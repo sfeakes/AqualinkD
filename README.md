@@ -18,7 +18,7 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
     * If it fails, try making the execuatable, below are some instructions.
 
 ## Making & Install
-* Get a linux computer (like a Raspberry PI) linked up to the RS485 interface of your pool controller.
+* Depends on a linux computer connected to a USB 2 RS485 adapter, that's connected to your pool controller.
 * Get a copy of the repo using git.
 * run make
 * run sudo make install
