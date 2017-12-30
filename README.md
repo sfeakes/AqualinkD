@@ -23,7 +23,7 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
     * sudo `systemctl start aqualinkd`
 
 ### Note:-
-The install script is designed for systemd / systemctl to run as a service or daemon. If you are using init / init-d then don't run the install script, install manuallt and the init-d script to use is in the xtras directory.
+The install script is designed for systemd / systemctl to run as a service or daemon. If you are using init / init-d then don't run the install script, install manually and the init-d script to use is in the xtras directory.
 Manual install for init-d systems
 * copy ./release/aqualinkd to /usr/local/bin
 * copy ./release/aqualinkd.conf to /etc
@@ -35,7 +35,7 @@ Manual install for init-d systems
 
 
 ## TODO
-* Only WEB interface (WS) & AQ_MQTT can change freeze & heater temprature set-points. Need to add support for standard HTTP. (DOMOTICZ_MQTT don't be supported until Domoticz create a better virtual thermostat)
+* Only WEB interface (WS) & AQ_MQTT can change freeze & heater temprature set-points. Need to add support for standard HTTP. (DOMOTICZ_MQTT won't be supported until Domoticz create a better virtual thermostat)
 * Web interface has a lot of fixed layout items that as specific to my implimentation. The HTML & CSS need a complete overhall and re-though to support different configurations.
 * There is code to control different light modes/shows, but it's not finished and no documentation will be provided until it is finished. It will not work unless you have this exact setup Haywood ColorLogic/Aqualink RS8. 
 
@@ -44,8 +44,13 @@ You will need a [USB2RS485](https://www.amazon.com/OctagonStar-Converter-Adapter
 
 ## Configuratio with home automation hubs
 ## Domoticz
-Enable MQTT in Domoticz, and install a MQTT broker. (If you don;t want to do this, then follow generic hub setup)
-Create a virtual device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner then place the Domoticz IDX for each device in the aqualinkd.conf file under the appropiate button.
+With MQTT
+* Enable MQTT in Domoticz, and install a MQTT broker. 
+* Create a virtual device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner.
+* Place the Domoticz IDX for each device in the aqualinkd.conf file under the appropiate button. Then modify each virtual device.
+
+Without MQTT
+* Follow generic hub setup.
 
 ## MQTT
 Aqualinkd supports generic MQTT implimentations, as well as specific Domoticz one described above.
@@ -89,7 +94,7 @@ Example that would turn on the filter pump
 aqualinkd/Filter_Pump/set 1
 ```
 
-## All other hubs excluding Apple HomeKit (Amazon,Samsung,Google etc)
+## All other hubs (excluding Apple HomeKit) Amazon,Samsung,Google etc
 Create a device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner. Then add the following URL to program the switching of each device
 ```
 http://aqualinkd.ip.address:port?command=Filter_Pump&value=on
