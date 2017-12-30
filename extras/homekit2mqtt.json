@@ -1,0 +1,207 @@
+{
+  "Aqualinkd Pool Air Temperature": {
+    "id": "AqualinkdPoolAirTemperatureSensor",
+    "name": "Pool Air Temp",
+    "service": "TemperatureSensor",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDTemperatureSensor",
+    "topic": {
+      "statusTemperature": "aqualinkd/Temperature/Air"
+    },
+    "payload": {},
+    "config": {}
+  },
+  "Aqualinkd Pool Water Temperature": {
+    "id": "AqualinkdPoolWaterTemperatureSensor",
+    "name": "Pool Water Temp",
+    "service": "TemperatureSensor",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDTemperatureSensor",
+    "topic": {
+      "statusTemperature": "aqualinkd/Temperature/Pool"
+    },
+    "payload": {},
+    "config": {}
+  },
+  "Aqualinkd Spa Water Temperature": {
+    "id": "AqualinkdSpaWaterTemperatureSensor",
+    "name": "Spa Water Temp",
+    "service": "TemperatureSensor",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDTemperatureSensor",
+    "topic": {
+      "statusTemperature": "aqualinkd/Temperature/Spa"
+    },
+    "payload": {},
+    "config": {}
+  },
+  "Aqualinkd Filter Pump": {
+    "id": "AqualinkdFilterPump",
+    "name": "Filter Pump",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDSwitch",
+    "topic": {
+      "setOn": "aqualinkd/Filter_Pump/set",
+      "statusOn": "aqualinkd/Filter_Pump"
+    },
+    "payload": {
+      "onFalse": 0,
+      "onTrue": 1
+    },
+    "config": {}
+  },
+  "Aqualinkd Spa Mode": {
+    "id": "AqualinkdSpaMode",
+    "name": "Spa Mode",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDSwitch",
+    "topic": {
+      "setOn": "aqualinkd/Spa_Mode/set",
+      "statusOn": "aqualinkd/Spa_Mode"
+    },
+    "payload": {
+      "onFalse": 0,
+      "onTrue": 1
+    },
+    "config": {}
+  },
+  "Aqualinkd Aux1": {
+    "id": "AqualinkdAux1Button",
+    "name": "Aux1",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_1/set",
+      "statusOn": "aqualinkd/Aux_1"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux2": {
+    "id": "AqualinkdAux2Button",
+    "name": "Aux2",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_2/set",
+      "statusOn": "aqualinkd/Aux_2"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux3": {
+    "id": "AqualinkdAux3Button",
+    "name": "Aux3",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_3/set",
+      "statusOn": "aqualinkd/Aux_3"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux4": {
+    "id": "AqualinkdAux4Button",
+    "name": "Aux4 ",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_4/set",
+      "statusOn": "aqualinkd/Aux_4"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux5": {
+    "id": "AqualinkdAux5Button",
+    "name": "Aux5",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_5/set",
+      "statusOn": "aqualinkd/Aux_5"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux6": {
+    "id": "AqualinkdAux6Button",
+    "name": "Aux6",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_6/set",
+      "statusOn": "aqualinkd/Aux_6"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd Aux7": {
+    "id": "AqualinkdAux7Button",
+    "name": "Aux7",
+    "service": "Switch",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkdAuxButton",
+    "topic": {
+      "setOn": "aqualinkd/Aux_7/set",
+      "statusOn": "aqualinkd/Aux_7"
+    },
+    "payload": {
+      "onTrue": 1,
+      "onFalse": 0
+    }
+  },
+  "Aqualinkd PoolHeater": {
+    "id": "AqualinkdPoolHeater",
+    "name": "Pool Heater",
+    "service": "Thermostat",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDThermostat",
+    "topic": {
+      "setTargetTemperature": "aqualinkd/Pool_Heater/setpoint/set",
+      "statusTargetTemperature": "aqualinkd/Pool_Heater/setpoint",
+      "statusCurrentTemperature": "aqualinkd/Temperature/Pool",
+      "setTargetHeatingCoolingState": "aqualinkd/Pool_Heater/set",
+      "statusTargetHeatingCoolingState": "aqualinkd/Pool_Heater"
+    },
+    "payload": {},
+    "config": {}
+  },
+  "Aqualinkd SpaHeater": {
+    "id": "AqualinkdSpaHeater",
+    "name": "Spa Heater",
+    "service": "Thermostat",
+    "manufacturer": "Feakes Inc",
+    "model": "AqualinkDThermostat",
+    "topic": {
+      "setTargetTemperature": "aqualinkd/Spa_Heater/setpoint/set",
+      "statusTargetTemperature": "aqualinkd/Spa_Heater/setpoint",
+      "statusCurrentTemperature": "aqualinkd/Temperature/Spa",
+      "setTargetHeatingCoolingState": "aqualinkd/Spa_Heater/set",
+      "statusTargetHeatingCoolingState": "aqualinkd/Spa_Heater"
+    },
+    "payload": {},
+    "config": {}
+  }
+}

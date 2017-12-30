@@ -1,0 +1,21 @@
+
+[Unit]
+Description=Aqualink RS daemon
+ConditionPathExists=/etc/aqualinkd.conf
+After=network.target multi-user.target
+Requires=network.target
+
+[Service]
+Type=forking
+#RemainAfterExit=no
+#StartLimitInterval=0
+PIDFile=/run/aqualinkd.pid 
+EnvironmentFile=/etc/default/aqualinkd
+ExecStart=/usr/local/bin/aqualinkd $OPTS
+ExecReload=/bin/kill -HUP $MAINPID
+#Restart=on-failure
+KillMode=process
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
