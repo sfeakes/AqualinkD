@@ -1,9 +1,12 @@
 # Aqualinkd  
 linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. So you can control your pool equiptment from any phone/tablet or computer, and should work with just about Home control systems, including Apple HomeKit, Samsung, Alexa, Google, etc home hubs.
 
-### It does not, and will never profide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, like VPNs.
+### It does not, and will never profide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
 
+## Builtin WEB Interface.
 ![Image](extras/web_ui.png?raw=true)
+
+## In Apple Home app.
 ![Image](extras/HomeKit.png?raw=true)
 
 # TL;DR Install
