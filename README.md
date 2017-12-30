@@ -3,6 +3,9 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 
 ### It does not, and will never profide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, like VPNs.
 
+![Image](extras/web_ui.png?raw=true)
+![Image](extras/HomeKit.png?raw=true)
+
 # TL;DR Install
 
 * Get a linux computer (like a Raspberry PI) linked up to the RS485 interface of your pool controller.
@@ -113,7 +116,7 @@ For the moment, native Homekit support has been removed, it will be added back i
 Recomended option for HomeKit support is to make use of the MQTT interface and use [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt) to bridge between Aqualinkd and you Apple (phone/tablet/tv & hub).
 * If you don't already have an MQTT broker Installed, install one. Mosquitto is recomended, this can usually be installed with apt-get
 * Install [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt). (see webpage for install)
-* Then copy the homekit2mqtt configuration file found in the extras directory `homekit2mqtt.json`
+* Then copy the [homekit2mqtt configuration](https://github.com/sfeakes/aqualinkd/blob/master/extras/homekit2mqtt.json) file found in the extras directory `homekit2mqtt.json`
 
 
 You can of course use a myriad of other HomeKit bridges with the URL endpoints listed in the `All other hubs section`, or MQTT topics listed in the `MQTT` section. The majority of them (including HomeBridge the most popular) use Node and HAP-Node.JS, neither of which I am a fan of for the RaspberryPI. But HomeKit2MQTT seemed to have the least overhead of them all. So that's why the recomendation.
@@ -126,7 +129,7 @@ http://aqualinkd.ip.address:port?command=mhstatus
 ```
 t0 will be air temp and t1 water temp.
 
-To use.  copy the `meteohub-aq-plugin.sh` script from the extras directory to your meteohub box, edit the script and use your IP address in the line that makes the URL call, below.
+To use.  copy the [meteohub-aq-plugin.sh script](https://github.com/sfeakes/aqualinkd/blob/master/extras/meteohub-aq-plugin.sh) from the extras directory to your meteohub box, edit the script and use your IP address in the line that makes the URL call, below.
 ```
 wget -O /dev/stdout 'http://your.ip.address.here/?command=mhstatus' 2>/dev/null
 ```
