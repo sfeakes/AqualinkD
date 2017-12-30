@@ -1,7 +1,7 @@
 # Aqualinkd  
-linux daemon to control Aqualink RS pool controllers. Provides web UI, MTQQ client for Domoticz, HTTP API endpoints for Samsung, Alexa, Google, etc home hubs.
-
-VERY MUCH A BETA RELEASE.
+linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. So you can control your pool equiptment from any phone/tablet or computer, and should work with just about Home control systems, including Apple HomeKit, Samsung, Alexa, Google, etc home hubs.
+(Alpha release)
+###It does not, and will never profide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, like VPNs.
 
 # TL;DR Install
 
@@ -111,8 +111,8 @@ http://aqualinkd.ip.address:port?command=status
 ## Apple HomeKit
 For the moment, native Homekit support has been removed, it will be added back in the future under a different implimentation. 
 Recomended option for HomeKit support is to make use of the MQTT interface and use [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt) to bridge between Aqualinkd and you Apple (phone/tablet/tv & hub).
-* Install a MQTT broker (mosquitto) is recomended, this can usually be installed with apt-get
-* Install HomeKitMQTT. (see webpage for install)
+* If you don't already have an MQTT broker Installed, install one. Mosquitto is recomended, this can usually be installed with apt-get
+* Install [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt). (see webpage for install)
 * Then copy the homekit2mqtt configuration file found in the extras directory `homekit2mqtt.json`
 
 
