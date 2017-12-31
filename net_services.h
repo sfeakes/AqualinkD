@@ -5,8 +5,6 @@
 #define GET_RTN_UNKNOWN "Unknown command"
 #define GET_RTN_NOT_CHANGED "Not Changed"
 
-#define FREEZE_PROTECT "Freeze_Protect"
-
 //void main_server();
 //void main_server_TEST(struct aqualinkdata *aqdata, char *s_http_port);
 //bool start_web_server(struct mg_mgr *mgr, struct aqualinkdata *aqdata, char *port, char* web_root);

@@ -128,13 +128,6 @@ void broadcast_aqualinkstate(struct mg_connection *nc)
 }
 
 
-#ifndef MG_DISABLE_MQTT
-/*
-int fahrenheit2celsius(int fahrenheit)
-{
-  return (int)((fahrenheit - 32) * 5 / 9)+0.5f;
-}
-*/
 void send_mqtt(struct mg_connection *nc, char *toppic, char *message)
 {
   static uint16_t msg_id = 0;
@@ -147,9 +140,8 @@ void send_mqtt(struct mg_connection *nc, char *toppic, char *message)
   logMessage(LOG_INFO, "MQTT: Published id=%d: %s %s\n", msg_id, toppic, message);
 }
 
-// ******************** FIX THIS *******************************
-// NSF this doesn't work for tempratures, we are badly rounding.
-void send_domoticz_mqtt_msg(struct mg_connection *nc, int idx, int value) 
+
+void send_domoticz_mqtt_state_msg(struct mg_connection *nc, int idx, int value) 
 {
   if (idx <= 0)
     return;
@@ -159,13 +151,13 @@ void send_domoticz_mqtt_msg(struct mg_connection *nc, int idx, int value)
   send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
 }
 
-void send_domoticz_mqtt_msg_setpoint(struct mg_connection *nc, int idx, int value, float setpoint) 
+void send_domoticz_mqtt_temp_msg(struct mg_connection *nc, int idx, int value) 
 {
   if (idx <= 0)
     return;
 
   char mqtt_msg[JSON_MQTT_MSG_SIZE];
-  build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, value, setpoint);
+  build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, (_aqualink_data->temp_units==FAHRENHEIT)?roundf(degFtoC(value)):value);
   send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
 }
 
@@ -205,33 +197,34 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->air_temp != TEMP_UNKNOWN && _aqualink_data->air_temp != _last_mqtt_aqualinkdata.air_temp) {
     _last_mqtt_aqualinkdata.air_temp = _aqualink_data->air_temp;
     send_mqtt_temp_msg(nc, AIR_TEMP_TOPIC, _aqualink_data->air_temp);
-    send_domoticz_mqtt_msg(nc, _aqualink_config->dzidx_air_temp, (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(_aqualink_data->air_temp):_aqualink_data->air_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_air_temp, _aqualink_data->air_temp);
   }
   if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.pool_temp) {
     _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
-    send_domoticz_mqtt_msg(nc, _aqualink_config->dzidx_pool_water_temp, (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(_aqualink_data->pool_temp):_aqualink_data->pool_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
   }
   if (_aqualink_data->spa_temp != TEMP_UNKNOWN && _aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
     _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
     send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
-    send_domoticz_mqtt_msg(nc, _aqualink_config->dzidx_spa_water_temp, (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(_aqualink_data->spa_temp):_aqualink_data->pool_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
   }
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
     // removed until domoticz has a better virtuel thermostat
-    //send_domoticz_mqtt_msg_setpoint(nc, _aqualink_config->dzidx_pool_thermostat, 0, degFtoC(_aqualink_data->pool_htr_set_point));
+    //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_thermostat, _aqualink_data->pool_htr_set_point);
   }
   if (_aqualink_data->spa_htr_set_point != TEMP_UNKNOWN && _aqualink_data->spa_htr_set_point != _last_mqtt_aqualinkdata.spa_htr_set_point) {
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
     // removed until domoticz has a better virtuel thermostat
-    //send_domoticz_mqtt_msg_setpoint(nc, _aqualink_config->dzidx_spa_thermostat, 0, degFtoC(_aqualink_data->spa_htr_set_point));
+    //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_thermostat, _aqualink_data->spa_htr_set_point);
   }
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
+    //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_rfz_protect, _aqualink_data->frz_protect_set_point);
   }
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -245,7 +238,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
       if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX) {
         send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
-        send_domoticz_mqtt_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
+        send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
       }
       // Send mqtt
     }
@@ -253,7 +246,6 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: END\n");
 }
 
-#endif //MG_DISABLE_MQTT
 
 // 
 

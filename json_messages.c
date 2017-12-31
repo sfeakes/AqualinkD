@@ -50,15 +50,15 @@ const char* getStatus(struct aqualinkdata *aqdata)
 }
 
 
-int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float setpoint/*char *svalue*/)
+int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float tvalue/*char *svalue*/)
 {
   memset(&buffer[0], 0, size);
   int length = 0;
 
-  if (setpoint == TEMP_UNKNOWN) {
+  if (tvalue == TEMP_UNKNOWN) {
     length = sprintf(buffer, "{\"idx\":%d,\"nvalue\":%d,\"svalue\":\"\"}", idx, nvalue);
   } else {
-    length = sprintf(buffer, "{\"idx\":%d,\"nvalue\":%d,\"stype\":\"SetPoint\",\"svalue\":\"%.2f\"}", idx, nvalue, setpoint+0.005);
+    length = sprintf(buffer, "{\"idx\":%d,\"nvalue\":%d,\"stype\":\"SetPoint\",\"svalue\":\"%.2f\"}", idx, nvalue, tvalue);
   }
 
   buffer[length] = '\0';

@@ -16,7 +16,8 @@
 
 #define MAXLEN 256
 
-#define round(a) (int) (a+0.5)
+#define round(a) (int) (a+0.5) // 0 decimal places
+#define roundf(a) (float) ((a*100)/100) // 2 decimal places
 
 /*
 typedef enum
