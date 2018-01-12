@@ -66,8 +66,9 @@ To enable, simply configure the main topic in `aqualinkd.conf`.
 ```mqtt_aq_topic = aqualinkd```
 
 Then status messages will be posted to the sub topics listed below, with appropiate information. Each button uses the standard Aqualink RS controller name, so Aux_1 might be your poool light.
+Note, all Temperatures will be in C, if you have your pool controler configured to F aqualinkd will automatically do the conversion.
 ```
-Tempratures will be a simply number posted to the topic.
+Temperatures simply be a number posted to the topic.
 aqualinkd/Temperature/Air
 aqualinkd/Temperature/Pool
 aqualinkd/Temperature/Spa
@@ -78,7 +79,7 @@ Buttons will be a 1 or 0 for state. 1=on 0=off
 aqualinkd/Filter_Pump
 aqualinkd/Spa_Mode       
 aqualinkd/Aux_1
-........./Aux_.
+....Aux_2-6....
 aqualinkd/Aux_7
 aqualinkd/Pool_Heater
 aqualinkd/Spa_Heater
@@ -89,6 +90,7 @@ To turn something on, or set information, simply add `set` to the end of the abo
 aqualinkd/Filter_Pump/set
 aqualinkd/Spa_Mode/set
 aqualinkd/Aux_1/set
+....Aux 2-6.../set
 aqualinkd/Aux_7/set
 aqualinkd/Pool_Heater/set
 aqualinkd/Spa_Heater/set
