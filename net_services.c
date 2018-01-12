@@ -207,7 +207,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->spa_temp != TEMP_UNKNOWN && _aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
     _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
     send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
-    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
   }
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
@@ -640,7 +640,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         mg_mqtt_subscribe(nc, topics, 1, 42);
         logMessage(LOG_INFO, "MQTT: Subscribing to '%s'\n", aq_topic);
       } 
-      else if (_aqualink_config->mqtt_aq_topic != NULL) {
+      else if (_aqualink_config->mqtt_dz_sub_topic != NULL) {
         topics[0].topic = _aqualink_config->mqtt_dz_sub_topic;;
         topics[0].qos = qos;
         mg_mqtt_subscribe(nc, topics, 1, 42);

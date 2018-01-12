@@ -100,10 +100,10 @@ bool checkAqualinkTime()
   time_difference = (int)difftime(now, last_checked);
   if (time_difference < TIME_CHECK_INTERVAL) {
     logMessage(LOG_DEBUG, "time not checked, will check in %d seconds", TIME_CHECK_INTERVAL - time_difference);
-    return TRUE;
+    return true;
   } else {
     last_checked = now;
-    //return FALSE;
+    //return false;
   }
   
   char datestr[DATE_STRING_LEN];
@@ -114,7 +114,7 @@ bool checkAqualinkTime()
   if (strptime(datestr, "%m/%d/%y %a %I:%M %p", &aq_tm) == NULL) {
     logMessage(LOG_ERR, "Could not convert RS time string '%s'", datestr);
     last_checked = (time_t)NULL;
-    return TRUE;
+    return true;
   }
 
   aq_tm.tm_isdst = -1;  // Force mktime to use local timezone
@@ -125,8 +125,8 @@ bool checkAqualinkTime()
   
   if(abs(time_difference) <= ACCEPTABLE_TIME_DIFF) {
     // Time difference is less than or equal to 90 seconds (1 1/2 minutes).
-    // Set the return value to TRUE.
-    return TRUE;
+    // Set the return value to true.
+    return true;
   }
 
   /*
@@ -139,7 +139,7 @@ bool checkAqualinkTime()
   printf("Aqualink '%s'\n",datestring);
   printf("test '%s'\n",datestring);
   */
-  return FALSE;
+  return false;
 }
 
 /*
@@ -219,7 +219,7 @@ void processMessage(char *message)
   else if( (msg[1] == ':' || msg[2] == ':') && msg[strlen(msg)-1] == 'M') { // time in format '9:45 AM'
     strcpy(_aqualink_data.time, msg);
     // Setting time takes a long time, so don't try until we have all other programmed data.
-    if ( (_initWithRS == true) && strlen(_aqualink_data.date) > 1 && checkAqualinkTime() != TRUE ) {
+    if ( (_initWithRS == true) && strlen(_aqualink_data.date) > 1 && checkAqualinkTime() != true ) {
       logMessage(LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data.time, _aqualink_data.date);
       aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);
     } else {
@@ -255,7 +255,7 @@ void processMessage(char *message)
 
 bool process_packet(unsigned char* packet, int length)
 {
-  bool rtn = FALSE;
+  bool rtn = false;
   static unsigned char last_packet[AQ_MAXPKTLEN];
   static char message[AQ_MSGLONGLEN+1];
   static int processing_long_msg = 0;
