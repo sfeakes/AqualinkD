@@ -747,6 +747,7 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
     
     if (message != NULL) {
+      logMessage(LOG_DEBUG, "Programming mode: String MATCH\n");
       ptr = stristr(aq_data->last_message, msgS);
       if (ptr != NULL) { // match
         if (msgS == message) // match & don't care if first char

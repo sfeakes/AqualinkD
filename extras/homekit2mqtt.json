@@ -185,6 +185,15 @@
       "setTargetHeatingCoolingState": "aqualinkd/Pool_Heater/set",
       "statusTargetHeatingCoolingState": "aqualinkd/Pool_Heater"
     },
+    "props": {
+      "TargetTemperature": {
+        "maxValue": 40,
+        "minValue": 4
+      },
+      "TargetHeatingCoolingState": {
+        "validValues": [0, 1]
+      }
+    },
     "payload": {},
     "config": {}
   },
@@ -200,6 +209,15 @@
       "statusCurrentTemperature": "aqualinkd/Temperature/Spa",
       "setTargetHeatingCoolingState": "aqualinkd/Spa_Heater/set",
       "statusTargetHeatingCoolingState": "aqualinkd/Spa_Heater"
+    },
+    "props": {
+      "TargetTemperature": {
+        "maxValue": 40,
+        "minValue": 4
+      },
+      "TargetHeatingCoolingState": {
+        "validValues": [0, 1]
+      }
     },
     "payload": {},
     "config": {}
