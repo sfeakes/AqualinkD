@@ -183,18 +183,18 @@ void processMessage(char *message)
   // Check long messages in this if/elseif block first, as some messages are similar.  
   // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
   // 
-  if(strstr(message, LNG_MSG_BATTERY_LOW) != NULL) {
+  if(stristr(message, LNG_MSG_BATTERY_LOW) != NULL) {
     _aqualink_data.battery = LOW;
   }
-  else if(strstr(message, LNG_MSG_POOL_TEMP_SET) != NULL) {
+  else if(stristr(message, LNG_MSG_POOL_TEMP_SET) != NULL) {
     //logMessage(LOG_DEBUG, "pool htr long message: %s", &message[20]);
     _aqualink_data.pool_htr_set_point = atoi(message+20);
   }
-  else if(strstr(message, LNG_MSG_SPA_TEMP_SET) != NULL) {
+  else if(stristr(message, LNG_MSG_SPA_TEMP_SET) != NULL) {
     //logMessage(LOG_DEBUG, "spa htr long message: %s", &message[19]);
     _aqualink_data.spa_htr_set_point = atoi(message+19);
   }
-  else if(strstr(message, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
+  else if(stristr(message, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
     //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
     _aqualink_data.frz_protect_set_point = atoi(message+28);
   }
@@ -242,7 +242,7 @@ void processMessage(char *message)
       _initWithRS = true;
     }
   }
-  else if(strstr(msg, " TURNS ON") != NULL) {
+  else if(stristr(msg, " TURNS ON") != NULL) {
     logMessage(LOG_NOTICE, "Program data '%s'\n",msg);
   }
   else {
