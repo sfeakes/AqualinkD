@@ -198,7 +198,7 @@ void processMessage(char *message)
     //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
     _aqualink_data.frz_protect_set_point = atoi(message+28);
   }
-  else if(strncmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
+  else if(strncasecmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
     _aqualink_data.air_temp = atoi(msg+8);
     if (msg[strlen(msg)-1] == 'F')
     _aqualink_data.temp_units = FAHRENHEIT;
@@ -207,10 +207,10 @@ void processMessage(char *message)
     else
     _aqualink_data.temp_units = UNKNOWN;
   }
-  else if(strncmp(message, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
+  else if(strncasecmp(message, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(message+9);
   }
-  else if(strncmp(message, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
+  else if(strncasecmp(message, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
     _aqualink_data.spa_temp = atoi(message+8);
   }
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
