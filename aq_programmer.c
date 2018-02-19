@@ -687,8 +687,9 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
     logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' OR '%s' received message1 '%s'\n",i,numMessageReceived,message1,message2,aq_data->last_message);
     
     if (message1 != NULL) {
-      ptr = strstr(aq_data->last_message, msgS1);
+      ptr = stristr(aq_data->last_message, msgS1);
       if (ptr != NULL) { // match
+        logMessage(LOG_DEBUG, "Programming mode: String MATCH '%s'\n", msgS1);
         if (msgS1 == message1) // match & don't care if first char
           break;
         else if (ptr == aq_data->last_message) // match & do care if first char
@@ -696,8 +697,9 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
       }
     }
     if (message2 != NULL) {
-      ptr = strstr(aq_data->last_message, msgS2);
+      ptr = stristr(aq_data->last_message, msgS2);
       if (ptr != NULL) { // match
+        logMessage(LOG_DEBUG, "Programming mode: String MATCH '%s'\n", msgS2);
         if (msgS2 == message2) // match & don't care if first char
           break;
         else if (ptr == aq_data->last_message) // match & do care if first char
@@ -747,9 +749,9 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
     
     if (message != NULL) {
-      logMessage(LOG_DEBUG, "Programming mode: String MATCH\n");
       ptr = stristr(aq_data->last_message, msgS);
       if (ptr != NULL) { // match
+        logMessage(LOG_DEBUG, "Programming mode: String MATCH\n");
         if (msgS == message) // match & don't care if first char
           break;
         else if (ptr == aq_data->last_message) // match & do care if first char
@@ -805,14 +807,14 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
   int wait_messages = 25;
   int i=0;
  
-  while( (strstr(aq_data->last_message, item_string) == NULL) && ( i++ < wait_messages) )
+  while( (stristr(aq_data->last_message, item_string) == NULL) && ( i++ < wait_messages) )
   {
     send_cmd(KEY_RIGHT, aq_data);
     waitForMessage(aq_data, NULL, 1);
     logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
   }
 
-  if (strstr(aq_data->last_message, item_string) == NULL) {
+  if (stristr(aq_data->last_message, item_string) == NULL) {
     //logMessage(LOG_ERR, "Could not select SUB_MENU of Aqualink control panel\n");
     return false;
   }

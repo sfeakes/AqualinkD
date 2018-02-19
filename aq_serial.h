@@ -90,6 +90,11 @@
 #define MSG_POOL_TEMP_LEN  9
 #define MSG_SPA_TEMP_LEN   8
 
+#define MSG_SWG_PCT   "AQUAPURE"  // AquaPure 55%
+#define MSG_SWG_PPM   "SALT"  // Salt 3000 PPM
+#define MSG_SWG_PCT_LEN  8
+#define MSG_SWG_PPM_LEN  4
+
 
 
 

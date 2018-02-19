@@ -216,6 +216,12 @@ void processMessage(char *message)
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
   }
+  else if(strncasecmp(message, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0) {
+    _aqualink_data.swg_percent = atoi(message+MSG_SWG_PCT_LEN);
+  }
+  else if(strncasecmp(message, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0) {
+    _aqualink_data.swg_ppm = atoi(message+MSG_SWG_PPM_LEN);
+  }
   else if( (msg[1] == ':' || msg[2] == ':') && msg[strlen(msg)-1] == 'M') { // time in format '9:45 AM'
     strcpy(_aqualink_data.time, msg);
     // Setting time takes a long time, so don't try until we have all other programmed data.
@@ -445,6 +451,8 @@ void main_loop() {
   _aqualink_data.pool_htr_set_point = TEMP_UNKNOWN;
   _aqualink_data.spa_htr_set_point = TEMP_UNKNOWN;
   _aqualink_data.unactioned.type = NO_ACTION;
+  _aqualink_data.swg_percent = TEMP_UNKNOWN;
+  _aqualink_data.swg_ppm = TEMP_UNKNOWN;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {

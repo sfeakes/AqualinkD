@@ -83,6 +83,8 @@ struct aqualinkdata
   unsigned char aq_command;
   struct programmingthread active_thread;
   struct action unactioned;
+  int swg_percent;
+  int swg_ppm;
 };
 
 

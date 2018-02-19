@@ -43,7 +43,7 @@ const char* getStatus(struct aqualinkdata *aqdata)
     return JSON_PROGRAMMING;
   }
  
-  if (aqdata->last_message != NULL && strstr(aqdata->last_message, "SERVICE") != NULL ) {
+  if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
     return JSON_SERVICE;
   }
 
