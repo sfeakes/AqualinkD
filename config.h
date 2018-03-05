@@ -12,10 +12,10 @@
 #define DEFAULT_WEBROOT      "./"
 #define DEFAULT_SERIALPORT   "/dev/ttyUSB0"
 #define DEFAULT_DEVICE_ID    "0x0a"
-#define DEFAULT_MQTT_DZ_IN   "domoticz/in"
-#define DEFAULT_MQTT_DZ_OUT  "domoticz/out"
-#define DEFAULT_MQTT_AQ_TP   "aqualinkd"
-#define DEFAULT_MQTT_SERVER  "trident:1883"
+#define DEFAULT_MQTT_DZ_IN   NULL
+#define DEFAULT_MQTT_DZ_OUT  NULL
+#define DEFAULT_MQTT_AQ_TP   NULL
+#define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
 

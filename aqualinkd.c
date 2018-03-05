@@ -491,7 +491,7 @@ void main_loop() {
       logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
       blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
     } else if (packet_length == 0) {
-      //logMessage(LOG_NOTICE, "Nothing read on serial\n");
+      logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;
@@ -507,6 +507,7 @@ void main_loop() {
         }
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
+        logMessage(LOG_DEBUG_SERIAL, "Received Packet, but not for us, ID is for %02x\n",packet_buffer[PKT_DEST]);
       }
     }
     mg_mgr_poll(&mgr, 0);

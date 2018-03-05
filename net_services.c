@@ -132,6 +132,9 @@ void send_mqtt(struct mg_connection *nc, char *toppic, char *message)
 {
   static uint16_t msg_id = 0;
 
+  if (toppic == NULL)
+    return;
+
   if (msg_id >= 65535){msg_id=1;}else{msg_id++;}
 
   //mg_mqtt_publish(nc, toppic, msg_id, MG_MQTT_QOS(0), message, strlen(message));
@@ -687,6 +690,9 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 void start_mqtt(struct mg_mgr *mgr) {
   logMessage (LOG_NOTICE, "Starting MQTT client to %s\n", _aqualink_config->mqtt_server);
+  if ( _aqualink_config->mqtt_server == NULL)
+    return;
+
   if (mg_connect(mgr, _aqualink_config->mqtt_server, ev_handler) == NULL) {
       logMessage (LOG_ERR, "Failed to create MQTT listener to %s\n", _aqualink_config->mqtt_server);
   } else {

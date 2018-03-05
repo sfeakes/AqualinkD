@@ -120,6 +120,9 @@ char *elevel2text(int level)
 
 int text2elevel(char* level)
 {
+  if (strcmp(level, "DEBUG_SERIAL") == 0) {
+    return LOG_DEBUG_SERIAL;
+  }
   if (strcmp(level, "DEBUG") == 0) {
     return LOG_DEBUG;
   }

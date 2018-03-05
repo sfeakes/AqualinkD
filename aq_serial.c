@@ -198,6 +198,7 @@ void send_ack(int fd, unsigned char command)
     if (nwrite < 0) 
       logMessage(LOG_ERR, "write to serial port failed\n");
   }
+  logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
 #endif  
   
@@ -300,6 +301,7 @@ int get_packet(int fd, unsigned char* packet)
     }
   }
   
+  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   // Return the packet length.
   return index;
 }

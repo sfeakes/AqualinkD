@@ -4,6 +4,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#define LOG_DEBUG_SERIAL 8
+
 #ifndef EXIT_SUCCESS
   #define EXIT_FAILURE 1
   #define EXIT_SUCCESS 0
