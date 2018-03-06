@@ -507,7 +507,7 @@ void main_loop() {
         }
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
-        logMessage(LOG_DEBUG_SERIAL, "Received Packet, but not for us, ID is for %02x\n",packet_buffer[PKT_DEST]);
+        logMessage(LOG_DEBUG_SERIAL, "Received Packet, but not for us, ID is for 0x%02hhx\n",packet_buffer[PKT_DEST]);
       }
     }
     mg_mgr_poll(&mgr, 0);
