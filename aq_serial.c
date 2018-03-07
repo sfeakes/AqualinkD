@@ -71,16 +71,20 @@ int init_serial_port(char* tty)
     logMessage(LOG_ERR, "Unable to open port: %s\n", tty);
     return -1;
   }
+
+  logMessage(LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
   
 #ifdef BLOCKING_MODE
   fcntl(fd, F_SETFL, 0);
   newtio.c_cc[VMIN]= 1;
   newtio.c_cc[VTIME]= 0;
+  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to blocking mode\n",tty);
 #else
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
   newtio.c_cc[VMIN]= 0;
   newtio.c_cc[VTIME]= 1;
+  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
 #endif
 
   tcgetattr(fd, &_oldtio); // save current port settings
@@ -93,6 +97,8 @@ int init_serial_port(char* tty)
   tcflush(fd, TCIFLUSH);
   tcsetattr(fd, TCSANOW, &newtio);
   
+  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
+
   return fd;
 }
 
@@ -101,6 +107,7 @@ void close_serial_port(int fd)
 {
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
+  logMessage(LOG_DEBUG_SERIAL, "Closed serial port\n");
 }
 
 // Generate and return checksum of packet.
