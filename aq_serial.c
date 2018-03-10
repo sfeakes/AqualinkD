@@ -48,7 +48,30 @@ void log_packet(unsigned char* packet, int length)
   logMessage(LOG_DEBUG, message_buffer);
 }
 
+const char* get_packet_type(unsigned char* packet, int length)
+{
+  if (length <= 0 )
+    return "";
 
+  switch (packet[PKT_CMD]) {
+    case CMD_ACK:
+      return "Ack";
+    break;
+    case CMD_STATUS:
+      return "Status";
+    break;
+    case CMD_MSG:
+    case CMD_MSG_LONG:
+      return "Message";
+    break;
+    case CMD_PROBE:
+      return "Probe";
+    break;
+    default:
+      return "Unknown";
+    break;
+  }
+}
 
 /*
 Open and Initialize the serial communications port to the Aqualink RS8 device.

@@ -491,7 +491,9 @@ void main_loop() {
       logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
       blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
     } else if (packet_length == 0) {
-      logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
+      #ifdef DEBUG_ALL_SERIAL
+        logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
+      #endif
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;
@@ -499,16 +501,18 @@ void main_loop() {
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
         send_ack(rs_fd, _aqualink_data.aq_command);
         _aqualink_data.aq_command = NUL;
-
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false) {
           broadcast_aqualinkstate(mgr.active_connections);
         }
       } else if (packet_length > 0) {
-        // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
-        logMessage(LOG_DEBUG_SERIAL, "Received Packet, but not for us, ID is for 0x%02hhx\n",packet_buffer[PKT_DEST]);
+        // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]); 
       }
+      if (getLogLevel() >= LOG_DEBUG_SERIAL)
+          logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
+                                       (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
+
     }
     mg_mgr_poll(&mgr, 0);
 

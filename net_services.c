@@ -424,6 +424,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
   int i;
+  logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
 //printf("Topic %.*s\n",msg->topic.len, msg->topic.p);
   // get the parts from the topic
   char *pt1 = (char *)&msg->topic.p[strlen(_aqualink_config->mqtt_aq_topic)+1];
@@ -441,7 +442,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     }
   }
 
-  logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+  //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   //only care about topics with set at the end.
   //aqualinkd/Freeze/setpoint/set
   //aqualinkd/Filter_Pump/set
@@ -489,7 +490,8 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
         // Message is either a 1 or 0 for on or off
         int status = atoi(msg->payload.p);
         if ( status > 1 || status < 0) {
-          logMessage(LOG_INFO, "MQTT: received unknown status of '%.*s' for '%s', Ignoring!\n", msg->payload.len, msg->payload.p, status, _aqualink_data->aqbuttons[i].name);
+          logMessage(LOG_ERR, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+          logMessage(LOG_ERR, "MQTT: received unknown status of '%.*s' for '%s', Ignoring!\n", msg->payload.len, msg->payload.p, _aqualink_data->aqbuttons[i].name);
         }
         else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && status==0) ||
            (status == 1 && (_aqualink_data->aqbuttons[i].led->state == ON || 
@@ -665,10 +667,10 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       logMessage(LOG_INFO, "MQTT: received (msg_id: %d), looks like my own message, ignoring\n", mqtt_msg->message_id);
     }
 // NSF Need to change strlen to a global so it's not executed every time we check a topic
-    if (strncmp(mqtt_msg->topic.p, _aqualink_config->mqtt_aq_topic, strlen(_aqualink_config->mqtt_aq_topic)) == 0) {
+    if (_aqualink_config->mqtt_aq_topic != NULL && strncmp(mqtt_msg->topic.p, _aqualink_config->mqtt_aq_topic, strlen(_aqualink_config->mqtt_aq_topic)) == 0) {
       action_mqtt_message(nc, mqtt_msg);
     }
-    if (strncmp(mqtt_msg->topic.p, _aqualink_config->mqtt_dz_sub_topic, strlen(_aqualink_config->mqtt_dz_sub_topic)) == 0) {
+    if (_aqualink_config->mqtt_dz_sub_topic != NULL && strncmp(mqtt_msg->topic.p, _aqualink_config->mqtt_dz_sub_topic, strlen(_aqualink_config->mqtt_dz_sub_topic)) == 0) {
       action_domoticz_mqtt_message(nc, mqtt_msg);
     }
     break;
@@ -690,7 +692,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
 void start_mqtt(struct mg_mgr *mgr) {
   logMessage (LOG_NOTICE, "Starting MQTT client to %s\n", _aqualink_config->mqtt_server);
-  if ( _aqualink_config->mqtt_server == NULL)
+  if ( _aqualink_config->mqtt_server == NULL || 
+      ( _aqualink_config->mqtt_aq_topic == NULL && _aqualink_config->mqtt_dz_pub_topic == NULL && _aqualink_config->mqtt_dz_sub_topic == NULL) )
     return;
 
   if (mg_connect(mgr, _aqualink_config->mqtt_server, ev_handler) == NULL) {

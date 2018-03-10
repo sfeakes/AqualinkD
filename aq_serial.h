@@ -128,6 +128,7 @@ int get_packet(int file_descriptor, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
+const char* get_packet_type(unsigned char* packet, int length);
 
 
 
