@@ -50,6 +50,8 @@ void log_packet(unsigned char* packet, int length)
 
 const char* get_packet_type(unsigned char* packet, int length)
 {
+  static char buf[15];
+
   if (length <= 0 )
     return "";
 
@@ -68,7 +70,8 @@ const char* get_packet_type(unsigned char* packet, int length)
       return "Probe";
     break;
     default:
-      return "Unknown";
+      sprintf(buf, "Unknown '0x%02hhx'\n", packet[PKT_CMD]);
+      return buf;
     break;
   }
 }
