@@ -526,18 +526,18 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       if (strncmp(pt1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
         logMessage(LOG_INFO, "MQTT: MATCH %s to topic %.*s\n",_aqualink_data->aqbuttons[i].name,msg->topic.len, msg->topic.p);
         // Message is either a 1 or 0 for on or off
-        int status = atoi(msg->payload.p);
-        if ( status > 1 || status < 0) {
+        //int status = atoi(msg->payload.p);
+        if ( value > 1 || value < 0) {
           logMessage(LOG_ERR, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, value);
           logMessage(LOG_ERR, "MQTT: received unknown status of '%.*s' for '%s', Ignoring!\n", msg->payload.len, msg->payload.p, _aqualink_data->aqbuttons[i].name);
         }
-        else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && status==0) ||
-           (status == 1 && (_aqualink_data->aqbuttons[i].led->state == ON || 
+        else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && value==0) ||
+           (value == 1 && (_aqualink_data->aqbuttons[i].led->state == ON || 
                                 _aqualink_data->aqbuttons[i].led->state == FLASH || 
                                 _aqualink_data->aqbuttons[i].led->state == ENABLE))) {
-          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', already '%s', Ignoring\n", (status==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (status==0?"OFF":"ON"));
+          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', already '%s', Ignoring\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (value==0?"OFF":"ON"));
         } else {
-          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (status==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(status==0?"OFF":"ON"));
+          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
           aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
         }
         break;

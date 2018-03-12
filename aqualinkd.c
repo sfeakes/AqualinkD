@@ -313,11 +313,11 @@ void processMessage(char *message)
   }
   else if(strncasecmp(msg, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0) {
     _aqualink_data.swg_percent = atoi(msg+MSG_SWG_PCT_LEN);
-    logMessage(LOG_DEBUG, "Stored SWG Percent as %d\n", _aqualink_data.swg_percent);
+    //logMessage(LOG_DEBUG, "Stored SWG Percent as %d\n", _aqualink_data.swg_percent);
   }
   else if(strncasecmp(msg, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0) {
     _aqualink_data.swg_ppm = atoi(msg+MSG_SWG_PPM_LEN);
-    logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
+    //logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
   }
   else if( (msg[1] == ':' || msg[2] == ':') && msg[strlen(msg)-1] == 'M') { // time in format '9:45 AM'
     strcpy(_aqualink_data.time, msg);

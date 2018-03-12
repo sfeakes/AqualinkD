@@ -235,6 +235,10 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_mode", 21) == 0) {
               config_parameters->light_programming_mode = atof(cleanalloc(indx+1)); // should free this
+            } else if (strncasecmp (b_ptr, "SWG_percent_dzidx", 17) == 0) {
+              config_parameters->dzidx_swg_percent = strtoul(indx+1, NULL, 10);
+            } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
+              config_parameters->dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
             }/*else if (strncasecmp (b_ptr, "pool_thermostat_dzidx", 21) == 0) {      // removed until domoticz has a better virtual thermostat
               config_parameters->dzidx_pool_thermostat = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "spa_thermostat_dzidx", 20) == 0) {
