@@ -49,7 +49,13 @@ Manual install for init-d systems
 ## Hardware
 You will need a [USB2RS485](https://www.amazon.com/OctagonStar-Converter-Adapter-Interface-FT232RL/dp/B01LCFRR3E/) adapter connected to your pool equiptmeent RS buss interface.  (If you have an inside controller mounted on your wall, this is usually best place, if not the outside control panel is the next best place).  Then a computer running linux connected to that USB2RS485 adapter. Code is designed & developed for raspberry pi zero w, so any computer with that as a minimum should work.
 
-## Configuratio with home automation hubs
+## Aqualinkd Configuration
+Please see the [aqualinkd.conf]
+(https://github.com/sfeakes/aqualinkd/blob/master/extras/aqualinkd.conf) 
+example in the release directory.  Many things are turned of by default, and you may need to enable or configure them for your setup.
+Specifically, make sure you configure your MQTT, Pool Equiptment Labels & Domoticz ID's in there, looking at the file it should be self explanatory. 
+
+## Configuration with home automation hubs
 ## Domoticz
 With MQTT
 * Enable MQTT in Domoticz, and install a MQTT broker. 
@@ -83,6 +89,10 @@ aqualinkd/Aux_1
 aqualinkd/Aux_7
 aqualinkd/Pool_Heater
 aqualinkd/Spa_Heater
+
+Other Information (Salt Water Generator)
+aqualinkd/SWG/Percent
+aqualinkd/SWG/PPM
 ```
 
 To turn something on, or set information, simply add `set` to the end of the above topics, and post 1 or 0 in the message for a button, or a number for a setpoint. Topics Aqualinkd will act on.
@@ -94,8 +104,8 @@ aqualinkd/Aux_1/set
 aqualinkd/Aux_7/set
 aqualinkd/Pool_Heater/set
 aqualinkd/Spa_Heater/set
-aqualinkd/Pool_Heater/setpoint
-aqualinkd/Spa_Heater/setpoint
+aqualinkd/Pool_Heater/setpoint/set
+aqualinkd/Spa_Heater/setpoint/set
 ```
 
 Example that would turn on the filter pump
