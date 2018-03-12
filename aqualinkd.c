@@ -166,8 +166,8 @@ void queueGetProgramData()
   aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, &_aqualink_data);
   //aq_programmer(AQ_GET_PROGRAMS, NULL, &_aqualink_data); // only displays to log at present, also seems to confuse getting set_points
 }
-
-void processMessage(char *message)
+/*
+void processMessage_OLD(char *message)
 {
   char *msg;
   static bool _initWithRS = false;
@@ -260,6 +260,101 @@ void processMessage(char *message)
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
 }
+*/
+
+void processMessage(char *message)
+{
+  char *msg;
+  static bool _initWithRS = false;
+  static bool _gotREV = false;
+  // NSF replace message with msg 
+  msg = cleanwhitespace(message);
+  _aqualink_data.last_message = msg;
+  
+  //aqualink_strcpy(_aqualink_data.message, msg);
+  
+  logMessage(LOG_DEBUG, "RS Message :- '%s'\n",msg);
+  
+  // Check long messages in this if/elseif block first, as some messages are similar.  
+  // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
+  // 
+  if(stristr(msg, LNG_MSG_BATTERY_LOW) != NULL) {
+    _aqualink_data.battery = LOW;
+  }
+  else if(stristr(msg, LNG_MSG_POOL_TEMP_SET) != NULL) {
+    //logMessage(LOG_DEBUG, "pool htr long message: %s", &message[20]);
+    _aqualink_data.pool_htr_set_point = atoi(message+20);
+  }
+  else if(stristr(msg, LNG_MSG_SPA_TEMP_SET) != NULL) {
+    //logMessage(LOG_DEBUG, "spa htr long message: %s", &message[19]);
+    _aqualink_data.spa_htr_set_point = atoi(message+19);
+  }
+  else if(stristr(msg, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
+    //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
+    _aqualink_data.frz_protect_set_point = atoi(message+28);
+  }
+  else if(strncasecmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
+    _aqualink_data.air_temp = atoi(msg+8);
+    if (msg[strlen(msg)-1] == 'F')
+    _aqualink_data.temp_units = FAHRENHEIT;
+    else if (msg[strlen(msg)-1] == 'C')
+    _aqualink_data.temp_units = CELSIUS;
+    else
+    _aqualink_data.temp_units = UNKNOWN;
+  }
+  else if(strncasecmp(msg, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
+    _aqualink_data.pool_temp = atoi(msg+9);
+  }
+  else if(strncasecmp(msg, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
+    _aqualink_data.spa_temp = atoi(msg+8);
+  }
+  else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
+    strcpy(_aqualink_data.date, msg);
+  }
+  else if(strncasecmp(msg, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0) {
+    _aqualink_data.swg_percent = atoi(msg+MSG_SWG_PCT_LEN);
+    logMessage(LOG_DEBUG, "Stored SWG Percent as %d\n", _aqualink_data.swg_percent);
+  }
+  else if(strncasecmp(msg, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0) {
+    _aqualink_data.swg_ppm = atoi(msg+MSG_SWG_PPM_LEN);
+    logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
+  }
+  else if( (msg[1] == ':' || msg[2] == ':') && msg[strlen(msg)-1] == 'M') { // time in format '9:45 AM'
+    strcpy(_aqualink_data.time, msg);
+    // Setting time takes a long time, so don't try until we have all other programmed data.
+    if ( (_initWithRS == true) && strlen(_aqualink_data.date) > 1 && checkAqualinkTime() != true ) {
+      logMessage(LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data.time, _aqualink_data.date);
+      aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);
+    } else {
+      logMessage(LOG_DEBUG, "RS time is accurate '%s %s'\n", _aqualink_data.time, _aqualink_data.date);
+    }
+    // If we get a time message before REV, the controller didn't see us as we started too quickly.
+    if ( _gotREV == false ) {
+      logMessage(LOG_NOTICE, "Getting control panel information\n",msg);
+      aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, &_aqualink_data);
+      _gotREV = true; // Force it to true just incase we don't understand the model#
+    }
+  }
+  else if(strstr(msg, " REV ") != NULL) {  // '8157 REV MMM'
+    // A master firmware revision message.
+    strcpy(_aqualink_data.version, msg);
+    _gotREV = true;
+    logMessage(LOG_NOTICE, "Control Panel %s\n",msg);
+    if ( _initWithRS == false) {
+      queueGetProgramData();
+      _initWithRS = true;
+    }
+  }
+  else if(stristr(msg, " TURNS ON") != NULL) {
+    logMessage(LOG_NOTICE, "Program data '%s'\n",msg);
+  }
+  else {
+    logMessage(LOG_DEBUG, "Ignoring '%s'\n",msg);
+  }
+  
+  // We processed the next message, kick any threads waiting on the message.
+  kick_aq_program_thread(&_aqualink_data);
+}
 
 bool process_packet(unsigned char* packet, int length)
 {
@@ -280,7 +375,7 @@ bool process_packet(unsigned char* packet, int length)
   if (processing_long_msg > 0 && packet[PKT_CMD] != CMD_MSG_LONG) {
     processing_long_msg = 0;
     //logMessage(LOG_ERR, "RS failed to receive complete long message, received '%s'\n",message);
-    //logMessage(LOG_DEBUG, "RS Finished receiving of MSG_LONG '%s'\n",message);
+    //logMessage(LOG_DEBUG, "RS didn't finished receiving of MSG_LONG '%s'\n",message);
     processMessage(message);
   }
   
@@ -301,13 +396,19 @@ bool process_packet(unsigned char* packet, int length)
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
     }
     //logMessage(LOG_DEBUG, "RS Pool temp set to %d | Spa temp %d\n",_aqualink_data.pool_temp,_aqualink_data.spa_temp);
+    /*
+    strcpy(message, "AquaPure 1%");
+    processMessage(message);
+    strcpy(message, "Salt 3200 PPM");
+    processMessage(message);
+    */
     break;
   case CMD_MSG:
     memset(message, 0, AQ_MSGLONGLEN+1);
     strncpy(message, (char*)packet+PKT_DATA+1, AQ_MSGLEN);
-    
+    //logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",message);
     if (packet[PKT_DATA] == 1) // Start of long message, get them all before processing
-    break;
+      break;
 
     processMessage(message);
     break;
@@ -315,6 +416,7 @@ bool process_packet(unsigned char* packet, int length)
     // First in sequence is normal message.
     processing_long_msg++;
     strncpy(&message[processing_long_msg*AQ_MSGLEN], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
+    //logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
     if (processing_long_msg == 3) {
       //logMessage(LOG_DEBUG, "RS Finished receiving of MSG_LONG '%s'\n",message);
       processMessage(message);
@@ -327,7 +429,7 @@ bool process_packet(unsigned char* packet, int length)
     rtn = false;
     break;
   default:
-    logMessage(LOG_INFO, "RS Received unknown packet.\n",length);
+    logMessage(LOG_INFO, "RS Received unknown packet, 0x%02hhx\n",packet[PKT_CMD]);
     rtn = false;
     break;
   }

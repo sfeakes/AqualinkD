@@ -163,6 +163,15 @@ void send_domoticz_mqtt_temp_msg(struct mg_connection *nc, int idx, int value)
   build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, (_aqualink_data->temp_units==FAHRENHEIT)?roundf(degFtoC(value)):value);
   send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
 }
+void send_domoticz_mqtt_numeric_msg(struct mg_connection *nc, int idx, int value) 
+{
+  if (idx <= 0)
+    return;
+
+  char mqtt_msg[JSON_MQTT_MSG_SIZE];
+  build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, value);
+  send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
+}
 
 void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
 {
@@ -188,6 +197,15 @@ void send_mqtt_setpoint_msg(struct mg_connection *nc, char *dev_name, long value
   sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(value):value );
   sprintf(mqtt_pub_topic, "%s/%s/setpoint", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
+}
+void send_mqtt_numeric_msg(struct mg_connection *nc, char *dev_name, int value)
+{
+  static char mqtt_pub_topic[250];
+  static char msg[10];
+  
+  sprintf(msg, "%d", value);
+  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, msg);
 }
 
 
@@ -228,6 +246,16 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
     //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_rfz_protect, _aqualink_data->frz_protect_set_point);
+  }
+  if (_aqualink_data->swg_percent != TEMP_UNKNOWN && _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent) {
+    _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
+    send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
+    send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_percent, _aqualink_data->swg_percent);
+  }
+  if (_aqualink_data->swg_ppm != TEMP_UNKNOWN && _aqualink_data->swg_ppm != _last_mqtt_aqualinkdata.swg_ppm) {
+    _last_mqtt_aqualinkdata.swg_ppm = _aqualink_data->swg_ppm;
+    send_mqtt_numeric_msg(nc, SWG_PPM_TOPIC, _aqualink_data->swg_ppm);
+    send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_ppm, _aqualink_data->swg_ppm);
   }
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -424,7 +452,17 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
   int i;
-  logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+  //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+  logMessage(LOG_DEBUG, "MQTT: topic %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
+
+  //Need to do this in a better manor, but for present it's ok.
+  static char tmp[20];
+  strncpy(tmp, msg->payload.p, msg->payload.len);
+  tmp[msg->payload.len] = '\0';
+
+  float value = atof(tmp);
+  //logMessage(LOG_DEBUG, "MQTT: topic converted %.*s %s %.2f\n",msg->topic.len, msg->topic.p, tmp, value);
+
 //printf("Topic %.*s\n",msg->topic.len, msg->topic.p);
   // get the parts from the topic
   char *pt1 = (char *)&msg->topic.p[strlen(_aqualink_config->mqtt_aq_topic)+1];
@@ -450,36 +488,36 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //aqualinkd/Pool_Heater/set
 
   if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
-    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(atof(msg->payload.p))) : round(atof(msg->payload.p));
+    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(value)) : round(value);
     if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
-        logMessage(LOG_INFO, "MQTT: request to set pool heater setpoint to %.2fc\n", atof(msg->payload.p));
+        logMessage(LOG_INFO, "MQTT: request to set pool heater setpoint to %.2fc\n", value);
         _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
       } else {
-        logMessage(LOG_ERR, "MQTT: request to set pool heater setpoint to %.2fc is outside of range\n", atof(msg->payload.p));
+        logMessage(LOG_ERR, "MQTT: request to set pool heater setpoint to %.2fc is outside of range\n", value);
         send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
       }
     } else if (strncmp(pt1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
-        logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", atof(msg->payload.p));
+        logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", value);
         _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
       } else {
-        logMessage(LOG_ERR, "MQTT: request to set spa heater setpoint to %.2fc is outside of range\n", atof(msg->payload.p));
+        logMessage(LOG_ERR, "MQTT: request to set spa heater setpoint to %.2fc is outside of range\n", value);
         send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
       }
     } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
       if (val <= FREEZE_PT_MAX && val >= FREEZE_PT_MIN) {
-      logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", atof(msg->payload.p));
+      logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
       _aqualink_data->unactioned.type = FREEZE_SETPOINT;
       } else {
-        logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc is outside of range\n", atof(msg->payload.p));
+        logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc is outside of range\n", value);
       }
     } else {
       // Not sure what the setpoint is, ignore.
       logMessage(LOG_DEBUG, "MQTT: ignoring %.*s don't recognise button setpoint\n", msg->topic.len, msg->topic.p);
       return;
     }
-    // logMessage(LOG_INFO, "MQTT: topic %.*s %.2f, setting %s\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+    // logMessage(LOG_INFO, "MQTT: topic %.*s %.2f, setting %s\n",msg->topic.len, msg->topic.p, value);
     time(&_aqualink_data->unactioned.requested);
     
   } else if (pt2 != NULL && (strncmp(pt2, "set", 3) == 0) && (strncmp(pt2, "setpoint", 8) != 0)) {
@@ -490,7 +528,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
         // Message is either a 1 or 0 for on or off
         int status = atoi(msg->payload.p);
         if ( status > 1 || status < 0) {
-          logMessage(LOG_ERR, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+          logMessage(LOG_ERR, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, value);
           logMessage(LOG_ERR, "MQTT: received unknown status of '%.*s' for '%s', Ignoring!\n", msg->payload.len, msg->payload.p, _aqualink_data->aqbuttons[i].name);
         }
         else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && status==0) ||

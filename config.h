@@ -40,6 +40,8 @@ struct aqconfig
   int dzidx_air_temp;
   int dzidx_pool_water_temp;
   int dzidx_spa_water_temp;
+  int dzidx_swg_percent;
+  int dzidx_swg_ppm;
   float light_programming_mode;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better

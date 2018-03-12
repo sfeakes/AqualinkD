@@ -112,7 +112,13 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     length += sprintf(buffer+length, ",\"spa_temp\":\" \"");
   else
     length += sprintf(buffer+length, ",\"spa_temp\":\"%d\"",aqdata->spa_temp );
+
+  if ( aqdata->swg_percent != TEMP_UNKNOWN )
+    length += sprintf(buffer+length, ",\"swg_percent\":\"%d\"",aqdata->swg_percent );
   
+  if ( aqdata->swg_ppm != TEMP_UNKNOWN )
+    length += sprintf(buffer+length, ",\"swg_ppm\":\"%d\"",aqdata->swg_ppm );
+
   if ( aqdata->temp_units == FAHRENHEIT )
     length += sprintf(buffer+length, ",\"temp_units\":\"%s\"",JSON_FAHRENHEIT );
   else if ( aqdata->temp_units == CELSIUS )
