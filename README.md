@@ -1,7 +1,7 @@
 # Aqualinkd  
 linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. So you can control your pool equiptment from any phone/tablet or computer, and should work with just about Home control systems, including Apple HomeKit, Samsung, Alexa, Google, etc home hubs.
 
-### It does not, and will never profide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
+### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
 
 ## Builtin WEB Interface.
 ![Image](extras/web_ui.png?raw=true)
@@ -49,10 +49,18 @@ Manual install for init-d systems
 ## Hardware
 You will need a [USB2RS485](https://www.amazon.com/OctagonStar-Converter-Adapter-Interface-FT232RL/dp/B01LCFRR3E/) adapter connected to your pool equiptmeent RS buss interface.  (If you have an inside controller mounted on your wall, this is usually best place, if not the outside control panel is the next best place).  Then a computer running linux connected to that USB2RS485 adapter. Code is designed & developed for raspberry pi zero w, so any computer with that as a minimum should work.
 
+Raspberry Pi Zero is the perfect device for this software. But all Raspberry PI's are inherently unstable devices to be running 24/7/365 in default Linux configrations. This is due to the way they use CF card, a power outage will generally cause CF card coruption. My recomendation is to use what's calles a "read only root" installation of Linux. Converting Raspbian to this is quite simple, but will require some Linux knoladge. There are two methods, one uses overlayfs and if you are not knolagable in Linux this is the easiest option. There are a some downsides to this method on a PI, so my prefered method is to simply use tmpfs on it's own without overlayfs ontop, this is easier to setup initially, but will probably require a few custom things to get right as some services will fail. Once you are up and running, You should search this topic, and there are a plenty of resources, and even some scripts the will do everything for you.  But below are two links that explain the process.
+
+[Good overlayfs tutorial on PI Forums](https://www.raspberrypi.org/forums/viewtopic.php?t=161416)
+
+[My prefered way to impliment](https://hallard.me/raspberry-pi-read-only/)
+
+I have my own scripts to do this for me, and probably won't ever document or publish them, but thay are very similar to the 2nd link above.
+
 ## Aqualinkd Configuration
 Please see the [aqualinkd.conf]
 (https://github.com/sfeakes/aqualinkd/blob/master/extras/aqualinkd.conf) 
-example in the release directory.  Many things are turned of by default, and you may need to enable or configure them for your setup.
+example in the release directory.  Many things are turned off by default, and you may need to enable or configure them for your setup.
 Specifically, make sure you configure your MQTT, Pool Equiptment Labels & Domoticz ID's in there, looking at the file it should be self explanatory. 
 
 ## Configuration with home automation hubs
