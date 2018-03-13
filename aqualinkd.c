@@ -348,6 +348,11 @@ void processMessage(char *message)
   else if(stristr(msg, " TURNS ON") != NULL) {
     logMessage(LOG_NOTICE, "Program data '%s'\n",msg);
   }
+  else if(_config_parameters.override_freeze_protect == TRUE &&
+          strncasecmp(msg, "Press Enter* to override Freeze Protection with", 47) == 0 ){
+    //send_cmd(KEY_ENTER, aq_data);
+    aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
+  }
   else {
     logMessage(LOG_DEBUG, "Ignoring '%s'\n",msg);
   }
@@ -499,6 +504,7 @@ int main(int argc, char *argv[]) {
   logMessage(LOG_NOTICE, "Config serial_port       = %s\n", _config_parameters.serial_port);
   logMessage(LOG_NOTICE, "Config web_directory     = %s\n", _config_parameters.web_directory);
   logMessage(LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _config_parameters.device_id);
+  logMessage(LOG_NOTICE, "Config override frz prot = %s\n", bool2text(_config_parameters.override_freeze_protect));
 #ifndef MG_DISABLE_MQTT
   logMessage(LOG_NOTICE, "Config mqtt_server       = %s\n", _config_parameters.mqtt_server);
   logMessage(LOG_NOTICE, "Config mqtt_dz_sub_topic = %s\n", _config_parameters.mqtt_dz_sub_topic);
@@ -510,6 +516,8 @@ int main(int argc, char *argv[]) {
   logMessage(LOG_NOTICE, "Config idx water temp    = %d\n", _config_parameters.dzidx_air_temp);
   logMessage(LOG_NOTICE, "Config idx pool temp     = %d\n", _config_parameters.dzidx_pool_water_temp);
   logMessage(LOG_NOTICE, "Config idx spa temp      = %d\n", _config_parameters.dzidx_spa_water_temp);
+  logMessage(LOG_NOTICE, "Config idx SWG Percent   = %d\n", _config_parameters.dzidx_swg_percent);
+  logMessage(LOG_NOTICE, "Config idx SWG PPM       = %d\n", _config_parameters.dzidx_swg_ppm);
   /* removed until domoticz has a better virtual thermostat
   logMessage(LOG_NOTICE, "Config idx pool thermostat = %d\n", _config_parameters.dzidx_pool_thermostat);
   logMessage(LOG_NOTICE, "Config idx spa thermostat  = %d\n", _config_parameters.dzidx_spa_thermostat);

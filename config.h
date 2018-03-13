@@ -43,6 +43,7 @@ struct aqconfig
   int dzidx_swg_percent;
   int dzidx_swg_ppm;
   float light_programming_mode;
+  bool override_freeze_protect;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better
   //char mqtt_pub_topic[250];

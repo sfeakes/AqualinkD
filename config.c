@@ -54,6 +54,7 @@ void init_parameters (struct aqconfig * parms)
   //parms->device_id = strtoul(DEFAULT_DEVICE_ID, &p, 16);
   parms->device_id = strtoul(DEFAULT_DEVICE_ID, NULL, 16);
   //sscanf(DEFAULT_DEVICE_ID, "0x%x", &parms->device_id);
+  parms->override_freeze_protect = FALSE;
 
   parms->mqtt_dz_sub_topic = DEFAULT_MQTT_DZ_OUT;
   parms->mqtt_dz_pub_topic = DEFAULT_MQTT_DZ_IN;
@@ -239,6 +240,8 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_swg_percent = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
               config_parameters->dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
+            } else if (strncasecmp (b_ptr, "override_freeze_protect", 23) == 0) {
+              config_parameters->override_freeze_protect = text2bool(indx+1);
             }/*else if (strncasecmp (b_ptr, "pool_thermostat_dzidx", 21) == 0) {      // removed until domoticz has a better virtual thermostat
               config_parameters->dzidx_pool_thermostat = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "spa_thermostat_dzidx", 20) == 0) {
