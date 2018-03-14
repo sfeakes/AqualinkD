@@ -11,7 +11,7 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 
 # TL;DR Install
 ## Quick instal if you are using Raspberry PI
-* There is a chance the pre-compiled binary will run, copy the git repo and run the install.sh script from the release directory.
+* There is a chance the pre-compiled binary will run, copy the git repo and run the install.sh script from the release directory. ie from the install directory `sudo ./release/install.sh`
 * try to run it with :-
     * `sudo aqualinkd -d -c /etc/aqualinkd.conf`
     * If it runs, then start configuring it to your setup.

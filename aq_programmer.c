@@ -729,7 +729,7 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 
 bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived)
 {
-  //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
+  logMessage(LOG_DEBUG, "waitForMessage %s %d\n",message,numMessageReceived);
   int i=0;
   pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
@@ -747,7 +747,7 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   while( ++i <= numMessageReceived)
   {
     logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
-    
+
     if (message != NULL) {
       ptr = stristr(aq_data->last_message, msgS);
       if (ptr != NULL) { // match
@@ -777,7 +777,29 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   return true;
 }
 
+bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
+{
+  char* expectedMsg = "PRESS ENTER* TO SELECT";
+  int wait_messages = 3;
+  bool found = false;
+  int tries = 0;
+  // Select the MENU and wait to get the RS8 respond.
+  
+  while (found == false && tries <= 3) {
+    send_cmd(KEY_MENU, aq_data);
+    found = waitForMessage(aq_data, expectedMsg, wait_messages);
+    tries++;
+  }
 
+  if (found == false)
+    return false;
+
+  send_cmd(KEY_ENTER, aq_data);
+  waitForMessage(aq_data, NULL, 1);
+  
+  return select_sub_menu_item(aq_data, item_string);
+}
+/*
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
 {
   char* expectedMsg = "PRESS ENTER* TO SELECT";
@@ -800,6 +822,7 @@ bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
   
   return select_sub_menu_item(aq_data, item_string);
 }
+*/
 
 //bool select_sub_menu_item(char* item_string, struct aqualinkdata *aq_data)
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)

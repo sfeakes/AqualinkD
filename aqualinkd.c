@@ -448,14 +448,26 @@ void action_delayed_request()
   snprintf(sval, 9, "%d", _aqualink_data.unactioned.value);
 
   if (_aqualink_data.unactioned.type == POOL_HTR_SETOINT) {
-    aq_programmer(AQ_SET_POOL_HEATER_TEMP, sval, &_aqualink_data);
-    logMessage(LOG_NOTICE, "Setting pool heater setpoint to %d\n",_aqualink_data.unactioned.value);
+    if ( _aqualink_data.pool_htr_set_point != _aqualink_data.unactioned.value ) {
+      aq_programmer(AQ_SET_POOL_HEATER_TEMP, sval, &_aqualink_data);
+      logMessage(LOG_NOTICE, "Setting pool heater setpoint to %d\n",_aqualink_data.unactioned.value);
+    } else {
+      logMessage(LOG_NOTICE, "Pool heater setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
+    }
   } else if (_aqualink_data.unactioned.type == SPA_HTR_SETOINT) {
-    aq_programmer(AQ_SET_SPA_HEATER_TEMP, sval, &_aqualink_data);
-    logMessage(LOG_NOTICE, "Setting spa heater setpoint to %d\n",_aqualink_data.unactioned.value);
+    if ( _aqualink_data.spa_htr_set_point != _aqualink_data.unactioned.value ) {
+      aq_programmer(AQ_SET_SPA_HEATER_TEMP, sval, &_aqualink_data);
+      logMessage(LOG_NOTICE, "Setting spa heater setpoint to %d\n",_aqualink_data.unactioned.value);
+    } else {
+      logMessage(LOG_NOTICE, "Spa heater setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
+    }
   } else if (_aqualink_data.unactioned.type == FREEZE_SETPOINT) {
-    aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, sval, &_aqualink_data);
-    logMessage(LOG_NOTICE, "Setting freeze protect to %d\n",_aqualink_data.unactioned.value);
+    if ( _aqualink_data.frz_protect_set_point != _aqualink_data.unactioned.value ) {
+      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, sval, &_aqualink_data);
+      logMessage(LOG_NOTICE, "Setting freeze protect to %d\n",_aqualink_data.unactioned.value);
+    } else {
+      logMessage(LOG_NOTICE, "Freeze setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
+    }
   }
 
   _aqualink_data.unactioned.type = NO_ACTION;
