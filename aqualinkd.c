@@ -270,14 +270,20 @@ void processMessage(char *message)
   // NSF replace message with msg 
   msg = cleanwhitespace(message);
   _aqualink_data.last_message = msg;
+  //_aqualink_data.display_message = NULL;
   
   //aqualink_strcpy(_aqualink_data.message, msg);
   
-  logMessage(LOG_DEBUG, "RS Message :- '%s'\n",msg);
+  logMessage(LOG_INFO, "RS Message :- '%s'\n",msg);
   
   // Check long messages in this if/elseif block first, as some messages are similar.  
   // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
-  // 
+  //
+  /*
+  if(stristr(msg, "JANDY AquaLinkRS") != NULL) {
+    _aqualink_data.display_message = NULL;
+  }
+  else*/
   if(stristr(msg, LNG_MSG_BATTERY_LOW) != NULL) {
     _aqualink_data.battery = LOW;
   }
@@ -355,6 +361,7 @@ void processMessage(char *message)
   }
   else {
     logMessage(LOG_DEBUG, "Ignoring '%s'\n",msg);
+    //_aqualink_data.display_message = msg;
   }
   
   // We processed the next message, kick any threads waiting on the message.
@@ -566,7 +573,7 @@ void main_loop() {
   unsigned char packet_buffer[AQ_MAXPKTLEN];
 
   // NSF need to find a better place to init this.
-  _aqualink_data.aq_command = 0x00;
+  //_aqualink_data.aq_command = 0x00;
   _aqualink_data.active_thread.thread_id = 0;
   _aqualink_data.air_temp = TEMP_UNKNOWN;
   _aqualink_data.pool_temp = TEMP_UNKNOWN;
@@ -621,8 +628,11 @@ void main_loop() {
       blank_read = 0;
 
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
+        /*
         send_ack(rs_fd, _aqualink_data.aq_command);
         _aqualink_data.aq_command = NUL;
+        */
+        send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false) {

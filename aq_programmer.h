@@ -27,6 +27,9 @@ struct programmingThreadCtrl {
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);
 void kick_aq_program_thread(struct aqualinkdata *aq_data);
 
+unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
+//bool push_aq_cmd(unsigned char cmd);
+
 //void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
 //void cancel_menu(struct aqualinkdata *aq_data);
 

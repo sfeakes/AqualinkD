@@ -25,7 +25,7 @@
 #include "aqualink.h"
 #include "utils.h"
 #include "aq_programmer.h"
-
+#include "aq_serial.h"
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
@@ -49,6 +49,55 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
 bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived);
 bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* message2, int numMessageReceived);
 
+bool push_aq_cmd(unsigned char cmd);
+
+#define MAX_STACK 20
+int _stack_place = 0;
+unsigned char _commands[MAX_STACK];
+//unsigned char pgm_commands[MAX_STACK];
+unsigned char _pgm_command = NUL;
+
+bool _last_sent_was_cmd = false;
+
+bool push_aq_cmd(unsigned char cmd) {
+  if (_stack_place < MAX_STACK) {
+    _commands[_stack_place] = cmd;
+    _stack_place++;
+  } else {
+    logMessage(LOG_ERR, "Command queue overflow, too many unsent commands to RS control panel\n");
+    return false;
+  }
+
+  return true;
+}
+
+unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
+{
+  unsigned char cmd = NUL;
+  
+  // can only send a command every other ack.
+  if (_last_sent_was_cmd == true) {
+    _last_sent_was_cmd= false;
+  }
+  else if (aq_data->active_thread.thread_id != 0) {
+    cmd = _pgm_command;
+    _pgm_command = NUL;
+  }
+  else if (_stack_place > 0) {
+    cmd = _commands[0];
+    _stack_place--;
+    memcpy(&_commands[0], &_commands[1], sizeof(unsigned char) * MAX_STACK);
+  }
+
+  if (cmd == NUL)
+    _last_sent_was_cmd= false;
+  else
+    _last_sent_was_cmd= true;
+
+  return cmd;
+}
+
+
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
   if (aq_data->active_thread.thread_id != 0) {
@@ -67,13 +116,17 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
     strncpy(programmingthread->thread_args, args, sizeof(programmingthread->thread_args)-1);
 
   switch(type) {
-    case AQ_SEND_CMD: 
+    case AQ_SEND_CMD:
+      push_aq_cmd((unsigned char)*args);
+      logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", (unsigned char)*args);
+      /*
       if(aq_data->active_thread.thread_id == 0) { // No need to thread a plane send if no active threads
         send_cmd( (unsigned char)*args, aq_data);
       } else if( pthread_create( &programmingthread->thread_id , NULL ,  threadded_send_cmd, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
+      */
       break;
     case AQ_GET_POOL_SPA_HEATER_TEMPS:
       if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_pool_spa_heater_temps, (void*)programmingthread) < 0) {
@@ -214,7 +267,7 @@ bool setAqualinkNumericField(struct aqualinkdata *aq_data, char *value_label, in
   
   return true;
 }
-
+/*
 void *threadded_send_cmd( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -229,7 +282,7 @@ void *threadded_send_cmd( void *ptr )
 
   return ptr;
 }
-
+*/
 void *set_aqualink_light_colormode( void *ptr )
 {
   int i;
@@ -631,8 +684,31 @@ void *get_aqualink_programs( void *ptr )
   return ptr;
 }
 
+/*
+void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
+{
+  push_aq_cmd(cmd);
+  logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", cmd);
+}
+*/
 
+void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
+{
+  int i=0;
+  // If there is an unsent command, wait.
+  while ( (_pgm_command != NUL) && ( i++ < 10) ) {
+    //sleep(1); // NSF Change to smaller time.
+    //logMessage(LOG_ERR, "********  QUEUE IS FULL ********  delay\n", pgm_command);
+    delay(500);
+  }
+  
+  _pgm_command = cmd;
+  //delay(200);
 
+  logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", _pgm_command);
+}
+
+/*
 void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 {
   int i=0;
@@ -645,9 +721,9 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
   aq_data->aq_command = cmd;
   //delay(200);
 
-  logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller\n", aq_data->aq_command);
+  logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", aq_data->aq_command);
 }
-
+*/
 
 void cancel_menu(struct aqualinkdata *aq_data)
 {

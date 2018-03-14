@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <string.h>
 
 #include "aq_serial.h"
 #include "utils.h"
@@ -195,7 +196,6 @@ void test_cmd()
 }
 
 
-
 void send_ack(int fd, unsigned char command)
 {
   const int length = 11;
@@ -221,7 +221,8 @@ void send_ack(int fd, unsigned char command)
 
   // Send the packet to the master device.
   //write(fd, ackPacket, length);
-  
+  logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", command);
+
 #ifdef BLOCKING_MODE
   write(fd, ackPacket, length);
 #else

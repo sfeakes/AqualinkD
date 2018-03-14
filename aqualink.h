@@ -67,7 +67,8 @@ struct aqualinkdata
   char time[AQ_MSGLEN];
   //char datestr[DATE_STRING_LEN];
   //char message[AQ_MSGLONGLEN];
-  char *last_message; // Be careful using this, can get core dumps.  
+  char *last_message; // Be careful using this, can get core dumps.
+  //char *display_message;  
   unsigned char raw_status[AQ_PSTLEN];
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
@@ -80,7 +81,7 @@ struct aqualinkdata
   int frz_protect_set_point;
   int pool_htr_set_point;
   int spa_htr_set_point;
-  unsigned char aq_command;
+  //unsigned char aq_command;
   struct programmingthread active_thread;
   struct action unactioned;
   int swg_percent;
