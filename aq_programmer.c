@@ -812,7 +812,6 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   char* msgS;
   char* ptr;
   
-  
   if (message != NULL) {
     if (message[0] == '^')
       msgS = &message[1];
@@ -870,8 +869,9 @@ bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
   if (found == false)
     return false;
 
-  send_cmd(KEY_ENTER, aq_data);
-  waitForMessage(aq_data, NULL, 1);
+  // NSF  This isn't needed and seems to cause issue on some controllers.
+  //send_cmd(KEY_ENTER, aq_data);
+  //waitForMessage(aq_data, NULL, 1);
   
   return select_sub_menu_item(aq_data, item_string);
 }
