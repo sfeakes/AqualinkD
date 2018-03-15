@@ -410,7 +410,7 @@ bool process_packet(unsigned char* packet, int length)
   
   // Check packet against last check if different.
   if (memcmp(packet, last_packet, length) == 0) {
-    //logMessage(LOG_DEBUG, "RS Received duplicate, ignoring.\n",length);
+    logMessage(LOG_DEBUG, "RS Received duplicate, ignoring.\n",length);
     return rtn;
   } else {
     memcpy(last_packet, packet, length);
@@ -453,7 +453,10 @@ bool process_packet(unsigned char* packet, int length)
     strncpy(message, (char*)packet+PKT_DATA+1, AQ_MSGLEN);
     //logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",message);
     if (packet[PKT_DATA] == 1) // Start of long message, get them all before processing
+    {
+      kick_aq_program_thread(&_aqualink_data);
       break;
+    }
 
     processMessage(message);
     break;
@@ -660,9 +663,7 @@ void main_loop() {
       logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
       blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
     } else if (packet_length == 0) {
-      #ifdef DEBUG_ALL_SERIAL
-        logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
-      #endif
+      logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;
@@ -673,7 +674,7 @@ void main_loop() {
         _aqualink_data.aq_command = NUL;
         */
         if (getLogLevel() >= LOG_DEBUG)
-          logMessage(LOG_DEBUG, "RS received packet of type %s\n", get_packet_type(packet_buffer, packet_length));
+          logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
 
         send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         // Process the packet. This includes deriving general status, and identifying

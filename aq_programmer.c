@@ -861,7 +861,10 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   
   while( ++i <= numMessageReceived)
   {
-    logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
+    if (message != NULL)
+      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
+    else
+      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d waiting for next message, received '%s'\n",i,numMessageReceived,aq_data->last_message);
 
     if (message != NULL) {
       ptr = stristr(aq_data->last_message, msgS);
