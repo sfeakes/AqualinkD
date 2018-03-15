@@ -34,6 +34,14 @@
 #define CMD_MSG         0x03
 #define CMD_MSG_LONG    0x04
 
+/* PDA KEY CODES */  // Just plating at the moment
+#define KEY_PDA_UP     0x06
+#define KEY_PDA_DOWN   0x05
+#define KEY_PDA_BACK   0x02
+#define KEY_PDA_SELECT 0x04
+#define KEY_PDA_PGUP   0x05
+#define KEY_PDA_PGDN   0x05
+
 /* KEY/BUTTON CODES */
 #define KEY_PUMP      0x02
 #define KEY_SPA       0x01
@@ -129,9 +137,5 @@ int get_packet(int file_descriptor, unsigned char* packet);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet, int length);
-
-
-
-
 
 #endif // AQ_SERIAL_H_

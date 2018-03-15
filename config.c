@@ -71,6 +71,7 @@ void init_parameters (struct aqconfig * parms)
   parms->light_programming_mode = 0;
   parms->deamonize = true;
   parms->log_file = '\0';
+  parms->pda_mode = false;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -242,6 +243,8 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "override_freeze_protect", 23) == 0) {
               config_parameters->override_freeze_protect = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {
+              config_parameters->pda_mode = text2bool(indx+1);
             }/*else if (strncasecmp (b_ptr, "pool_thermostat_dzidx", 21) == 0) {      // removed until domoticz has a better virtual thermostat
               config_parameters->dzidx_pool_thermostat = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "spa_thermostat_dzidx", 20) == 0) {

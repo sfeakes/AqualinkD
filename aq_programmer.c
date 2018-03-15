@@ -43,6 +43,7 @@ void *get_freeze_protect_temp( void *ptr );
 void *get_aqualink_diag_model( void *ptr );
 void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
+void *set_aqualink_PDA_init( void *ptr );
 
 bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate state, int numMessageReceived);
 
@@ -60,6 +61,7 @@ unsigned char _pgm_command = NUL;
 bool _last_sent_was_cmd = false;
 
 bool push_aq_cmd(unsigned char cmd) {
+  //logMessage(LOG_DEBUG, "push_aq_cmd\n");
   if (_stack_place < MAX_STACK) {
     _commands[_stack_place] = cmd;
     _stack_place++;
@@ -74,7 +76,7 @@ bool push_aq_cmd(unsigned char cmd) {
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
-  
+  //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
   // can only send a command every other ack.
   if (_last_sent_was_cmd == true) {
     _last_sent_was_cmd= false;
@@ -111,10 +113,10 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
   struct programmingThreadCtrl *programmingthread = malloc(sizeof(struct programmingThreadCtrl));
   
   programmingthread->aq_data = aq_data;
-  //programmingthread->thread_args = args;
-  if (args != NULL)
-    strncpy(programmingthread->thread_args, args, sizeof(programmingthread->thread_args)-1);
 
+  //programmingthread->thread_args = args;
+  if (args != NULL && type != AQ_SEND_CMD)
+    strncpy(programmingthread->thread_args, args, sizeof(programmingthread->thread_args)-1);
   switch(type) {
     case AQ_SEND_CMD:
       push_aq_cmd((unsigned char)*args);
@@ -178,6 +180,12 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
       break;
       case AQ_SET_COLORMODE:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_light_colormode, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+      case AQ_PDA_INIT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_init, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
@@ -283,6 +291,38 @@ void *threadded_send_cmd( void *ptr )
   return ptr;
 }
 */
+
+void *set_aqualink_PDA_init( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
+  
+  int val = atoi((char*)threadCtrl->thread_args);
+
+  logMessage(LOG_DEBUG, "PDA Init\n", val);
+  
+  //send_cmd(KEY_PDA_DOWN, aq_data);
+  //waitForMessage(threadCtrl->aq_data, NULL, 1);
+
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  waitForMessage(threadCtrl->aq_data, NULL, 1);
+
+  send_cmd(KEY_PDA_DOWN, aq_data);
+  waitForMessage(threadCtrl->aq_data, NULL, 1);
+
+  send_cmd(KEY_PDA_PGDN, aq_data);
+  waitForMessage(threadCtrl->aq_data, NULL, 1);
+
+  cleanAndTerminateThread(threadCtrl);
+  
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
+
+
 void *set_aqualink_light_colormode( void *ptr )
 {
   int i;

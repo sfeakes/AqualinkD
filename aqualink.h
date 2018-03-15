@@ -66,7 +66,7 @@ struct aqualinkdata
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
   //char datestr[DATE_STRING_LEN];
-  //char message[AQ_MSGLONGLEN];
+  char message[AQ_MSGLONGLEN];
   char *last_message; // Be careful using this, can get core dumps.
   //char *display_message;  
   unsigned char raw_status[AQ_PSTLEN];

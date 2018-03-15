@@ -42,6 +42,7 @@
 
 #define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
+
 static volatile bool _keepRunning = true;
 static struct aqconfig _config_parameters;
 static struct aqualinkdata _aqualink_data;
@@ -368,6 +369,38 @@ void processMessage(char *message)
   kick_aq_program_thread(&_aqualink_data);
 }
 
+void processPDAMessage(char *message)
+{
+  char *msg;
+
+  msg = cleanwhitespace(message);
+  _aqualink_data.last_message = msg;
+
+  logMessage(LOG_INFO, "RS PDA Message :- '%s'\n",msg);
+
+  if (_aqualink_data.message != NULL && strncasecmp(_aqualink_data.message, "AIR", 3) == 0)
+  {
+    _aqualink_data.temp_units = FAHRENHEIT;
+    // RS PDA Message :- '73`     66`'
+    _aqualink_data.air_temp = atoi(msg);
+    _aqualink_data.pool_temp = atoi(msg+8);
+    logMessage(LOG_DEBUG, "Air = %d : Pool = %d\n",_aqualink_data.air_temp, _aqualink_data.pool_temp);
+
+    //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
+    aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+  } else if(strstr(msg, "REV ") != NULL) {  // 'REV MMM'
+    aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+  }
+
+  //_aqualink_data.last_message = msg;
+  strncpy(_aqualink_data.message, msg,AQ_MSGLONGLEN);
+
+  // We processed the next message, kick any threads waiting on the message.
+  kick_aq_program_thread(&_aqualink_data);
+  
+}
+
+
 bool process_packet(unsigned char* packet, int length)
 {
   bool rtn = false;
@@ -426,13 +459,20 @@ bool process_packet(unsigned char* packet, int length)
     break;
   case CMD_MSG_LONG:
     // First in sequence is normal message.
-    processing_long_msg++;
-    strncpy(&message[processing_long_msg*AQ_MSGLEN], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
-    //logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
-    if (processing_long_msg == 3) {
-      //logMessage(LOG_DEBUG, "RS Finished receiving of MSG_LONG '%s'\n",message);
-      processMessage(message);
-      processing_long_msg=0;
+    if (_config_parameters.pda_mode == true) {
+      strncpy(message, (char*)packet+PKT_DATA+1, AQ_MSGLEN);
+      //logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",(char*)packet);
+      //logMessage(LOG_DEBUG_SERIAL, "RS deciphered message '%s'\n",message);
+      processPDAMessage(message);
+    } else {
+      processing_long_msg++;
+      strncpy(&message[processing_long_msg*AQ_MSGLEN], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
+      //logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
+      if (processing_long_msg == 3) {
+        //logMessage(LOG_DEBUG, "RS Finished receiving of MSG_LONG '%s'\n",message);
+        processMessage(message);
+        processing_long_msg=0;
+      }
     }
     break;
   case CMD_PROBE:
@@ -487,6 +527,7 @@ int main(int argc, char *argv[]) {
 
   int i;
   char *cfgFile = DEFAULT_CONFIG_FILE;
+  
 
   // struct lws_context_creation_info info;
   // Log only NOTICE messages and above. Debug and info messages
@@ -537,6 +578,7 @@ int main(int argc, char *argv[]) {
   logMessage(LOG_NOTICE, "Config idx spa temp      = %d\n", _config_parameters.dzidx_spa_water_temp);
   logMessage(LOG_NOTICE, "Config idx SWG Percent   = %d\n", _config_parameters.dzidx_swg_percent);
   logMessage(LOG_NOTICE, "Config idx SWG PPM       = %d\n", _config_parameters.dzidx_swg_ppm);
+  logMessage(LOG_NOTICE, "Config PDA Mode          = %s\n", bool2text(_config_parameters.pda_mode));
   /* removed until domoticz has a better virtual thermostat
   logMessage(LOG_NOTICE, "Config idx pool thermostat = %d\n", _config_parameters.dzidx_pool_thermostat);
   logMessage(LOG_NOTICE, "Config idx spa thermostat  = %d\n", _config_parameters.dzidx_spa_thermostat);
@@ -546,8 +588,6 @@ int main(int argc, char *argv[]) {
   logMessage(LOG_NOTICE, "Config log_file          = %s\n", _config_parameters.log_file);
   logMessage(LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _config_parameters.light_programming_mode);
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
-
-  
 
   for (i=0; i < TOTAL_BUTONS; i++) {
     logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
@@ -632,6 +672,7 @@ void main_loop() {
         send_ack(rs_fd, _aqualink_data.aq_command);
         _aqualink_data.aq_command = NUL;
         */
+
         send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
@@ -641,9 +682,10 @@ void main_loop() {
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]); 
       }
-      if (getLogLevel() >= LOG_DEBUG_SERIAL)
+      if (getLogLevel() >= LOG_DEBUG_SERIAL) {
           logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
                                        (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
+      }
 
     }
     mg_mgr_poll(&mgr, 0);

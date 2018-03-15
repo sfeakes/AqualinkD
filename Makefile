@@ -23,16 +23,27 @@ CFLAGS = -Wall $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -
 # define the C source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c mongoose.c
 
+SL_SRC = serial_logger.c aq_serial.c utils.c
+
 OBJS = $(SRCS:.c=.o)
+SL_OBJS = $(SL_SRC:.c=.o)
 
 # define the executable file
 MAIN = ./release/aqualinkd
+SLOG = ./release/serial_logger
 
 all:    $(MAIN) 
   @echo: $(MAIN) have been compiled
 
 $(MAIN): $(OBJS) 
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+
+
+slog:	$(SLOG)
+  @echo: $(SLOG) have been compiled
+
+$(SLOG): $(SL_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS)
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
