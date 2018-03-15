@@ -672,7 +672,9 @@ void main_loop() {
         send_ack(rs_fd, _aqualink_data.aq_command);
         _aqualink_data.aq_command = NUL;
         */
-
+        if (getLogLevel() >= LOG_DEBUG)
+          logMessage(LOG_DEBUG, "Packet of type %s\n", get_packet_type(packet_buffer, packet_length));
+          
         send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
