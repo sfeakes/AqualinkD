@@ -52,7 +52,7 @@ Below are versions :-
 
 
 | Version | Notes | 
-| --- | --- |
+| ---------------------------------- | --- |
 | JANDY AquaLinkRS 8157 REV MMM      | Everything working  | 
 | Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |  
 | Jandy iAqualink E0260801 REV R     | All working, but sometimes programming is hit 'n miss. This is a combo board iAqualink & AqualinkRS  |  
