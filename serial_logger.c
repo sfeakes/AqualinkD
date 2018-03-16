@@ -5,11 +5,13 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <signal.h>
+#include <string.h>
 
 #include "aq_serial.h"
 #include "utils.h"
 
 #define SLOG_MAX 40
+#define PACKET_MAX 1000
 
 typedef struct serial_id_log {
   unsigned char ID;
@@ -18,13 +20,22 @@ typedef struct serial_id_log {
 
 bool _keepRunning = true;           
 
-
+unsigned char _goodID[] = { 0x0a, 0x0b, 0x08, 0x09 };
 
 void intHandler(int dummy) {
   _keepRunning = false;
   logMessage(LOG_NOTICE, "Stopping!");
 }
 
+bool canUse(unsigned char ID)
+{
+  int i;
+  for (i=0; i < strlen((char*)_goodID); i++ ) {
+    if (ID == _goodID[i])
+      return true;
+  }
+  return false;
+} 
 
 int main(int argc, char *argv[]) {
   int rs_fd;
@@ -35,6 +46,7 @@ int main(int argc, char *argv[]) {
   bool found;
   serial_id_log slog[SLOG_MAX];
   int sindex = 0;
+  int received_packets=0;
 
   if (getuid() != 0) {
     fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
@@ -59,6 +71,7 @@ int main(int argc, char *argv[]) {
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
+    
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.
       logMessage(LOG_DEBUG_SERIAL, "ERROR, on serial port\n");
@@ -94,6 +107,11 @@ int main(int argc, char *argv[]) {
       }
 
       lastID = packet_buffer[PKT_DEST];
+      received_packets++;
+    }
+
+    if (received_packets >= PACKET_MAX) {
+      _keepRunning = false;
     }
   }
 
@@ -102,18 +120,10 @@ int main(int argc, char *argv[]) {
     logMessage(LOG_DEBUG_SERIAL, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
   logMessage(LOG_DEBUG_SERIAL, "ID's found\n");
   for (i=0; i <= sindex; i++) {
-    logMessage(LOG_DEBUG_SERIAL, "ID 0x%02hhx is %s\n",slog[i].ID, slog[i].inuse==true?"in use":"not used");
+    logMessage(LOG_DEBUG_SERIAL, "ID 0x%02hhx is %s %s\n",slog[i].ID, 
+                                                          slog[i].inuse==true?"in use":"not used", 
+                                                          slog[i].inuse==false && canUse(slog[i].ID)==true?" <-- can use for Aqualinkd":"");
   }
-  /*
-  static serial_id_logger slog[SLOG_MAX];
-            static unsigned char lastID;
-            static int index = 0;
 
-  if (packet_buffer[PKT_DEST] == DEV_MASTER && packet_buffer[PKT_CMD] == CMD_ACK) {
-              logMessage(LOG_DEBUG_SERIAL, "ID is in use 0x%02hhx\n",lastID);
-            }
-            lastID = packet_buffer[PKT_DEST];
-          }
-  */
   return 0;
 }
