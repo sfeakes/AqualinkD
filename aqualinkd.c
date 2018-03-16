@@ -663,7 +663,7 @@ void main_loop() {
       logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
       blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
     } else if (packet_length == 0) {
-      logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
+      //logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;

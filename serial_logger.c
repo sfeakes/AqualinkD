@@ -9,7 +9,7 @@
 #include "aq_serial.h"
 #include "utils.h"
 
-#define SLOG_MAX 20
+#define SLOG_MAX 40
 
 typedef struct serial_id_log {
   unsigned char ID;
@@ -98,6 +98,8 @@ int main(int argc, char *argv[]) {
   }
 
   logMessage(LOG_DEBUG_SERIAL, "\n");
+  if (sindex >= SLOG_MAX)
+    logMessage(LOG_DEBUG_SERIAL, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
   logMessage(LOG_DEBUG_SERIAL, "ID's found\n");
   for (i=0; i <= sindex; i++) {
     logMessage(LOG_DEBUG_SERIAL, "ID 0x%02hhx is %s\n",slog[i].ID, slog[i].inuse==true?"in use":"not used");

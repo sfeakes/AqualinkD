@@ -44,7 +44,19 @@ Manual install for init-d systems
 ## TODO
 * Only WEB interface (WS) & AQ_MQTT can change freeze & heater temprature set-points. Need to add support for standard HTTP. (DOMOTICZ_MQTT won't be supported until Domoticz create a better virtual thermostat)
 * Web interface has a lot of fixed layout items that as specific to my implimentation. The HTML & CSS need a complete overhall and re-though to support different configurations.
-* There is code to control different light modes/shows, but it's not finished and no documentation will be provided until it is finished. It will not work unless you have this exact setup Haywood ColorLogic/Aqualink RS8. 
+* There is code to control different light modes/shows, but it's not finished and no documentation will be provided until it is finished. It will not work unless you have this exact setup Haywood ColorLogic/Aqualink RS8.
+
+# Aqualink Versions tested
+This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo controll panels. At the moment it will not work with Aqualink PDA / AquaPalm and NON Combo iAqualink.
+Below are versions :-
+| Version                            | Notes                                                                                                   | 
+| ---------------------------------- |---------------------------------------------------------------------------------------------------------|
+| JANDY AquaLinkRS 8157 REV MMM      | Everything working                                                                                      | 
+| Jandy AquaLinkRS B0029223 REV T.2  | Everything working                                                                                      |  
+| Jandy iAqualink E0260801 REV R     | All except temprature setpoints. This is a combo board that supports iAqualink & AqualinkRS             |  
+| AquaLink PDA / AquaPalm            | Not usable, work in progress.                                                                           |
+
+Please post details in issues section if you have one not listed above.
 
 ## Hardware
 You will need a [USB2RS485](https://www.amazon.com/OctagonStar-Converter-Adapter-Interface-FT232RL/dp/B01LCFRR3E/) adapter connected to your pool equiptmeent RS buss interface.  (If you have an inside controller mounted on your wall, this is usually best place, if not the outside control panel is the next best place).  Then a computer running linux connected to that USB2RS485 adapter. Code is designed & developed for raspberry pi zero w, so any computer with that as a minimum should work.
