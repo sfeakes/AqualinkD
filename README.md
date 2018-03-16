@@ -53,7 +53,7 @@ Below are versions :-
 | ---------------------------------- |---------------------------------------------------------------------------------------------------------|
 | JANDY AquaLinkRS 8157 REV MMM      | Everything working                                                                                      | 
 | Jandy AquaLinkRS B0029223 REV T.2  | Everything working                                                                                      |  
-| Jandy iAqualink E0260801 REV R     | All except temprature setpoints. This is a combo board that supports iAqualink & AqualinkRS             |  
+| Jandy iAqualink E0260801 REV R     | All working, but sometimes programming is hit 'n miss. This is a combo board iAqualink & AqualinkRS     |  
 | AquaLink PDA / AquaPalm            | Not usable, work in progress.                                                                           |
 
 Please post details in issues section if you have one not listed above.
