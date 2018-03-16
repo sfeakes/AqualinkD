@@ -66,8 +66,8 @@ struct aqualinkdata
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
   //char datestr[DATE_STRING_LEN];
-  char message[AQ_MSGLONGLEN]; // NSF just temp for PDA crap
-  char *last_message; // Be careful using this, can get core dumps.
+  char last_message[AQ_MSGLONGLEN+1]; // NSF just temp for PDA crap
+  //char *last_message; // Be careful using this, can get core dumps.
   //char *display_message;  
   unsigned char raw_status[AQ_PSTLEN];
   aqled aqualinkleds[TOTAL_LEDS];

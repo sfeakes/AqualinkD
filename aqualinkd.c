@@ -269,8 +269,9 @@ void processMessage(char *message)
   static bool _initWithRS = false;
   static bool _gotREV = false;
   // NSF replace message with msg 
-  msg = cleanwhitespace(message);
-  _aqualink_data.last_message = msg;
+  msg = stripwhitespace(message);
+  strcpy(_aqualink_data.last_message, msg);
+  //_aqualink_data.last_message = _aqualink_data.message;
   //_aqualink_data.display_message = NULL;
   
   //aqualink_strcpy(_aqualink_data.message, msg);
@@ -361,7 +362,7 @@ void processMessage(char *message)
     aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
   }
   else {
-    logMessage(LOG_DEBUG, "Ignoring '%s'\n",msg);
+    logMessage(LOG_DEBUG_SERIAL, "Ignoring '%s'\n",msg);
     //_aqualink_data.display_message = msg;
   }
   
@@ -371,15 +372,16 @@ void processMessage(char *message)
 
 void processPDAMessage(char *message)
 {
+  static bool nextMessageTemp = false;
   char *msg;
 
-  msg = cleanwhitespace(message);
-  _aqualink_data.last_message = msg;
+  msg = stripwhitespace(message);
+  strcpy(_aqualink_data.last_message, msg);
 
   logMessage(LOG_INFO, "RS PDA Message :- '%s'\n",msg);
 
-  if (_aqualink_data.message != NULL && strncasecmp(_aqualink_data.message, "AIR", 3) == 0)
-  {
+  if (nextMessageTemp == true) {
+    nextMessageTemp = false;
     _aqualink_data.temp_units = FAHRENHEIT;
     // RS PDA Message :- '73`     66`'
     _aqualink_data.air_temp = atoi(msg);
@@ -388,12 +390,16 @@ void processPDAMessage(char *message)
 
     //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
     aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
-  } else if(strstr(msg, "REV ") != NULL) {  // 'REV MMM'
-    aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+  } 
+  else if (strncasecmp(_aqualink_data.last_message, "AIR", 3) == 0) {
+    nextMessageTemp = true; 
+  } 
+  else if(strstr(msg, "REV ") != NULL) {  // 'REV MMM'
+    //aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
   }
 
   //_aqualink_data.last_message = msg;
-  strncpy(_aqualink_data.message, msg,AQ_MSGLONGLEN);
+  strncpy(_aqualink_data.last_message, msg,AQ_MSGLONGLEN);
 
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
@@ -410,7 +416,7 @@ bool process_packet(unsigned char* packet, int length)
   
   // Check packet against last check if different.
   if (memcmp(packet, last_packet, length) == 0) {
-    logMessage(LOG_DEBUG, "RS Received duplicate, ignoring.\n",length);
+    logMessage(LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n",length);
     return rtn;
   } else {
     memcpy(last_packet, packet, length);

@@ -40,6 +40,7 @@ char *elevel2text(int level);
 char *cleanwhitespace(char *str);
 //char *cleanquotes(char *str);
 void trimwhitespace(char *str);
+char *stripwhitespace(char *str);
 int cleanint(char*str);
 bool text2bool(char *str);
 char *bool2text(bool val);

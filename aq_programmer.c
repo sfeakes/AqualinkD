@@ -889,8 +889,8 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     //logMessage(LOG_ERR, "Could not select MENU of Aqualink control panel\n");
     logMessage(LOG_DEBUG, "Programming mode: did not find '%s'\n",message);
     return false;
-  }
-  logMessage(LOG_DEBUG, "Programming mode: found message '%s' in '%s'\n",message,aq_data->last_message);
+  } else if (message != NULL)
+    logMessage(LOG_DEBUG, "Programming mode: found message '%s' in '%s'\n",message,aq_data->last_message);
   
   return true;
 }

@@ -161,6 +161,7 @@ void trimwhitespace(char *str)
   *(end+1) = 0;
 }
 
+//Move existing pointer
 char *cleanwhitespace(char *str)
 {
   char *end;
@@ -179,6 +180,28 @@ char *cleanwhitespace(char *str)
   *(end+1) = 0;
 
   return str;
+}
+
+// Return new pointer
+char *stripwhitespace(char *str)
+{
+  char *end;
+  char *start = str;
+
+  // Trim leading space
+  while(isspace(*start)) start++;
+
+  if(*start == 0)  // All spaces?
+    return start;
+
+  // Trim trailing space
+  end = str + strlen(str) - 1;
+  while(end > str && isspace(*end)) end--;
+
+  // Write new null terminator
+  *(end+1) = 0;
+
+  return start;
 }
 
 

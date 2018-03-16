@@ -238,9 +238,6 @@ void send_ack(int fd, unsigned char command)
   
 }
 
-
-
-
 // Reads the bytes of the next incoming packet, and
 // returns when a good packet is available in packet
 // fd: the file descriptor to read the bytes from
@@ -335,6 +332,14 @@ int get_packet(int fd, unsigned char* packet)
     }
   }
   
+  if (generate_checksum(packet, index) != packet[index-3]){
+    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    return 0;
+  } else if (index < AQ_MINPKTLEN) {
+    logMessage(LOG_WARNING, "Serial read too small, (but good checksum), need to understand this better\n");
+    return 0;
+  }
+
   logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   // Return the packet length.
   return index;

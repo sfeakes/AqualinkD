@@ -10,7 +10,7 @@
 #include "aq_serial.h"
 #include "utils.h"
 
-#define SLOG_MAX 40
+#define SLOG_MAX 80
 #define PACKET_MAX 1000
 
 typedef struct serial_id_log {
