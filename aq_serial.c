@@ -31,22 +31,42 @@
 
 static struct termios _oldtio;
 
-void log_packet(unsigned char* packet, int length)
+
+
+
+void log_packet(char *init_str, unsigned char* packet, int length)
 {
+  if ( getLogLevel() < LOG_DEBUG)
+    return;
+
+  int cnt;
+  int i;
+  char buff[MAXLEN];
+
+  cnt = sprintf(buff, "%s", init_str);
+  cnt += sprintf(buff+cnt, " | HEX: ");
+  //printHex(packet_buffer, packet_length);
+  for (i=0;i<length;i++)
+    cnt += sprintf(buff+cnt, "0x%02hhx|",packet[i]);
+
+  cnt += sprintf(buff+cnt, "\n");
+  logMessage(LOG_DEBUG, buff);
+/*
   int i;
   char temp_string[64];
   char message_buffer[MAXLEN];
 
-  sprintf(temp_string, "%02x ", packet[0]);
+  sprintf(temp_string, "Send 0x%02hhx|", packet[0]);
   strcpy(message_buffer, temp_string);
 
   for (i = 1; i < length; i++) {
-    sprintf(temp_string, "%02x ", packet[i]);
+    sprintf(temp_string, "0x%02hhx|", packet[i]);
     strcat(message_buffer, temp_string);
   }
 
   strcat(message_buffer, "\n");
   logMessage(LOG_DEBUG, message_buffer);
+  */
 }
 
 const char* get_packet_type(unsigned char* packet, int length)
@@ -71,7 +91,7 @@ const char* get_packet_type(unsigned char* packet, int length)
       return "Probe";
     break;
     default:
-      sprintf(buf, "Unknown '0x%02hhx'\n", packet[PKT_CMD]);
+      sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;
     break;
   }
@@ -195,6 +215,36 @@ void test_cmd()
   print_hex((char *)ackPacket, length);
 }
 
+void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
+{
+  const int length = 11;
+  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
+  //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, NUL, NUL, NUL, 0x13, DLE, ETX, NUL };
+
+  // Update the packet and checksum if command argument is not NUL.
+  ackPacket[3] = destination;
+  ackPacket[4] = b1;
+  ackPacket[5] = b2;
+  ackPacket[6] = b3;
+  ackPacket[7] = generate_checksum(ackPacket, length-1);
+
+  log_packet("Sent ", ackPacket, length);
+
+#ifdef BLOCKING_MODE
+  write(fd, ackPacket, length);
+#else
+  int nwrite, i;
+  for (i=0; i<length; i += nwrite) {        
+    nwrite = write(fd, ackPacket + i, length - i);
+    if (nwrite < 0) 
+      logMessage(LOG_ERR, "write to serial port failed\n");
+  }
+  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //tcdrain(fd);
+  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+#endif  
+  
+}
 
 void send_ack(int fd, unsigned char command)
 {
@@ -214,14 +264,14 @@ void send_ack(int fd, unsigned char command)
       aqualink_cmd = NUL;
     }
     */
-    log_packet(ackPacket, length);
+    log_packet("Sent ", ackPacket, length);
     // In debug mode, log the packet to the private log file.
     //log_packet(ackPacket, length);
   }
 
   // Send the packet to the master device.
   //write(fd, ackPacket, length);
-  logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", command);
+  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", command);
 
 #ifdef BLOCKING_MODE
   write(fd, ackPacket, length);
@@ -334,9 +384,11 @@ int get_packet(int fd, unsigned char* packet)
   
   if (generate_checksum(packet, index) != packet[index-3]){
     logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    log_packet("Bad packet ", packet, index);
     return 0;
   } else if (index < AQ_MINPKTLEN) {
-    logMessage(LOG_WARNING, "Serial read too small, (but good checksum), need to understand this better\n");
+    logMessage(LOG_WARNING, "Serial read too small\n");
+    log_packet("Bad packet ", packet, index);
     return 0;
   }
 

@@ -312,6 +312,11 @@ void processMessage(char *message)
   }
   else if(strncasecmp(msg, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(msg+9);
+    /* NSF  add config option to support
+    if (_config_parameters.spa_temp_follow_pool == true && _aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF ) {
+      _aqualink_data.spa_temp = _aqualink_data.pool_temp
+    }
+    */
   }
   else if(strncasecmp(msg, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
     _aqualink_data.spa_temp = atoi(msg+8);
@@ -615,6 +620,48 @@ int main(int argc, char *argv[]) {
   exit(EXIT_SUCCESS);
 }
 
+
+void debugPacketPrint(unsigned char ID, unsigned char *packet_buffer, int packet_length)
+{
+  char buff[1000];
+  int i=0;
+  int cnt = 0;
+
+  cnt = sprintf(buff, "%4.4s 0x%02hhx of type %8.8s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), ID, get_packet_type(packet_buffer, packet_length));
+  cnt += sprintf(buff+cnt, " | HEX: ");
+  //printHex(packet_buffer, packet_length);
+  for (i=0;i<packet_length;i++)
+    cnt += sprintf(buff+cnt, "0x%02hhx|",packet_buffer[i]);
+  
+  if (packet_buffer[PKT_CMD] == CMD_MSG) {
+    cnt += sprintf(buff+cnt, "  Message : ");
+    //fwrite(packet_buffer + 4, 1, packet_length - 4, stdout);
+    strncpy(buff+cnt, (char*)packet_buffer+PKT_DATA+1, AQ_MSGLEN);
+    cnt += AQ_MSGLEN;
+  }
+  
+  if (packet_buffer[PKT_DEST]==0x00)
+    cnt += sprintf(buff+cnt,"\n\n");
+  else
+    cnt += sprintf(buff+cnt,"\n");
+
+  logMessage(LOG_NOTICE, "- AQUA SWG - \n%s", buff);
+}
+void debugPacket(unsigned char *packet_buffer, int packet_length)
+{
+  static unsigned char lastID;
+
+  if (packet_buffer[PKT_DEST] == DEV_MASTER && (lastID == 0x50 || lastID == 0x58)) {
+    debugPacketPrint(lastID, packet_buffer, packet_length);
+  } else if (packet_buffer[PKT_DEST] == 0x50 || packet_buffer[PKT_DEST] == 0x58) {
+    debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
+  }
+
+  lastID = packet_buffer[PKT_DEST];
+}
+
+
+
 void main_loop() {
   struct mg_mgr mgr;
   int rs_fd;
@@ -673,6 +720,8 @@ void main_loop() {
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;
+
+//debugPacket(packet_buffer, packet_length);
 
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
         /*

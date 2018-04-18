@@ -229,6 +229,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
     send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
+  } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.spa_temp) {
+    // Use Pool Temp is Spa is not available
+    _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
+    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->pool_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
   }
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
@@ -345,6 +350,10 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
 
+    } else if (strcmp(command, "diag") == 0) {
+      aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {

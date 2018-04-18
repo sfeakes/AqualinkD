@@ -11,37 +11,13 @@
 #include "utils.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 1000
-
-/*
-typedef enum used {
-  yes,
-  no,
-  unknown
-} used;
-*/
-
-typedef struct serial_id_log {
-  unsigned char ID;
-  bool inuse;
-} serial_id_log;
+#define PACKET_MAX 10000
 
 bool _keepRunning = true;
-
-unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
 
 void intHandler(int dummy) {
   _keepRunning = false;
   logMessage(LOG_NOTICE, "Stopping!");
-}
-
-bool canUse(unsigned char ID) {
-  int i;
-  for (i = 0; i < strlen((char *)_goodID); i++) {
-    if (ID == _goodID[i])
-      return true;
-  }
-  return false;
 }
 
 
@@ -70,10 +46,7 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
   }
   
-  //if (packet_buffer[PKT_DEST]==0x00)
-  //  printf("\n\n");
-  //else
-    printf("\n");
+  printf("\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -81,13 +54,8 @@ int main(int argc, char *argv[]) {
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
   unsigned char lastID;
-  int i = 0;
-  bool found;
-  serial_id_log slog[SLOG_MAX];
-  int sindex = 0;
   int received_packets = 0;
-  //char buffer[256];
-  bool idMode = true;
+
 
   if (getuid() != 0) {
     fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
@@ -123,52 +91,41 @@ int main(int argc, char *argv[]) {
     } else if (packet_length == 0) {
       // Nothing read
     } else if (packet_length > 0) {
-
-        //logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
-        printPacket(lastID, packet_buffer, packet_length);
-
-        if (packet_buffer[PKT_DEST] != DEV_MASTER) {
-          found = false;
-          for (i = 0; i <= sindex; i++) {
-            if (slog[i].ID == packet_buffer[PKT_DEST]) {
-              found = true;
-              break;
-            }
-          }
-          if (found != true && sindex < SLOG_MAX) {
-            slog[sindex].ID = packet_buffer[PKT_DEST];
-            slog[sindex].inuse = false;
-            sindex++;
-          }
-        }
-
-        if (packet_buffer[PKT_DEST] == DEV_MASTER && packet_buffer[PKT_CMD] == CMD_ACK) {
-          //logMessage(LOG_DEBUG_SERIAL, "ID is in use 0x%02hhx %x\n", lastID, lastID);
-          for (i = 0; i <= sindex; i++) {
-            if (slog[i].ID == lastID) {
-              slog[i].inuse = true;
-              break;
-            }
-          }
-        }
       
+        //printPacket(lastID, packet_buffer, packet_length);
+       
+        if ((packet_buffer[PKT_DEST] == DEV_MASTER && (lastID == 0x50 || lastID == 0x58)) 
+            || packet_buffer[PKT_DEST] == 0x50 || packet_buffer[PKT_DEST] == 0x58)
+          printPacket(lastID, packet_buffer, packet_length);
+        else if (packet_buffer[PKT_CMD] == CMD_MSG || packet_buffer[PKT_CMD] == CMD_MSG_LONG) {
+          printf("  To 0x%02hhx of Type  Message | ",packet_buffer[PKT_DEST]);
+          fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
+          printf("\n");
+        }
+       
+       /*
+        if (received_packets == 10 || received_packets == 20) {
+          send_test_cmd(rs_fd, 0x50, 0x11, 0x32, 0x7d);
+          //send_test_cmd(rs_fd, 0x80, CMD_PROBE, NUL, NUL);
+          //send_test_cmd(rs_fd, 0x50, 0x11, 0x0a, NUL); // Set salt to 10%
+          //send_test_cmd(rs_fd, 0x50, 0x14, 0x01, 0x77); // Send initial string AquaPure (0x14 is the comand, others should be NUL)
+           //0x10|0x02|0x50|0x14|0x01|0x77|0x10|0x03|
+           //0x10|0x02|0x50|0x14|0x01|0x77|0x10|0x03|
+          // 10 02 50 11 0a 7d 10 03
 
-      lastID = packet_buffer[PKT_DEST];
-      received_packets++;
-    }
+           // 0x11 is set %
+
+          printf(" *** SENT TEST *** \n");
+        }
+       */
+       lastID = packet_buffer[PKT_DEST];
+       received_packets++;
+      }
+    
 
     if (received_packets >= PACKET_MAX) {
       _keepRunning = false;
     }
-  }
-
-  logMessage(LOG_DEBUG, "\n");
-  if (sindex >= SLOG_MAX)
-    logMessage(LOG_DEBUG, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
-  logMessage(LOG_DEBUG, "ID's found\n");
-  for (i = 0; i <= sindex; i++) {
-    logMessage(LOG_DEBUG, "ID 0x%02hhx is %s %s\n", slog[i].ID, slog[i].inuse == true ? "in use" : "not used",
-               slog[i].inuse == false && canUse(slog[i].ID) == true ? " <-- can use for Aqualinkd" : "");
   }
 
   return 0;

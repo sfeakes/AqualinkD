@@ -137,5 +137,6 @@ int get_packet(int file_descriptor, unsigned char* packet);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet, int length);
+void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
 
 #endif // AQ_SERIAL_H_
