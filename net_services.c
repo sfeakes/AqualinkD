@@ -354,6 +354,29 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+
+    } else if (strcmp(command, "POOL_HTR") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_POOL_HEATER_TEMP, value, _aqualink_data);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+
+    } else if (strcmp(command, "SPA_HTR") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_SPA_HEATER_TEMP, value, _aqualink_data);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+
+    } else if (strcmp(command, "FRZ_PROTECT") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+
+      //} else if (strstr(http_msg->query_string.p, "command=mhstatus")) {
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
