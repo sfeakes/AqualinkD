@@ -34,6 +34,11 @@
 #define CMD_MSG         0x03
 #define CMD_MSG_LONG    0x04
 
+/* AquaRite commands */
+#define CMD_GETID       0x14  // May be remote control control
+#define CMD_PERCENT     0x11  // Set Percent
+#define CMD_PPM         0x16  // Received PPM
+
 /* PDA KEY CODES */  // Just plating at the moment
 #define KEY_PDA_UP     0x06
 #define KEY_PDA_DOWN   0x05
@@ -138,5 +143,6 @@ int get_packet(int file_descriptor, unsigned char* packet);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet, int length);
 void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
-
+void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
+void send_messaged(int fd, unsigned char destination, char *message);
 #endif // AQ_SERIAL_H_

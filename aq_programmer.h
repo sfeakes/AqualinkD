@@ -15,6 +15,7 @@ typedef enum {
   AQ_GET_PROGRAMS,
   AQ_SET_COLORMODE,
   AQ_PDA_INIT,
+  AQ_SET_SWG_PERCENT
 } program_type;
 
 struct programmingThreadCtrl {

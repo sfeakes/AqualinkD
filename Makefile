@@ -18,6 +18,8 @@ $DBG =
 CFLAGS = -Wall $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 #CFLAGS = -Wall $(DBG) $(LIBS) -D MG_DISABLE_MQTT -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 
+INCLUDES = -I/nas/data/Development/Raspberry/aqualink/aqualinkd
+
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
@@ -25,15 +27,18 @@ SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c n
 
 SL_SRC = serial_logger.c aq_serial.c utils.c
 AL_SRC = aquarite_logger.c aq_serial.c utils.c
+AR_SRC = aquarite/aquarited.c aquarite/ar_net_services.c aquarite/ar_config.c aq_serial.c utils.c mongoose.c json_messages.c config.c
 
 OBJS = $(SRCS:.c=.o)
 SL_OBJS = $(SL_SRC:.c=.o)
 AL_OBJS = $(AL_SRC:.c=.o)
+AR_OBJS = $(AR_SRC:.c=.o)
 
 # define the executable file
 MAIN = ./release/aqualinkd
 SLOG = ./release/serial_logger
 AQUARITELOG = ./release/aquarite_logger
+AQUARITED = ./release/aquarited
 
 all:    $(MAIN) 
   @echo: $(MAIN) have been compiled
@@ -53,6 +58,12 @@ aquaritelog:	$(AQUARITELOG)
 
 $(AQUARITELOG): $(AL_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(AQUARITELOG) $(AL_OBJS)
+
+aquarited:	$(AQUARITED)
+  @echo: $(AQUARITED) have been compiled
+
+$(AQUARITED): $(AR_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(AQUARITED) $(AR_OBJS)
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of

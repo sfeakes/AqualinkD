@@ -42,6 +42,7 @@ struct aqconfig
   int dzidx_spa_water_temp;
   int dzidx_swg_percent;
   int dzidx_swg_ppm;
+  int dzidx_swg_status;
   float light_programming_mode;
   bool override_freeze_protect;
   bool pda_mode;

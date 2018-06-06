@@ -241,6 +241,8 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_swg_percent = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
               config_parameters->dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
+            } else if (strncasecmp (b_ptr, "SWG_Status_dzidx", 14) == 0) {
+              config_parameters->dzidx_swg_status = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "override_freeze_protect", 23) == 0) {
               config_parameters->override_freeze_protect = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {

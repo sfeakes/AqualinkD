@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 1000
+#define PACKET_MAX 10000
 
 /*
 typedef enum used {

@@ -279,12 +279,15 @@ void logMessage(int msg_level, char *format, ...)
   
   if (_daemonise == TRUE)
   {
-    syslog (msg_level, "%s", &buffer[8]);
+    if (msg_level > LOG_DEBUG)  // Let's not confuse syslog with custom levels
+      syslog (LOG_DEBUG, "%s", &buffer[8]);
+    else
+      syslog (msg_level, "%s", &buffer[8]);
     closelog ();
     //return;
   }
   
-  if (_log2file == TRUE && _log_filename != NULL) {
+  //if (_log2file == TRUE && _log_filename != NULL) {
     int len;
     char *strLevel = elevel2text(msg_level);
 
@@ -297,7 +300,8 @@ void logMessage(int msg_level, char *format, ...)
     if ( buffer[len-1] != '\n') {
       strcat(buffer, "\n");
     } 
-    
+
+ if (_log2file == TRUE && _log_filename != NULL) {   
     char time[TIMESTAMP_LENGTH];
     int fp = open(_log_filename, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if (fp != -1) {

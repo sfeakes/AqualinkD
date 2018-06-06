@@ -50,6 +50,7 @@ typedef enum action_type {
   POOL_HTR_SETOINT,
   SPA_HTR_SETOINT,
   FREEZE_SETPOINT,
+  SWG_SETPOINT
 } action_type;
 
 struct action {
@@ -86,6 +87,9 @@ struct aqualinkdata
   struct action unactioned;
   int swg_percent;
   int swg_ppm;
+  unsigned char ar_swg_status;
+  int swg_delayed_percent;
+  //bool ar_swg_connected;
 };
 
 

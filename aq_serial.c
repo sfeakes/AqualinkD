@@ -36,7 +36,7 @@ static struct termios _oldtio;
 
 void log_packet(char *init_str, unsigned char* packet, int length)
 {
-  if ( getLogLevel() < LOG_DEBUG)
+  if ( getLogLevel() < LOG_DEBUG_SERIAL)
     return;
 
   int cnt;
@@ -50,7 +50,7 @@ void log_packet(char *init_str, unsigned char* packet, int length)
     cnt += sprintf(buff+cnt, "0x%02hhx|",packet[i]);
 
   cnt += sprintf(buff+cnt, "\n");
-  logMessage(LOG_DEBUG, buff);
+  logMessage(LOG_DEBUG_SERIAL, buff);
 /*
   int i;
   char temp_string[64];
@@ -89,6 +89,15 @@ const char* get_packet_type(unsigned char* packet, int length)
     break;
     case CMD_PROBE:
       return "Probe";
+    break;
+    case CMD_GETID:
+      return "GetID";
+    break;
+    case CMD_PERCENT:
+      return "AR %%";
+    break;
+    case CMD_PPM:
+      return "AR PPM";
     break;
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
@@ -228,7 +237,35 @@ void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned
   ackPacket[6] = b3;
   ackPacket[7] = generate_checksum(ackPacket, length-1);
 
+#ifdef BLOCKING_MODE
+  write(fd, ackPacket, length);
+#else
+  int nwrite, i;
+  for (i=0; i<length; i += nwrite) {        
+    nwrite = write(fd, ackPacket + i, length - i);
+    if (nwrite < 0) 
+      logMessage(LOG_ERR, "write to serial port failed\n");
+  }
+  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //tcdrain(fd);
+  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+#endif  
+
   log_packet("Sent ", ackPacket, length);
+
+}
+void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
+{
+  const int length = 11;
+  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
+  //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, NUL, NUL, NUL, 0x13, DLE, ETX, NUL };
+
+  // Update the packet and checksum if command argument is not NUL.
+  ackPacket[3] = destination;
+  ackPacket[4] = b1;
+  ackPacket[5] = b2;
+  ackPacket[6] = b3;
+  ackPacket[7] = generate_checksum(ackPacket, length-1);
 
 #ifdef BLOCKING_MODE
   write(fd, ackPacket, length);
@@ -243,7 +280,44 @@ void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned
   //tcdrain(fd);
   //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
-  
+
+  if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
+    char buf[30];
+    sprintf(buf, "Sent     %8.8s ", get_packet_type(ackPacket+1, length));
+    log_packet(buf, ackPacket, length);
+  }
+}
+
+void send_messaged(int fd, unsigned char destination, char *message)
+{
+  const int length = 24;
+  int i;
+  //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
+  unsigned char msgPacket[] = { DLE,STX,DEV_MASTER,CMD_MSG,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,NUL,DLE,ETX };
+  //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, NUL, NUL, NUL, 0x13, DLE, ETX, NUL };
+
+  // Update the packet and checksum if command argument is not NUL.
+  msgPacket[2] = destination;
+  for (i=0; i < strlen(message) && i < AQ_MSGLEN; i++)
+    msgPacket[4+i] = message[i];
+
+  msgPacket[length-3] = generate_checksum(msgPacket, length-1);
+
+#ifdef BLOCKING_MODE
+  write(fd, msgPacket, length);
+#else
+  int nwrite;
+  for (i=0; i<length; i += nwrite) {        
+    nwrite = write(fd, msgPacket + i, length - i);
+    if (nwrite < 0) 
+      logMessage(LOG_ERR, "write to serial port failed\n");
+  }
+  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //tcdrain(fd);
+  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+#endif  
+
+  log_packet("Sent ", msgPacket, length);
 }
 
 void send_ack(int fd, unsigned char command)
@@ -264,7 +338,7 @@ void send_ack(int fd, unsigned char command)
       aqualink_cmd = NUL;
     }
     */
-    log_packet("Sent ", ackPacket, length);
+    
     // In debug mode, log the packet to the private log file.
     //log_packet(ackPacket, length);
   }
@@ -286,6 +360,7 @@ void send_ack(int fd, unsigned char command)
   //tcdrain(fd);
 #endif  
   
+  log_packet("Sent ", ackPacket, length);
 }
 
 // Reads the bytes of the next incoming packet, and
@@ -302,6 +377,7 @@ int get_packet(int fd, unsigned char* packet)
   int packetStarted = FALSE;
   int foundDLE = FALSE;
   bool started = FALSE;
+  int retry=0;
 
   while (!endOfPacket) {
     //printf("Read loop %d\n",++i);
@@ -312,6 +388,10 @@ int get_packet(int fd, unsigned char* packet)
       return 0;
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
+      if (retry > 10)
+        return 0;
+        
+      retry++;
       delay(10);
     } else if (bytesRead == 1) {
       started = TRUE;

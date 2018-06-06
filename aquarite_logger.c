@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 10000
+#define PACKET_MAX 10000000000
 
 bool _keepRunning = true;
 
@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
+    received_packets++;
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.
@@ -90,10 +91,8 @@ int main(int argc, char *argv[]) {
       _keepRunning = false;
     } else if (packet_length == 0) {
       // Nothing read
+
     } else if (packet_length > 0) {
-      
-        //printPacket(lastID, packet_buffer, packet_length);
-       
         if ((packet_buffer[PKT_DEST] == DEV_MASTER && (lastID == 0x50 || lastID == 0x58)) 
             || packet_buffer[PKT_DEST] == 0x50 || packet_buffer[PKT_DEST] == 0x58)
           printPacket(lastID, packet_buffer, packet_length);
@@ -101,7 +100,11 @@ int main(int argc, char *argv[]) {
           printf("  To 0x%02hhx of Type  Message | ",packet_buffer[PKT_DEST]);
           fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
           printf("\n");
+        } else {
+          printPacket(lastID, packet_buffer, packet_length);
         }
+
+        //send_messaged(0, 0x00, "AquaPure");
        
        /*
         if (received_packets == 10 || received_packets == 20) {
@@ -119,7 +122,10 @@ int main(int argc, char *argv[]) {
         }
        */
        lastID = packet_buffer[PKT_DEST];
-       received_packets++;
+       //received_packets++;
+
+       //delay(100);
+       sleep(1);
       }
     
 

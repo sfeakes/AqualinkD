@@ -66,6 +66,18 @@ int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float tv
   return strlen(buffer);
 }
 
+int build_mqtt_status_message_JSON(char* buffer, int size, int idx, int nvalue, char *svalue)
+{
+  memset(&buffer[0], 0, size);
+  int length = 0;
+  //json.htm?type=command&param=udevice&idx=IDX&nvalue=LEVEL&svalue=TEXT
+
+  length = sprintf(buffer, "{\"idx\":%d,\"nvalue\":%d,\"svalue\":\"%s\"}", idx, nvalue, svalue);
+
+  buffer[length] = '\0';
+  return strlen(buffer);
+}
+
 int build_aqualink_error_status_JSON(char* buffer, int size, char *msg)
 {
   //return snprintf(buffer, size, "{\"type\": \"error\",\"status\":\"%s\"}", msg);

@@ -172,6 +172,15 @@ void send_domoticz_mqtt_numeric_msg(struct mg_connection *nc, int idx, int value
   build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, value);
   send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
 }
+void send_domoticz_mqtt_status_message(struct mg_connection *nc, int idx, int value, char *svalue) {
+  if (idx <= 0)
+    return;
+
+  char mqtt_msg[JSON_MQTT_MSG_SIZE];
+  build_mqtt_status_message_JSON(mqtt_msg, JSON_MQTT_MSG_SIZE, idx, value, svalue);
+
+  send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
+}
 
 void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
 {
@@ -207,10 +216,36 @@ void send_mqtt_numeric_msg(struct mg_connection *nc, char *dev_name, int value)
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
+void send_mqtt_float_msg(struct mg_connection *nc, char *dev_name, float value) {
+  static char mqtt_pub_topic[250];
+  static char msg[10];
+
+  sprintf(msg, "%f", value);
+  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, msg);
+}
+void send_mqtt_int_msg(struct mg_connection *nc, char *dev_name, int value) {
+  static char mqtt_pub_topic[250];
+  static char msg[10];
+
+  sprintf(msg, "%d", value);
+  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, msg);
+}
 
 
 void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 {
+  static int cnt=0;
+  bool force_update = false;
+
+  if (cnt > 300) {  // 100 = about every 2 minutes.
+    force_update = true;
+    cnt = 0;
+  } else {
+    cnt++;
+    force_update = false;
+  }
   int i;
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START\n");
@@ -252,15 +287,71 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
     //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_rfz_protect, _aqualink_data->frz_protect_set_point);
   }
-  if (_aqualink_data->swg_percent != TEMP_UNKNOWN && _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent) {
-    _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
-    send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
-    send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_percent, _aqualink_data->swg_percent);
+  if (_aqualink_data->ar_swg_status == 0x00) { // If the SWG is actually on
+    if (_aqualink_data->swg_percent != TEMP_UNKNOWN && (force_update || _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent)) {
+      _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
+      send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
+      send_mqtt_float_msg(nc, SWG_PERCENT_F_TOPIC, roundf(degFtoC(_aqualink_data->swg_percent)));
+      send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_percent, _aqualink_data->swg_percent);
+    }
+    if (_aqualink_data->swg_ppm != TEMP_UNKNOWN && ( force_update || _aqualink_data->swg_ppm != _last_mqtt_aqualinkdata.swg_ppm)) {
+      _last_mqtt_aqualinkdata.swg_ppm = _aqualink_data->swg_ppm;
+      send_mqtt_numeric_msg(nc, SWG_PPM_TOPIC, _aqualink_data->swg_ppm);
+      send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_ppm, _aqualink_data->swg_ppm);
+    }
   }
-  if (_aqualink_data->swg_ppm != TEMP_UNKNOWN && _aqualink_data->swg_ppm != _last_mqtt_aqualinkdata.swg_ppm) {
-    _last_mqtt_aqualinkdata.swg_ppm = _aqualink_data->swg_ppm;
-    send_mqtt_numeric_msg(nc, SWG_PPM_TOPIC, _aqualink_data->swg_ppm);
-    send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_ppm, _aqualink_data->swg_ppm);
+  if (_aqualink_data->ar_swg_status != _last_mqtt_aqualinkdata.ar_swg_status) {
+    switch (_aqualink_data->ar_swg_status) {
+      // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
+      case 0x00:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 1, "GENERATING CHLORINE");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
+        break;
+      case 0x01:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "NO FLOW");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      case 0x02:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "LOW SALT");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
+        break;
+      case 0x04:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "VERY LOW SALT");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      case 0x08:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "HIGH CURRENT");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
+        break;
+      case 0x09:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "TURNING OFF");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      case 0x10:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "CLEAN CELL");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
+        break;
+      case 0x20:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "LOW VOLTAGE");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
+        break;
+      case 0x40:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "WATER TEMP LOW");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      case 0x80:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "CHECK PCB");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      case 0xFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "OFF");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        break;
+      default:
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "Unknown");
+        break;
+      }
+      _last_mqtt_aqualinkdata.ar_swg_status = _aqualink_data->ar_swg_status;
   }
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -495,6 +586,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //aqualinkd/Filter_Pump/set
   //aqualinkd/Pool_Heater/setpoint/set
   //aqualinkd/Pool_Heater/set
+  //aqualinkd/SWG/Percent_f/set
 
   if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
     int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(value)) : round(value);
@@ -513,7 +605,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       } else {
         logMessage(LOG_ERR, "MQTT: request to set spa heater setpoint to %.2fc is outside of range\n", value);
         send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
-      }
+      } 
     } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
       if (val <= FREEZE_PT_MAX && val >= FREEZE_PT_MIN) {
       logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
@@ -528,7 +620,19 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     }
     // logMessage(LOG_INFO, "MQTT: topic %.*s %.2f, setting %s\n",msg->topic.len, msg->topic.p, value);
     time(&_aqualink_data->unactioned.requested);
-    
+  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent_f", 8) == 0) && (strncmp(pt3, "set", 3) == 0))) {
+      int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(value)) : round(value);
+      // Convert number to nearest 5, since those are the incruments, NSF check 100 or 101
+      if (0 != (val % 5) )
+        val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
+ 
+      if (val > SWG_PERCENT_MAX) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MAX;
+      } else if ( val < SWG_PERCENT_MIN) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MIN;
+      }
+      logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
   } else if (pt2 != NULL && (strncmp(pt2, "set", 3) == 0) && (strncmp(pt2, "setpoint", 8) != 0)) {
     // Must be a switch on / off
     for (i=0; i < TOTAL_BUTTONS; i++) {

@@ -44,6 +44,7 @@ void *get_aqualink_diag_model( void *ptr );
 void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
+void *set_aqualink_SWG( void *ptr );
 
 bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate state, int numMessageReceived);
 
@@ -178,18 +179,25 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         return;
       }
       break;
-      case AQ_SET_COLORMODE:
+    case AQ_SET_COLORMODE:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_light_colormode, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
       break;
-      case AQ_PDA_INIT:
+    case AQ_PDA_INIT:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_init, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
       break;
+      case AQ_SET_SWG_PERCENT:
+       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_SWG, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+
       default:
         logMessage (LOG_ERR, "Don't understand thread type\n");
       break;
@@ -234,8 +242,12 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
   pthread_exit(0);
 }
 
-
+bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label, int value, int increment);
 bool setAqualinkNumericField(struct aqualinkdata *aq_data, char *value_label, int value)
+{
+  return setAqualinkNumericField_new(aq_data, value_label, value, 1);
+}
+bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label, int value, int increment)
 {
   logMessage(LOG_DEBUG,"Setting menu item '%s' to %d\n",value_label, value);
   char leading[10];  // description of the field (POOL, SPA, FRZ)
@@ -248,13 +260,55 @@ bool setAqualinkNumericField(struct aqualinkdata *aq_data, char *value_label, in
   do 
   {
     if (waitForMessage(aq_data, searchBuf, 3) != true) {
-      logMessage(LOG_WARNING, "Could not set %s temp, current temp not found\n",value_label);
+      logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', not found\n",value_label);
+      cancel_menu(aq_data);
+      return false;
+    }
+//logMessage(LOG_DEBUG,"WAITING for kick value=%d\n",current_val);     
+    //sscanf(aq_data->last_message, "%s %d%s", leading, &current_val, trailing);
+    sscanf(aq_data->last_message, "%*[^0123456789]%d", &current_val);
+    logMessage(LOG_DEBUG, "%s set to %d, looking for %d\n",value_label,current_val,value);
+    
+    if(value > current_val) {
+      // Increment the field.
+      sprintf(searchBuf, "%s %d", value_label, current_val+increment);
+      send_cmd(KEY_RIGHT, aq_data);
+    }
+    else if(value < current_val) {
+      // Decrement the field.
+      sprintf(searchBuf, "%s %d", value_label, current_val-increment);
+      send_cmd(KEY_LEFT, aq_data);
+    }
+    else {
+      // Just send ENTER. We are at the right value.
+      sprintf(searchBuf, "%s %d", value_label, current_val);
+      send_cmd(KEY_ENTER, aq_data);
+    }
+  } while(value != current_val); 
+  
+  return true;
+}
+
+bool OLD_setAqualinkNumericField_OLD(struct aqualinkdata *aq_data, char *value_label, int value)
+{ // Works for everything but not SWG
+  logMessage(LOG_DEBUG,"Setting menu item '%s' to %d\n",value_label, value);
+  char leading[10];  // description of the field (POOL, SPA, FRZ)
+  int current_val;        // integer value of the current set point
+  char trailing[10];      // the degrees and scale
+  char searchBuf[20];
+    
+  sprintf(searchBuf, "^%s", value_label);
+  
+  do 
+  {
+    if (waitForMessage(aq_data, searchBuf, 3) != true) {
+      logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', not found\n",value_label);
       cancel_menu(aq_data);
       return false;
     }
 //logMessage(LOG_DEBUG,"WAITING for kick value=%d\n",current_val);     
     sscanf(aq_data->last_message, "%s %d%s", leading, &current_val, trailing);
-//    logMessage(LOG_DEBUG, "%s set to %d, looking for %d\n",value_label,current_val,value);
+    logMessage(LOG_DEBUG, "%s set to %d, looking for %d\n",value_label,current_val,value);
     
     if(value > current_val) {
       // Increment the field.
@@ -291,6 +345,48 @@ void *threadded_send_cmd( void *ptr )
   return ptr;
 }
 */
+
+
+void *set_aqualink_SWG( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_SWG_PERCENT);
+
+  int val = atoi((char*)threadCtrl->thread_args);
+
+  // Just recheck it's in multiple of 5.
+  if (0 != (val % 5) )
+    val = ((val + 5) / 10) * 10;
+
+  logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
+
+  if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
+    logMessage(LOG_WARNING, "Could not select SET TEMP menu\n");
+    cancel_menu(aq_data);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  if (select_sub_menu_item(aq_data, "SET POOL SP") != true) {
+    logMessage(LOG_WARNING, "Could not select SET POOL TEMP menu\n");
+    cancel_menu(aq_data);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  setAqualinkNumericField_new(aq_data, "POOL SP", val, 5);
+
+  // usually miss this message, not sure why, but wait anyway to make sure programming has ended
+  waitForMessage(threadCtrl->aq_data, "POOL SP IS SET TO", 1);
+
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
 
 void *set_aqualink_PDA_init( void *ptr )
 {

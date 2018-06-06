@@ -529,6 +529,20 @@ void action_delayed_request()
     } else {
       logMessage(LOG_NOTICE, "Freeze setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
     }
+  } else if (_aqualink_data.unactioned.type == SWG_SETPOINT) {
+    if (_aqualink_data.ar_swg_status != 0x00 ) {
+      // SWG is off, can't set %, so delay the set until it's on.
+      _aqualink_data.swg_delayed_percent = _aqualink_data.unactioned.value;
+    } else {
+      if ( _aqualink_data.swg_percent != _aqualink_data.unactioned.value ) {
+        aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
+        logMessage(LOG_NOTICE, "Setting SWG % to %d\n",_aqualink_data.unactioned.value);
+      } else {
+        logMessage(LOG_NOTICE, "SWG % is already %d, not changing\n",_aqualink_data.unactioned.value);
+      } 
+    }
+    // Let's just tell everyone we set it, before we actually did.  Makes homekit happy, and it will re-correct on error.
+    _aqualink_data.swg_percent = _aqualink_data.unactioned.value;
   }
 
   _aqualink_data.unactioned.type = NO_ACTION;
@@ -667,6 +681,7 @@ void main_loop() {
   int rs_fd;
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
+  bool interestedInNextAck;
 
   // NSF need to find a better place to init this.
   //_aqualink_data.aq_command = 0x00;
@@ -680,6 +695,8 @@ void main_loop() {
   _aqualink_data.unactioned.type = NO_ACTION;
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
+  _aqualink_data.ar_swg_status = 0xFF;
+  _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
@@ -738,7 +755,27 @@ void main_loop() {
           broadcast_aqualinkstate(mgr.active_connections);
         }
       } else if (packet_length > 0) {
-        // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]); 
+        // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
+        if (packet_buffer[PKT_DEST] == 0x00 && interestedInNextAck == true) {
+          if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
+            _aqualink_data.ar_swg_status = packet_buffer[5];
+            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00) { // We have a delayed % to set.
+              char sval[10];
+              snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
+              aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
+              logMessage(LOG_NOTICE, "Setting SWG % to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
+              _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
+            }
+          }
+          interestedInNextAck = false;
+        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != 0x00) {
+          _aqualink_data.ar_swg_status = 0xFF;
+          interestedInNextAck = false;
+        } else if (packet_buffer[PKT_DEST] == 0x50) {
+          interestedInNextAck = true;
+        } else {
+          interestedInNextAck = false;
+        }
       }
       if (getLogLevel() >= LOG_DEBUG_SERIAL) {
           logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
