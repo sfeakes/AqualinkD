@@ -262,6 +262,20 @@ void processMessage_OLD(char *message)
   kick_aq_program_thread(&_aqualink_data);
 }
 */
+void setUnits(char *msg)
+{
+  //logMessage(LOG_INFO, "Getting temp from %s, looking at %c", msg, msg[strlen(msg)-1]);
+
+  if (msg[strlen(msg)-1] == 'F')
+       _aqualink_data.temp_units = FAHRENHEIT;
+  else if (msg[strlen(msg)-1] == 'C')
+      _aqualink_data.temp_units = CELSIUS;
+  else
+      _aqualink_data.temp_units = UNKNOWN;
+
+  logMessage(LOG_INFO, "Temp Units set to %d (F=0, C=1, Unknown=3)", _aqualink_data.temp_units);
+}
+
 
 void processMessage(char *message)
 {
@@ -292,26 +306,35 @@ void processMessage(char *message)
   else if(stristr(msg, LNG_MSG_POOL_TEMP_SET) != NULL) {
     //logMessage(LOG_DEBUG, "pool htr long message: %s", &message[20]);
     _aqualink_data.pool_htr_set_point = atoi(message+20);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if(stristr(msg, LNG_MSG_SPA_TEMP_SET) != NULL) {
     //logMessage(LOG_DEBUG, "spa htr long message: %s", &message[19]);
     _aqualink_data.spa_htr_set_point = atoi(message+19);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if(stristr(msg, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
     //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
     _aqualink_data.frz_protect_set_point = atoi(message+28);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if(strncasecmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
     _aqualink_data.air_temp = atoi(msg+8);
-    if (msg[strlen(msg)-1] == 'F')
-    _aqualink_data.temp_units = FAHRENHEIT;
-    else if (msg[strlen(msg)-1] == 'C')
-    _aqualink_data.temp_units = CELSIUS;
-    else
-    _aqualink_data.temp_units = UNKNOWN;
+   
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if(strncasecmp(msg, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(msg+9);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
     /* NSF  add config option to support
     if (_config_parameters.spa_temp_follow_pool == true && _aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF ) {
       _aqualink_data.spa_temp = _aqualink_data.pool_temp
@@ -530,7 +553,7 @@ void action_delayed_request()
       logMessage(LOG_NOTICE, "Freeze setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
     }
   } else if (_aqualink_data.unactioned.type == SWG_SETPOINT) {
-    if (_aqualink_data.ar_swg_status != 0x00 ) {
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF ) {
       // SWG is off, can't set %, so delay the set until it's on.
       _aqualink_data.swg_delayed_percent = _aqualink_data.unactioned.value;
     } else {
@@ -695,8 +718,9 @@ void main_loop() {
   _aqualink_data.unactioned.type = NO_ACTION;
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
-  _aqualink_data.ar_swg_status = 0xFF;
+  _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
+  _aqualink_data.temp_units = UNKNOWN;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
@@ -769,7 +793,7 @@ void main_loop() {
           }
           interestedInNextAck = false;
         } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != 0x00) {
-          _aqualink_data.ar_swg_status = 0xFF;
+          _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
           interestedInNextAck = false;
         } else if (packet_buffer[PKT_DEST] == 0x50) {
           interestedInNextAck = true;

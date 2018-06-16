@@ -109,7 +109,9 @@
 #define MSG_SWG_PPM_LEN  4
 
 
+/* AQUAPURE SWG */
 
+#define SWG_STATUS_OFF    0xFF
 
 typedef enum {
   ON,

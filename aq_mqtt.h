@@ -6,6 +6,8 @@
 #define AIR_TEMP_TOPIC "Temperature/Air"
 #define POOL_TEMP_TOPIC "Temperature/Pool"
 #define SPA_TEMP_TOPIC "Temperature/Spa"
+//#define POOL_SETPT_TOPIC "Pool_Heater/setpoint"
+//#define SPA_SETPT_TOPIC "Spa_Heater/setpoint"
 #define SWG_PERCENT_TOPIC "SWG/Percent"
 #define SWG_PERCENT_F_TOPIC "SWG/Percent_f"
 #define SWG_PPM_TOPIC "SWG/PPM"

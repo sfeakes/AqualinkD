@@ -343,7 +343,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "CHECK PCB");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
-      case 0xFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
+      case SWG_STATUS_OFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
@@ -445,6 +445,23 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "swg_percent") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      int val = atoi(value);
+      if (0 != (val % 5) )
+        val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
+
+      if (val > SWG_PERCENT_MAX) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MAX;
+      } else if ( val < SWG_PERCENT_MIN) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MIN;
+      }
+      logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
+    } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
+    } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
+    } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {

@@ -250,9 +250,9 @@ bool setAqualinkNumericField(struct aqualinkdata *aq_data, char *value_label, in
 bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label, int value, int increment)
 {
   logMessage(LOG_DEBUG,"Setting menu item '%s' to %d\n",value_label, value);
-  char leading[10];  // description of the field (POOL, SPA, FRZ)
+  //char leading[10];  // description of the field (POOL, SPA, FRZ)
   int current_val;        // integer value of the current set point
-  char trailing[10];      // the degrees and scale
+  //char trailing[10];      // the degrees and scale
   char searchBuf[20];
     
   sprintf(searchBuf, "^%s", value_label);
