@@ -187,7 +187,7 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
   static char mqtt_pub_topic[250];
 
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
-  send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
+  send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
 
 void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
@@ -197,13 +197,13 @@ void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqleds
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
 
   if (state == ENABLE) {
-    send_mqtt(nc, mqtt_pub_topic, "0");
-    sprintf(mqtt_pub_topic, "%s/%s/enabeled",_aqualink_config->mqtt_aq_topic, dev_name);
-    send_mqtt(nc, mqtt_pub_topic, "1");
+    send_mqtt(nc, mqtt_pub_topic, MQTT_OFF);
+    sprintf(mqtt_pub_topic, "%s/%s/%s",ENABELED_SUBT,_aqualink_config->mqtt_aq_topic, dev_name);
+    send_mqtt(nc, mqtt_pub_topic, MQTT_ON);
   } else {
-    send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
-    sprintf(mqtt_pub_topic, "%s/%s/enabeled",_aqualink_config->mqtt_aq_topic, dev_name);
-    send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
+    send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
+    sprintf(mqtt_pub_topic, "%s/%s/%s",ENABELED_SUBT,_aqualink_config->mqtt_aq_topic, dev_name);
+    send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
   }
 }
 
@@ -254,11 +254,22 @@ void send_mqtt_float_msg(struct mg_connection *nc, char *dev_name, float value) 
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
+
 void send_mqtt_int_msg(struct mg_connection *nc, char *dev_name, int value) {
+  send_mqtt_numeric_msg(nc, dev_name, value);
+  /*
   static char mqtt_pub_topic[250];
   static char msg[10];
 
   sprintf(msg, "%d", value);
+  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, msg);
+  */
+}
+
+void send_mqtt_string_msg(struct mg_connection *nc, char *dev_name, char *msg) {
+  static char mqtt_pub_topic[250];
+
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
@@ -301,21 +312,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->spa_temp != TEMP_UNKNOWN && _aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
     send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
-  } /*else if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp ) {
-    _aqualink_data->spa_temp = _last_mqtt_aqualinkdata.spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
-  } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.spa_temp && _aqualink_config->report_zero_spa_temp == false) {
-    // Use Pool Temp is Spa is not available
-    _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
-    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
-    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
-  } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.spa_temp) {
-    // Use Pool Temp is Spa is not available
-    _aqualink_data->spa_temp = _last_mqtt_aqualinkdata.spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
-    //_last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
-    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
-    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
   } 
-  */
+  
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
@@ -327,11 +325,19 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
   }
+
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
+    send_mqtt_string_msg(nc, FREEZE_PROTECT, MQTT_OFF); // Blindly send off, maybe change this in future if we can read whn freeze protect is active.
+    /*
+    send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
     //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_rfz_protect, _aqualink_data->frz_protect_set_point);
+  } else if (_aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
+    _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
+    send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_OFF);*/
   }
+
   if (_aqualink_data->ar_swg_status == 0x00) { // If the SWG is actually on
     if (_aqualink_data->swg_percent != TEMP_UNKNOWN && (force_update || _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent)) {
       _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
@@ -699,10 +705,15 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       } 
     } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
       if (val <= FREEZE_PT_MAX && val >= FREEZE_PT_MIN) {
-      logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
-      _aqualink_data->unactioned.type = FREEZE_SETPOINT;
+        logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
+        _aqualink_data->unactioned.type = FREEZE_SETPOINT;
       } else {
-        logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc is outside of range\n", value);
+        if (val > FREEZE_PT_MAX)
+          _aqualink_data->unactioned.value = FREEZE_PT_MAX;
+        else
+          _aqualink_data->unactioned.value = FREEZE_PT_MIN;
+        logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc/%df is outside range using %df\n", value, val, _aqualink_data->unactioned.value);
+        _aqualink_data->unactioned.type = FREEZE_SETPOINT;
       }
     } else {
       // Not sure what the setpoint is, ignore.

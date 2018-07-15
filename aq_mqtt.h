@@ -9,13 +9,16 @@
 //#define POOL_SETPT_TOPIC "Pool_Heater/setpoint"
 //#define SPA_SETPT_TOPIC "Spa_Heater/setpoint"
 
+#define ENABELED_SUBT "/enabeled"
+
 #define SWG_TOPIC "SWG"
 #define SWG_PPM_TOPIC SWG_TOPIC "/PPM"
-#define SWG_ENABELED_TOPIC SWG_TOPIC "/enabeled"
+#define SWG_ENABELED_TOPIC SWG_TOPIC ENABELED_SUBT
 #define SWG_PERCENT_TOPIC SWG_TOPIC "/Percent"
 #define SWG_PERCENT_F_TOPIC SWG_TOPIC "/Percent_f"
 
-
+#define FREEZE_PROTECT "Freeze_Protect"
+#define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT
 
 #define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
 #define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
@@ -31,7 +34,10 @@
 #define SWG_ON 2
 #define SWG_OFF 0
 
-#define FREEZE_PROTECT "Freeze_Protect"
+#define MQTT_ON "1"
+#define MQTT_OFF "0"
+
+
 
 // These need to be moved, but at present only aq_mqtt uses them, so there are here.
 // Also need to get the C values from aqualink manual and add those just incase
