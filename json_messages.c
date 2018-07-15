@@ -27,6 +27,7 @@
 //#include "web_server.h"
 #include "json_messages.h"
 #include "domoticz.h"
+#include "aq_mqtt.h"
 
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
@@ -83,6 +84,86 @@ int build_aqualink_error_status_JSON(char* buffer, int size, char *msg)
   //return snprintf(buffer, size, "{\"type\": \"error\",\"status\":\"%s\"}", msg);
   return snprintf(buffer, size, "{\"type\": \"status\",\"status\":\"%s\",\"version\":\"xx\",\"time\":\"xx\",\"air_temp\":\"0\",\"pool_temp\":\"0\",\"spa_temp\":\"0\",\"pool_htr_set_pnt\":\"0\",\"spa_htr_set_pnt\":\"0\",\"frz_protect_set_pnt\":\"0\",\"temp_units\":\"f\",\"battery\":\"ok\",\"leds\":{\"Filter_Pump\": \"off\",\"Spa_Mode\": \"off\",\"Aux_1\": \"off\",\"Aux_2\": \"off\",\"Aux_3\": \"off\",\"Aux_4\": \"off\",\"Aux_5\": \"off\",\"Aux_6\": \"off\",\"Aux_7\": \"off\",\"Pool_Heater\": \"off\",\"Spa_Heater\": \"off\",\"Solar_Heater\": \"off\"}}", msg);
 
+}
+
+int build_homebridge_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
+{
+  memset(&buffer[0], 0, size);
+  int length = 0;
+  int i;
+
+  length += sprintf(buffer+length, "{\"type\": \"devices\",");
+  length += sprintf(buffer+length,  " \"devices\": [");
+  
+  for (i=0; i < TOTAL_BUTTONS; i++) 
+  {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && aqdata->pool_htr_set_point != TEMP_UNKNOWN) {
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_themo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
+                                     aqdata->aqbuttons[i].led->state,
+                                     aqdata->pool_htr_set_point,
+                                     aqdata->pool_temp);
+    } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && aqdata->spa_htr_set_point != TEMP_UNKNOWN) {
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_themo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
+                                     aqdata->aqbuttons[i].led->state,
+                                     aqdata->spa_htr_set_point,
+                                     aqdata->spa_temp);
+    } else {
+      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\" },", 
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
+                                     aqdata->aqbuttons[i].led->state);
+    }
+  }
+
+  //FREEZE_PROTECT  // could add freeze setpoint in future.
+
+  if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
+    length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+                                     SWG_PERCENT_TOPIC,
+                                    "Salt Water Genrator %",
+                                    aqdata->ar_swg_status == 0x00?"on":"off",
+                                    aqdata->swg_percent,
+                                    aqdata->swg_percent);
+
+    length += sprintf(buffer+length, "{\"type\": \"Value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+                                   SWG_PPM_TOPIC,
+                                   "Salt Water Generator PPM",
+                                   "on",
+                                   aqdata->swg_ppm);
+  }
+
+  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+                                   AIR_TEMPERATURE,
+                                   "Pool Air Temperature",
+                                   "on",
+                                   aqdata->air_temp);
+  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+                                   POOL_TEMPERATURE,
+                                   "Pool Water Temperature",
+                                   "on",
+                                   aqdata->pool_temp);
+  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" }",
+                                   SPA_TEMPERATURE,
+                                   "Spa Water Temperature",
+                                   "on",
+                                   aqdata->spa_temp);
+
+  length += sprintf(buffer+length, "]}");
+
+  logMessage(LOG_DEBUG, "WEB: homebridge used %d of %d", length, size);
+
+  buffer[length] = '\0';
+
+  return strlen(buffer);
+  
+  //return length;
 }
 
 int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int size)

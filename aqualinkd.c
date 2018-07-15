@@ -780,10 +780,10 @@ void main_loop() {
         }
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
-        if (packet_buffer[PKT_DEST] == 0x00 && interestedInNextAck == true) {
+        if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
           if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
             _aqualink_data.ar_swg_status = packet_buffer[5];
-            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00) { // We have a delayed % to set.
+            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == DEV_MASTER) { // We have a delayed % to set.
               char sval[10];
               snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
               aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
@@ -792,10 +792,10 @@ void main_loop() {
             }
           }
           interestedInNextAck = false;
-        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != 0x00) {
+        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER) {
           _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
           interestedInNextAck = false;
-        } else if (packet_buffer[PKT_DEST] == 0x50) {
+        } else if (packet_buffer[PKT_DEST] == SWG_DEV_ID) {
           interestedInNextAck = true;
         } else {
           interestedInNextAck = false;

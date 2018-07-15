@@ -21,9 +21,11 @@ typedef enum {
 struct programmingThreadCtrl {
   pthread_t thread_id;
   //void *thread_args;
-  char thread_args[20];
+  char thread_args[25];
   struct aqualinkdata *aq_data;
 };
+
+#define LIGHT_MODE_BUFER 25
 
 //void aq_programmer(program_type type, void *args, struct aqualinkdata *aq_data);
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);

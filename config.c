@@ -69,9 +69,15 @@ void init_parameters (struct aqconfig * parms)
   //parms->dzidx_pool_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   //parms->dzidx_spa_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   parms->light_programming_mode = 0;
+  parms->light_programming_initial_on = 15;
+  parms->light_programming_initial_off = 12;
+  parms->light_programming_button = 5;
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
+  parms->convert_mqtt_temp = true;
+  parms->convert_dz_temp = true;
+  parms->report_zero_spa_temp = false;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -237,6 +243,12 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_mode", 21) == 0) {
               config_parameters->light_programming_mode = atof(cleanalloc(indx+1)); // should free this
+            } else if (strncasecmp (b_ptr, "light_programming_initial_on", 27) == 0) {
+              config_parameters->light_programming_initial_on = strtoul(indx+1, NULL, 10);
+            } else if (strncasecmp (b_ptr, "light_programming_initial_off", 28) == 0) {
+              config_parameters->light_programming_initial_off = strtoul(indx+1, NULL, 10);
+            } else if (strncasecmp (b_ptr, "light_programming_button", 21) == 0) {
+              config_parameters->light_programming_button = strtoul(indx+1, NULL, 10) - 1;
             } else if (strncasecmp (b_ptr, "SWG_percent_dzidx", 17) == 0) {
               config_parameters->dzidx_swg_percent = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
@@ -247,6 +259,14 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->override_freeze_protect = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {
               config_parameters->pda_mode = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "convert_mqtt_temp_to_c", 22) == 0) {
+              config_parameters->convert_mqtt_temp = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "convert_dz_temp_to_c", 21) == 0) {
+              config_parameters->convert_dz_temp = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "flash_mqtt_buttons", 18) == 0) {
+              config_parameters->flash_mqtt_buttons = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
+              config_parameters->report_zero_spa_temp = text2bool(indx+1);
             }/*else if (strncasecmp (b_ptr, "pool_thermostat_dzidx", 21) == 0) {      // removed until domoticz has a better virtual thermostat
               config_parameters->dzidx_pool_thermostat = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "spa_thermostat_dzidx", 20) == 0) {

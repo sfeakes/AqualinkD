@@ -431,7 +431,9 @@ void *set_aqualink_light_colormode( void *ptr )
   char *buf = (char*)threadCtrl->thread_args;
   int val = atoi(&buf[0]);
   int btn = atoi(&buf[5]);
-  float pmode = atof(&buf[10]);
+  int iOn = atoi(&buf[10]);
+  int iOff = atoi(&buf[15]);
+  float pmode = atof(&buf[20]);
 
   if (btn < 0 || btn >= TOTAL_BUTTONS ) {
     logMessage(LOG_ERR, "Can't program light mode on button %d\n", btn);
@@ -442,7 +444,7 @@ void *set_aqualink_light_colormode( void *ptr )
   aqkey *button = &aq_data->aqbuttons[btn];
   unsigned char code = button->code;
 
-  logMessage(LOG_NOTICE, "Pool Light Programming #: %d, on button: %s, with mode: %f\n", val, button->label, pmode);
+  logMessage(LOG_NOTICE, "Pool Light Programming #: %d, on button: %s, with pause mode: %f (initial on=%d, initial off=%d)\n", val, button->label, pmode, iOn, iOff);
 
   // Simply turn the light off if value is 0
   if (val <= 0) {
@@ -459,13 +461,15 @@ void *set_aqualink_light_colormode( void *ptr )
   if ( button->led->state != ON ) {
     logMessage(LOG_INFO, "Pool Light Initial state off, turning on for 15 seconds\n");
     send_cmd(code, aq_data);
-    delay(15 * seconds);
+    //delay(15 * seconds);
+    delay(iOn * seconds);
   }
 
   logMessage(LOG_INFO, "Pool Light turn off for 12 seconds\n");
   // Now need to turn off for between 11 and 14 seconds to reset light.
   send_cmd(code, aq_data);
-  delay(12 * seconds);
+  //delay(12 * seconds);
+  delay(iOff * seconds);
 
   // Now light is reset, pulse the appropiate number of times to advance program.
   logMessage(LOG_INFO, "Pool Light button pulsing on/off %d times\n", val);

@@ -76,6 +76,33 @@ I have my own scripts to do this for me, and probably won't ever document or pub
 Please see the [aqualinkd.conf]
 (https://github.com/sfeakes/aqualinkd/blob/master/extras/aqualinkd.conf) 
 example in the release directory.  Many things are turned off by default, and you may need to enable or configure them for your setup.
+Main item to configure is the Aqualink RS485 address so it doesn't conflict with any existing control panels or equiptment. By default it's set to 0x0a which is the second usable address of an allbutton control panel. Included is a serial loging tool that can let you know all information on the RS485 buss, you can use this to find a good address.
+```
+make slog    <-- will make the serial logging tool
+./release/serial_logger /dev/ttyUSB0    <- is probably all you'll need to run.
+--- example output ---
+Notice: Logging serial information, please wait!
+Notice: ID's found
+Notice: ID 0x08 is in use 
+Notice: ID 0x60 is not used 
+Notice: ID 0x0a is not used  <-- can use for Aqualinkd
+Notice: ID 0x0b is not used  <-- can use for Aqualinkd
+Notice: ID 0x40 is not used 
+Notice: ID 0x41 is not used 
+Notice: ID 0x42 is not used 
+Notice: ID 0x43 is not used 
+<-- snip -->
+Notice: ID 0x50 is not used 
+Notice: ID 0x58 is not used 
+Notice: ID 0x09 is not used  <-- can use for Aqualinkd
+Notice: ID 0x88 is in use
+
+Any address listed with Aqualinkd can be used.  This is the `device-id` address in the config file.
+
+Other command like options for serial_ligger are :-
+-d        (print out every packet)
+-p 1000   (log 1000 packets, default is 200)
+``` 
 Specifically, make sure you configure your MQTT, Pool Equiptment Labels & Domoticz ID's in there, looking at the file it should be self explanatory. 
 
 ## Configuration with home automation hubs
@@ -110,12 +137,19 @@ aqualinkd/Spa_Mode
 aqualinkd/Aux_1
 ....Aux_2-6....
 aqualinkd/Aux_7
-aqualinkd/Pool_Heater
-aqualinkd/Spa_Heater
+aqualinkd/Pool_Heater               (0 off, 1 on and heating)
+aqualinkd/Pool_Heater/enabeled      (0 off, 1 on but not heating - water has reached target temp)
+aqualinkd/Spa_Heater                (0 off, 1 on and heating )
+aqualinkd/Spa_Heater/enabeled       (0 off, 1 but not heating - water has reached target temp)
+aqualinkd/SWG                       (0 off, 2 on generating salt)
+aqualinkd/SWG/enabeled              (0 off, 2 on but not generating salt - SWG reported no-flow or equiv)
 
 Other Information (Salt Water Generator)
 aqualinkd/SWG/Percent
 aqualinkd/SWG/PPM
+aqualinkd/SWG/Percent/set           (set the SWG percent)
+aqualinkd/SWG/Percent_f             (since we use a homekit thermostat for SWG and use degC as %, we need to pass degF for US phone)
+aqualinkd/SWG/Percent_f/set
 ```
 
 To turn something on, or set information, simply add `set` to the end of the above topics, and post 1 or 0 in the message for a button, or a number for a setpoint. Topics Aqualinkd will act on.
@@ -166,7 +200,18 @@ For the moment, native Homekit support has been removed, it will be added back i
 Recomended option for HomeKit support is to make use of the MQTT interface and use [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt) to bridge between Aqualinkd and you Apple (phone/tablet/tv & hub).
 * If you don't already have an MQTT broker Installed, install one. Mosquitto is recomended, this can usually be installed with apt-get
 * Install [HomeKit2MQTT](https://www.npmjs.com/package/homekit2mqtt). (see webpage for install)
-* Then copy the [homekit2mqtt configuration](https://github.com/sfeakes/aqualinkd/blob/master/extras/homekit2mqtt.json) file found in the extras directory `homekit2mqtt.json`
+* Then copy the [`homekit2mqtt.json`](https://github.com/sfeakes/aqualinkd/blob/master/extras/homekit2mqtt.json) configuration file found in the extras directory to your homekit2mqtt storage directory.
+
+* If you want to run homekit2mqtt as a daemon service, there are files in the extras directory to help you do this.
+  * copy [`homekit2mqtt.service`] to `/etc/systemd/system/homekit2mqtt.service`
+  * copy [`homekit2mqtt.defaults`] to `/etc/defaults/homekit2mqtt`
+  * create directory `/var/lib/homekitmqtt`
+  * copy [`homekit2mqtt.json`](https://github.com/sfeakes/aqualinkd/blob/master/extras/homekit2mqtt.json) to `/var/lib/homekitmqtt`
+  * edit `/etc/defaults/homekit2mqtt` to change and homekit2mqtt config parameters.
+  * install and start service
+    * `sudo systemctl enable homekit2mqtt`
+    * `sudo systemctl daemon-reload`
+    * `sudo systemctl start homekit2mqtt`
 
 
 You can of course use a myriad of other HomeKit bridges with the URL endpoints listed in the `All other hubs section`, or MQTT topics listed in the `MQTT` section. The majority of them (including HomeBridge the most popular) use Node and HAP-Node.JS, neither of which I am a fan of for the RaspberryPI. But HomeKit2MQTT seemed to have the least overhead of them all. So that's why the recomendation.

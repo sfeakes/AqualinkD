@@ -1,0 +1,27 @@
+#[Unit]
+#Description=HomeKitMQTT Service
+#After=multi-user.target
+#
+#[Service]
+#User=pi
+#Type=idle
+#ExecStart=/usr/bin/homekitmqtt
+#
+#[Install]
+#WantedBy=multi-user.target
+#
+[Unit]
+Description=Node.js HomeKit Server for MQTT
+After=syslog.target network-online.target
+
+[Service]
+Type=simple
+User=homebridge
+EnvironmentFile=/etc/default/homekitmqtt
+ExecStart=/usr/bin/homekit2mqtt $HOMEKITMQTT_OPTS
+Restart=on-failure
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

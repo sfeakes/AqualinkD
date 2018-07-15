@@ -12,7 +12,8 @@
 #define PKT_STATUS_BYTES 5
 
 
-#define DEV_MASTER      0
+#define DEV_MASTER      0x00
+#define SWG_DEV_ID      0x50
 
 // PACKET DEFINES
 #define NUL  0x00

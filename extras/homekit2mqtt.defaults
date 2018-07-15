@@ -1,0 +1,4 @@
+# Defaults / Configuration options for homebridge
+# The following settings tells homebridge where to find the config.json file and where to persist the data (i.e. pairing and others)
+
+HOMEKITMQTT_OPTS=--p 51827 -u mqtt://localhost -m /var/lib/homekit2mqtt/homekit2mqtt.json -s /var/lib/homekit2mqtt -b "Aqualinkd bridge" -a "CC:22:3D:E3:CE:F6" -c "031-45-154" -x --disable-json-parse

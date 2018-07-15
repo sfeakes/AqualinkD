@@ -160,7 +160,7 @@ void send_domoticz_mqtt_temp_msg(struct mg_connection *nc, int idx, int value)
     return;
 
   char mqtt_msg[JSON_MQTT_MSG_SIZE];
-  build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, (_aqualink_data->temp_units==FAHRENHEIT)?roundf(degFtoC(value)):value);
+  build_mqtt_status_JSON(mqtt_msg ,JSON_MQTT_MSG_SIZE, idx, 0, (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_dz_temp)?roundf(degFtoC(value)):value);
   send_mqtt(nc, _aqualink_config->mqtt_dz_pub_topic, mqtt_msg);
 }
 void send_domoticz_mqtt_numeric_msg(struct mg_connection *nc, int idx, int value) 
@@ -189,21 +189,51 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
 }
+
+void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
+{
+  static char mqtt_pub_topic[250];
+
+  sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
+
+  if (state == ENABLE) {
+    send_mqtt(nc, mqtt_pub_topic, "0");
+    sprintf(mqtt_pub_topic, "%s/%s/enabeled",_aqualink_config->mqtt_aq_topic, dev_name);
+    send_mqtt(nc, mqtt_pub_topic, "1");
+  } else {
+    send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
+    sprintf(mqtt_pub_topic, "%s/%s/enabeled",_aqualink_config->mqtt_aq_topic, dev_name);
+    send_mqtt(nc, mqtt_pub_topic, (state==OFF?"0":"1"));
+  }
+}
+
+// NSF need to change this function to the _new once finished.
 void send_mqtt_temp_msg(struct mg_connection *nc, char *dev_name, long value)
 {
   static char mqtt_pub_topic[250];
   static char degC[5];
-  
-  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(value):value );
+  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
 }
+/*
+void send_mqtt_temp_msg_new(struct mg_connection *nc, char *dev_name, long value)
+{
+  static char mqtt_pub_topic[250];
+  static char degC[5];
+  // NSF remove false below once we have finished.
+  sprintf(degC, "%.2f", (false && _aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
+  //sprintf(degC, "%d", value );
+  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, degC);
+}
+*/
 void send_mqtt_setpoint_msg(struct mg_connection *nc, char *dev_name, long value)
 {
   static char mqtt_pub_topic[250];
   static char degC[5];
   
-  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT)?degFtoC(value):value );
+  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
   sprintf(mqtt_pub_topic, "%s/%s/setpoint", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
 }
@@ -237,6 +267,8 @@ void send_mqtt_int_msg(struct mg_connection *nc, char *dev_name, int value) {
 void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 {
   static int cnt=0;
+  static long int lastFlashTm = 0;
+  static bool lastFlash = false;
   bool force_update = false;
 
   if (cnt > 300) {  // 100 = about every 2 minutes.
@@ -253,34 +285,47 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->air_temp != TEMP_UNKNOWN && _aqualink_data->air_temp != _last_mqtt_aqualinkdata.air_temp) {
     _last_mqtt_aqualinkdata.air_temp = _aqualink_data->air_temp;
     send_mqtt_temp_msg(nc, AIR_TEMP_TOPIC, _aqualink_data->air_temp);
+    //send_mqtt_temp_msg_new(nc, AIR_TEMPERATURE_TOPIC, _aqualink_data->air_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_air_temp, _aqualink_data->air_temp);
   }
+
   if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.pool_temp) {
     _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
+
+    // If we get pool temp, we know spa is inactive, so set spa temp to pool if configured
+    _aqualink_data->spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
   }
+
   if (_aqualink_data->spa_temp != TEMP_UNKNOWN && _aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
-    _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
+    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
+  } /*else if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp ) {
+    _aqualink_data->spa_temp = _last_mqtt_aqualinkdata.spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
+  } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.spa_temp && _aqualink_config->report_zero_spa_temp == false) {
+    // Use Pool Temp is Spa is not available
+    _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
   } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.spa_temp) {
     // Use Pool Temp is Spa is not available
-    _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
-    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->pool_temp);
-    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
-  }
+    _aqualink_data->spa_temp = _last_mqtt_aqualinkdata.spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
+    //_last_mqtt_aqualinkdata.spa_temp = _aqualink_data->pool_temp;
+    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
+    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
+  } 
+  */
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
     // removed until domoticz has a better virtuel thermostat
     //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_thermostat, _aqualink_data->pool_htr_set_point);
   }
+
   if (_aqualink_data->spa_htr_set_point != TEMP_UNKNOWN && _aqualink_data->spa_htr_set_point != _last_mqtt_aqualinkdata.spa_htr_set_point) {
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
-    // removed until domoticz has a better virtuel thermostat
-    //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_thermostat, _aqualink_data->spa_htr_set_point);
   }
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
@@ -301,6 +346,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     }
   }
   if (_aqualink_data->ar_swg_status != _last_mqtt_aqualinkdata.ar_swg_status) {
+    if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF)
+      send_mqtt_int_msg(nc, SWG_ENABELED_TOPIC, SWG_OFF);
+    else
+      send_mqtt_int_msg(nc, SWG_ENABELED_TOPIC, SWG_ON);
+
     switch (_aqualink_data->ar_swg_status) {
       // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
       case 0x00:
@@ -364,7 +414,22 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state){
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
       if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX) {
-        send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+        if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
+          send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+        } else if (_aqualink_data->aqbuttons[i].led->state == FLASH && _aqualink_config->flash_mqtt_buttons == true) {
+          time_t     now;
+          now = time(NULL);
+          if ( now != lastFlashTm ) {
+            lastFlashTm = now;
+            _aqualink_data->aqbuttons[i].led->state = lastFlash;
+            _last_mqtt_aqualinkdata.aqualinkleds[i].state = !lastFlash;
+            send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _last_mqtt_aqualinkdata.aqualinkleds[i].state);
+            logMessage(LOG_DEBUG, "Flash button : %s\n",_aqualink_data->aqbuttons[i].name);
+          }
+        } else {
+          send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+        }
+
         send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
       }
       // Send mqtt
@@ -395,9 +460,14 @@ int getTempforMeteohub(char *buffer)
 
 void set_light_mode(char *value) 
 {
-  char buf[20];
+  char buf[LIGHT_MODE_BUFER];
   // 5 below is light index, need to look this up so it's not hard coded.
-  sprintf(buf, "%-5s%-5d%.2f",value, 5, _aqualink_config->light_programming_mode );
+  sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
+                                      _aqualink_config->light_programming_button, 
+                                      _aqualink_config->light_programming_initial_on ,
+                                      _aqualink_config->light_programming_initial_off,
+                                      _aqualink_config->light_programming_mode );
+  //logMessage(LOG_NOTICE, "WEB: requset light mode %s\n", buf);
   aq_programmer(AQ_SET_COLORMODE, buf, _aqualink_data);
 }
 
@@ -432,7 +502,6 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       int size = getTempforMeteohub(data);
       mg_send_head(nc, 200, size, "Content-Type: text/plain");
       mg_send(nc, data, size);
-
     } else if (strcmp(command, "poollightmode") == 0) {
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
@@ -440,7 +509,6 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       set_light_mode(value);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-
     } else if (strcmp(command, "diag") == 0) {
       aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
@@ -462,6 +530,11 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
     } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
     } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
+    } else if (strcmp(command, "homebridge") == 0) {
+      char message[JSON_LABEL_SIZE*10];
+      int size = build_homebridge_JSON(_aqualink_data, message, JSON_LABEL_SIZE*10);
+      mg_send_head(nc, 200, size, "Content-Type: application/json");
+      mg_send(nc, message, size);
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -520,6 +593,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     // logMessage (LOG_DEBUG, "Doc root=%s\n",opts.document_root);
     mg_serve_http(nc, http_msg, s_http_server_opts);
   }
+
 }
 
 void action_websocket_request(struct mg_connection *nc, struct websocket_message *wm) {
@@ -637,8 +711,14 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     }
     // logMessage(LOG_INFO, "MQTT: topic %.*s %.2f, setting %s\n",msg->topic.len, msg->topic.p, value);
     time(&_aqualink_data->unactioned.requested);
-  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent_f", 8) == 0) && (strncmp(pt3, "set", 3) == 0))) {
-      int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(value)) : round(value);
+  //} else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent_f", 8) == 0) && (strncmp(pt3, "set", 3) == 0))) {
+  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent", 7) == 0) && (strncmp(pt3, "set", 3) == 0))) {
+      int val;
+      if ( (strncmp(pt2, "Percent_f", 9) == 0)  ) {
+        val = _aqualink_data->unactioned.value = round(degCtoF(value));
+      } else {
+        val = _aqualink_data->unactioned.value = round(value);
+      }
       // Convert number to nearest 5, since those are the incruments, NSF check 100 or 101
       if (0 != (val % 5) )
         val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
@@ -745,6 +825,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     //nc->user_data = WEB;
     http_msg = (struct http_message *)ev_data;
     action_web_request(nc, http_msg);
+    logMessage(LOG_DEBUG, "Served WEB request\n");
     break;
   
   case MG_EV_WEBSOCKET_HANDSHAKE_DONE:

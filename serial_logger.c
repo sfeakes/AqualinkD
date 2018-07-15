@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 10000
+#define PACKET_MAX 200
 
 /*
 typedef enum used {
@@ -86,46 +86,59 @@ int main(int argc, char *argv[]) {
   serial_id_log slog[SLOG_MAX];
   int sindex = 0;
   int received_packets = 0;
+  int logPackets = PACKET_MAX;
+  int logLevel = LOG_NOTICE;
+  //int logLevel; 
   //char buffer[256];
-  bool idMode = true;
+  //bool idMode = true;
 
   if (getuid() != 0) {
     fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
     return EXIT_FAILURE;
   }
 
-  //if (idMode)
-    setLoggingPrms(LOG_DEBUG, false, false);
-  //else
-  //  setLoggingPrms(LOG_DEBUG_SERIAL, false, false);
-
-  if (argc < 2) {
-    logMessage(LOG_DEBUG, "ERROR, first param must be serial port, ie:-\n    %s /dev/ttyUSB0\n\n", argv[0]);
+  if (argc < 2 || access( argv[1], F_OK ) == -1 ) {
+    fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
+    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000\n\n", argv[0]);
     return 1;
   }
+
+  
+  for (i = 2; i < argc; i++) {
+    if (strcmp(argv[i], "-d") == 0) {
+      logLevel = LOG_DEBUG;
+    } else if (strcmp(argv[i], "-p") == 0 && i+1 < argc) {
+      logPackets = atoi(argv[i+1]);
+    }
+  }
+
+  setLoggingPrms(logLevel, false, false);
 
   rs_fd = init_serial_port(argv[1]);
 
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);
 
+  logMessage(LOG_NOTICE, "Logging serial information, please wait!\n");
+
   while (_keepRunning == true) {
     if (rs_fd < 0) {
-      logMessage(LOG_DEBUG, "ERROR, serial port disconnect\n");
+      logMessage(LOG_ERR, "ERROR, serial port disconnect\n");
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.
-      logMessage(LOG_DEBUG, "ERROR, on serial port\n");
+      logMessage(LOG_ERR, "ERROR, on serial port\n");
       _keepRunning = false;
     } else if (packet_length == 0) {
       // Nothing read
     } else if (packet_length > 0) {
 
         //logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
-        printPacket(lastID, packet_buffer, packet_length);
+        if (logLevel > LOG_NOTICE)
+          printPacket(lastID, packet_buffer, packet_length);
 
         if (packet_buffer[PKT_DEST] != DEV_MASTER) {
           found = false;
@@ -157,18 +170,18 @@ int main(int argc, char *argv[]) {
       received_packets++;
     }
 
-    if (received_packets >= PACKET_MAX) {
+    if (received_packets >= logPackets) {
       _keepRunning = false;
     }
   }
 
   logMessage(LOG_DEBUG, "\n");
   if (sindex >= SLOG_MAX)
-    logMessage(LOG_DEBUG, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
-  logMessage(LOG_DEBUG, "ID's found\n");
+    logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
+  logMessage(LOG_NOTICE, "ID's found\n");
   for (i = 0; i <= sindex; i++) {
-    logMessage(LOG_DEBUG, "ID 0x%02hhx is %s %s\n", slog[i].ID, slog[i].inuse == true ? "in use" : "not used",
-               slog[i].inuse == false && canUse(slog[i].ID) == true ? " <-- can use for Aqualinkd" : "");
+    logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+               (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
   }
 
   return 0;
