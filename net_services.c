@@ -304,16 +304,19 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
-
-    // If we get pool temp, we know spa is inactive, so set spa temp to pool if configured
-    _aqualink_data->spa_temp = _aqualink_config->report_zero_spa_temp?32:_aqualink_data->pool_temp;
   }
-
-  if (_aqualink_data->spa_temp != TEMP_UNKNOWN && _aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
-    send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
-    send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
-  } 
   
+  if (_aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
+    if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp) {
+      _last_mqtt_aqualinkdata.spa_temp = TEMP_UNKNOWN;
+      send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, (_aqualink_config->convert_mqtt_temp?-18:0));
+    } else {
+      _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
+      send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
+      send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);
+    }
+  } 
+
   if (_aqualink_data->pool_htr_set_point != TEMP_UNKNOWN && _aqualink_data->pool_htr_set_point != _last_mqtt_aqualinkdata.pool_htr_set_point) {
     _last_mqtt_aqualinkdata.pool_htr_set_point = _aqualink_data->pool_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
@@ -522,20 +525,23 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     } else if (strcmp(command, "swg_percent") == 0) {
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      int val = atoi(value);
-      if (0 != (val % 5) )
-        val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
-
-      if (val > SWG_PERCENT_MAX) {
-         _aqualink_data->unactioned.value = SWG_PERCENT_MAX;
-      } else if ( val < SWG_PERCENT_MIN) {
-         _aqualink_data->unactioned.value = SWG_PERCENT_MIN;
-      }
-      logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
-      _aqualink_data->unactioned.type = SWG_SETPOINT;
+      aq_programmer(AQ_SET_SWG_PERCENT, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set SWG to %s\n", value);
     } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_POOL_HEATER_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Pool heater to %s\n", value);
     } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_SPA_HEATER_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Spa heater to %s\n", value);
     } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
     } else if (strcmp(command, "homebridge") == 0) {
       char message[JSON_LABEL_SIZE*10];
       int size = build_homebridge_JSON(_aqualink_data, message, JSON_LABEL_SIZE*10);
@@ -760,6 +766,9 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
         } else {
           logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
           aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
+          //_last_mqtt_aqualinkdata.aqbuttons[i].led->state = LED_S_UNKNOWN;
+          _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
         }
         break;
       }
@@ -995,6 +1004,7 @@ bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata, struct 
   // Start MQTT
   start_mqtt(mgr);
 #endif
+
 
   return true;
 }

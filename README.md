@@ -11,13 +11,14 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 * (Salt Water Generator is configured as Thermostat as it's the closest homekit accessory type, so &deg;=% and Cooling=Generating)
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
-## Latest update in Release 1.0
+## Latest update in Release 1.0a
 * Flash buttons on/off in homekit for enabeling / disabeling / cooldown period as they do on control panel
 * Full SWG support (setting %, not just reporting current state). Also reports Salt Cell status such as (no flow, low salt, high curent, clean cell, low voltage, water temp low, check PCB)
-* Update to thermostats.
+* Update to thermostats, colors are now correct in homekit, green=enabeled, orange=heating, blue=cooling (SWG only)
 * Light show program mode should now support most vendors lights.
 * config changes for (spa temp as pool temp / light program mode options / enable homekit button flash)
 * updated to serial_logger.
+* freeze protect, heater temperature & SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support)
 
 # TL;DR Install
 ## Quick instal if you are using Raspberry PI

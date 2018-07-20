@@ -2,6 +2,18 @@
 #ifndef AQ_PROGRAMMER_H_
 #define AQ_PROGRAMMER_H_
 
+
+// need to get the C values from aqualink manual and add those just incase
+// someone has the controller set to C.
+#define HEATER_MAX 104
+#define MEATER_MIN 36
+#define FREEZE_PT_MAX 42
+#define FREEZE_PT_MIN 36
+#define SWG_PERCENT_MAX 101
+#define SWG_PERCENT_MIN 0
+
+#define LIGHT_MODE_BUFER 25
+
 typedef enum {
   AQP_NULL = -1,
   AQ_GET_POOL_SPA_HEATER_TEMPS,
@@ -25,7 +37,7 @@ struct programmingThreadCtrl {
   struct aqualinkdata *aq_data;
 };
 
-#define LIGHT_MODE_BUFER 25
+
 
 //void aq_programmer(program_type type, void *args, struct aqualinkdata *aq_data);
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);

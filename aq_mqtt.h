@@ -38,14 +38,4 @@
 #define MQTT_OFF "0"
 
 
-
-// These need to be moved, but at present only aq_mqtt uses them, so there are here.
-// Also need to get the C values from aqualink manual and add those just incase
-// someone has the controller set to C.
-#define HEATER_MAX 104
-#define MEATER_MIN 36
-#define FREEZE_PT_MAX 42
-#define FREEZE_PT_MIN 36
-#define SWG_PERCENT_MAX 101
-#define SWG_PERCENT_MIN 0
 #endif // AQ_MQTT_H_

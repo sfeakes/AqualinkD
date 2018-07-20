@@ -361,6 +361,12 @@ void *set_aqualink_SWG( void *ptr )
   if (0 != (val % 5) )
     val = ((val + 5) / 10) * 10;
 
+  if (val > SWG_PERCENT_MAX) {
+    val = SWG_PERCENT_MAX;
+  } else if ( val < SWG_PERCENT_MIN) {
+    val = SWG_PERCENT_MIN;
+  }
+
   logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
@@ -510,7 +516,12 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_POOL_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
-   
+  if (val > HEATER_MAX) {
+    val = HEATER_MAX;
+  } else if ( val < MEATER_MIN) {
+    val = MEATER_MIN;
+  }
+  
   logMessage(LOG_DEBUG, "Setting pool heater setpoint to %d\n", val);
   //setAqualinkTemp(aq_data, "SET TEMP", "SET POOL TEMP", NULL, "POOL", val);
   
@@ -546,6 +557,11 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_SPA_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
+  if (val > HEATER_MAX) {
+    val = HEATER_MAX;
+  } else if ( val < MEATER_MIN) {
+    val = MEATER_MIN;
+  }
 
   logMessage(LOG_DEBUG, "Setting spa heater setpoint to %d\n", val);
    
@@ -583,6 +599,11 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_FRZ_PROTECTION_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
+  if (val > FREEZE_PT_MAX) {
+    val = FREEZE_PT_MAX;
+  } else if ( val < FREEZE_PT_MIN) {
+    val = FREEZE_PT_MIN;
+  }
   
   logMessage(LOG_DEBUG, "Setting sfreeze protection to %d\n", val);
 

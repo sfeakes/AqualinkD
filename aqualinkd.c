@@ -68,11 +68,11 @@ void processLEDstate()
     for (bit=0; bit<8; bit+=2)
     {
       if ( ((_aqualink_data.raw_status[byte] >> (bit+1) ) & 1) == 1 )
-      _aqualink_data.aqualinkleds[i].state = FLASH;
+         _aqualink_data.aqualinkleds[i].state = FLASH;
       else if ( ((_aqualink_data.raw_status[byte] >> bit) & 1) == 1 )
-      _aqualink_data.aqualinkleds[i].state = ON;
+        _aqualink_data.aqualinkleds[i].state = ON;
       else
-      _aqualink_data.aqualinkleds[i].state = OFF;
+        _aqualink_data.aqualinkleds[i].state = OFF;
       
       //logMessage(LOG_DEBUG,"Led %d state %d",i+1,_aqualink_data.aqualinkleds[i].state);
       i++;
@@ -80,13 +80,13 @@ void processLEDstate()
   }
   // Reset enabled state for heaters, as they take 2 led states
   if ( _aqualink_data.aqualinkleds[POOL_HTR_LED_INDEX-1].state == OFF && _aqualink_data.aqualinkleds[POOL_HTR_LED_INDEX].state == ON)
-  _aqualink_data.aqualinkleds[POOL_HTR_LED_INDEX-1].state = ENABLE;\
+    _aqualink_data.aqualinkleds[POOL_HTR_LED_INDEX-1].state = ENABLE;\
   
   if ( _aqualink_data.aqualinkleds[SPA_HTR_LED_INDEX-1].state == OFF && _aqualink_data.aqualinkleds[SPA_HTR_LED_INDEX].state == ON)
-  _aqualink_data.aqualinkleds[SPA_HTR_LED_INDEX-1].state = ENABLE;
+    _aqualink_data.aqualinkleds[SPA_HTR_LED_INDEX-1].state = ENABLE;
   
   if ( _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX-1].state == OFF && _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX].state == ON)
-  _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX-1].state = ENABLE;
+    _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX-1].state = ENABLE;
 }
 
 
@@ -291,6 +291,7 @@ void processMessage(char *message)
   //aqualink_strcpy(_aqualink_data.message, msg);
   
   logMessage(LOG_INFO, "RS Message :- '%s'\n",msg);
+  //logMessage(LOG_NOTICE, "RS Message :- '%s'\n",msg);
   
   // Check long messages in this if/elseif block first, as some messages are similar.  
   // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
@@ -469,7 +470,9 @@ bool process_packet(unsigned char* packet, int length)
     if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF ) {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
+      //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
     } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF ) {
+      //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
     } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON ) {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
