@@ -59,6 +59,7 @@ Manual install for init-d systems
 
 
 ## New WEB UI (in beta)
+* Doesn't work in MS Edge or MS Exploder browsers. (Firefox, Chrome, Safari & mobile versions of each) all seem to be fine.
 * use http://aqualink.ip.address/hk/ to access new UI
 * look in `<install_dir>/web/hk` hopefully customizing icon and background images are self explanatory.
 * icons should be around 50x50 pixles and in PNG format, background any size in JPG or just delete the file if you want solid color.

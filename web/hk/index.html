@@ -416,17 +416,18 @@
       if (w > h)
         _landscape = true;
       else
-        _landscape - false;
+        _landscape = false;
       /*
         Future change element sizes here if needed
       */
       window.addEventListener("orientationchange", function() {
         var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
         var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-        if (w > h)
+        // Have no idea why this is reversed, but w is less then h in landscape when captured here.
+        if (w < h)
           _landscape = true;
         else
-          _landscape - false;
+          _landscape = false;
       }, false);
     }
 
@@ -1028,13 +1029,7 @@
 <!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
 
 <body onload='showTileOptions(false); init(); startWebsockets();'>
-    <div id='body_wrap' class='body_wrap' onclick='showTileOptions(false);'>
-  <!--
-    <div id='message' class='message' onmousedown='hidemessage()'>
-        <div id='message-text' class='message-text'>
-          <b>Loading....</b>
-        </div>
-      </div>-->
+  <div id='body_wrap' class='body_wrap' onclick='showTileOptions(false);'>
   <div id='wrapper' class="wrapper">
     <div id="header" class="head">
       <table border='0' width='100%' cellpadding='0' cellspacing='0'>
