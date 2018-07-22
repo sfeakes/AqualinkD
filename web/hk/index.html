@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<script type='text/javascript'>
+  // Any devices you don't want to see you can uncomment the ID below.
+  // For a complete list returned from your particular aqualinkd instance 
+  // use the below URL and look at the ID value for each device.
+  // http://aqualink.ip.address/?command=devices
+  var ignore_devices = [ 
+                         //"Filter_Pump",
+                         //"Spa_Mode",
+                         //"Aux_1",
+                         //"Aux_2",
+                         //"Aux_3",
+                         //"Aux_4",
+                         //"Aux_5",
+                         //"Aux_6",
+                         //"Aux_7",
+                         //"Pool_Heater",
+                         //"Spa_Heater",
+                         "Solar_Heater",
+                         //"Freeze_Protect",
+                         //"SWG/Percent",
+                         //"SWG/PPM",
+                         //"Air",
+                         //"Pool_Water",
+                         //"Spa_Water"
+                        ];
+  // Add the light program names below, the name index MUST correlate to
+  // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
+  var light_program = ["Voodoo Lounge - Show",
+                       "Blue Sea",
+                       "Royal Blue",
+                       "Afternoon Skies",
+                       "Aqua Green",
+                       "Emerald",
+                       "Cloud White",
+                       "Warm Red",
+                       "Flamingo",
+                       "Vivid Violet",
+                       "Sangria",
+                       "Twilight - Show",
+                       "Tranquility - Show",
+                       "Gemstone - Show",
+                       "USA - Show",
+                       "Mardi Gras - Show",
+                       "Cool Cabaret - Show"];
+</script>
+
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+
+  <title>AqualinkD</title>
+  <meta name='viewport' content='width=device-width'>
+  <meta name='apple-mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+  <link href="aqualinkd.png" rel="apple-touch-icon">
+  <link href="aqualinkd.png" rel="icon">
+  <style>
+    :root {
+
+      --tile-width: 100px;
+      --tile_icon-height: 35px;
+      --tile_name-height: 32px;
+      --tile_status-height: 15px;
+      --tile_grid-gap: 10px;
+      /*
+      --tile-width: 125px;
+      --tile_icon-height: 45px;
+      --tile_name-height: 42px;
+      --tile_status-height: 15px;
+      --tile_grid-gap: 20px;
+    */
+      --slider-ball: 30;
+      --slider-highlight: #2196F3;
+      --slider-lowlight: #d3d3d3;
+      --slider-height: 20px;
+    }
+
+
+    div {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+
+    div::-moz-selection {
+      background: transparent;
+    }
+
+    div::selection {
+      background: transparent;
+    }
+
+    html {}
+
+    body {
+      background-color: rgb(235, 235, 235);
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      color: black;
+      /*margin: 0 !important;*/
+      /*padding: 0 !important;*/
+      /*margin: 10px !important;*/
+      /* Font rendering (mainly for firefox) */
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .body_wrap {
+      position:fixed;
+      width:100%;
+      height:100%;
+      top:0px;
+      left:0px;
+      background-image: url("background.jpg");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: cover;
+      height: 100%;
+    }
+
+    .opaque {
+      top: 0px;
+      left: 0px;
+      filter: alpha(opacity=60);
+      opacity: 0.6;
+    }
+
+    .options_pane {
+      background-color: rgb(245, 245, 245);
+      border: 2px solid rgb(124, 124, 124);
+      border-radius: 20px;
+    }
+
+    .options {
+      top: 10px;
+      /*left: 10px;*/
+      position: fixed;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw;
+      /*
+      height: 100%;
+      */
+    }
+
+    /*
+    .show {
+      top: 0px;
+      left: 0px;
+    }
+*/
+    .wrapper {
+      display: grid;
+      /*grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));
+      grid-auto-rows: 1fr, repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));*/
+      grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), auto));
+      grid-auto-rows: 1fr, repeat(auto-fit, minmax(var(--tile-width), auto));
+      grid-gap: var(--tile_grid-gap);
+      padding: 0 !important;
+      margin: 10px !important;
+    }
+
+    .head {
+      /*background-color: rgb(124, 124, 124);*/
+      background-color: rgb(43, 106, 143);
+      color: #fff;
+      border-radius: 5px;
+      padding: 5px;
+      grid-column: 1 / -1;
+    }
+
+    .error {
+      background-color: rgb(143, 43, 43) !important;
+    }
+
+    .hide {
+      display: none;
+      filter: alpha(opacity=0);
+      opacity: 0.0;
+    }
+
+    .tile {
+      background-color: rgb(220, 220, 220);
+      color: rgb(110, 110, 110);
+      border-radius: 10px;
+      padding: 0px;
+      /*font-size: 100%;*/
+      box-sizing: border-box;
+      padding: 5px;
+      height: var(--tile-width);
+      width: var(--tile-width);
+
+      filter: alpha(opacity=90);
+      opacity: 0.9;
+    }
+
+    .on {
+      background-color: #fff;
+      color: #000;
+      filter: alpha(opacity=100);
+      opacity: 1.0;
+    }
+
+    /*
+    .off {
+      background-color: #ccc;
+      color: rgb(133, 133, 133);
+    }
+*/
+
+    .tile_icon {
+      height: var(--tile_icon-height);
+      display: table;
+      margin: 0 auto;
+
+      /*background-color: red;*/
+    }
+
+    .tile_name {
+      height: var(--tile_name-height);
+      /*background-color: green;*/
+    }
+
+    .tile_status {
+      color: rgb(87, 87, 87);
+      height: var(--tile_status-height);
+      /*background-color: blue;*/
+    }
+
+    .tile_icon_value {
+      border-radius: calc(var(--tile_icon-height) / 2);
+      font-weight: 600;
+      /*border-radius: 27px;*/
+      height: var(--tile_icon-height);
+      min-width: var(--tile_icon-height);
+      text-align: center;
+      vertical-align: middle;
+      line-height: var(--tile_icon-height);
+      filter: alpha(opacity=100);
+      opacity: 1.0;
+    }
+
+    .heat {
+      background-color: rgb(255, 123, 0);
+      color: rgb(255, 255, 255);
+    }
+
+    .cool {
+      background-color: rgb(4, 159, 248);
+      color: rgb(255, 255, 255);
+    }
+
+    .enabled {
+      background-color: rgb(78, 196, 0);
+      color: rgb(255, 255, 255);
+    }
+
+    .disabled {
+      background-color: rgb(110, 110, 110);
+      color: rgb(220, 220, 220);
+    }
+
+    /* All for options panel */
+
+    .option_switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px
+    }
+
+    .option_switch input {
+      display: none;
+    }
+
+    .option_switch_slide {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--slider-lowlight);
+      -webkit-transition: .4s;
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .option_switch_slide:before {
+      position: absolute;
+      content: "";
+      height: calc(var(--slider-ball)*1px);
+      width: calc(var(--slider-ball)*1px);
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      -webkit-transition: .4s;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.option_switch_slide {
+      background-color: var(--slider-highlight);
+    }
+
+    input:focus+.option_switch_slide {
+      box-shadow: 0 0 1px var(--slider-highlight);
+    }
+
+    input:checked+.option_switch_slide:before {
+      -webkit-transform: translateX(26px);
+      -ms-transform: translateX(26px);
+      transform: translateX(26px);
+    }
+
+    .option_slider {
+      -webkit-appearance: none;
+      width: 300px;
+      height: var(--slider-height);
+      background: var(--slider-lowlight);
+      outline: none;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+      border-radius: var(--slider-height);
+    }
+
+    .option_slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: calc(var(--slider-ball)*1px);
+      height: calc(var(--slider-ball)*1px);
+      background: var(--slider-highlight);
+      cursor: pointer;
+      border-radius: calc(var(--slider-ball)*1px);
+    }
+
+    .option_slider::-moz-range-thumb {
+      width: calc(var(--slider-ball)*1px);
+      height: calc(var(--slider-ball)*1px);
+      background: var(--slider-highlight);
+      cursor: pointer;
+      border-radius: var(--slider-height);
+    }
+
+    .options_title {
+      /*background-color: rgb(124, 124, 124);
+      color: #fff; 
+      font-weight: 200;*/
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    .options_selector {
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+    }
+
+    .options_button {
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+    }
+
+    .timedate {
+      font-size: 10px;
+    }
+  </style>
+
+  <script type='text/javascript'>
+    var _pressEvent;
+    var _ignoreMouseEvent = false;
+    var _temperature_units;
+    var _aqualink_data;
+    var _landscape = false;
+
+    //init();
+
+    function init() {
+      setSizeSpecifics();
+
+      option = document.getElementById('pswitch_option_list');
+
+      fLen = light_program.length;
+      for (i = 1; i < fLen; i++) {
+        var opt = document.createElement('option');
+        opt.value = i;
+        opt.innerHTML = light_program[i];
+        option.appendChild(opt);
+      }
+
+      document.getElementById('thermostat_options').classList.remove("hide");
+      document.getElementById('swg_options').classList.remove("hide");
+      document.getElementById('pswitch_options').classList.remove("hide");
+    }
+
+    function setSizeSpecifics() {
+      var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+      var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+      //alert(w+"x"+h+" = "+(w*h));
+      // 375x724 = 271500
+      if ((w * h) > 350000) {
+        document.documentElement.style.setProperty('--tile-width', '125px');
+        document.documentElement.style.setProperty('--tile_icon-height', '45px');
+        document.documentElement.style.setProperty('--tile_name-height', '42px');
+        document.documentElement.style.setProperty('--tile_status-height', '15px');
+        document.documentElement.style.setProperty('--tile_grid-gap', '20px');
+      }
+      if (w > h)
+        _landscape = true;
+      else
+        _landscape - false;
+      /*
+        Future change element sizes here if needed
+      */
+      window.addEventListener("orientationchange", function() {
+        var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+        if (w > h)
+          _landscape = true;
+        else
+          _landscape - false;
+      }, false);
+    }
+
+    function interval(duration, fn) {
+      this.baseline = undefined
+
+      this.run = function() {
+        if (this.baseline === undefined) {
+          this.baseline = new Date().getTime()
+        }
+        fn()
+        var end = new Date().getTime()
+        this.baseline += duration
+
+        var nextTick = duration - (end - this.baseline)
+        if (nextTick < 0) {
+          nextTick = 0
+        }
+        (function(i) {
+          i.timer = setTimeout(function() {
+            i.run(end)
+          }, nextTick)
+        }(this))
+      }
+
+      this.stop = function() {
+        clearTimeout(this.timer)
+      }
+    }
+
+    var timer = new interval(1000, function() {
+      blink_tiles();
+    })
+    timer.run();
+
+    function blink_tiles() {
+      if (_aqualink_data == undefined) {
+        return;
+      }
+      for (var obj in _aqualink_data.leds) {
+        if (_aqualink_data.leds[obj] == "flash" && (tile = document.getElementById(obj)) != null) {
+          if (tile.classList.contains("on"))
+            tile.classList.remove("on");
+          else
+            tile.classList.add("on");
+        }
+      }
+    }
+
+
+    function endPress(id) {
+      //pressEvent = 0;
+      //alert ("Long press "+id);
+      //switchTileState(id, true);
+      showTileOptions(true, id);
+    }
+
+
+    function add_clickEvent(tile, id) {
+
+      tile.addEventListener('touchstart', function() {
+        _ignoreMouseEvent = true;
+        _pressEvent = window.setTimeout(function() {
+          _pressEvent = 0;
+          endPress(id);
+        }, 1000);
+      });
+
+      tile.addEventListener('touchend', function() {
+        if (_pressEvent != 0) {
+          clearTimeout(_pressEvent);
+          switchTileState(id, false);
+        }
+      });
+
+      tile.addEventListener("mousedown", function() {
+        if (_ignoreMouseEvent == false) {
+          _pressEvent = window.setTimeout(function() {
+            _pressEvent = 0;
+            endPress(id);
+          }, 1000);
+        }
+      });
+
+      tile.addEventListener("mouseup", function() {
+        if (_pressEvent != 0 && _ignoreMouseEvent == false) {
+          clearTimeout(_pressEvent);
+          switchTileState(id, false);
+        }
+      });
+    }
+
+    function add_tile(id, name, status, type, subtype, off_imgurl, on_imgurl) {
+
+      height = getComputedStyle(document.documentElement).getPropertyValue('--tile_icon-height');
+
+      div = document.createElement('div');
+      div.setAttribute('class', 'tile');
+      div.setAttribute('id', id);
+      div.setAttribute('type', subtype);
+      //div.setAttribute('onclick', "switchTileState('" + id + "')");
+
+      subdiv = document.createElement('div');
+      subdiv.setAttribute('class', 'tile_icon');
+      subdiv.setAttribute('id', id + '_icon');
+
+      if (off_imgurl != null) {
+        imgdiv = document.createElement('img');
+        imgdiv.setAttribute('height', height + 'px');
+        imgdiv.setAttribute('src', off_imgurl);
+        subdiv.appendChild(imgdiv);
+        div.appendChild(subdiv);
+        if (on_imgurl != null) {
+          subdiv = document.createElement('div');
+          subdiv.setAttribute('class', 'tile_icon');
+          subdiv.setAttribute('id', id + '_icon_on');
+          imgdiv = document.createElement('img');
+          imgdiv.setAttribute('height', height + 'px');
+          imgdiv.setAttribute('src', on_imgurl);
+          subdiv.style.display = 'none';
+          subdiv.appendChild(imgdiv);
+          div.appendChild(subdiv);
+        }
+      } else if (type == "value" || type == "thermostat") {
+        valdiv = document.createElement('div');
+        valdiv.setAttribute('class', 'tile_icon_value disabled');
+        valdiv.setAttribute('id', id + '_tile_icon_value');
+        valdiv.textContent = '--';
+        subdiv.appendChild(valdiv);
+        div.appendChild(subdiv);
+      }
+      /*else if (type == "thermostat") {
+             valdiv = document.createElement('div');
+             valdiv.setAttribute('class', 'tile_icon_value disabled');
+             valdiv.setAttribute('id', id + '_tile_icon_value');
+             valdiv.textContent = '--';
+             subdiv.appendChild(valdiv);
+           } */
+
+      subdiv = document.createElement('div');
+      subdiv.setAttribute('class', 'tile_name');
+      subdiv.setAttribute('id', id + '_name');
+      subdiv.textContent = name;
+      div.appendChild(subdiv);
+
+      // Value and Thermostat are the same, but value is read only and no state
+      if (type != "value") {
+        subdiv = document.createElement('div');
+        subdiv.setAttribute('class', 'tile_status');
+        subdiv.setAttribute('id', id + '_status');
+        subdiv.textContent = formatSatus(status);
+        div.appendChild(subdiv);
+        if (type == "switch" && subtype != "switch_program") {
+          div.setAttribute('onclick', "switchTileState('" + id + "')");
+        } else /*if (id != "SWG/Percent")*/ {
+          add_clickEvent(div, id);
+        }
+      }
+
+      document.getElementById('wrapper').appendChild(div);
+    }
+
+    function switchTileState(id, details) {
+      if (details) {
+        console.log("TILE DETAILS WHAY ARE WE HERE??? '" + id + "'");
+      } else {
+        setTileState(id, (document.getElementById(id).getAttribute('status') == 'off'))
+      }
+    }
+
+    function setTileState(id, state) {
+      if (state == (document.getElementById(id).getAttribute('status') == 'off')) {
+        send_command(id);
+      }
+      setTileOn(id, ((state) ? "on" : "off"));
+    }
+
+    function setThermostatSetpoint(id, sp_value) {
+      if ((tile = document.getElementById(id)) == null) {
+        return;
+      }
+
+      tile.setAttribute('setpoint', sp_value);
+      send_setpoint(id);
+    }
+
+    function setTileValue(id, value) {
+      var ext = '';
+
+      if (value == undefined || value.startsWith("-999") || value.startsWith(" "))
+        value = '--';
+      else {
+        if ((type = document.getElementById(id).getAttribute('type')) != null) {
+          if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
+            ext = '&deg;';
+          else if (type == 'setpoint_swg')
+            ext = '%';
+        }
+      }
+      //document.getElementById(id + '_tile_icon_value').textContent = value;
+      if ((tile = document.getElementById(id + '_tile_icon_value')) != null)
+        tile.innerHTML = value + ext;
+    }
+
+    function setThermostatTile(id, value, sp_value) {
+
+      setTileValue(id, value);
+
+      if ((tile = document.getElementById(id)) != null) {
+        tile.setAttribute('setpoint', sp_value);
+      }
+
+    }
+
+
+    function formatSatus(state) {
+      //console.log("Tile "+id+" from "+status+" | to "+formatSatus(status));
+      state = state.charAt(0).toUpperCase() + state.substr(1).toLowerCase();
+      return state;
+    }
+
+    function setTileOn(id, status) {
+      //function setTileOn(id, status, text) {
+      var tile;
+      var text;
+      if ((tile = document.getElementById(id)) == null) {
+        //console.log("Error unknown ID '"+id+"' can't set to '"+status+"'");
+        return;
+      }
+      if (status != "on" && status != "off" && status != "enabled" && status != "flash") {
+        console.log("Error unknown status '" + status + "' for '" + id + "'");
+        return;
+      }
+
+      tile.setAttribute('status', status);
+
+      if (status != 'off') {
+        tile.classList.add("on");
+        if ((offimg = document.getElementById(id + '_icon')) != null &&
+          (onimg = document.getElementById(id + '_icon_on')) != null) {
+          offimg.style.display = 'none';
+          onimg.style.display = 'table';
+        }
+        if ((type = tile.getAttribute('type')) != null) {
+          if (type == 'setpoint_swg')
+            text = 'Generating';
+          else if (type == 'setpoint_thermo')
+            text = 'Heating to ' + tile.getAttribute('setpoint');
+          else if (type == 'setpoint_freeze')
+            text = 'Turn on ' + tile.getAttribute('setpoint') + "&deg;";
+          else
+            text = "On";
+        }
+        //document.getElementById(id + '_status').innerHTML = "On";
+      } else {
+        tile.classList.remove("on");
+        if ((offimg = document.getElementById(id + '_icon')) != null &&
+          (onimg = document.getElementById(id + '_icon_on')) != null) {
+          onimg.style.display = 'none';
+          offimg.style.display = 'table';
+        }
+        text = "Off";
+      }
+      document.getElementById(id + '_status').innerHTML = text;
+
+      tile_icon = document.getElementById(id + '_tile_icon_value');
+      type = tile.getAttribute('type');
+      if (status != null && tile_icon != null) {
+        if (status == 'enabled') {
+          tile_icon.classList.add("enabled");
+          tile_icon.classList.remove("disabled");
+          tile_icon.classList.remove("cool");
+          tile_icon.classList.remove("heat");
+        } else if (status == 'off') {
+          tile_icon.classList.remove("enabled");
+          tile_icon.classList.add("disabled");
+          tile_icon.classList.remove("cool");
+          tile_icon.classList.remove("heat");
+        } else if (status == 'on' && type != 'setpoint_swg' && type != 'setpoint_freeze') {
+          tile_icon.classList.remove("enabled");
+          tile_icon.classList.remove("disabled");
+          tile_icon.classList.remove("cool");
+          tile_icon.classList.add("heat");
+        } else if (status == 'on') {
+          tile_icon.classList.remove("enabled");
+          tile_icon.classList.remove("disabled");
+          tile_icon.classList.add("cool");
+          tile_icon.classList.remove("heat");
+        }
+      }
+    }
+
+    function createTile(object) {
+      if (object.name == 'NONE')
+        return;
+
+      if (ignore_devices.indexOf(object.id) >= 0)
+        return;
+
+      if (object.type == 'switch' || object.type == 'switch_program') {
+        //add_tile(object.id, object.name, object.state, 'switch', object.type, '/hk_images/'+object.id+'-off.png', '/hk_images/'+object.id+'-on.png');
+        add_tile(object.id, object.name, object.state, 'switch', object.type, object.id + '-off.png', object.id + '-on.png');
+        setTileOn(object.id, object.status, null);
+      } else if (object.type == 'value' || object.type == 'temperature') {
+        add_tile(object.id, object.name, object.state, 'value', object.type);
+        setTileValue(object.id, object.value);
+      } else if (object.type == 'setpoint_thermo' || object.type == 'setpoint_swg' || object.type == 'setpoint_freeze') {
+        add_tile(object.id, object.name, object.state, 'thermostat', object.type);
+        document.getElementById(object.id).setAttribute('setpoint', object.spvalue);
+        setTileValue(object.id, object.value);
+        setTileOn(object.id, object.status);
+      }
+    }
+
+    function showTileOptions(show, id) {
+      if (show == true) {
+        var wrapH = document.getElementById('wrapper').clientHeight+'px';
+        if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_thermo') {
+          document.getElementById('thermostat_options').style.height = wrapH;
+          document.getElementById('thermostat_options').style.display = 'flex';
+          document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
+          document.getElementById('pswitch_options').style.height = wrapH;
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'flex';
+        } else /*if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg')*/ {
+          document.getElementById('swg_options').style.height = wrapH;
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'flex';
+          document.getElementById('pswitch_options').style.display = 'none';
+        }
+        document.getElementById('wrapper').classList.add("opaque");
+      } else {
+        document.getElementById('thermostat_options').style.display = 'none';
+        document.getElementById('swg_options').style.display = 'none';
+        document.getElementById('pswitch_options').style.display = 'none';
+        document.getElementById('wrapper').classList.remove("opaque");
+      }
+
+      if (show == true) {
+        var tile = document.getElementById(id);
+        sp_value = tile.getAttribute('setpoint');
+        //tile_state = tile.classList.contains("on");
+        tile_state = !(tile.getAttribute('status') == 'off');
+        var type = tile.getAttribute('type');
+        var slider;
+        var slider_output;
+        var title;
+        var close_button;
+        var ext;
+
+        if (type == 'setpoint_swg') {
+          slider = document.getElementById("swg_option_slider_range");
+          slider_output = document.getElementById("swg_option_slider_text_value");
+          title = document.getElementById("swg_option_title");
+          close_button = document.getElementById("swg_options_close");
+          ext = "%";
+        } else if (type == 'setpoint_freeze') {
+          slider = document.getElementById("swg_option_slider_range");
+          slider_output = document.getElementById("swg_option_slider_text_value");
+          title = document.getElementById("swg_option_title");
+          close_button = document.getElementById("swg_options_close");
+          ext = '&deg;' + _temperature_units;
+        } else if (type == 'switch_program') {
+          //slider = document.getElementById("pswitch_option_slider_range");
+          //slider_output = document.getElementById("pswitch_option_slider_text_value");
+          title = document.getElementById("pswitch_option_title");
+          close_button = document.getElementById("pswitch_options_close");
+          //ext = '&deg;' + _temperature_units;
+        } else {
+          slider = document.getElementById("option_slider_range");
+          slider_output = document.getElementById("option_slider_text_value");
+          title = document.getElementById("option_title");
+          close_button = document.getElementById("options_close");
+          ext = '&deg;' + _temperature_units;
+        }
+
+        if (type == 'setpoint_swg') {
+          slider.min = 0;
+          slider.max = 100;
+          slider.step = 5;
+        } else if (type == 'setpoint_freeze') {
+          slider.min = 36;
+          slider.max = 42;
+          slider.step = 1;
+        } else if (type == 'setpoint_thermo') {
+          slider.min = 36;
+          slider.max = 104;
+          slider.step = 1;
+        }
+        title.innerHTML = document.getElementById(id + '_name').innerHTML;
+
+        if (type == 'switch_program') {
+          var pswitch = document.getElementById("pswitch_option_list");
+        } else {
+          slider.value = sp_value;
+          var oswitch = document.getElementById("option_switch");
+          oswitch.checked = tile_state;
+          var oswitch_output = document.getElementById("option_switch_text_value");
+
+          slider_output.innerHTML = slider.value + ext;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "Heat" : "Off");
+
+          slider.oninput = function() {
+            slider_output.innerHTML = this.value + ext;
+            //sp_value = this.value
+          }
+          oswitch.onclick = function() {
+            oswitch_output.innerHTML = ((oswitch.checked) ? "Heat" : "Off");
+            //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
+          }
+        }
+
+        close_button.onclick = function() {
+          if (type == 'switch_program') {
+            if (pswitch.selectedIndex > 0)
+              send_light_mode(pswitch.selectedIndex);
+          } else {
+            state = oswitch.checked;
+            value = slider.value;
+            if (state == (tile.getAttribute('status') == 'off'))
+              setTileState(id, state);
+            if (sp_value != slider.value)
+              setThermostatSetpoint(id, slider.value)
+          }
+          showTileOptions(false);
+        }
+      }
+    }
+
+    function update_status(data) {
+      //console.log("Received Update Satus");
+
+      _aqualink_data = data;
+      var el = document.getElementById("datetime");
+      el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
+
+      if (data.status != "Ready") {
+        document.getElementById("message").innerHTML = formatSatus(data.status);
+      } else {
+        document.getElementById("message").innerHTML = '';
+      }
+      // Hard code value updated as I can't be bothered to update source.
+      // should come back and re-do these values.  
+      // The ID's should ultimatly come from json
+      setThermostatTile("Pool_Heater", data.pool_temp, data.pool_htr_set_pnt);
+      setThermostatTile("Spa_Heater", data.spa_temp, data.spa_htr_set_pnt);
+      setThermostatTile("SWG/Percent", data.swg_percent, data.swg_percent);
+      setThermostatTile("Freeze_Protect", data.air_temp, data.frz_protect_set_pnt);
+      setTileValue("SWG/PPM", data.swg_ppm);
+      setTileValue("Air", data.air_temp);
+      setTileValue("Pool_Water", data.pool_temp);
+      setTileValue("Spa_Water", data.spa_temp);
+
+      for (var obj in data.leds) {
+        setTileOn(obj.toString(), data.leds[obj])
+      }
+
+    }
+
+
+    function check_devices(data) {
+      _temperature_units = data['temp_units'];
+      for (var obj in data['devices']) {
+        if (document.getElementById(data['devices'][obj].id) == null) {
+          //console.log("Create "+data['devices'][obj].id);
+          createTile(data['devices'][obj]);
+        } else {
+          //console.log("old type "+document.getElementById(data['devices'][obj].id).getAttribute('type')+" | new "+data['devices'][obj].type);
+          if (document.getElementById(data['devices'][obj].id).getAttribute('type') != data['devices'][obj].type) {
+            //console.log("Remove and create "+data['devices'][obj].id);
+            var element = document.getElementById(data['devices'][obj].id);
+            element.parentNode.removeChild(element);
+            createTile(data['devices'][obj]);
+          }
+        }
+      }
+    }
+
+
+    function get_appropriate_ws_url() {
+      var pcol;
+      var u = document.URL;
+
+      /*
+       * We open the websocket encrypted if this page came on an
+       * https:// url itself, otherwise unencrypted
+       */
+
+      if (u.substring(0, 5) == "https") {
+        pcol = "wss://";
+        u = u.substr(8);
+      } else {
+        pcol = "ws://";
+        if (u.substring(0, 4) == "http")
+          u = u.substr(7);
+      }
+
+      u = u.split('/');
+
+      //alert (pcol + u[0] + ":6500");
+
+      return pcol + u[0];
+    }
+
+
+
+    /* dumb increment protocol */
+    var socket_di;
+
+    function startWebsockets() {
+      socket_di = new WebSocket(get_appropriate_ws_url());
+
+
+      try {
+        socket_di.onopen = function() {
+          // success!
+          get_devices();
+          // Set another load 1 minute from now just incase the server hasn't got all the devices yet
+          window.setTimeout(get_devices, (60 * 1000));
+        }
+
+        socket_di.onmessage = function got_packet(msg) {
+          document.getElementById("header").classList.remove("error");
+          var data = JSON.parse(msg.data);
+          if (data.type == 'status') {
+            update_status(data);
+          } else if (data.type == 'devices') {
+            check_devices(data);
+            window.setTimeout(get_devices, (300 * 1000)); // Check for new dvices ever 5 mins.
+          }
+        }
+
+        socket_di.onclose = function() {
+          // something went wrong
+          document.getElementById("message").innerHTML = '  Connection error!  '
+          document.getElementById("header").classList.add("error");
+          // Try to reconnect every 5 seconds.
+          setTimeout(function() {
+            startWebsockets()
+          }, 5000);
+        }
+      } catch (exception) {
+        alert('<p>Error' + exception);
+      }
+    }
+
+    function get_devices() {
+      var msg = {
+        command: "GET_DEVICES"
+      };
+      socket_di.send(JSON.stringify(msg));
+    }
+
+    function send_command(cmd) {
+      var _cmd = {};
+      _cmd.command = cmd;
+
+      socket_di.send(JSON.stringify(_cmd));
+    }
+
+    function send_setpoint(id) {
+      var temperature = {};
+
+      if ((tile = document.getElementById(id)) == null) {
+        return;
+      }
+
+      temperature.parameter = tile.getAttribute('id');
+      temperature.value = tile.getAttribute('setpoint');
+
+      socket_di.send(JSON.stringify(temperature));
+    }
+
+    function send_light_mode(value) {
+      var mode = {};
+
+      mode.parameter = 'POOL_LIGHT_MODE';
+      mode.value = value;
+      socket_di.send(JSON.stringify(mode));
+    }
+
+    function reset() {
+      socket_di.send("reset\n");
+    }
+  </script>
+</head>
+
+<!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
+
+<body onload='showTileOptions(false); init(); startWebsockets();'>
+    <div id='body_wrap' class='body_wrap'>
+  <!--
+    <div id='message' class='message' onmousedown='hidemessage()'>
+        <div id='message-text' class='message-text'>
+          <b>Loading....</b>
+        </div>
+      </div>-->
+  <div id='wrapper' class="wrapper">
+    <div id="header" class="head">
+      <table border='0' width='100%' cellpadding='0' cellspacing='0'>
+        <tr>
+          <td align='left'><span class='title' id='name'>AqualinkD</span></td>
+          <td align='center'><span class='title' id='message'></span></td>
+          <td align='right'><span class='timedate' id='datetime'></class>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div id='thermostat_options' class='options hide'>
+    <div id='thermostat_options_pane' class='options_pane'>
+      <table border='0' cellpadding='10px'>
+        <tr class='options_title'>
+          <th colspan='2'><span id="option_title"></span></th>
+        </tr>
+        <tr>
+          <td align='right' width='50%'><span id='option_switch_text_value'></span></td>
+          <td align='left' width='50%'>
+            <label class="option_switch">
+              <input type="checkbox" id='option_switch'>
+              <span class="option_switch_slide"></span>
+            </label>
+          </td>
+        </tr>
+        <tr>
+          <td colspan='2'>
+            <div class="slidecontainer">
+              <input type="range" class="option_slider" id='option_slider_range'>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'><span id="option_slider_text_value"></span></td>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'>
+            <input type="button" value="close" id='options_close' class='options_button'>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div id='swg_options' class='options hide'>
+    <div id='swg_options_pane' class='options_pane'>
+      <table border='0' cellpadding='10px'>
+        <tr class='options_title'>
+          <th colspan='2'><span id="swg_option_title"></span></th>
+        </tr>
+        <tr>
+          <td colspan='2'>
+            <div class="slidecontainer">
+              <input type="range" class="option_slider" id='swg_option_slider_range'>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'><span id="swg_option_slider_text_value"></span></td>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'>
+            <input type="button" value="close" id='swg_options_close' class='options_button'>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <div id='pswitch_options' class='options hide'>
+    <div id='pswitch_options_pane' class='options_pane'>
+      <table border='0' cellpadding='10px'>
+        <tr class='options_title'>
+          <th colspan='2'><span id="pswitch_option_title"></span></th>
+        </tr>
+        <tr>
+          <td colspan='2'>
+            <select id='pswitch_option_list' class='options_selector'>
+              <option value="0">Pool Light Program</option>
+            </select>
+          </td>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'>
+            <input type="button" value="close" id='pswitch_options_close' class='options_button'>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+</body>
+
+</html>

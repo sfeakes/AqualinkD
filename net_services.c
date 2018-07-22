@@ -436,7 +436,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
             logMessage(LOG_DEBUG, "Flash button : %s\n",_aqualink_data->aqbuttons[i].name);
           }
         } else {
-          send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+            send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
         }
 
         send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
@@ -542,9 +542,9 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
       logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
-    } else if (strcmp(command, "homebridge") == 0) {
+    } else if (strcmp(command, "homebridge") == 0 || strcmp(command, "devices") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      int size = build_homebridge_JSON(_aqualink_data, message, JSON_LABEL_SIZE*10);
+      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else {
@@ -625,6 +625,10 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       char labels[JSON_LABEL_SIZE];
       build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
       ws_send(nc, labels);
+    } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
+      char message[JSON_LABEL_SIZE*10];
+      build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
+      ws_send(nc, message);
     } else { // Search for value in command list
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -638,12 +642,14 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       }
     }
   } else if (strcmp(request.first.key, "parameter") == 0) {
-    if (strcmp(request.first.value, "FRZ_PROTECT") == 0) {
+    if (strcmp(request.first.value, "FRZ_PROTECT") == 0 || strcmp(request.first.value, FREEZE_PROTECT) == 0) {
       aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, "POOL_HTR") == 0) {
+    } else if (strcmp(request.first.value, "POOL_HTR") == 0 || strcmp(request.first.value, BTN_POOL_HTR) == 0 ) {
       aq_programmer(AQ_SET_POOL_HEATER_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, "SPA_HTR") == 0) {
+    } else if (strcmp(request.first.value, "SPA_HTR") == 0 || strcmp(request.first.value, BTN_SPA_HTR) == 0) {
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, request.second.value, _aqualink_data);
+    } else if (strcmp(request.first.value, SWG_PERCENT_TOPIC) == 0) {
+      aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
     } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) {
       //aq_programmer(AQ_SET_COLORMODE, request.second.value, _aqualink_data);
       set_light_mode(request.second.value);
@@ -767,8 +773,9 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
           logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
           aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
           // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
-          //_last_mqtt_aqualinkdata.aqbuttons[i].led->state = LED_S_UNKNOWN;
-          _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
+          // This causes a good MQTT button to flash on/off once before getting the latest update.  Need to find a better way
+          //_last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
+          // NSF   Update above to cater for ignored buttons.
         }
         break;
       }

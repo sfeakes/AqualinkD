@@ -296,11 +296,14 @@ void processMessage(char *message)
   // Check long messages in this if/elseif block first, as some messages are similar.  
   // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
   //
-  /*
+  
   if(stristr(msg, "JANDY AquaLinkRS") != NULL) {
-    _aqualink_data.display_message = NULL;
+    //_aqualink_data.display_message = NULL;
+    _aqualink_data.last_display_message[0] = '\0';
   }
-  else*/
+  //else
+  //_aqualink_data.display_last_message = false;
+
   if(stristr(msg, LNG_MSG_BATTERY_LOW) != NULL) {
     _aqualink_data.battery = LOW;
   }
@@ -393,6 +396,15 @@ void processMessage(char *message)
   else {
     logMessage(LOG_DEBUG_SERIAL, "Ignoring '%s'\n",msg);
     //_aqualink_data.display_message = msg;
+    if (_aqualink_data.active_thread.thread_id == 0 &&
+        stristr(msg, "PUMP O") == NULL &&  // Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
+        stristr(msg, "JANDY AquaLinkRS") == NULL &&
+        stristr(msg, "CLEANER O") == NULL &&
+        stristr(msg, "SPA O") == NULL &&
+        stristr(msg, "AUX") == NULL) { // Catch all AUX1 AUX5 messages
+      //_aqualink_data.display_last_message = true;
+      strcpy(_aqualink_data.last_display_message, msg);
+    }
   }
   
   // We processed the next message, kick any threads waiting on the message.
@@ -786,7 +798,7 @@ void main_loop() {
         if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
           if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
             _aqualink_data.ar_swg_status = packet_buffer[5];
-            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == DEV_MASTER) { // We have a delayed % to set.
+            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00) { // We have a delayed % to set.
               char sval[10];
               snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
               aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
@@ -795,7 +807,7 @@ void main_loop() {
             }
           }
           interestedInNextAck = false;
-        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER) {
+        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00 ) {
           _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
           interestedInNextAck = false;
         } else if (packet_buffer[PKT_DEST] == SWG_DEV_ID) {

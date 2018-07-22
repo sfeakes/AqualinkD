@@ -37,6 +37,7 @@
 
 //{"type": "aux_labels","Pool Pump": "Pool Pump","Spa Mode": "Spa Mode","Cleaner": "Aux 1","Waterfall": "Aux 2","Spa Blower": "Aux 2","Pool Light": "Aux 4","Spa Light ": "Aux 5","Aux 6": "Aux 6","Aux 7": "Aux 7","Heater": "Heater","Heater": "Heater","Solar Heater": "Solar Heater","(null)": "(null)"}
 
+//SPA WILL TURN OFF AFTER COOL DOWN CYCLE
 
 const char* getStatus(struct aqualinkdata *aqdata)
 {
@@ -48,6 +49,13 @@ const char* getStatus(struct aqualinkdata *aqdata)
     return JSON_SERVICE;
   }
 
+  if (aqdata->last_display_message[0] != '\0')
+    return aqdata->last_display_message;
+/*
+  if (aqdata->display_last_message == true) {
+    return aqdata->last_message;
+  }
+*/
   return JSON_READY; 
 }
 
@@ -86,70 +94,118 @@ int build_aqualink_error_status_JSON(char* buffer, int size, char *msg)
 
 }
 
-int build_homebridge_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
+char *LED2text(aqledstate state)
+{
+  switch (state) {
+    case ON:
+      return "on";
+    break;
+    case OFF:
+      return "off";
+    break;
+    case FLASH:
+      return "flash";
+    break;
+    case ENABLE:
+      return "enadeled";
+    break;
+    case LED_S_UNKNOWN:
+    default:
+      return "unknown";
+    break;
+  }
+}
+
+int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size)
 {
   memset(&buffer[0], 0, size);
   int length = 0;
   int i;
 
-  length += sprintf(buffer+length, "{\"type\": \"devices\",");
-  length += sprintf(buffer+length,  " \"devices\": [");
+  length += sprintf(buffer+length, "{\"type\": \"devices\"");
+  length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
+  length += sprintf(buffer+length, ",\"time\":\"%s\"",aqdata->time );//"1:16 PM",
+  if ( aqdata->temp_units == FAHRENHEIT )
+    length += sprintf(buffer+length, ",\"temp_units\":\"%s\"",JSON_FAHRENHEIT );
+  else if ( aqdata->temp_units == CELSIUS )
+    length += sprintf(buffer+length, ",\"temp_units\":\"%s\"", JSON_CELSIUS);
+  else
+    length += sprintf(buffer+length, ",\"temp_units\":\"%s\"",JSON_UNKNOWN );
+
+  length += sprintf(buffer+length,  ", \"devices\": [");
   
   for (i=0; i < TOTAL_BUTTONS; i++) 
   {
     if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && aqdata->pool_htr_set_point != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "{\"type\": \"setpoint_themo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
-                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
-                                     aqdata->aqbuttons[i].led->state,
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state),
                                      aqdata->pool_htr_set_point,
                                      aqdata->pool_temp);
     } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && aqdata->spa_htr_set_point != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "{\"type\": \"setpoint_themo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
-                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
-                                     aqdata->aqbuttons[i].led->state,
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state),
                                      aqdata->spa_htr_set_point,
                                      aqdata->spa_temp);
-    } else {
-      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%d\" },", 
+    } else if (programable_switch > 0 && programable_switch == i) {
+      length += sprintf(buffer+length, "{\"type\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\" },", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
-                                     aqdata->aqbuttons[i].led->state==ON?"on":"off",
-                                     aqdata->aqbuttons[i].led->state);
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state));
+    } else {
+      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\" },", 
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state));
     }
   }
 
-  //FREEZE_PROTECT  // could add freeze setpoint in future.
+  if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) {
+    length += sprintf(buffer+length, "{\"type\": \"setpoint_freeze\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+                                     FREEZE_PROTECT,
+                                    "Freeze Protection",
+                                    JSON_OFF,
+                                    JSON_ENABLED,
+                                    aqdata->frz_protect_set_point,
+                                    aqdata->air_temp);
+  }
 
   if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
+    length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%d\", \"value\": \"%d\" },",
                                      SWG_PERCENT_TOPIC,
-                                    "Salt Water Genrator %",
-                                    aqdata->ar_swg_status == 0x00?"on":"off",
+                                    "Salt Water Generator",
+                                    aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
+                                    aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
                                     aqdata->swg_percent,
                                     aqdata->swg_percent);
+  }
 
-    length += sprintf(buffer+length, "{\"type\": \"Value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+  if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
+    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    SWG_PPM_TOPIC,
                                    "Salt Water Generator PPM",
                                    "on",
                                    aqdata->swg_ppm);
   }
 
-  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+  length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    AIR_TEMPERATURE,
                                    "Pool Air Temperature",
                                    "on",
                                    aqdata->air_temp);
-  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+  length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    POOL_TEMPERATURE,
                                    "Pool Water Temperature",
                                    "on",
                                    aqdata->pool_temp);
-  length += sprintf(buffer+length, "{\"type\": \"Temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" }",
+  length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" }",
                                    SPA_TEMPERATURE,
                                    "Spa Water Temperature",
                                    "on",
@@ -249,6 +305,15 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     if (i+1 < TOTAL_BUTTONS)
       length += sprintf(buffer+length, "," );
   }
+
+  if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_PERCENT_TOPIC, aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF);
+  }
+  //NSF Need to come back and read what the display states when Freeze protection is on
+  if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN ) {
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, JSON_ENABLED);
+  }
+
   length += sprintf(buffer+length, "}}" );
   
   buffer[length] = '\0';

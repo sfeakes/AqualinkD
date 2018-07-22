@@ -4,14 +4,20 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
 
 ## Builtin WEB Interface.
-![Image](extras/web_ui.png?raw=true)
-
+<img src="extras/web_ui.png?raw=true" width="800"></img>
+## New WEB UI interface (in beta)
+<img src="extras/IMG_0251.PNG?raw=true" width="350"></img>
+* The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.
+* Customizable tile icons & background image. (can hide any tile)
+* Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press
+* Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
 ## In Apple Home app.
-![Image](extras/HomeKit2.png?raw=true)
+<img src="extras/HomeKit2.png?raw=true" width="800"></img>
 * (Salt Water Generator is configured as Thermostat as it's the closest homekit accessory type, so &deg;=% and Cooling=Generating)
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
-## Latest update in Release 1.0a
+## Latest update in Release 1.0b
+* NEW WEB UI !!!!!!!!!!!!!  (in beta)
 * Flash buttons on/off in homekit for enabeling / disabeling / cooldown period as they do on control panel
 * Full SWG support (setting %, not just reporting current state). Also reports Salt Cell status such as (no flow, low salt, high curent, clean cell, low voltage, water temp low, check PCB)
 * Update to thermostats, colors are now correct in homekit, green=enabeled, orange=heating, blue=cooling (SWG only)
@@ -52,10 +58,15 @@ Manual install for init-d systems
 
 
 
-## TODO
-* Only WEB interface (WS) & AQ_MQTT can change freeze & heater temprature set-points. Need to add support for standard HTTP. (DOMOTICZ_MQTT won't be supported until Domoticz create a better virtual thermostat)
-* Web interface has a lot of fixed layout items that as specific to my implimentation. The HTML & CSS need a complete overhall and re-though to support different configurations.
-* There is code to control different light modes/shows, but it's not finished and no documentation will be provided until it is finished. It will not work unless you have this exact setup Haywood ColorLogic/Aqualink RS8.
+## New WEB UI (in beta)
+* use http://aqualink.ip.address/hk/ to access new UI
+* look in `<install_dir>/web/hk` hopefully customizing icon and background images are self explanatory.
+* icons should be around 50x50 pixles and in PNG format, background any size in JPG or just delete the file if you want solid color.
+* edit `<install_dir>/web/hk/index.html` there are two arrays that can be modified
+    * `ignore_devices`  just lis any device you don;t want to see in there.
+    * `light_program`  If you have a programable light (and it's configured in `aqualinkd.conf`), then list the light modes here.
+
+
 
 # Aqualink Versions tested
 This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo controll panels. At the moment it will not work with Aqualink PDA / AquaPalm and NON Combo iAqualink.
