@@ -135,6 +135,10 @@
       background-color: rgb(245, 245, 245);
       border: 2px solid rgb(124, 124, 124);
       border-radius: 20px;
+      justify-content: center;
+      align-items: center;
+      width:345px;
+      /*height:245px;*/
     }
 
     .options {
@@ -359,13 +363,19 @@
 
     .options_selector {
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 16px;
     }
 
     .options_button {
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .option_text{
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-weight: 600;
       font-size: 16px;
     }
 
@@ -482,6 +492,7 @@
       //pressEvent = 0;
       //alert ("Long press "+id);
       //switchTileState(id, true);
+      
       showTileOptions(true, id);
     }
 
@@ -788,6 +799,7 @@
         var title;
         var close_button;
         var ext;
+        var oswitch;
 
         if (type == 'setpoint_swg') {
           slider = document.getElementById("swg_option_slider_range");
@@ -832,9 +844,16 @@
 
         if (type == 'switch_program') {
           var pswitch = document.getElementById("pswitch_option_list");
+          oswitch = document.getElementById("pswitch_option_switch");
+          var oswitch_output = document.getElementById("pswitch_option_switch_text_value");
+          oswitch.checked = tile_state;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          oswitch.onclick = function() {
+            oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          }
         } else {
           slider.value = sp_value;
-          var oswitch = document.getElementById("option_switch");
+          oswitch = document.getElementById("option_switch");
           oswitch.checked = tile_state;
           var oswitch_output = document.getElementById("option_switch_text_value");
 
@@ -852,11 +871,13 @@
         }
 
         close_button.onclick = function() {
+          state = oswitch.checked;
           if (type == 'switch_program') {
             if (pswitch.selectedIndex > 0)
               send_light_mode(pswitch.selectedIndex);
+            else if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
+              setTileState(id, state);
           } else {
-            state = oswitch.checked;
             value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
               setTileState(id, state);
@@ -935,11 +956,8 @@
         if (u.substring(0, 4) == "http")
           u = u.substr(7);
       }
-
       u = u.split('/');
-
       //alert (pcol + u[0] + ":6500");
-
       return pcol + u[0];
     }
 
@@ -995,7 +1013,6 @@
     function send_command(cmd) {
       var _cmd = {};
       _cmd.command = cmd;
-
       socket_di.send(JSON.stringify(_cmd));
     }
 
@@ -1029,7 +1046,8 @@
 <!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
 
 <body onload='showTileOptions(false); init(); startWebsockets();'>
-  <div id='body_wrap' class='body_wrap' onclick='showTileOptions(false);'>
+  <!--<div id='body_wrap' class='body_wrap'>-->
+  <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'>
   <div id='wrapper' class="wrapper">
     <div id="header" class="head">
       <table border='0' width='100%' cellpadding='0' cellspacing='0'>
@@ -1043,13 +1061,13 @@
     </div>
   </div>
   <div id='thermostat_options' class='options hide'>
-    <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+    <div id='thermostat_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="option_title"></span></th>
         </tr>
         <tr>
-          <td align='right' width='50%'><span id='option_switch_text_value'></span></td>
+          <td align='right' width='50%'><span class="option_text" id='option_switch_text_value'></span></td>
           <td align='left' width='50%'>
             <label class="option_switch">
               <input type="checkbox" id='option_switch'>
@@ -1065,7 +1083,7 @@
           </td>
         </tr>
         <tr>
-          <td colspan='2' align='center'><span id="option_slider_text_value"></span></td>
+          <td colspan='2' align='center'><span class="option_text" id="option_slider_text_value"></span></td>
         </tr>
         <tr>
           <td colspan='2' align='center'>
@@ -1076,7 +1094,7 @@
     </div>
   </div>
   <div id='swg_options' class='options hide'>
-    <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+    <div id='swg_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="swg_option_title"></span></th>
@@ -1089,7 +1107,7 @@
           </td>
         </tr>
         <tr>
-          <td colspan='2' align='center'><span id="swg_option_slider_text_value"></span></td>
+          <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span></td>
         </tr>
         <tr>
           <td colspan='2' align='center'>
@@ -1100,13 +1118,22 @@
     </div>
   </div>
   <div id='pswitch_options' class='options hide'>
-    <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
-      <table border='0' cellpadding='10px'>
+    <div id='pswitch_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
+      <table border='0' cellpadding='10px' width="100%">
         <tr class='options_title'>
           <th colspan='2'><span id="pswitch_option_title"></span></th>
         </tr>
         <tr>
-          <td colspan='2'>
+            <td align='right' width='50%'><span class="option_text" id='pswitch_option_switch_text_value'></span></td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='pswitch_option_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
+          </tr>
+        <tr >
+          <td colspan='2' align='center'>
             <select id='pswitch_option_list' class='options_selector'>
               <option value="0">Pool Light Program</option>
             </select>

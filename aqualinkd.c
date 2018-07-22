@@ -397,11 +397,11 @@ void processMessage(char *message)
     logMessage(LOG_DEBUG_SERIAL, "Ignoring '%s'\n",msg);
     //_aqualink_data.display_message = msg;
     if (_aqualink_data.active_thread.thread_id == 0 &&
-        stristr(msg, "PUMP O") == NULL &&  // Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
         stristr(msg, "JANDY AquaLinkRS") == NULL &&
+        stristr(msg, "PUMP O") == NULL /*&&  // Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
         stristr(msg, "CLEANER O") == NULL &&
         stristr(msg, "SPA O") == NULL &&
-        stristr(msg, "AUX") == NULL) { // Catch all AUX1 AUX5 messages
+        stristr(msg, "AUX") == NULL*/) { // Catch all AUX1 AUX5 messages
       //_aqualink_data.display_last_message = true;
       strcpy(_aqualink_data.last_display_message, msg);
     }
