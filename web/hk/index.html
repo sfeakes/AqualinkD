@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang='en'>
+  <head>
+    <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
 
 <script type='text/javascript'>
   // Any devices you don't want to see you can uncomment the ID below.
@@ -46,9 +48,6 @@
                        "Mardi Gras - Show",
                        "Cool Cabaret - Show"];
 </script>
-
-<head>
-  <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
 
   <title>AqualinkD</title>
   <meta name='viewport' content='width=device-width'>
@@ -763,6 +762,14 @@
         }
         document.getElementById('wrapper').classList.add("opaque");
       } else {
+        // Fake onclick to close and save any values if open
+        if (document.getElementById('thermostat_options').style.display == 'flex')
+          document.getElementById("options_close").click();
+        else if (document.getElementById('swg_options').style.display == 'flex')
+          document.getElementById("swg_options_close").click();
+        else if (document.getElementById('pswitch_options').style.display == 'flex')
+          document.getElementById("pswitch_options_close").click();
+
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
         document.getElementById('pswitch_options').style.display = 'none';
@@ -1021,7 +1028,7 @@
 <!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
 
 <body onload='showTileOptions(false); init(); startWebsockets();'>
-    <div id='body_wrap' class='body_wrap'>
+    <div id='body_wrap' class='body_wrap' onclick='showTileOptions(false);'>
   <!--
     <div id='message' class='message' onmousedown='hidemessage()'>
         <div id='message-text' class='message-text'>
@@ -1041,7 +1048,7 @@
     </div>
   </div>
   <div id='thermostat_options' class='options hide'>
-    <div id='thermostat_options_pane' class='options_pane'>
+    <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="option_title"></span></th>
@@ -1074,7 +1081,7 @@
     </div>
   </div>
   <div id='swg_options' class='options hide'>
-    <div id='swg_options_pane' class='options_pane'>
+    <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="swg_option_title"></span></th>
@@ -1098,7 +1105,7 @@
     </div>
   </div>
   <div id='pswitch_options' class='options hide'>
-    <div id='pswitch_options_pane' class='options_pane'>
+    <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="pswitch_option_title"></span></th>
