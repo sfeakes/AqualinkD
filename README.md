@@ -5,11 +5,12 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 
 ## Builtin WEB Interface.
 <img src="extras/web_ui.png?raw=true" width="800"></img>
-## New WEB UI interface (in beta)
+## New WEB interface (in beta)
 <img src="extras/IMG_0251.PNG?raw=true" width="350"></img>
 * The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.
 * Customizable tile icons & background image. (can hide any tile)
 * Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press
+* Support live background imags (ie poll camera for still image every X seconds)
 * Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
 ## In Apple Home app.
 <img src="extras/HomeKit2.png?raw=true" width="800"></img>
@@ -58,7 +59,7 @@ Manual install for init-d systems
 
 
 
-## New WEB UI (in beta)
+## New WEB interface (in beta)
 * Doesn't work in MS Edge or MS Exploder browsers. (Firefox, Chrome, Safari & mobile versions of each) all seem to be fine.
 * use http://aqualink.ip.address/hk/ to access new UI
 * look in `<install_dir>/web/hk` hopefully customizing icon and background images are self explanatory.

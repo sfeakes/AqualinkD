@@ -47,6 +47,14 @@
                        "USA - Show",
                        "Mardi Gras - Show",
                        "Cool Cabaret - Show"];
+
+  // Background image, delete or leave blank for solid color
+  //var background_url="http://192.168.144.224/snap.jpeg";
+  var background_url='background.jpg';
+
+  // Reload background image every X seconds.(useful if camera snapshot)
+  // 0 means only load once when page loads.
+  var background_reload=0;
 </script>
 
   <title>AqualinkD</title>
@@ -63,12 +71,14 @@
       --tile_name-height: 32px;
       --tile_status-height: 15px;
       --tile_grid-gap: 10px;
+      --tile_name-lineheight: 1.2;
       /*
       --tile-width: 125px;
       --tile_icon-height: 45px;
       --tile_name-height: 42px;
       --tile_status-height: 15px;
       --tile_grid-gap: 20px;
+      --tile_name-lineheight: 1.4;
     */
       --slider-ball: 30;
       --slider-highlight: #2196F3;
@@ -117,7 +127,8 @@
       height:100%;
       top:0px;
       left:0px;
-      background-image: url("background.jpg");
+      /*background-image: url("background.jpg");*/
+      /*background-image: url("http://192.168.144.224/snap.jpeg");*/
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
@@ -230,6 +241,7 @@
     .tile_name {
       height: var(--tile_name-height);
       /*background-color: green;*/
+      line-height: var(--tile_name-lineheight);
     }
 
     .tile_status {
@@ -399,9 +411,9 @@
       option = document.getElementById('pswitch_option_list');
 
       fLen = light_program.length;
-      for (i = 1; i < fLen; i++) {
+      for (i = 0; i < fLen; i++) {
         var opt = document.createElement('option');
-        opt.value = i;
+        opt.value = i+1;
         opt.innerHTML = light_program[i];
         option.appendChild(opt);
       }
@@ -422,6 +434,7 @@
         document.documentElement.style.setProperty('--tile_name-height', '42px');
         document.documentElement.style.setProperty('--tile_status-height', '15px');
         document.documentElement.style.setProperty('--tile_grid-gap', '20px');
+        document.documentElement.style.setProperty('--tile_name-lineheight', '1.4');
       }
       if (w > h)
         _landscape = true;
@@ -440,6 +453,23 @@
           _landscape = false;
       }, false);
     }
+
+function load_background()
+{
+  if (! background_url)
+   return;
+
+  //alert("load");
+    // call the notify_complete function when the image has loaded
+  var image = new Image();
+  image.onload = function() {
+    document.getElementById("body_wrap").style.backgroundImage = "url('"+this.src+"')";
+  };
+  image.src = background_url+'?' + new Date().getTime();
+  
+  if (background_reload > 0)
+    setTimeout(load_background, (background_reload * 1000) );
+}
 
     function interval(duration, fn) {
       this.baseline = undefined
@@ -753,39 +783,47 @@
       }
     }
 
-    function showTileOptions(show, id) {
+    function showTileOptions(show, id, contex) {
+      var active_option;
+
       if (show == true) {
         var wrapH = document.getElementById('wrapper').clientHeight+'px';
         if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_thermo') {
+          active_option = document.getElementById('thermostat_options');
           document.getElementById('thermostat_options').style.height = wrapH;
-          document.getElementById('thermostat_options').style.display = 'flex';
+          //document.getElementById('thermostat_options').style.display = 'flex';
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
+          active_option = document.getElementById('pswitch_options');
           document.getElementById('pswitch_options').style.height = wrapH;
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('swg_options').style.display = 'none';
-          document.getElementById('pswitch_options').style.display = 'flex';
+          //document.getElementById('pswitch_options').style.display = 'flex';
         } else /*if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg')*/ {
+          active_option = document.getElementById('swg_options');
           document.getElementById('swg_options').style.height = wrapH;
           document.getElementById('thermostat_options').style.display = 'none';
-          document.getElementById('swg_options').style.display = 'flex';
+          //document.getElementById('swg_options').style.display = 'flex';
           document.getElementById('pswitch_options').style.display = 'none';
         }
+        active_option.style.display = 'flex';
         document.getElementById('wrapper').classList.add("opaque");
       } else {
         // Fake onclick to close and save any values if open
-        if (document.getElementById('thermostat_options').style.display == 'flex')
+        if (contex == null) {
+         if (document.getElementById('thermostat_options').style.display == 'flex')
           document.getElementById("options_close").click();
-        else if (document.getElementById('swg_options').style.display == 'flex')
+         else if (document.getElementById('swg_options').style.display == 'flex')
           document.getElementById("swg_options_close").click();
-        else if (document.getElementById('pswitch_options').style.display == 'flex')
+         else if (document.getElementById('pswitch_options').style.display == 'flex')
           document.getElementById("pswitch_options_close").click();
-
+        }
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
         document.getElementById('pswitch_options').style.display = 'none';
         document.getElementById('wrapper').classList.remove("opaque");
+        return;
       }
 
       if (show == true) {
@@ -870,7 +908,17 @@
           }
         }
 
+        // Should look info Date.now() for old browsers, but then can't use event for time
+        var cTime = performance.now();
+        var clickHandler = function(e) {
+          // Short time diff means event was the one that launched the options pane, so ignore 
+          if ( (e.timeStamp - cTime) > 1000)
+            showTileOptions(false);
+        };
+        document.getElementById("body_wrap").addEventListener("click", clickHandler);
+
         close_button.onclick = function() {
+          document.getElementById("body_wrap").removeEventListener("click", clickHandler);
           state = oswitch.checked;
           if (type == 'switch_program') {
             if (pswitch.selectedIndex > 0)
@@ -884,7 +932,9 @@
             if (sp_value != slider.value)
               setThermostatSetpoint(id, slider.value)
           }
-          showTileOptions(false);
+          //showTileOptions(false, null, 'this');
+          active_option.style.display = 'none';
+          document.getElementById('wrapper').classList.remove("opaque");
         }
       }
     }
@@ -1045,9 +1095,9 @@
 
 <!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
 
-<body onload='showTileOptions(false); init(); startWebsockets();'>
-  <!--<div id='body_wrap' class='body_wrap'>-->
-  <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'>
+<body onload='load_background(); showTileOptions(false); init(); startWebsockets();'>
+  <div id='body_wrap' class='body_wrap'>
+  <!-- <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'> -->
   <div id='wrapper' class="wrapper">
     <div id="header" class="head">
       <table border='0' width='100%' cellpadding='0' cellspacing='0'>
@@ -1061,7 +1111,7 @@
     </div>
   </div>
   <div id='thermostat_options' class='options hide'>
-    <div id='thermostat_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
+    <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="option_title"></span></th>
@@ -1076,14 +1126,14 @@
           </td>
         </tr>
         <tr>
+          <td colspan='2' align='center'><span class="option_text" id="option_slider_text_value"></span></td>
+        </tr>
+        <tr>
           <td colspan='2'>
             <div class="slidecontainer">
               <input type="range" class="option_slider" id='option_slider_range'>
             </div>
           </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'><span class="option_text" id="option_slider_text_value"></span></td>
         </tr>
         <tr>
           <td colspan='2' align='center'>
@@ -1094,10 +1144,13 @@
     </div>
   </div>
   <div id='swg_options' class='options hide'>
-    <div id='swg_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
+    <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
           <th colspan='2'><span id="swg_option_title"></span></th>
+        </tr>
+        <tr>
+          <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span></td>
         </tr>
         <tr>
           <td colspan='2'>
@@ -1105,9 +1158,6 @@
               <input type="range" class="option_slider" id='swg_option_slider_range'>
             </div>
           </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span></td>
         </tr>
         <tr>
           <td colspan='2' align='center'>
@@ -1118,7 +1168,7 @@
     </div>
   </div>
   <div id='pswitch_options' class='options hide'>
-    <div id='pswitch_options_pane' class='options_pane' onmousedown='event.stopPropagation();'>
+    <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px' width="100%">
         <tr class='options_title'>
           <th colspan='2'><span id="pswitch_option_title"></span></th>

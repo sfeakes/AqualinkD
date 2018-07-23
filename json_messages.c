@@ -190,7 +190,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char*
   if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
     length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    SWG_PPM_TOPIC,
-                                   "Salt Water Generator PPM",
+                                   "Salt Level PPM",
                                    "on",
                                    aqdata->swg_ppm);
   }
