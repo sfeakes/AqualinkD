@@ -1,61 +1,63 @@
 <!DOCTYPE html>
 <html lang='en'>
-  <head>
-    <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
 
-<script type='text/javascript'>
-  // Any devices you don't want to see you can uncomment the ID below.
-  // For a complete list returned from your particular aqualinkd instance 
-  // use the below URL and look at the ID value for each device.
-  // http://aqualink.ip.address/?command=devices
-  var ignore_devices = [ 
-                         //"Filter_Pump",
-                         //"Spa_Mode",
-                         //"Aux_1",
-                         //"Aux_2",
-                         //"Aux_3",
-                         //"Aux_4",
-                         //"Aux_5",
-                         //"Aux_6",
-                         //"Aux_7",
-                         //"Pool_Heater",
-                         //"Spa_Heater",
-                         "Solar_Heater",
-                         //"Freeze_Protect",
-                         //"SWG/Percent",
-                         //"SWG/PPM",
-                         //"Air",
-                         //"Pool_Water",
-                         //"Spa_Water"
-                        ];
-  // Add the light program names below, the name index MUST correlate to
-  // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
-  var light_program = ["Voodoo Lounge - Show",
-                       "Blue Sea",
-                       "Royal Blue",
-                       "Afternoon Skies",
-                       "Aqua Green",
-                       "Emerald",
-                       "Cloud White",
-                       "Warm Red",
-                       "Flamingo",
-                       "Vivid Violet",
-                       "Sangria",
-                       "Twilight - Show",
-                       "Tranquility - Show",
-                       "Gemstone - Show",
-                       "USA - Show",
-                       "Mardi Gras - Show",
-                       "Cool Cabaret - Show"];
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
 
-  // Background image, delete or leave blank for solid color
-  //var background_url="http://192.168.144.224/snap.jpeg";
-  var background_url='background.jpg';
-
-  // Reload background image every X seconds.(useful if camera snapshot)
-  // 0 means only load once when page loads.
-  var background_reload=0;
-</script>
+  <script type='text/javascript'>
+    // Any devices you don't want to see you can uncomment the ID below.
+    // For a complete list returned from your particular aqualinkd instance
+    // use the below URL and look at the ID value for each device.
+    // http://aqualink.ip.address/?command=devices
+    var ignore_devices = [
+      //"Filter_Pump",
+      //"Spa_Mode",
+      //"Aux_1",
+      //"Aux_2",
+      //"Aux_3",
+      //"Aux_4",
+      //"Aux_5",
+      //"Aux_6",
+      //"Aux_7",
+      //"Pool_Heater",
+      //"Spa_Heater",
+      "Solar_Heater",
+      //"Freeze_Protect",
+      //"SWG/Percent",
+      //"SWG/PPM",
+      //"Air",
+      //"Pool_Water",
+      //"Spa_Water"
+    ];
+    // Add the light program names below, the name index MUST correlate to
+    // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
+    var light_program = [
+      "Voodoo Lounge - Show",
+      "Blue Sea",
+      "Royal Blue",
+      "Afternoon Skies",
+      "Aqua Green",
+      "Emerald",
+      "Cloud White",
+      "Warm Red",
+      "Flamingo",
+      "Vivid Violet",
+      "Sangria",
+      "Twilight - Show",
+      "Tranquility - Show",
+      "Gemstone - Show",
+      "USA - Show",
+      "Mardi Gras - Show",
+      "Cool Cabaret - Show"
+    ];
+    // Background image, delete or leave blank for solid color
+    //var background_url = "http://192.168.144.224/snap.jpeg";
+    var background_url='background.jpg';
+    //var background_url='';
+    // Reload background image every X seconds.(useful if camera snapshot)
+    // 0 means only load once when page loads.
+    var background_reload = 0;
+  </script>
 
   <title>AqualinkD</title>
   <meta name='viewport' content='width=device-width'>
@@ -65,7 +67,6 @@
   <link href="aqualinkd.png" rel="icon">
   <style>
     :root {
-
       --tile-width: 100px;
       --tile_icon-height: 35px;
       --tile_name-height: 32px;
@@ -73,20 +74,34 @@
       --tile_grid-gap: 10px;
       --tile_name-lineheight: 1.2;
       /*
+      // Larger devices will use the below values, just here for testing.
       --tile-width: 125px;
       --tile_icon-height: 45px;
       --tile_name-height: 42px;
       --tile_status-height: 15px;
       --tile_grid-gap: 20px;
       --tile_name-lineheight: 1.4;
-    */
+      */
       --slider-ball: 30;
       --slider-highlight: #2196F3;
       --slider-lowlight: #d3d3d3;
       --slider-height: 20px;
+
+      --body_background: rgb(235, 235, 235);
+      --body_text: black;
+      --options_pane_background: rgb(245, 245, 245);
+      --options_pane_bordercolor: rgb(124, 124, 124);
+      
+      --head_background: rgb(43, 106, 143);
+      --head_text: #fff;
+      --error_background: rgb(143, 43, 43);
+      
+      --tile_background: rgb(220, 220, 220);
+      --tile_text: rgb(110, 110, 110);
+      --tile_on_background: #fff;
+      --tile_on_text: #000;
+      --tile_status_text: rgb(87, 87, 87);
     }
-
-
     div {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -95,23 +110,18 @@
       -ms-user-select: none;
       user-select: none;
     }
-
     div::-moz-selection {
       background: transparent;
     }
-
     div::selection {
       background: transparent;
     }
-
-    html {}
-
-    body {
-      background-color: rgb(235, 235, 235);
+    html {} body {
+      background-color: var(--body_background);
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 14px;
-      color: black;
+      color: var(--body_text);
       /*margin: 0 !important;*/
       /*padding: 0 !important;*/
       /*margin: 10px !important;*/
@@ -120,41 +130,36 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-
     .body_wrap {
-      position:fixed;
-      width:100%;
-      height:100%;
-      top:0px;
-      left:0px;
-      /*background-image: url("background.jpg");*/
-      /*background-image: url("http://192.168.144.224/snap.jpeg");*/
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0px;
+      left: 0px;
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
       height: 100%;
     }
-
     .opaque {
       top: 0px;
       left: 0px;
       filter: alpha(opacity=60);
       opacity: 0.6;
     }
-
     .options_pane {
-      background-color: rgb(245, 245, 245);
-      border: 2px solid rgb(124, 124, 124);
+      background-color: var(--options_pane_background);
+      border: 2px solid var(--options_pane_bordercolor);
       border-radius: 20px;
       justify-content: center;
       align-items: center;
-      width:345px;
+      width: 345px;
       /*height:245px;*/
     }
-
     .options {
       top: 10px;
       /*left: 10px;*/
+
       position: fixed;
       display: flex;
       justify-content: center;
@@ -164,65 +169,61 @@
       height: 100%;
       */
     }
-
     /*
     .show {
       top: 0px;
       left: 0px;
     }
 */
+
     .wrapper {
       display: grid;
       /*grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));
       grid-auto-rows: 1fr, repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));*/
+
       grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), auto));
       grid-auto-rows: 1fr, repeat(auto-fit, minmax(var(--tile-width), auto));
       grid-gap: var(--tile_grid-gap);
       padding: 0 !important;
       margin: 10px !important;
     }
-
     .head {
       /*background-color: rgb(124, 124, 124);*/
-      background-color: rgb(43, 106, 143);
-      color: #fff;
+
+      background-color: var(--head_background);
+      color: var(--head_text);
       border-radius: 5px;
       padding: 5px;
       grid-column: 1 / -1;
     }
-
     .error {
-      background-color: rgb(143, 43, 43) !important;
+      background-color: var(--error_background) !important;
     }
-
     .hide {
       display: none;
       filter: alpha(opacity=0);
       opacity: 0.0;
     }
-
     .tile {
-      background-color: rgb(220, 220, 220);
-      color: rgb(110, 110, 110);
+      background-color: var(--tile_background);
+      color: var(--tile_text);
       border-radius: 10px;
       padding: 0px;
       /*font-size: 100%;*/
+
       box-sizing: border-box;
       padding: 5px;
       height: var(--tile-width);
       width: var(--tile-width);
-
       filter: alpha(opacity=90);
       opacity: 0.9;
     }
-
     .on {
-      background-color: #fff;
-      color: #000;
+      background-color: var(--tile_on_background);
+      color: var(--tile_on_text);
       filter: alpha(opacity=100);
       opacity: 1.0;
     }
-
     /*
     .off {
       background-color: #ccc;
@@ -234,26 +235,24 @@
       height: var(--tile_icon-height);
       display: table;
       margin: 0 auto;
-
       /*background-color: red;*/
     }
-
     .tile_name {
       height: var(--tile_name-height);
       /*background-color: green;*/
+
       line-height: var(--tile_name-lineheight);
     }
-
     .tile_status {
-      color: rgb(87, 87, 87);
+      color: var(--tile_status_text);
       height: var(--tile_status-height);
       /*background-color: blue;*/
     }
-
     .tile_icon_value {
       border-radius: calc(var(--tile_icon-height) / 2);
       font-weight: 600;
       /*border-radius: 27px;*/
+
       height: var(--tile_icon-height);
       min-width: var(--tile_icon-height);
       text-align: center;
@@ -262,27 +261,22 @@
       filter: alpha(opacity=100);
       opacity: 1.0;
     }
-
     .heat {
       background-color: rgb(255, 123, 0);
       color: rgb(255, 255, 255);
     }
-
     .cool {
       background-color: rgb(4, 159, 248);
       color: rgb(255, 255, 255);
     }
-
     .enabled {
       background-color: rgb(78, 196, 0);
       color: rgb(255, 255, 255);
     }
-
     .disabled {
       background-color: rgb(110, 110, 110);
       color: rgb(220, 220, 220);
     }
-
     /* All for options panel */
 
     .option_switch {
@@ -291,11 +285,9 @@
       width: 60px;
       height: 34px
     }
-
     .option_switch input {
       display: none;
     }
-
     .option_switch_slide {
       position: absolute;
       cursor: pointer;
@@ -308,7 +300,6 @@
       transition: .4s;
       border-radius: 34px;
     }
-
     .option_switch_slide:before {
       position: absolute;
       content: "";
@@ -321,21 +312,17 @@
       transition: .4s;
       border-radius: 50%;
     }
-
     input:checked+.option_switch_slide {
       background-color: var(--slider-highlight);
     }
-
     input:focus+.option_switch_slide {
       box-shadow: 0 0 1px var(--slider-highlight);
     }
-
     input:checked+.option_switch_slide:before {
       -webkit-transform: translateX(26px);
       -ms-transform: translateX(26px);
       transform: translateX(26px);
     }
-
     .option_slider {
       -webkit-appearance: none;
       width: 300px;
@@ -346,7 +333,6 @@
       transition: opacity .2s;
       border-radius: var(--slider-height);
     }
-
     .option_slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
@@ -356,7 +342,6 @@
       cursor: pointer;
       border-radius: calc(var(--slider-ball)*1px);
     }
-
     .option_slider::-moz-range-thumb {
       width: calc(var(--slider-ball)*1px);
       height: calc(var(--slider-ball)*1px);
@@ -364,33 +349,29 @@
       cursor: pointer;
       border-radius: var(--slider-height);
     }
-
     .options_title {
       /*background-color: rgb(124, 124, 124);
-      color: #fff; 
+      color: #fff;
       font-weight: 200;*/
+
       font-size: 18px;
       overflow: hidden;
     }
-
     .options_selector {
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
     .options_button {
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
-    .option_text{
+    .option_text {
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
     .timedate {
       font-size: 10px;
     }
@@ -402,25 +383,27 @@
     var _temperature_units;
     var _aqualink_data;
     var _landscape = false;
-
+    var _displayNames = [];
+    
     //init();
-
     function init() {
       setSizeSpecifics();
-
       option = document.getElementById('pswitch_option_list');
-
       fLen = light_program.length;
       for (i = 0; i < fLen; i++) {
         var opt = document.createElement('option');
-        opt.value = i+1;
+        opt.value = i + 1;
         opt.innerHTML = light_program[i];
         option.appendChild(opt);
       }
-
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
+      
+      load_background();
+      showTileOptions(false);  
+      startWebsockets();
+      resetBackgroundSize();
     }
 
     function setSizeSpecifics() {
@@ -428,7 +411,7 @@
       var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
       //alert(w+"x"+h+" = "+(w*h));
       // 375x724 = 271500
-      if ((w * h) > 350000) {
+      if ((w * h) > 370000) { // 370000 is kind-a just guess
         document.documentElement.style.setProperty('--tile-width', '125px');
         document.documentElement.style.setProperty('--tile_icon-height', '45px');
         document.documentElement.style.setProperty('--tile_name-height', '42px');
@@ -436,10 +419,13 @@
         document.documentElement.style.setProperty('--tile_grid-gap', '20px');
         document.documentElement.style.setProperty('--tile_name-lineheight', '1.4');
       }
+
       if (w > h)
         _landscape = true;
       else
         _landscape = false;
+
+      setOrientation(_landscape);
       /*
         Future change element sizes here if needed
       */
@@ -451,29 +437,67 @@
           _landscape = true;
         else
           _landscape = false;
+        setOrientation(_landscape);
+         // Need to finish rendering before calling this, so wait a small time
+        setTimeout(resetBackgroundSize, 100);
       }, false);
     }
 
-function load_background()
-{
-  if (! background_url)
-   return;
+    function setOrientation(isLandscape) {
+      if (isLandscape) {
+        //alert('lll')
+        document.getElementById("td_name").width = '72px';
+        document.getElementById("td_timedate").width = '72px';
+      } else {
+        document.getElementById("td_name").width = '72px';
+        document.getElementById("td_timedate").width = '102px';
+      }
+    }
 
-  //alert("load");
-    // call the notify_complete function when the image has loaded
-  var image = new Image();
-  image.onload = function() {
-    document.getElementById("body_wrap").style.backgroundImage = "url('"+this.src+"')";
-  };
-  image.src = background_url+'?' + new Date().getTime();
-  
-  if (background_reload > 0)
-    setTimeout(load_background, (background_reload * 1000) );
-}
+    function load_background() {
+      // check for undevined AND defined but empty
+      if (typeof background_url === 'undefined' || background_url === undefined)
+        return;
+      //alert("load");
+      // call the notify_complete function when the image has loaded
+      var image = new Image();
+      image.onload = function() {
+        document.getElementById("body_wrap").style.backgroundImage = "url('" + this.src + "')";
+      };
+
+      if (typeof background_reload !== 'undefined' && background_reload > 0) {
+        image.src = background_url + '?' + new Date().getTime();
+        setTimeout(load_background, (background_reload * 1000));
+      } else {
+        image.src = background_url;
+      }
+    }
+    
+    // If the grid continer is larger than the page container, increase page so background looks nice
+    // also reduce size if needed on page rotate.
+    function resetBackgroundSize() {
+       if (typeof background_url === 'undefined' || background_url === undefined)
+        return;
+      
+      try {
+        //inside = document.getElementById('wrapper');
+        outside = document.getElementById('body_wrap');
+        insideH = parseInt(window.getComputedStyle(document.getElementById('wrapper')).height);
+        outsideH = parseInt(window.getComputedStyle(outside).height);
+
+        var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
+        if (insideH > outsideH || outsideH > h) {
+          //outside.style.height = ((insideH > h)?(insideH + 40)+'px':(h + 40)+'px');
+          outside.style.height = ((insideH > h)?(insideH + 40)+'px':h+'px');
+          //alert("w:"+w+" h:"+h+" inH:"+insideH+" outH:"+outsideH+"\nUsed:"+outside.style.height);
+        }
+      } catch (e) {}
+    }
 
     function interval(duration, fn) {
       this.baseline = undefined
-
       this.run = function() {
         if (this.baseline === undefined) {
           this.baseline = new Date().getTime()
@@ -481,7 +505,6 @@ function load_background()
         fn()
         var end = new Date().getTime()
         this.baseline += duration
-
         var nextTick = duration - (end - this.baseline)
         if (nextTick < 0) {
           nextTick = 0
@@ -492,12 +515,10 @@ function load_background()
           }, nextTick)
         }(this))
       }
-
       this.stop = function() {
         clearTimeout(this.timer)
       }
     }
-
     var timer = new interval(1000, function() {
       blink_tiles();
     })
@@ -517,18 +538,14 @@ function load_background()
       }
     }
 
-
     function endPress(id) {
       //pressEvent = 0;
       //alert ("Long press "+id);
       //switchTileState(id, true);
-      
       showTileOptions(true, id);
     }
 
-
     function add_clickEvent(tile, id) {
-
       tile.addEventListener('touchstart', function() {
         _ignoreMouseEvent = true;
         _pressEvent = window.setTimeout(function() {
@@ -536,14 +553,12 @@ function load_background()
           endPress(id);
         }, 1000);
       });
-
       tile.addEventListener('touchend', function() {
         if (_pressEvent != 0) {
           clearTimeout(_pressEvent);
           switchTileState(id, false);
         }
       });
-
       tile.addEventListener("mousedown", function() {
         if (_ignoreMouseEvent == false) {
           _pressEvent = window.setTimeout(function() {
@@ -552,7 +567,6 @@ function load_background()
           }, 1000);
         }
       });
-
       tile.addEventListener("mouseup", function() {
         if (_pressEvent != 0 && _ignoreMouseEvent == false) {
           clearTimeout(_pressEvent);
@@ -562,19 +576,15 @@ function load_background()
     }
 
     function add_tile(id, name, status, type, subtype, off_imgurl, on_imgurl) {
-
       height = getComputedStyle(document.documentElement).getPropertyValue('--tile_icon-height');
-
       div = document.createElement('div');
       div.setAttribute('class', 'tile');
       div.setAttribute('id', id);
       div.setAttribute('type', subtype);
       //div.setAttribute('onclick', "switchTileState('" + id + "')");
-
       subdiv = document.createElement('div');
       subdiv.setAttribute('class', 'tile_icon');
       subdiv.setAttribute('id', id + '_icon');
-
       if (off_imgurl != null) {
         imgdiv = document.createElement('img');
         imgdiv.setAttribute('height', height + 'px');
@@ -607,13 +617,11 @@ function load_background()
              valdiv.textContent = '--';
              subdiv.appendChild(valdiv);
            } */
-
       subdiv = document.createElement('div');
       subdiv.setAttribute('class', 'tile_name');
       subdiv.setAttribute('id', id + '_name');
       subdiv.textContent = name;
       div.appendChild(subdiv);
-
       // Value and Thermostat are the same, but value is read only and no state
       if (type != "value") {
         subdiv = document.createElement('div');
@@ -627,7 +635,6 @@ function load_background()
           add_clickEvent(div, id);
         }
       }
-
       document.getElementById('wrapper').appendChild(div);
     }
 
@@ -650,14 +657,12 @@ function load_background()
       if ((tile = document.getElementById(id)) == null) {
         return;
       }
-
       tile.setAttribute('setpoint', sp_value);
       send_setpoint(id);
     }
 
     function setTileValue(id, value) {
       var ext = '';
-
       if (value == undefined || value.startsWith("-999") || value.startsWith(" "))
         value = '--';
       else {
@@ -674,20 +679,23 @@ function load_background()
     }
 
     function setThermostatTile(id, value, sp_value) {
-
       setTileValue(id, value);
-
       if ((tile = document.getElementById(id)) != null) {
         tile.setAttribute('setpoint', sp_value);
       }
-
     }
 
-
-    function formatSatus(state) {
-      //console.log("Tile "+id+" from "+status+" | to "+formatSatus(status));
-      state = state.charAt(0).toUpperCase() + state.substr(1).toLowerCase();
-      return state;
+    function formatSatus(status) {
+      if ((index = status.indexOf("AUX")) >= 0) {
+        aux = status.substr(index, 4);
+        status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
+        if ((name = _displayNames[aux]) != undefined) {
+          status = status.substr(0, index) + name + status.substr(index + 4);
+        }
+      } else {
+        status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
+      }
+      return status;
     }
 
     function setTileOn(id, status) {
@@ -702,9 +710,7 @@ function load_background()
         console.log("Error unknown status '" + status + "' for '" + id + "'");
         return;
       }
-
       tile.setAttribute('status', status);
-
       if (status != 'off') {
         tile.classList.add("on");
         if ((offimg = document.getElementById(id + '_icon')) != null &&
@@ -733,7 +739,6 @@ function load_background()
         text = "Off";
       }
       document.getElementById(id + '_status').innerHTML = text;
-
       tile_icon = document.getElementById(id + '_tile_icon_value');
       type = tile.getAttribute('type');
       if (status != null && tile_icon != null) {
@@ -764,12 +769,9 @@ function load_background()
     function createTile(object) {
       if (object.name == 'NONE')
         return;
-
       if (ignore_devices.indexOf(object.id) >= 0)
         return;
-
       if (object.type == 'switch' || object.type == 'switch_program') {
-        //add_tile(object.id, object.name, object.state, 'switch', object.type, '/hk_images/'+object.id+'-off.png', '/hk_images/'+object.id+'-on.png');
         add_tile(object.id, object.name, object.state, 'switch', object.type, object.id + '-off.png', object.id + '-on.png');
         setTileOn(object.id, object.status, null);
       } else if (object.type == 'value' || object.type == 'temperature') {
@@ -785,9 +787,8 @@ function load_background()
 
     function showTileOptions(show, id, contex) {
       var active_option;
-
       if (show == true) {
-        var wrapH = document.getElementById('wrapper').clientHeight+'px';
+        var wrapH = document.getElementById('wrapper').clientHeight + 'px';
         if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_thermo') {
           active_option = document.getElementById('thermostat_options');
           document.getElementById('thermostat_options').style.height = wrapH;
@@ -812,12 +813,12 @@ function load_background()
       } else {
         // Fake onclick to close and save any values if open
         if (contex == null) {
-         if (document.getElementById('thermostat_options').style.display == 'flex')
-          document.getElementById("options_close").click();
-         else if (document.getElementById('swg_options').style.display == 'flex')
-          document.getElementById("swg_options_close").click();
-         else if (document.getElementById('pswitch_options').style.display == 'flex')
-          document.getElementById("pswitch_options_close").click();
+          if (document.getElementById('thermostat_options').style.display == 'flex')
+            document.getElementById("options_close").click();
+          else if (document.getElementById('swg_options').style.display == 'flex')
+            document.getElementById("swg_options_close").click();
+          else if (document.getElementById('pswitch_options').style.display == 'flex')
+            document.getElementById("pswitch_options_close").click();
         }
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
@@ -825,7 +826,6 @@ function load_background()
         document.getElementById('wrapper').classList.remove("opaque");
         return;
       }
-
       if (show == true) {
         var tile = document.getElementById(id);
         sp_value = tile.getAttribute('setpoint');
@@ -838,7 +838,6 @@ function load_background()
         var close_button;
         var ext;
         var oswitch;
-
         if (type == 'setpoint_swg') {
           slider = document.getElementById("swg_option_slider_range");
           slider_output = document.getElementById("swg_option_slider_text_value");
@@ -864,7 +863,6 @@ function load_background()
           close_button = document.getElementById("options_close");
           ext = '&deg;' + _temperature_units;
         }
-
         if (type == 'setpoint_swg') {
           slider.min = 0;
           slider.max = 100;
@@ -879,7 +877,6 @@ function load_background()
           slider.step = 1;
         }
         title.innerHTML = document.getElementById(id + '_name').innerHTML;
-
         if (type == 'switch_program') {
           var pswitch = document.getElementById("pswitch_option_list");
           oswitch = document.getElementById("pswitch_option_switch");
@@ -894,10 +891,8 @@ function load_background()
           oswitch = document.getElementById("option_switch");
           oswitch.checked = tile_state;
           var oswitch_output = document.getElementById("option_switch_text_value");
-
           slider_output.innerHTML = slider.value + ext;
           oswitch_output.innerHTML = ((oswitch.checked) ? "Heat" : "Off");
-
           slider.oninput = function() {
             slider_output.innerHTML = this.value + ext;
             //sp_value = this.value
@@ -908,22 +903,26 @@ function load_background()
           }
         }
 
-        // Should look info Date.now() for old browsers, but then can't use event for time
-        var cTime = performance.now();
+        var cTime;
+        try {
+          cTime = performance.now();
+        } catch (e) {
+          cTime = Date.now(); // NSF Probably won't test well below, need to check.
+        }
         var clickHandler = function(e) {
-          // Short time diff means event was the one that launched the options pane, so ignore 
-          if ( (e.timeStamp - cTime) > 1000)
+          // Short time diff means event was the one that launched the options pane, so ignore
+          if ((e.timeStamp - cTime) > 1000)
             showTileOptions(false);
         };
         document.getElementById("body_wrap").addEventListener("click", clickHandler);
-
         close_button.onclick = function() {
           document.getElementById("body_wrap").removeEventListener("click", clickHandler);
           state = oswitch.checked;
           if (type == 'switch_program') {
-            if (pswitch.selectedIndex > 0)
+            if (pswitch.selectedIndex > 0) {
+              //alert("send "+pswitch.selectedIndex);
               send_light_mode(pswitch.selectedIndex);
-            else if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
+            } else if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
               setTileState(id, state);
           } else {
             value = slider.value;
@@ -941,18 +940,16 @@ function load_background()
 
     function update_status(data) {
       //console.log("Received Update Satus");
-
       _aqualink_data = data;
       var el = document.getElementById("datetime");
       el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
-
       if (data.status != "Ready") {
         document.getElementById("message").innerHTML = formatSatus(data.status);
       } else {
         document.getElementById("message").innerHTML = '';
       }
       // Hard code value updated as I can't be bothered to update source.
-      // should come back and re-do these values.  
+      // should come back and re-do these values.
       // The ID's should ultimatly come from json
       setThermostatTile("Pool_Heater", data.pool_temp, data.pool_htr_set_pnt);
       setThermostatTile("Spa_Heater", data.spa_temp, data.spa_htr_set_pnt);
@@ -962,18 +959,16 @@ function load_background()
       setTileValue("Air", data.air_temp);
       setTileValue("Pool_Water", data.pool_temp);
       setTileValue("Spa_Water", data.spa_temp);
-
       for (var obj in data.leds) {
         setTileOn(obj.toString(), data.leds[obj])
       }
-
     }
-
 
     function check_devices(data) {
       _temperature_units = data['temp_units'];
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
+          _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
           //console.log("Create "+data['devices'][obj].id);
           createTile(data['devices'][obj]);
         } else {
@@ -988,16 +983,13 @@ function load_background()
       }
     }
 
-
     function get_appropriate_ws_url() {
       var pcol;
       var u = document.URL;
-
       /*
        * We open the websocket encrypted if this page came on an
        * https:// url itself, otherwise unencrypted
        */
-
       if (u.substring(0, 5) == "https") {
         pcol = "wss://";
         u = u.substr(8);
@@ -1010,16 +1002,11 @@ function load_background()
       //alert (pcol + u[0] + ":6500");
       return pcol + u[0];
     }
-
-
-
     /* dumb increment protocol */
     var socket_di;
 
     function startWebsockets() {
       socket_di = new WebSocket(get_appropriate_ws_url());
-
-
       try {
         socket_di.onopen = function() {
           // success!
@@ -1027,7 +1014,6 @@ function load_background()
           // Set another load 1 minute from now just incase the server hasn't got all the devices yet
           window.setTimeout(get_devices, (60 * 1000));
         }
-
         socket_di.onmessage = function got_packet(msg) {
           document.getElementById("header").classList.remove("error");
           var data = JSON.parse(msg.data);
@@ -1035,10 +1021,10 @@ function load_background()
             update_status(data);
           } else if (data.type == 'devices') {
             check_devices(data);
+            resetBackgroundSize();
             window.setTimeout(get_devices, (300 * 1000)); // Check for new dvices ever 5 mins.
           }
         }
-
         socket_di.onclose = function() {
           // something went wrong
           document.getElementById("message").innerHTML = '  Connection error!  '
@@ -1068,20 +1054,16 @@ function load_background()
 
     function send_setpoint(id) {
       var temperature = {};
-
       if ((tile = document.getElementById(id)) == null) {
         return;
       }
-
       temperature.parameter = tile.getAttribute('id');
       temperature.value = tile.getAttribute('setpoint');
-
       socket_di.send(JSON.stringify(temperature));
     }
 
     function send_light_mode(value) {
       var mode = {};
-
       mode.parameter = 'POOL_LIGHT_MODE';
       mode.value = value;
       socket_di.send(JSON.stringify(mode));
@@ -1090,21 +1072,24 @@ function load_background()
     function reset() {
       socket_di.send("reset\n");
     }
+
   </script>
 </head>
 
 <!--<body onload='showTileOptions(false); test_harness();startWebsockets();'> -->
 
-<body onload='load_background(); showTileOptions(false); init(); startWebsockets();'>
+<body onload='init();'>
   <div id='body_wrap' class='body_wrap'>
-  <!-- <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'> -->
-  <div id='wrapper' class="wrapper">
-    <div id="header" class="head">
-      <table border='0' width='100%' cellpadding='0' cellspacing='0'>
-        <tr>
-          <td align='left'><span class='title' id='name'>AqualinkD</span></td>
-          <td align='center'><span class='title' id='message'></span></td>
-          <td align='right'><span class='timedate' id='datetime'></class>
+    <!-- <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'> -->
+    <div id='wrapper' class="wrapper">
+      <div id="header" class="head">
+        <table border='0' width='100%' cellpadding='0' cellspacing='0'>
+          <tr>
+            <td width="70px" align='left' id='td_name'><span class='title' id='name'>AqualinkD</span>
+            </td>
+            <td align='center'><span class='title' id='message'></span>
+            </td>
+            <td  width="70px" align='right' id='td_timedate'><span class='timedate' id='datetime'></class>
           </td>
         </tr>
       </table>
@@ -1114,67 +1099,74 @@ function load_background()
     <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
       <table border='0' cellpadding='10px'>
         <tr class='options_title'>
-          <th colspan='2'><span id="option_title"></span></th>
-        </tr>
-        <tr>
-          <td align='right' width='50%'><span class="option_text" id='option_switch_text_value'></span></td>
-          <td align='left' width='50%'>
-            <label class="option_switch">
-              <input type="checkbox" id='option_switch'>
-              <span class="option_switch_slide"></span>
-            </label>
-          </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'><span class="option_text" id="option_slider_text_value"></span></td>
-        </tr>
-        <tr>
-          <td colspan='2'>
-            <div class="slidecontainer">
-              <input type="range" class="option_slider" id='option_slider_range'>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'>
-            <input type="button" value="close" id='options_close' class='options_button'>
-          </td>
-        </tr>
-      </table>
+          <th colspan='2'><span id="option_title"></span>
+              </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='option_switch_text_value'></span>
+            </td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='option_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="option_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='option_slider_range'>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='options_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
-  </div>
-  <div id='swg_options' class='options hide'>
-    <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
-      <table border='0' cellpadding='10px'>
-        <tr class='options_title'>
-          <th colspan='2'><span id="swg_option_title"></span></th>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span></td>
-        </tr>
-        <tr>
-          <td colspan='2'>
-            <div class="slidecontainer">
-              <input type="range" class="option_slider" id='swg_option_slider_range'>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'>
-            <input type="button" value="close" id='swg_options_close' class='options_button'>
-          </td>
-        </tr>
-      </table>
+    <div id='swg_options' class='options hide'>
+      <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px'>
+          <tr class='options_title'>
+            <th colspan='2'><span id="swg_option_title"></span>
+            </th>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='swg_option_slider_range'>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='swg_options_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
-  </div>
-  <div id='pswitch_options' class='options hide'>
-    <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
-      <table border='0' cellpadding='10px' width="100%">
-        <tr class='options_title'>
-          <th colspan='2'><span id="pswitch_option_title"></span></th>
-        </tr>
-        <tr>
-            <td align='right' width='50%'><span class="option_text" id='pswitch_option_switch_text_value'></span></td>
+    <div id='pswitch_options' class='options hide'>
+      <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px' width="100%">
+          <tr class='options_title'>
+            <th colspan='2'><span id="pswitch_option_title"></span>
+            </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='pswitch_option_switch_text_value'></span>
+            </td>
             <td align='left' width='50%'>
               <label class="option_switch">
                 <input type="checkbox" id='pswitch_option_switch'>
@@ -1182,22 +1174,23 @@ function load_background()
               </label>
             </td>
           </tr>
-        <tr >
-          <td colspan='2' align='center'>
-            <select id='pswitch_option_list' class='options_selector'>
-              <option value="0">Pool Light Program</option>
-            </select>
-          </td>
-        </tr>
-        <tr>
-          <td colspan='2' align='center'>
-            <input type="button" value="close" id='pswitch_options_close' class='options_button'>
-          </td>
-        </tr>
-      </table>
+          <tr>
+            <td colspan='2' align='center'>
+              <select id='pswitch_option_list' class='options_selector'>
+                <option value="0">Pool Light Program</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='pswitch_options_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
   </div>
-</div>
 </body>
 
 </html>
+

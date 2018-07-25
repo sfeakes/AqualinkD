@@ -243,9 +243,9 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_mode", 21) == 0) {
               config_parameters->light_programming_mode = atof(cleanalloc(indx+1)); // should free this
-            } else if (strncasecmp (b_ptr, "light_programming_initial_on", 27) == 0) {
+            } else if (strncasecmp (b_ptr, "light_programming_initial_on", 28) == 0) {
               config_parameters->light_programming_initial_on = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "light_programming_initial_off", 28) == 0) {
+            } else if (strncasecmp (b_ptr, "light_programming_initial_off", 29) == 0) {
               config_parameters->light_programming_initial_off = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_button", 21) == 0) {
               config_parameters->light_programming_button = strtoul(indx+1, NULL, 10) - 1;

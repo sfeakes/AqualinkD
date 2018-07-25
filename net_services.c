@@ -473,7 +473,7 @@ void set_light_mode(char *value)
   // 5 below is light index, need to look this up so it's not hard coded.
   sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
                                       _aqualink_config->light_programming_button, 
-                                      _aqualink_config->light_programming_initial_on ,
+                                      _aqualink_config->light_programming_initial_on,
                                       _aqualink_config->light_programming_initial_off,
                                       _aqualink_config->light_programming_mode );
   //logMessage(LOG_NOTICE, "WEB: requset light mode %s\n", buf);
