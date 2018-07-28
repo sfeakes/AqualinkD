@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+  <script type='text/javascript'>
+    // Display order of devices.  Tiles will be displayed in the order below,
+    // any devices you don't want to see you can comment the ID.
+    // If the device isn't listed below is will NOT be shown.
+    // For a complete list returned from your particular aqualinkd instance
+    // use the below URL and look at the ID value for each device.
+    // http://aqualink.ip.address/?command=devices
+    var devices = [
+      "Air",
+      "Pool_Water",
+      "Spa_Water",
+      "SWG/PPM",
+      "Filter_Pump",
+      "Spa_Mode",
+      "Aux_3",
+      "Aux_1",
+      "Aux_2",
+      "Aux_4",
+      "Aux_5",
+      "Aux_6",
+      "Aux_7",
+      "Pool_Heater",
+      "Spa_Heater",
+      "SWG/Percent",
+      "Freeze_Protect",
+      //"Solar_Heater",
+    ];
+    // Add the light program names below, the name index MUST correlate to
+    // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
+    var light_program = [
+      "Voodoo Lounge - Show",
+      "Blue Sea",
+      "Royal Blue",
+      "Afternoon Skies",
+      "Aqua Green",
+      "Emerald",
+      "Cloud White",
+      "Warm Red",
+      "Flamingo",
+      "Vivid Violet",
+      "Sangria",
+      "Twilight - Show",
+      "Tranquility - Show",
+      "Gemstone - Show",
+      "USA - Show",
+      "Mardi Gras - Show",
+      "Cool Cabaret - Show"
+    ];
+  </script>
+
+  <title>AqualinkD</title>
+  <meta name='viewport' content='width=device-width'>
+  <meta name='apple-mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+  <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+  <link href="aqualinkd.png" rel="apple-touch-icon">
+  <link href="aqualinkd.png" rel="icon">
+  <style>
+    :root {
+      --diameter: 30px;
+      --slider-ball: 30px;
+      /*--highlight: rgb(76, 217, 100);*/
+      --highlight: rgb(76, 170, 217);
+      --lowlight: #f1f1f1;
+      --error_background: rgb(143, 43, 43);
+      --error_text: rgb(255, 255, 255);
+    }
+
+    html {}
+
+    body {
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-weight: 300;
+      background-color: #f1f1f1;
+      color: #000000;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    .error {
+      background-color: var(--error_background) !important;
+      color: var(--error_text) !important;
+    }
+
+    
+    table,
+    th,
+    td {
+      border-collapse: collapse;
+      padding: 5px;
+      text-align: left;
+      border-bottom: 1px solid rgb(189, 189, 189);
+      /*width: 100%;*/
+    }
+
+    th {
+      /*width: 100vw;*/
+      text-align: center;
+      background-color: #f1f1f1;
+    }
+
+    tr {
+      height: 50px;
+      background-color: white;
+      color: black;
+    }
+
+    .input-text {
+      font-size: 16px;
+    }
+
+    .btn-toggle {
+      position: absolute;
+      margin-left: -9999px;
+      visibility: hidden;
+    }
+
+    .btn-toggle+label {
+      display: block;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      user-select: none;
+    }
+
+    input.btn-toggle-round+label {
+      padding: 2px;
+      width: calc(2 * var(--diameter));
+      height: var(--diameter);
+      background-color: #dddddd;
+      border-radius: var(--diameter);
+    }
+
+    input.btn-toggle-round+label:before,
+    input.btn-toggle-round+label:after {
+      display: block;
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      bottom: 1px;
+      content: '';
+    }
+
+    input.btn-toggle-round+label:before {
+      right: 1px;
+      background-color: #f1f1f1;
+      border-radius: var(--diameter);
+      transition: background 0.4s;
+    }
+
+    input.btn-toggle-round+label:after {
+      width: var(--diameter);
+      background-color: #ffffff;
+      border-radius: 100%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      transition: margin 0.4s;
+    }
+
+    input.btn-toggle-round:checked+label:before {
+      background-color: var(--highlight);
+    }
+    input.btn-toggle-round:checked+label:after {
+      margin-left: var(--diameter);
+    }
+    
+    .slidecontainer {
+      width: 100%;
+    }
+
+   
+    .slider {
+      -webkit-appearance: none;
+      /*width: 100%;*/
+      height: 15px;
+      background: #f1f1f1;
+      transition: background 0.4s;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+      border-radius: 20px;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: var(--diameter);
+      height: var(--diameter);
+      background: var(--highlight);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      border-radius: var(--diameter);
+    }
+
+    .slider::-moz-range-thumb {
+      width: var(--diameter);
+      height: var(--diameter);
+      background: var(--highlight);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      border-radius: var(--diameter);
+    }
+   
+    .options_selector {
+     
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+      font-size: 16px;
+      /*background: var(--highlight);*/
+      background: var(--lowlight);
+      border: 0;
+      padding:5px;
+      /*
+       -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg fill='blue' height='40' viewBox='0 0 40 40' width='40' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h40v20H0z' fill='none'/></svg>");
+      background-repeat: no-repeat;
+      background-position-x: 100%;
+*/
+    }
+  </style>
+  <script type='text/javascript'>
+    
+    var _width;
+    var _height;
+
+    function getSize() {
+      _width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+      _height = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+    }
+
+    function formatSatus(status) {
+      if ((index = status.indexOf("AUX")) >= 0) {
+        aux = status.substr(index, 4);
+        status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
+        if ((name = _displayNames[aux]) != undefined) {
+          status = status.substr(0, index) + name + status.substr(index + 4);
+        }
+      } else {
+        status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
+      }
+      return status;
+    }
+    
+    function deviceSort(a, b) {
+      pa = devices.indexOf(a.id);
+      pb = devices.indexOf(b.id);
+      if (pa > pb)
+        return 1;
+      else if (pa < pb)
+        return -1;
+      return 0;
+    }
+
+    function check_devices(data) {
+      _temperature_units = data['temp_units'];
+      //document.getElementById("title").innerHTML = "AqualinkD &nbsp;&nbsp;&nbsp;<font size='-2'>"+formatSatus(data['time']+"&nbsp;"+data['date']+"</font>");
+      setTitle(data['date'], data['time']);
+      data['devices'].sort(deviceSort);
+      for (var obj in data['devices']) {
+        if (document.getElementById(data['devices'][obj].id) == null) {
+          //_displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
+          //console.log("Create " + data['devices'][obj].id);
+          createTile(data['devices'][obj]);
+        }
+      }
+    }
+    
+    function setTitle(date, time) {
+      document.getElementById("title").innerHTML = "AqualinkD &nbsp;&nbsp;&nbsp;<font size='-1'>"+formatSatus(date+"&nbsp;"+time)+"</font>";
+    }
+
+    function update_status(data) {
+      //console.log("Received Update Satus");
+      _aqualink_data = data;
+      
+      if (data.status != "Ready") {
+        document.getElementById("title").innerHTML = formatSatus(data.status);
+      } else {
+        //document.getElementById("title").innerHTML = 'AqualinkD';
+        setTitle(data['date'], data['time']);
+      }
+      
+      setSlider("Pool_Heater", data.pool_htr_set_pnt);
+      setSlider("Spa_Heater", data.spa_htr_set_pnt);
+      setSlider("SWG/Percent", data.swg_percent);
+      setSlider("Freeze_Protect", data.frz_protect_set_pnt);
+      setLabel("SWG/PPM", data.swg_ppm);
+      setLabel("Air", data.air_temp);
+      setLabel("Pool_Water", data.pool_temp);
+      setLabel("Spa_Water", data.spa_temp);
+      
+      for (var obj in data.leds) {
+        setButton(obj.toString(), data.leds[obj])
+      }
+    }
+
+    function createTile(object) {
+      if (object.name == 'NONE')
+        return;
+      //if (ignore_devices.indexOf(object.id) >= 0)
+      //  return;
+      var table = document.getElementById("deviceList");
+      var row = table.insertRow(-1);
+      var cell1 = row.insertCell(0);
+      var cell2 = row.insertCell(1);
+      var cell3 = row.insertCell(2);
+      var cell4 = row.insertCell(3);
+      cell1.innerHTML = object.name;
+      cell2.innerHTML = "&nbsp;";
+      cell3.innerHTML = "&nbsp;";
+      cell4.innerHTML = "&nbsp;";
+      cell2.setAttribute('width', '100px');
+      cell3.setAttribute('width', '38px');
+      cell4.setAttribute('width', '70px');
+      cell3.setAttribute('align', 'right');
+      //cell3.setAttribute('cellpadding', '0');
+      cell4.setAttribute('align', 'right');
+      if (object.type == 'switch') {
+        row.deleteCell(2);
+        row.deleteCell(1);
+        cell1.setAttribute('colspan', '3');
+        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        setButton(object.id, object.state);
+      } else if (object.type == 'switch_program') {
+        row.deleteCell(2);
+        cell2.setAttribute('colspan', '2');
+        //cell2.setAttribute('width', '100%');
+        cell2.innerHTML = "<select id='selector_"+object.id+"' onchange='update(this);' class='options_selector'><option value='0'>Program</option></select>";
+        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        option = document.getElementById('selector_'+object.id);
+        fLen = light_program.length;
+        for (i = 0; i < fLen; i++) {
+          var opt = document.createElement('option');
+          opt.value = i + 1;
+          opt.innerHTML = light_program[i];
+          option.appendChild(opt);
+        }
+        setButton(object.id, object.state);
+      } else if (object.type == 'value') {
+        row.deleteCell(2);
+        row.deleteCell(1);
+        cell1.setAttribute('colspan', '3');
+        cell4.innerHTML = "<label id='"+object.id+"' output_ext=''></label>";
+        setLabel(object.id, object.value);
+      } else if (object.type == 'temperature') {
+        row.deleteCell(2);
+        row.deleteCell(1);
+        cell1.setAttribute('colspan', '3');
+        cell4.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
+        setLabel(object.id, object.value);
+      } else if (object.type == 'setpoint_thermo') {
+        cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='104' class='slider' output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        cell3.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
+        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        setSlider(object.id, object.spvalue);
+        setButton(object.id, object.status);
+      } else if (object.type == 'setpoint_freeze') {
+        cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='42' class='slider'  output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        cell4.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
+        setSlider(object.id, object.spvalue);
+      } else if (object.type == 'setpoint_swg') {
+        if (_width <= 390)
+          cell1.innerHTML = "SWG";
+        cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='0' max='100' step='5' class='slider' output_id='"+object.id+"'' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        cell3.innerHTML = "<label id='"+object.id+"' output_ext='%'></label>";
+        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        setSlider(object.id, object.value);
+        setButton(object.id, object.state);
+      }
+    }
+    
+    function update(source) {
+      //console.log("Send "+source.id+" to server "+source.getAttribute("type")+" "+source.value);
+      
+      var cmd = {};
+      
+      switch (source.getAttribute("type")) {
+        case "range":
+          cmd.parameter = source.id.substr(7); // remove 'slider_'
+          cmd.value = source.value;
+        break;
+        case "checkbox":
+          //name = source.id.substr(11); //remove 'btn-toggle-''
+          //state = source.checked?"on":"off";
+          cmd.command = source.id.substr(11);
+        break;
+        default:  // type is null because it's a selector
+          //name = source.id.substr(9); //remove 'selector_''
+          cmd.parameter = 'POOL_LIGHT_MODE';
+          cmd.value = source.value;
+        break;
+      }
+
+      //console.log(cmd);
+      send_command(cmd);    
+    }
+    
+    function sliderchange(source) {
+      setLabel(source.getAttribute('output_id'), source.value);
+    }
+    
+    function setButton(id, isOn) {
+      if ( (isOn != true && isOn != false) || Number.isInteger(isOn)){
+        if (isOn != "enabled") {
+          if (Number.isInteger(isOn))
+            isOn = (isOn==1)?true:false;
+          else
+            isOn = (isOn=="on")?true:false;
+        } else {
+          //document.getElementById('btn-toggle-' + id).classList.add("btn-toggle-round_enabled");
+        }
+      }
+      //NSF need to chance the button color if enadled is a sent state.
+      if( (btn = document.getElementById('btn-toggle-' + id)) != null)
+        btn.checked = isOn;
+    }
+
+    function lock(source) {
+      source.setAttribute('lock', 'true');
+    }
+    function unlock(source) {
+      source.setAttribute('lock', 'false');
+    }
+    function setSlider(id, value) {
+      slider = document.getElementById("slider_"+id);
+
+      if (slider.getAttribute('lock') == 'true')
+        return;
+
+      slider.value = value;
+      setLabel(slider.getAttribute('output_id'), value);
+    }
+    
+    function setLabel(id, value) {
+      label = document.getElementById(id);
+      if (value != -999 && value != " ")
+        label.innerHTML = value+label.getAttribute('output_ext');
+      else
+        label.innerHTML = "--";
+        
+    }
+
+    
+    function get_appropriate_ws_url() {
+      var pcol;
+      var u = document.URL;
+      /*
+       * We open the websocket encrypted if this page came on an
+       * https:// url itself, otherwise unencrypted
+       */
+      if (u.substring(0, 5) == "https") {
+        pcol = "wss://";
+        u = u.substr(8);
+      } else {
+        pcol = "ws://";
+        if (u.substring(0, 4) == "http")
+          u = u.substr(7);
+      }
+      u = u.split('/');
+      //alert (pcol + u[0] + ":6500");
+      return pcol + u[0];
+    }
+    /* dumb increment protocol */
+    var socket_di;
+
+    function startWebsockets() {
+      socket_di = new WebSocket(get_appropriate_ws_url());
+      try {
+        socket_di.onopen = function() {
+          // success!
+          get_devices();
+        }
+        socket_di.onmessage = function got_packet(msg) {
+          document.getElementById("title").classList.remove("error");
+          var data = JSON.parse(msg.data);
+          if (data.type == 'status') {
+            update_status(data);
+          } else if (data.type == 'devices') {
+            check_devices(data);
+          }
+        }
+        socket_di.onclose = function() {
+          // something went wrong
+          document.getElementById("title").innerHTML = '  !!! Connection error !!!  '
+          document.getElementById("title").classList.add("error");
+          // Try to reconnect every 5 seconds.
+          setTimeout(function() {
+            startWebsockets();
+          }, 5000);
+        }
+      } catch (exception) {
+        alert('<p>Error' + exception);
+      }
+    }
+
+    function get_devices() {
+      var msg = {
+        command: "GET_DEVICES"
+      };
+      socket_di.send(JSON.stringify(msg));
+    }
+
+    function send_command(cmd) {
+      socket_di.send(JSON.stringify(cmd));
+    }
+
+    function reset() {
+      socket_di.send("reset\n");
+    }
+    
+    function init() {
+      getSize();
+      startWebsockets();
+    }
+  </script>
+
+  <body onload="init();">
+    <div class="wrapper">
+
+      <table border='0' width="100%" id="deviceList">
+        <tr>
+          <th colspan="4" id="title">AqualinkD</th>
+        </tr>
+      </table>
+    </div>
+  </body>
+</html>

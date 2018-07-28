@@ -5,30 +5,33 @@
   <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
 
   <script type='text/javascript'>
-    // Any devices you don't want to see you can uncomment the ID below.
+    // Display order of devices.  Tiles will be displayed in the order below,
+    // any devices you don't want to see you can comment the ID.
+    // If the device isn't listed below is will NOT be shown.
     // For a complete list returned from your particular aqualinkd instance
     // use the below URL and look at the ID value for each device.
     // http://aqualink.ip.address/?command=devices
-    var ignore_devices = [
-      //"Filter_Pump",
-      //"Spa_Mode",
-      //"Aux_1",
-      //"Aux_2",
-      //"Aux_3",
-      //"Aux_4",
-      //"Aux_5",
-      //"Aux_6",
-      //"Aux_7",
-      //"Pool_Heater",
-      //"Spa_Heater",
-      "Solar_Heater",
-      //"Freeze_Protect",
-      //"SWG/Percent",
-      //"SWG/PPM",
-      //"Air",
-      //"Pool_Water",
-      //"Spa_Water"
+    var devices = [
+      "Filter_Pump",
+      "Spa_Mode",
+      "Aux_1",
+      "Aux_2",
+      "Aux_3",
+      "Aux_4",
+      "Aux_5",
+      "Aux_6",
+      "Aux_7",
+      "Pool_Heater",
+      "Spa_Heater",
+      "SWG/Percent",
+      "SWG/PPM", 
+      "Air",
+      "Pool_Water",
+      "Spa_Water",
+      "Freeze_Protect",
+      //"Solar_Heater",
     ];
+
     // Add the light program names below, the name index MUST correlate to
     // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
     var light_program = [
@@ -52,11 +55,11 @@
     ];
     // Background image, delete or leave blank for solid color
     //var background_url = "http://192.168.144.224/snap.jpeg";
-    var background_url='background.jpg';
+    //var background_url='background.jpg';
     //var background_url='';
     // Reload background image every X seconds.(useful if camera snapshot)
     // 0 means only load once when page loads.
-    var background_reload = 0;
+    //var background_reload = 10;
   </script>
 
   <title>AqualinkD</title>
@@ -91,11 +94,11 @@
       --body_text: black;
       --options_pane_background: rgb(245, 245, 245);
       --options_pane_bordercolor: rgb(124, 124, 124);
-      
+
       --head_background: rgb(43, 106, 143);
       --head_text: #fff;
       --error_background: rgb(143, 43, 43);
-      
+
       --tile_background: rgb(220, 220, 220);
       --tile_text: rgb(110, 110, 110);
       --tile_on_background: #fff;
@@ -146,6 +149,12 @@
       left: 0px;
       filter: alpha(opacity=60);
       opacity: 0.6;
+    }
+    .vopaque {
+      top: 0px;
+      left: 0px;
+      filter: alpha(opacity=40);
+      opacity: 0.4;
     }
     .options_pane {
       background-color: var(--options_pane_background);
@@ -384,7 +393,7 @@
     var _aqualink_data;
     var _landscape = false;
     var _displayNames = [];
-    
+
     //init();
     function init() {
       setSizeSpecifics();
@@ -399,9 +408,9 @@
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
-      
+
       load_background();
-      showTileOptions(false);  
+      showTileOptions(false);
       startWebsockets();
       resetBackgroundSize();
     }
@@ -472,13 +481,13 @@
         image.src = background_url;
       }
     }
-    
+
     // If the grid continer is larger than the page container, increase page so background looks nice
     // also reduce size if needed on page rotate.
     function resetBackgroundSize() {
        if (typeof background_url === 'undefined' || background_url === undefined)
         return;
-      
+
       try {
         //inside = document.getElementById('wrapper');
         outside = document.getElementById('body_wrap');
@@ -769,7 +778,7 @@
     function createTile(object) {
       if (object.name == 'NONE')
         return;
-      if (ignore_devices.indexOf(object.id) >= 0)
+      if (devices.indexOf(object.id) < 0)
         return;
       if (object.type == 'switch' || object.type == 'switch_program') {
         add_tile(object.id, object.name, object.state, 'switch', object.type, object.id + '-off.png', object.id + '-on.png');
@@ -964,8 +973,22 @@
       }
     }
 
+    function deviceSort(a, b) {
+      pa = devices.indexOf(a.id);
+      pb = devices.indexOf(b.id);
+      
+      if (pa > pb)
+        return 1;
+      else if (pa < pb)
+        return -1;
+      
+      return 0;
+    }
+    
     function check_devices(data) {
       _temperature_units = data['temp_units'];
+      
+      data['devices'].sort(deviceSort);
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
           _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
@@ -1073,6 +1096,14 @@
       socket_di.send("reset\n");
     }
 
+    function showBackground() {
+      wrapper = document.getElementById("wrapper");
+      if (wrapper.classList.contains("vopaque")) {
+        wrapper.classList.remove("vopaque");
+      } else {
+        wrapper.classList.add("vopaque");
+      }
+    }
   </script>
 </head>
 
@@ -1082,7 +1113,7 @@
   <div id='body_wrap' class='body_wrap'>
     <!-- <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'> -->
     <div id='wrapper' class="wrapper">
-      <div id="header" class="head">
+      <div id="header" class="head" onclick="showBackground();">
         <table border='0' width='100%' cellpadding='0' cellspacing='0'>
           <tr>
             <td width="70px" align='left' id='td_name'><span class='title' id='name'>AqualinkD</span>

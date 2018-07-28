@@ -87,6 +87,11 @@ void processLEDstate()
   
   if ( _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX-1].state == OFF && _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX].state == ON)
     _aqualink_data.aqualinkleds[SOLAR_HTR_LED_INDEX-1].state = ENABLE;
+/*
+  for (i=0; i < TOTAL_BUTTONS; i++) {
+    logMessage(LOG_NOTICE, "%s = %d", _aqualink_data.aqbuttons[i].name,  _aqualink_data.aqualinkleds[i].state);
+  }
+*/
 }
 
 

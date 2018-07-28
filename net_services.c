@@ -419,10 +419,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
   // Loop over LED's and send any changes.
   for (i=0; i < TOTAL_BUTTONS; i++) {
+    //logMessage(LOG_NOTICE, "%s = %d, last=%d", _aqualink_data->aqbuttons[i].name,  _aqualink_data->aqbuttons[i].led->state, _last_mqtt_aqualinkdata.aqualinkleds[i].state);
     //logMessage(LOG_INFO, "LED %d : new state %d | old state %d\n", i, _aqualink_data->aqbuttons[i].led->state, _last_mqtt_aqualinkdata.aqualinkleds[i].state);
     if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state){
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
-      if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX) {
+      //if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX) {
         if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
           send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
         } else if (_aqualink_data->aqbuttons[i].led->state == FLASH && _aqualink_config->flash_mqtt_buttons == true) {
@@ -438,9 +439,10 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         } else {
             send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
         }
-
-        send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
-      }
+        
+        if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX)
+          send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
+      //}
       // Send mqtt
     }
   }
