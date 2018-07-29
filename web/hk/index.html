@@ -6,7 +6,7 @@
 
   <script type='text/javascript'>
     // Display order of devices.  Tiles will be displayed in the order below,
-    // any devices you don't want to see you can comment the ID.
+    // any devices you don't want to see you can comment the ID. (with // e.g. `//"Solar_Heater",` )
     // If the device isn't listed below is will NOT be shown.
     // For a complete list returned from your particular aqualinkd instance
     // use the below URL and look at the ID value for each device.
@@ -952,11 +952,15 @@
       _aqualink_data = data;
       var el = document.getElementById("datetime");
       el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
+  
+      if ( document.getElementById("name").innerHTML == "AqualinkD" ) {
       if (data.status != "Ready") {
         document.getElementById("message").innerHTML = formatSatus(data.status);
       } else {
         document.getElementById("message").innerHTML = '';
       }
+      }
+      
       // Hard code value updated as I can't be bothered to update source.
       // should come back and re-do these values.
       // The ID's should ultimatly come from json
@@ -1104,6 +1108,15 @@
         wrapper.classList.add("vopaque");
       }
     }
+
+    function showVersion(source) {
+      if ( (message = document.getElementById("message")) != null) {
+        message.innerHTML = "AqualinkD : "+_aqualink_data.aqualinkd_version+" | AqualinkRS : "+_aqualink_data.version;
+      }
+      source.innerHTML = "Version(s)";
+
+      setTimeout(function(){ source.innerHTML = "AqualinkD"; }, 5000);
+    }
   </script>
 </head>
 
@@ -1116,7 +1129,7 @@
       <div id="header" class="head" onclick="showBackground();">
         <table border='0' width='100%' cellpadding='0' cellspacing='0'>
           <tr>
-            <td width="70px" align='left' id='td_name'><span class='title' id='name'>AqualinkD</span>
+            <td width="70px" align='left' id='td_name'><span class='title' id='name' onclick="showVersion(this);event.stopPropagation();">AqualinkD</span>
             </td>
             <td align='center'><span class='title' id='message'></span>
             </td>

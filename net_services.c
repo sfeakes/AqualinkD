@@ -304,6 +304,10 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
+    // IF spa is off, report pool water temp to Domoticz.
+    if (_aqualink_data->spa_temp == TEMP_UNKNOWN)
+      send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
+
   }
   
   if (_aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
@@ -363,46 +367,57 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     switch (_aqualink_data->ar_swg_status) {
       // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
       case 0x00:
+        sprintf(_aqualink_data->last_display_message, "AquaPure ON");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 1, "GENERATING CHLORINE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x01:
+        sprintf(_aqualink_data->last_display_message, "AquaPure No Flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "NO FLOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x02:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Low Salt");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x04:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Very No flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "VERY LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x08:
+        sprintf(_aqualink_data->last_display_message, "AquaPure High Current");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "HIGH CURRENT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x09:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Turning Off");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "TURNING OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x10:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Clean Cell");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "CLEAN CELL");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x20:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Low Voltage");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "LOW VOLTAGE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x40:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Water Temp Low");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "WATER TEMP LOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x80:
+        sprintf(_aqualink_data->last_display_message, "AquaPure Check PCB");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "CHECK PCB");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case SWG_STATUS_OFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
+        sprintf(_aqualink_data->last_display_message, "AquaPure OFF");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
@@ -621,8 +636,24 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
   parseJSONwebrequest(buffer, &request);
   logMessage(LOG_INFO, "WS: Message - Key '%s' Value '%s' | Key2 '%s' Value2 '%s'\n", request.first.key, request.first.value, request.second.key,
              request.second.value);
+/*
+  if (strcmp(request.first.key, "raw") == 0 || strcmp(request.first.key, "simulator") == 0 )
+    _aqualink_data->simulate_panel = true;
+  else
+    _aqualink_data->simulate_panel = false;
+*/
 
-  if (strcmp(request.first.key, "command") == 0) {
+  if (strcmp(request.first.key, "raw") == 0) {
+    _aqualink_data->simulate_panel = true;
+    logMessage (LOG_WARNING, "WS: Send raw command to controller %s\n",request.first.value);
+    unsigned int n;
+    sscanf(request.first.value, "0x%2x", &n);
+    aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
+    //char message[JSON_LABEL_SIZE*10];
+    //build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
+    //ws_send(nc, message);
+  } else if (strcmp(request.first.key, "command") == 0) {
+    _aqualink_data->simulate_panel = false;
     if (strcmp(request.first.value, "GET_AUX_LABELS") == 0) {
       char labels[JSON_LABEL_SIZE];
       build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
@@ -631,6 +662,12 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       char message[JSON_LABEL_SIZE*10];
       build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
       ws_send(nc, message);
+    } else if ( strcmp(request.first.value, "simulator") == 0) {
+      _aqualink_data->simulate_panel = true;
+      logMessage(LOG_INFO, "WS: Set Simpulator mode");
+      char labels[JSON_LABEL_SIZE];
+      build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
+      ws_send(nc, labels);
     } else { // Search for value in command list
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -644,6 +681,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       }
     }
   } else if (strcmp(request.first.key, "parameter") == 0) {
+    _aqualink_data->simulate_panel = false;
     if (strcmp(request.first.value, "FRZ_PROTECT") == 0 || strcmp(request.first.value, FREEZE_PROTECT) == 0) {
       aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, request.second.value, _aqualink_data);
     } else if (strcmp(request.first.value, "POOL_HTR") == 0 || strcmp(request.first.value, BTN_POOL_HTR) == 0 ) {
@@ -658,7 +696,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     } else {
       logMessage(LOG_DEBUG, "WS: Unknown parameter %s\n", request.first.value);
     }
-  }
+  } 
 }
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {

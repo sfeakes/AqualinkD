@@ -465,3 +465,21 @@ char* stristr(const char* haystack, const char* needle) {
   } while (*haystack++);
   return 0;
 }
+
+int ascii(char *destination, char *source) {
+  int i;
+  for(i = 0; i < strlen(source); i++) {
+    if ( source[i] >= 0 && source[i] < 128 )
+      destination[i] = source[i];
+    else
+      destination[i] = ' ';
+
+    if ( source[i]==126 ) {
+      destination[i-1] = '<';
+      destination[i] = '>';
+    } 
+
+  }
+  destination[i] = '\0';
+  return i;
+}

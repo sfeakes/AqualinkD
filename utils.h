@@ -48,6 +48,7 @@ void delay (unsigned int howLong);
 float degFtoC(float degF);
 float degCtoF(float degC);
 char* stristr(const char* haystack, const char* needle);
+int ascii(char *destination, char *source);
 
 
 //#ifndef _UTILS_C_

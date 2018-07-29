@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+    <title>AqualinkD Simulator</title>
+    <meta name='viewport' content='width=device-width'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <link href="aqualinkd.png" rel="apple-touch-icon">
+    <link href="aqualinkd.png" rel="icon">
+    <style>
+        html {}
+
+        body {
+            font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+            font-weight: 300;
+            background-color: white;
+            color: #000000;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        table {
+            background-color: rgb(221, 221, 221);
+            padding: 10px;
+        }
+        th{
+            background-color: white;
+        }
+        input[type=button],
+        input[type=submit],
+        input[type=reset] {
+            background-color: rgb(165, 165, 165);
+            border: none;
+            color: rgb(0, 0, 0);
+            padding: 2px 2px;
+            text-decoration: none;
+            margin: 0px 0px;
+            min-width: 70px;
+            border-radius: 70px;
+        }
+
+        .led {
+            border-radius: calc(var(--tile_icon-height) / 2);
+            border-radius: 20px;
+            height: 20px;
+            width: 20px;
+            text-align: center;
+            vertical-align: middle;
+            filter: alpha(opacity=100);
+            opacity: 1.0;
+        }
+
+        .on {
+            background-color: rgb(255, 0, 0);
+        }
+
+        .off {
+            background-color: rgb(116, 116, 116);
+        }
+    </style>
+
+    <script type='text/javascript'>
+        function send(source) {
+            console.log("from" + source.id);
+
+            var cmd = {};
+            switch (source.id) {
+                case "Filter_Pump_button":
+                    cmd.raw = "0x02";
+                    break;
+                case "Spa_Mode_button":
+                    cmd.raw = "0x01";
+                    break;
+                case "Aux_1_button":
+                    cmd.raw = "0x05";
+                    break;
+                case "Aux_2_button":
+                    cmd.raw = "0x0a";
+                    break;
+                case "Aux_3_button":
+                    cmd.raw = "0x0f";
+                    break;
+                case "Aux_4_button":
+                    cmd.raw = "0x06";
+                    break;
+                case "Aux_5_button":
+                    cmd.raw = "0x0b";
+                    break;
+                case "Aux_6_button":
+                    cmd.raw = "0x10";
+                    break;
+                case "Aux_7_button":
+                    cmd.raw = "0x15";
+                    break;
+                case "Pool_Heater_button":
+                    cmd.raw = "0x12";
+                    break;
+                case "Spa_Heater_button":
+                    cmd.raw = "0x17";
+                    break;
+                case "Solar_Heater_button":
+                    cmd.raw = "0x1c";
+                    break;
+                case "B_menu":
+                    cmd.raw = "0x09";
+                    break;
+                case "B_cancel":
+                    cmd.raw = "0x0e";
+                    break;
+                case "B_back":
+                    cmd.raw = "0x13";
+                    break;
+                case "B_forward":
+                    cmd.raw = "0x18";
+                    break;
+                case "B_enter":
+                    cmd.raw = "0x1d";
+                    break;
+                case "B_hold":
+                    cmd.raw = "0x19";
+                    break;
+                case "B_overide":
+                    cmd.raw = "0x1c";
+                    break;
+                default:
+                    alert("Unknown button");
+                    return;
+                    break;
+            }
+
+            send_command(cmd);
+        }
+
+        function update_status(data) {
+            document.getElementById("status").innerHTML = data.status;
+
+            for (var obj in data.leds) {
+                if ((led = document.getElementById(obj.toString() + "_led")) == null) {
+                    console.log("Error " + obj.toString() + " LED not found");
+                    return;
+                }
+                if (data.leds[obj] == "on") {
+                    led.classList.add("on");
+                    led.classList.remove("off");
+                } else {
+                    led.classList.add("off");
+                    led.classList.remove("on");
+                }
+            }
+        }
+
+
+        function set_labels(data) {
+            for (var obj in data) {
+                if ( (button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
+                    button.value = data[obj];
+                }
+            }
+        }
+
+        function get_appropriate_ws_url() {
+            var pcol;
+            var u = document.URL;
+            /*
+             * We open the websocket encrypted if this page came on an
+             * https:// url itself, otherwise unencrypted
+             */
+            if (u.substring(0, 5) == "https") {
+                pcol = "wss://";
+                u = u.substr(8);
+            } else {
+                pcol = "ws://";
+                if (u.substring(0, 4) == "http")
+                    u = u.substr(7);
+            }
+            u = u.split('/');
+            //alert (pcol + u[0] + ":6500");
+            return pcol + u[0];
+        }
+        /* dumb increment protocol */
+        var socket_di;
+
+        function startWebsockets() {
+            socket_di = new WebSocket(get_appropriate_ws_url());
+            try {
+                socket_di.onopen = function () {
+                    // success!
+                    start_simulator();
+                }
+                socket_di.onmessage = function got_packet(msg) {
+                    document.getElementById("status").classList.remove("error");
+                    var data = JSON.parse(msg.data);
+                    if (data.type == 'status') {
+                        update_status(data);
+                    } else if (data.type == 'devices') {
+                        //update_status(data);
+                    } else if (data.type == 'aux_labels') {
+                        set_labels(data);
+                    }
+                }
+                socket_di.onclose = function () {
+                    // something went wrong
+                    document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
+                    document.getElementById("status").classList.add("error");
+                    // Try to reconnect every 5 seconds.
+                    setTimeout(function () {
+                        startWebsockets();
+                    }, 5000);
+                }
+            } catch (exception) {
+                alert('<p>Error' + exception);
+            }
+        }
+
+        function start_simulator() {
+            var msg = {
+                command: "simulator"
+            };
+            socket_di.send(JSON.stringify(msg));
+
+            /*
+                    var msg = {
+                        command: "simulator"
+                    };
+                    socket_di.send(JSON.stringify(msg));*/
+        }
+
+        function send_command(cmd) {
+            socket_di.send(JSON.stringify(cmd));
+        }
+
+        function reset() {
+            socket_di.send("reset\n");
+        }
+
+        function init() {
+            startWebsockets();
+        }
+    </script>
+
+
+
+    <body onload="init();">
+        <div class="wrapper">
+
+            <table border='0' id="deviceList">
+                <tr>
+                    <th colspan="12" id="status">AqualinkD</th>
+                </tr>
+                <tr>
+                    <td align="right">
+                        <div id="Filter_Pump_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Filter_Pump_button" type="button" onclick="send(this);"  value="Filter Pump">
+                    </td>
+                    <td align="right">
+                        <div id="Spa_Mode_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Spa_Mode_button" type="button" onclick="send(this);" value="Spa Mode">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_1_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_1_button" type="button" onclick="send(this);"  value="AUX1">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_2_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_2_button" type="button" onclick="send(this);"  value="AUX2">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_3_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_3_button" type="button" onclick="send(this);" value="AUX3">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_4_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_4_button" type="button" onclick="send(this);"  value="AUX4">
+                    </td>
+                </tr>
+                <tr>
+                    <td align="right">
+                        <div id="Aux_5_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_5_button" type="button" onclick="send(this);" value="AUX5">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_6_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_6_button" type="button" onclick="send(this);"  value="AUX6">
+                    </td>
+                    <td align="right">
+                        <div id="Aux_7_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Aux_7_button" type="button" onclick="send(this);" value="AUX7">
+                    </td>
+                    <td align="right">
+                        <div id="Pool_Heater_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Pool_Heater_button" type="button" onclick="send(this);" value="Pool Heater">
+                    </td>
+                    <td align="right">
+                        <div id="Spa_Heater_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Spa_Heater_button" type="button" onclick="send(this);"  value="Spa Heater">
+                    </td>
+                    <td align="right">
+                        <div id="Solar_Heater_led" class="led off"></div>
+                    </td>
+                    <td align="left">
+                        <input id="Solar_Heater_button" type="button" onclick="send(this);"  value="Solar Heater">
+                    </td>
+                </tr>
+                <tr>
+                    <TD>&nbsp;</TD>
+                </tr>
+                <tr>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_menu" value="Menu">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_cancel" value="Cancel">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_back" value="Back <">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_forward" value="Forward >">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_enter" value="Enter *">
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </body>
+
+</html>

@@ -3,6 +3,7 @@
 #define AQUALINK_H_
 
 #include <pthread.h>
+#include <stdbool.h>
 #include "aq_serial.h"
 #include "aq_programmer.h"
 
@@ -90,6 +91,7 @@ struct aqualinkdata
   int swg_ppm;
   unsigned char ar_swg_status;
   int swg_delayed_percent;
+  bool simulate_panel;
   //bool ar_swg_connected;
 };
 

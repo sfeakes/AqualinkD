@@ -28,6 +28,7 @@
 #include "json_messages.h"
 #include "domoticz.h"
 #include "aq_mqtt.h"
+#include "version.h"
 
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
@@ -41,7 +42,7 @@
 
 const char* getStatus(struct aqualinkdata *aqdata)
 {
-  if (aqdata->active_thread.thread_id != 0) {
+  if (aqdata->active_thread.thread_id != 0 && !aqdata->simulate_panel) {
     return JSON_PROGRAMMING;
   }
  
@@ -236,6 +237,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   length += sprintf(buffer+length, ",\"status\":\"%s\"",getStatus(aqdata) );
   //length += sprintf(buffer+length, ",\"message\":\"%s\"",aqdata->message );
   length += sprintf(buffer+length, ",\"version\":\"%s\"",aqdata->version );//8157 REV MMM",
+  length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"", AQUALINKD_VERSION ); //1.0b,
   length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"time\":\"%s\"",aqdata->time );//"1:16 PM",
   //length += sprintf(buffer+length, ",\"air_temp\":\"%d\"",aqdata->air_temp );//"96",

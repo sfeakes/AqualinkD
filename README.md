@@ -3,21 +3,40 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
 
-## Builtin WEB Interface.
-<img src="extras/web_ui.png?raw=true" width="800"></img>
-## New WEB interface (in beta)
+## Builtin WEB Interface(s).
+### Curren web UI, (soon to be deprecated)
+<img src="extras/web_ui.png?raw=true" width="700"></img>
+### New WEB interface
 <img src="extras/IMG_0251.PNG?raw=true" width="350"></img>
 * The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.
 * Customizable tile icons & background image. (can hide any tile)
 * Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press
 * Support live background imags (ie poll camera for still image every X seconds)
 * Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
-## In Apple Home app.
+### Other web Interface options
+Simple :- (Just another option if you don't default)<br>
+<img src="extras/simple.png?raw=true" width="350"></img>
+
+Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
+<img src="extras/simulator.png?raw=true" width="550">
+
+### In Apple Home app.
 <img src="extras/HomeKit2.png?raw=true" width="800"></img>
 * (Salt Water Generator is configured as Thermostat as it's the closest homekit accessory type, so &deg;=% and Cooling=Generating)
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
-## Latest update in Release 1.0b
+## All Web interfaces.
+* http://aqualink.ip/     <- (Default, soon to be deprecated, too much hard coding)
+* http://aqualink.ip/hk   <- (New, soon to be defaut)
+* http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
+* http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
+## Latest update in Release 1.0c
+* New Simple interface.
+* Start of a RS8 Simulator :-
+    * So you can program the AqualinkRS form a web interface and not control panel.
+    * Please make sure all other browsers & tabs are not using AqualinkD. it doesn't support multiple devices when in simulator mode.
+* Fixed a few bugs.
+* -- Release 1.0b --
 * NEW WEB UI !!!!!!!!!!!!!  (in beta)
 * Flash buttons on/off in homekit for enabeling / disabeling / cooldown period as they do on control panel
 * Full SWG support (setting %, not just reporting current state). Also reports Salt Cell status such as (no flow, low salt, high curent, clean cell, low voltage, water temp low, check PCB)
@@ -28,6 +47,7 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 * freeze protect, heater temperature & SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support)
 
 # TL;DR Install
+* For new install or update existing install follow the same procedures. Your configuration file will not be overriden, so on an update check you have added new config options to your config, your old config will work, you just may not have the new features enabeled. If you have modified any files in the web directory then you should back them up before upgrading.
 ## Quick instal if you are using Raspberry PI
 * There is a chance the pre-compiled binary will run, copy the git repo and run the install.sh script from the release directory. ie from the install directory `sudo ./release/install.sh`
 * try to run it with :-
@@ -72,14 +92,15 @@ Manual install for init-d systems
 
 # Aqualink Versions tested
 This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo controll panels. At the moment it will not work with Aqualink PDA / AquaPalm and NON Combo iAqualink.
-Below are versions :-
+Below are varified versions (But should work witn any AqualinkRS) :-
 
 
 | Version | Notes | 
 | --- | --- |
-| JANDY AquaLinkRS 8157 REV MMM      | Everything working  | 
-| Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |  
-| Jandy iAqualink E0260801 REV R     | All working, but sometimes programming is hit 'n miss. This is a combo board iAqualink & AqualinkRS  |  
+| JANDY AquaLinkRS 8157 REV MMM      | Everything working  |
+| Jandy AquaLinkRS 8157 REV JJ       | Everything working  |
+| Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |
+| Jandy iAqualink E0260801 REV R     | All working, but sometimes programming is hit 'n miss. This is a combo board iAqualink & AqualinkRS |  
 | AquaLink PDA / AquaPalm            | Not usable, work in progress.|
 
 

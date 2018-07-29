@@ -181,7 +181,7 @@
       transition: background 0.4s;
       -webkit-transition: .2s;
       transition: opacity .2s;
-      border-radius: 20px;
+      border-radius: var(--diameter);
     }
 
     .slider::-webkit-slider-thumb {
@@ -193,6 +193,7 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
       cursor: pointer;
       border-radius: var(--diameter);
+      border: 0px;
     }
 
     .slider::-moz-range-thumb {
@@ -202,6 +203,7 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
       cursor: pointer;
       border-radius: var(--diameter);
+      border: 0px;
     }
    
     .options_selector {
@@ -515,6 +517,14 @@
       getSize();
       startWebsockets();
     }
+/*
+    function sendRaw() {
+      var cmd = {};
+      cmd.raw = "0x02"; // remove 'slider_'
+      send_command(cmd);
+      console.log("Sent command");
+    }
+*/
   </script>
 
   <body onload="init();">

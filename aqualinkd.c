@@ -412,6 +412,10 @@ void processMessage(char *message)
     }
   }
   
+  // Send every message if we are in simulate panel mode
+  if (_aqualink_data.simulate_panel)
+    ascii(_aqualink_data.last_display_message, msg);
+
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
 }
@@ -728,6 +732,7 @@ void main_loop() {
 
   // NSF need to find a better place to init this.
   //_aqualink_data.aq_command = 0x00;
+  _aqualink_data.simulate_panel = false;
   _aqualink_data.active_thread.thread_id = 0;
   _aqualink_data.air_temp = TEMP_UNKNOWN;
   _aqualink_data.pool_temp = TEMP_UNKNOWN;
