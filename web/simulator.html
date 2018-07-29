@@ -26,9 +26,11 @@
             background-color: rgb(221, 221, 221);
             padding: 10px;
         }
-        th{
+
+        th {
             background-color: white;
         }
+
         input[type=button],
         input[type=submit],
         input[type=reset] {
@@ -134,12 +136,19 @@
             send_command(cmd);
         }
 
+
         function update_status(data) {
-            document.getElementById("status").innerHTML = data.status;
+    
+            if (document.getElementById("status").getAttribute("raw") != data.status) {
+              document.getElementById("status_three").innerHTML = document.getElementById("status_two").innerHTML;
+              document.getElementById("status_two").innerHTML = document.getElementById("status").innerHTML;
+              document.getElementById("status").innerHTML = data.status;
+              document.getElementById("status").setAttribute("raw", data.status);
+            } 
 
             for (var obj in data.leds) {
                 if ((led = document.getElementById(obj.toString() + "_led")) == null) {
-                    console.log("Error " + obj.toString() + " LED not found");
+                    //console.log("Error " + obj.toString() + " LED not found");
                     return;
                 }
                 if (data.leds[obj] == "on") {
@@ -155,7 +164,7 @@
 
         function set_labels(data) {
             for (var obj in data) {
-                if ( (button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
+                if ((button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
                     button.value = data[obj];
                 }
             }
@@ -247,15 +256,23 @@
         <div class="wrapper">
 
             <table border='0' id="deviceList">
+                
                 <tr>
-                    <th colspan="12" id="status">AqualinkD</th>
+                    <td colspan="12" align="center"><label id="status_three">&nbsp;</label></td>
+                </tr>
+                <tr>
+                    <td colspan="12" align="center"><label id="status_two">&nbsp;</label></td>
+                </tr>
+            
+                <tr>
+                    <th colspan="12"><label id="status">AqualinkD</label></th>
                 </tr>
                 <tr>
                     <td align="right">
                         <div id="Filter_Pump_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Filter_Pump_button" type="button" onclick="send(this);"  value="Filter Pump">
+                        <input id="Filter_Pump_button" type="button" onclick="send(this);" value="Filter Pump">
                     </td>
                     <td align="right">
                         <div id="Spa_Mode_led" class="led off"></div>
@@ -267,13 +284,13 @@
                         <div id="Aux_1_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Aux_1_button" type="button" onclick="send(this);"  value="AUX1">
+                        <input id="Aux_1_button" type="button" onclick="send(this);" value="AUX1">
                     </td>
                     <td align="right">
                         <div id="Aux_2_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Aux_2_button" type="button" onclick="send(this);"  value="AUX2">
+                        <input id="Aux_2_button" type="button" onclick="send(this);" value="AUX2">
                     </td>
                     <td align="right">
                         <div id="Aux_3_led" class="led off"></div>
@@ -285,7 +302,7 @@
                         <div id="Aux_4_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Aux_4_button" type="button" onclick="send(this);"  value="AUX4">
+                        <input id="Aux_4_button" type="button" onclick="send(this);" value="AUX4">
                     </td>
                 </tr>
                 <tr>
@@ -299,7 +316,7 @@
                         <div id="Aux_6_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Aux_6_button" type="button" onclick="send(this);"  value="AUX6">
+                        <input id="Aux_6_button" type="button" onclick="send(this);" value="AUX6">
                     </td>
                     <td align="right">
                         <div id="Aux_7_led" class="led off"></div>
@@ -317,13 +334,13 @@
                         <div id="Spa_Heater_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Spa_Heater_button" type="button" onclick="send(this);"  value="Spa Heater">
+                        <input id="Spa_Heater_button" type="button" onclick="send(this);" value="Spa Heater">
                     </td>
                     <td align="right">
                         <div id="Solar_Heater_led" class="led off"></div>
                     </td>
                     <td align="left">
-                        <input id="Solar_Heater_button" type="button" onclick="send(this);"  value="Solar Heater">
+                        <input id="Solar_Heater_button" type="button" onclick="send(this);" value="Solar Heater">
                     </td>
                 </tr>
                 <tr>

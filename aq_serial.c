@@ -36,8 +36,10 @@ static struct termios _oldtio;
 
 void log_packet(char *init_str, unsigned char* packet, int length)
 {
-  if ( getLogLevel() < LOG_DEBUG_SERIAL)
+  if ( getLogLevel() < LOG_DEBUG_SERIAL) {
+    //logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", packet[6]);
     return;
+  }
 
   int cnt;
   int i;
@@ -69,7 +71,7 @@ void log_packet(char *init_str, unsigned char* packet, int length)
   */
 }
 
-const char* get_packet_type(unsigned char* packet, int length)
+const char* get_packet_type(unsigned char* packet , int length)
 {
   static char buf[15];
 
@@ -283,7 +285,7 @@ void send_command(int fd, unsigned char destination, unsigned char b1, unsigned 
 
   if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
     char buf[30];
-    sprintf(buf, "Sent     %8.8s ", get_packet_type(ackPacket+1, length));
+    sprintf(buf, "Sent     %8.8s ", get_packet_type(ackPacket+1 , length));
     log_packet(buf, ackPacket, length);
   }
 }

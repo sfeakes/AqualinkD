@@ -367,57 +367,68 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     switch (_aqualink_data->ar_swg_status) {
       // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
       case 0x00:
-        sprintf(_aqualink_data->last_display_message, "AquaPure ON");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure ON");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 1, "GENERATING CHLORINE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x01:
-        sprintf(_aqualink_data->last_display_message, "AquaPure No Flow");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure No Flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "NO FLOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x02:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Low Salt");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Low Salt");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x04:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Very No flow");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Very No flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "VERY LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x08:
-        sprintf(_aqualink_data->last_display_message, "AquaPure High Current");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure High Current");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "HIGH CURRENT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x09:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Turning Off");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Turning Off");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "TURNING OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x10:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Clean Cell");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Clean Cell");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "CLEAN CELL");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x20:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Low Voltage");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Low Voltage");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "LOW VOLTAGE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case 0x40:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Water Temp Low");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Water Temp Low");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "WATER TEMP LOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case 0x80:
-        sprintf(_aqualink_data->last_display_message, "AquaPure Check PCB");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure Check PCB");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "CHECK PCB");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case SWG_STATUS_OFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
-        sprintf(_aqualink_data->last_display_message, "AquaPure OFF");
+        if (!_aqualink_data->simulate_panel)
+          sprintf(_aqualink_data->last_display_message, "AquaPure OFF");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;

@@ -78,6 +78,7 @@ int get_aq_cmd_length()
 {
   return _stack_place;
 }
+
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
@@ -118,7 +119,6 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
   struct programmingThreadCtrl *programmingthread = malloc(sizeof(struct programmingThreadCtrl));
   
   programmingthread->aq_data = aq_data;
-
   //programmingthread->thread_args = args;
   if (args != NULL && type != AQ_SEND_CMD)
     strncpy(programmingthread->thread_args, args, sizeof(programmingthread->thread_args)-1);

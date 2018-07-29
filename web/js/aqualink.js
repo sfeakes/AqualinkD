@@ -381,8 +381,10 @@ function update_status(data) {
   
   if (aqualink_data.status == "Ready") {
     document.getElementById('messages_div').innerHTML = "";
-  } else {
+  } else if (aqualink_data.status == "Programming") {
     document.getElementById('messages_div').innerHTML = aqualink_data.status+" (please wait!)";
+  } else {
+    document.getElementById('messages_div').innerHTML = aqualink_data.status;
   }
   
   update_temp("air_temp");
