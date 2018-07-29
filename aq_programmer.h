@@ -52,4 +52,6 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 //void *set_aqualink_time( void *ptr );
 //void *get_aqualink_pool_spa_heater_temps( void *ptr );
 
+int get_aq_cmd_length();
+
 #endif

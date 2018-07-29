@@ -74,6 +74,10 @@ bool push_aq_cmd(unsigned char cmd) {
   return true;
 }
 
+int get_aq_cmd_length()
+{
+  return _stack_place;
+}
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;

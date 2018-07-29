@@ -797,12 +797,18 @@ void main_loop() {
         if (getLogLevel() >= LOG_DEBUG)
           logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
 
-        send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+        // **** NSF  (Taken out while playing with Panel Simulator, put back in. ************)
+        //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false) {
           broadcast_aqualinkstate(mgr.active_connections);
         }
+
+        //if (! _aqualink_data.simulate_panel || stristr(_aqualink_data.last_display_message, "SELECT") == NULL || get_aq_cmd_length() > 0)
+          send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
         if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
