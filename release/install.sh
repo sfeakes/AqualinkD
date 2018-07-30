@@ -69,7 +69,13 @@ if [ ! -d "$WEBLocation" ]; then
   mkdir -p $WEBLocation
 fi
 
-cp -r $BUILD/../web/* $WEBLocation
+if [ -f "$WEBLocation/config.js" ]; then
+  echo "$WEBLocation/config.js exists, did not copy overight, please make sure to update manually"
+  rsync -avq --exclude='$BUILD/../web/config.js' $BUILD/../web/* $WEBLocation
+else
+  cp -r $BUILD/../web/* $WEBLocation
+fi
+
 
 systemctl enable $SERVICE
 systemctl daemon-reload

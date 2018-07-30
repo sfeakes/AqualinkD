@@ -3,56 +3,6 @@
 
 <head>
   <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
-  <script type='text/javascript'>
-    // Display order of devices.  Tiles will be displayed in the order below,
-    // any devices you don't want to see you can comment the ID.
-    // If the device isn't listed below is will NOT be shown.
-    // For a complete list returned from your particular aqualinkd instance
-    // use the below URL and look at the ID value for each device.
-    // http://aqualink.ip.address/?command=devices
-    var devices = [
-      "Air",
-      "Pool_Water",
-      "Spa_Water",
-      "SWG/PPM",
-      "Filter_Pump",
-      "Spa_Mode",
-      "Aux_3",
-      "Aux_1",
-      "Aux_2",
-      "Aux_4",
-      "Aux_5",
-      "Aux_6",
-      "Aux_7",
-      "Pool_Heater",
-      "Spa_Heater",
-      "SWG/Percent",
-      "Freeze_Protect",
-      //"Solar_Heater",
-    ];
-    // Add the light program names below, the name index MUST correlate to
-    // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
-    var light_program = [
-      "Voodoo Lounge - Show",
-      "Blue Sea",
-      "Royal Blue",
-      "Afternoon Skies",
-      "Aqua Green",
-      "Emerald",
-      "Cloud White",
-      "Warm Red",
-      "Flamingo",
-      "Vivid Violet",
-      "Sangria",
-      "Twilight - Show",
-      "Tranquility - Show",
-      "Gemstone - Show",
-      "USA - Show",
-      "Mardi Gras - Show",
-      "Cool Cabaret - Show"
-    ];
-  </script>
-
   <title>AqualinkD</title>
   <meta name='viewport' content='width=device-width'>
   <meta name='apple-mobile-web-app-capable' content='yes'>
@@ -60,6 +10,7 @@
   <meta name='apple-mobile-web-app-status-bar-style' content='black'>
   <link href="aqualinkd-white.png" rel="apple-touch-icon">
   <link href="aqualinkd-white.png" rel="icon">
+  <script src="config.js"></script>
   <style>
     :root {
       --diameter: 30px;
@@ -227,6 +178,7 @@
     
     var _width;
     var _height;
+    var _displayNames = [];
 
     function getSize() {
       _width = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
@@ -247,12 +199,15 @@
     }
     
     function deviceSort(a, b) {
-      pa = devices.indexOf(a.id);
-      pb = devices.indexOf(b.id);
-      if (pa > pb)
-        return 1;
-      else if (pa < pb)
-        return -1;
+      try {
+        pa = devices.indexOf(a.id);
+        pb = devices.indexOf(b.id);
+        if (pa > pb)
+          return 1;
+        else if (pa < pb)
+          return -1;
+      } catch (e){}
+
       return 0;
     }
 
@@ -263,7 +218,7 @@
       data['devices'].sort(deviceSort);
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
-          //_displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
+          _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
           //console.log("Create " + data['devices'][obj].id);
           createTile(data['devices'][obj]);
         }
@@ -333,6 +288,8 @@
         cell2.innerHTML = "<select id='selector_"+object.id+"' onchange='update(this);' class='options_selector'><option value='0'>Program</option></select>";
         cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
         option = document.getElementById('selector_'+object.id);
+
+        try {
         fLen = light_program.length;
         for (i = 0; i < fLen; i++) {
           var opt = document.createElement('option');
@@ -340,6 +297,7 @@
           opt.innerHTML = light_program[i];
           option.appendChild(opt);
         }
+        } catch (e) {}
         setButton(object.id, object.state);
       } else if (object.type == 'value') {
         row.deleteCell(2);
@@ -429,19 +387,22 @@
     function setSlider(id, value) {
       slider = document.getElementById("slider_"+id);
 
+      try{
       if (slider.getAttribute('lock') == 'true')
         return;
+      } catch (e) { return; }
 
       slider.value = value;
       setLabel(slider.getAttribute('output_id'), value);
     }
     
     function setLabel(id, value) {
-      label = document.getElementById(id);
-      if (value != -999 && value != " ")
-        label.innerHTML = value+label.getAttribute('output_ext');
-      else
-        label.innerHTML = "--";
+      if ( (label = document.getElementById(id)) != null) {
+        if (value != -999 && value != " ")
+          label.innerHTML = value+label.getAttribute('output_ext');
+        else
+          label.innerHTML = "--";
+      }
         
     }
 

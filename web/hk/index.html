@@ -3,71 +3,13 @@
 
 <head>
   <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
-
-  <script type='text/javascript'>
-    // Display order of devices.  Tiles will be displayed in the order below,
-    // any devices you don't want to see you can comment the ID. (with // e.g. `//"Solar_Heater",` )
-    // If the device isn't listed below is will NOT be shown.
-    // For a complete list returned from your particular aqualinkd instance
-    // use the below URL and look at the ID value for each device.
-    // http://aqualink.ip.address/?command=devices
-    var devices = [
-      "Filter_Pump",
-      "Spa_Mode",
-      "Aux_1",
-      "Aux_2",
-      "Aux_3",
-      "Aux_4",
-      "Aux_5",
-      "Aux_6",
-      "Aux_7",
-      "Pool_Heater",
-      "Spa_Heater",
-      "SWG/Percent",
-      "SWG/PPM", 
-      "Air",
-      "Pool_Water",
-      "Spa_Water",
-      "Freeze_Protect",
-      //"Solar_Heater",
-    ];
-
-    // Add the light program names below, the name index MUST correlate to
-    // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
-    var light_program = [
-      "Voodoo Lounge - Show",
-      "Blue Sea",
-      "Royal Blue",
-      "Afternoon Skies",
-      "Aqua Green",
-      "Emerald",
-      "Cloud White",
-      "Warm Red",
-      "Flamingo",
-      "Vivid Violet",
-      "Sangria",
-      "Twilight - Show",
-      "Tranquility - Show",
-      "Gemstone - Show",
-      "USA - Show",
-      "Mardi Gras - Show",
-      "Cool Cabaret - Show"
-    ];
-    // Background image, delete or leave blank for solid color
-    //var background_url = "http://192.168.144.224/snap.jpeg";
-    //var background_url='background.jpg';
-    //var background_url='';
-    // Reload background image every X seconds.(useful if camera snapshot)
-    // 0 means only load once when page loads.
-    //var background_reload = 10;
-  </script>
-
   <title>AqualinkD</title>
   <meta name='viewport' content='width=device-width'>
   <meta name='apple-mobile-web-app-capable' content='yes'>
   <meta name='apple-mobile-web-app-status-bar-style' content='black'>
   <link href="aqualinkd.png" rel="apple-touch-icon">
   <link href="aqualinkd.png" rel="icon">
+  <script src="/config.js"></script>
   <style>
     :root {
       --tile-width: 100px;
@@ -85,15 +27,17 @@
       --tile_grid-gap: 20px;
       --tile_name-lineheight: 1.4;
       */
-      --slider-ball: 30;
-      --slider-highlight: #2196F3;
-      --slider-lowlight: #d3d3d3;
-      --slider-height: 20px;
+
 
       --body_background: rgb(235, 235, 235);
       --body_text: black;
+
       --options_pane_background: rgb(245, 245, 245);
       --options_pane_bordercolor: rgb(124, 124, 124);
+      --options_slider_ball: 30;
+      --options_slider_highlight: #2196F3;
+      --options_slider_lowlight: #d3d3d3;
+      --options_slider_height: 20px;
 
       --head_background: rgb(43, 106, 143);
       --head_text: #fff;
@@ -304,7 +248,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: var(--slider-lowlight);
+      background-color: var(--options_slider_lowlight);
       -webkit-transition: .4s;
       transition: .4s;
       border-radius: 34px;
@@ -312,8 +256,8 @@
     .option_switch_slide:before {
       position: absolute;
       content: "";
-      height: calc(var(--slider-ball)*1px);
-      width: calc(var(--slider-ball)*1px);
+      height: calc(var(--options_slider_ball)*1px);
+      width: calc(var(--options_slider_ball)*1px);
       left: 2px;
       bottom: 2px;
       background-color: white;
@@ -322,10 +266,10 @@
       border-radius: 50%;
     }
     input:checked+.option_switch_slide {
-      background-color: var(--slider-highlight);
+      background-color: var(--options_slider_highlight);
     }
     input:focus+.option_switch_slide {
-      box-shadow: 0 0 1px var(--slider-highlight);
+      box-shadow: 0 0 1px var(--options_slider_highlight);
     }
     input:checked+.option_switch_slide:before {
       -webkit-transform: translateX(26px);
@@ -335,28 +279,28 @@
     .option_slider {
       -webkit-appearance: none;
       width: 300px;
-      height: var(--slider-height);
-      background: var(--slider-lowlight);
+      height: var(--options_slider_height);
+      background: var(--options_slider_lowlight);
       outline: none;
       -webkit-transition: .2s;
       transition: opacity .2s;
-      border-radius: var(--slider-height);
+      border-radius: var(--options_slider_height);
     }
     .option_slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
-      width: calc(var(--slider-ball)*1px);
-      height: calc(var(--slider-ball)*1px);
-      background: var(--slider-highlight);
+      width: calc(var(--options_slider_ball)*1px);
+      height: calc(var(--options_slider_ball)*1px);
+      background: var(--options_slider_highlight);
       cursor: pointer;
-      border-radius: calc(var(--slider-ball)*1px);
+      border-radius: calc(var(--options_slider_ball)*1px);
     }
     .option_slider::-moz-range-thumb {
-      width: calc(var(--slider-ball)*1px);
-      height: calc(var(--slider-ball)*1px);
-      background: var(--slider-highlight);
+      width: calc(var(--options_slider_ball)*1px);
+      height: calc(var(--options_slider_ball)*1px);
+      background: var(--options_slider_highlight);
       cursor: pointer;
-      border-radius: var(--slider-height);
+      border-radius: var(--options_slider_height);
     }
     .options_title {
       /*background-color: rgb(124, 124, 124);
@@ -398,21 +342,49 @@
     function init() {
       setSizeSpecifics();
       option = document.getElementById('pswitch_option_list');
-      fLen = light_program.length;
-      for (i = 0; i < fLen; i++) {
-        var opt = document.createElement('option');
-        opt.value = i + 1;
-        opt.innerHTML = light_program[i];
-        option.appendChild(opt);
-      }
+      try {
+         fLen = light_program.length;
+        for (i = 0; i < fLen; i++) {
+          var opt = document.createElement('option');
+          opt.value = i + 1;
+          opt.innerHTML = light_program[i];
+          option.appendChild(opt);
+        }
+      } catch (e) {}
+
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
 
+      setColors();
       load_background();
       showTileOptions(false);
       startWebsockets();
       resetBackgroundSize();
+    }
+    
+    function setProp(name) {
+      if (typeof window[name] !== 'undefined')
+        document.documentElement.style.setProperty('--'+name, window[name]);
+    }
+
+    function setColors() {
+      setProp("tile_on_background");
+      setProp("tile_on_background-crap");
+      setProp("body_background");
+      setProp("body_text");
+      setProp("options_pane_background");
+      setProp("options_pane_bordercolor");
+      setProp("options_slider_highlight");
+      setProp("options_slider_lowlight");
+      setProp("head_background");
+      setProp("head_text");
+      setProp("error_background");
+      setProp("tile_background");
+      setProp("tile_text");
+      setProp("tile_on_background");
+      setProp("tile_on_text");
+      setProp("tile_status_text");
     }
 
     function setSizeSpecifics() {
@@ -778,7 +750,7 @@
     function createTile(object) {
       if (object.name == 'NONE')
         return;
-      if (devices.indexOf(object.id) < 0)
+      if ( typeof devices !== 'undefined' && devices.indexOf(object.id) < 0)
         return;
       if (object.type == 'switch' || object.type == 'switch_program') {
         add_tile(object.id, object.name, object.state, 'switch', object.type, object.id + '-off.png', object.id + '-on.png');
@@ -978,6 +950,7 @@
     }
 
     function deviceSort(a, b) {
+      try {
       pa = devices.indexOf(a.id);
       pb = devices.indexOf(b.id);
       
@@ -985,7 +958,8 @@
         return 1;
       else if (pa < pb)
         return -1;
-      
+      } catch (e){}
+
       return 0;
     }
     

@@ -501,7 +501,7 @@ void *set_aqualink_light_colormode( void *ptr )
       waitForButtonState(aq_data, button, OFF, 2);
     }
 
-    logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, "ON", val);
+    logMessage(LOG_INFO, "Finished - Pool Light button press number %d - %s of %d\n", i, "ON", val);
     send_cmd(code, aq_data);
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);
@@ -1112,6 +1112,7 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
     logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for state change to '%d' for '%s' \n",i,numMessageReceived,button->led->state,button->name);
 
     if (button->led->state == state) {
+      logMessage(LOG_INFO, "Programming mode: Button State =%d for %s\n",state,button->name);
         break;
     }
 

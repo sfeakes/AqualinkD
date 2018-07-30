@@ -799,17 +799,7 @@ void main_loop() {
           logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer , packet_length), packet_length);
 
         // **** NSF  (Taken out while playing with Panel Simulator, put back in. ************)
-        //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-
-        // Process the packet. This includes deriving general status, and identifying
-        // warnings and errors.  If something changed, notify any listeners
-        if (process_packet(packet_buffer, packet_length) != false) {
-          broadcast_aqualinkstate(mgr.active_connections);
-        }
-
-        //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-        // NSF Not 100% yet but better.  Still a mess.  Delete if and go back to above is problems with messages, this is only
-        // Necessary for simulator mode.
+       // send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         if (! _aqualink_data.simulate_panel || 
              _aqualink_data.active_thread.thread_id != 0 || 
              strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0 || 
@@ -821,7 +811,29 @@ void main_loop() {
           logMessage(LOG_NOTICE, "Delaying ACK due to Simulator mode \n");
           delayAckCnt++;
         }
-          
+
+        // Process the packet. This includes deriving general status, and identifying
+        // warnings and errors.  If something changed, notify any listeners
+        if (process_packet(packet_buffer, packet_length) != false) {
+          broadcast_aqualinkstate(mgr.active_connections);
+        }
+
+        //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+        // NSF Not 100% yet but better.  Still a mess.  Delete if and go back to above is problems with messages, this is only
+        // Necessary for simulator mode.
+        /*
+        if (! _aqualink_data.simulate_panel || 
+             _aqualink_data.active_thread.thread_id != 0 || 
+             strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0 || 
+             get_aq_cmd_length() > 0 ||
+             delayAckCnt > 5) {
+          send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+          delayAckCnt = 0;
+        } else {
+          logMessage(LOG_NOTICE, "Delaying ACK due to Simulator mode \n");
+          delayAckCnt++;
+        }
+          */
 
       } else if (packet_length > 0) {
         // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
