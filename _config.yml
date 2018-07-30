@@ -1,0 +1,5 @@
+title: AqualinkD
+description: Daemon to control Jandy Aqualink RS (and other) pool equipment from any home automations hub (Alexa, Homekit, Home Assistant, smartthings, domoticz etc) or web browser.
+
+plugins:
+  - jekyll-seo-tag
