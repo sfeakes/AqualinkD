@@ -35,6 +35,11 @@
 #define CMD_MSG         0x03
 #define CMD_MSG_LONG    0x04
 
+/* ACK RETURN COMMANDS */
+#define NORMAL                 0x00
+#define SCREEN_BUSY            0x01
+#define SCREEN_BUSY_DISPLAY    0x03
+
 /* AquaRite commands */
 #define CMD_GETID       0x14  // May be remote control control
 #define CMD_PERCENT     0x11  // Set Percent

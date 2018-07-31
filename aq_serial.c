@@ -330,6 +330,7 @@ void send_ack(int fd, unsigned char command)
 
   // Update the packet and checksum if command argument is not NUL.
   if(command != NUL) {
+    //ackPacket[5] = 0x00 normal, 0x03 some pause, 0x01 some pause ending  (0x01 = Screen Busy (also return from logn message))
     ackPacket[6] = command;
     ackPacket[7] = generate_checksum(ackPacket, length-1);
 

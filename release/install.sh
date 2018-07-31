@@ -71,7 +71,7 @@ fi
 
 if [ -f "$WEBLocation/config.js" ]; then
   echo "$WEBLocation/config.js exists, did not copy overight, please make sure to update manually"
-  rsync -avq --exclude='$BUILD/../web/config.js' $BUILD/../web/* $WEBLocation
+  rsync -avq --exclude='config.js' $BUILD/../web/* $WEBLocation
 else
   cp -r $BUILD/../web/* $WEBLocation
 fi

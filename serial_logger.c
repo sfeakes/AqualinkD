@@ -29,6 +29,7 @@ typedef struct serial_id_log {
 bool _keepRunning = true;
 
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
+unsigned char _filter = 0x00;
 
 void intHandler(int dummy) {
   _keepRunning = false;
@@ -57,6 +58,16 @@ void printHex(char *pk, int length)
 
 void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length)
 {
+  //if (_filter != 0x00 && ID != _filter && packet_buffer[PKT_DEST] != _filter )
+  //  return;
+
+  if (_filter != 0x00) {
+    if ( packet_buffer[PKT_DEST]==0x00 && ID != _filter )
+      return;
+    if ( packet_buffer[PKT_DEST]!=0x00 && packet_buffer[PKT_DEST] != _filter )
+      return;
+  }
+
   if (packet_buffer[PKT_DEST] != 0x00)
     printf("\n");
 
@@ -99,7 +110,7 @@ int main(int argc, char *argv[]) {
 
   if (argc < 2 || access( argv[1], F_OK ) == -1 ) {
     fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
-    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000\n\n", argv[0]);
+    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
     return 1;
   }
 
@@ -109,6 +120,11 @@ int main(int argc, char *argv[]) {
       logLevel = LOG_DEBUG;
     } else if (strcmp(argv[i], "-p") == 0 && i+1 < argc) {
       logPackets = atoi(argv[i+1]);
+    } else if (strcmp(argv[i], "-i") == 0 && i+1 < argc) {
+      unsigned int n;
+      sscanf(argv[i+1], "0x%2x", &n);
+      _filter = n;
+      logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
     }
   }
 
@@ -170,7 +186,7 @@ int main(int argc, char *argv[]) {
       received_packets++;
     }
 
-    if (received_packets >= logPackets) {
+    if (logPackets != 0 && received_packets >= logPackets) {
       _keepRunning = false;
     }
   }
