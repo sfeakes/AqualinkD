@@ -579,21 +579,29 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       aq_programmer(AQ_SET_SWG_PERCENT, value, _aqualink_data);
       logMessage(LOG_INFO, "Web: request to set SWG to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       aq_programmer(AQ_SET_POOL_HEATER_TEMP, value, _aqualink_data);
       logMessage(LOG_INFO, "Web: request to set Pool heater to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, value, _aqualink_data);
       logMessage(LOG_INFO, "Web: request to set Spa heater to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
       logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "homebridge") == 0 || strcmp(command, "devices") == 0) {
       char message[JSON_LABEL_SIZE*10];
       int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
