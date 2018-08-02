@@ -13,11 +13,19 @@
   <script src='config.js'></script>
   <style>
     :root {
-      --diameter: 30px;
-      --slider-ball: 30px;
-      /*--highlight: rgb(76, 217, 100);*/
-      --highlight: rgb(76, 170, 217);
-      --lowlight: #f1f1f1;
+      --switch-diameter: 30px;
+      --switch-on-background: #4CAAD9;
+      --switch-off-background: #f1f1f1;
+      --switch-enabled-background: #4cd9aa;
+      --switch-color: #ffffff;
+      --switch-bordercolor: #dddddd;
+
+      --slide-ball-diameter: 30px;
+      --slide-ball-color: #4CAAD9;
+      --slide-background: #f1f1f1;
+      --slide-range-height: 16px;
+      --slide-range-bordercolor: #dddddd;
+
       --error_background: rgb(143, 43, 43);
       --error_text: rgb(255, 255, 255);
     }
@@ -64,7 +72,7 @@
     .input-text {
       font-size: 16px;
     }
-
+/*
     .btn-toggle {
       position: absolute;
       margin-left: -9999px;
@@ -126,7 +134,6 @@
    
     .slider {
       -webkit-appearance: none;
-      /*width: 100%;*/
       height: 15px;
       background: #f1f1f1;
       transition: background 0.4s;
@@ -156,7 +163,146 @@
       border-radius: var(--diameter);
       border: 0px;
     }
-   
+   */
+
+   .switch {
+      position: absolute;
+      margin-left: -9999px;
+      visibility: hidden;
+    }
+
+    .switch+label {
+      display: block;
+      position: relative;
+      cursor: pointer;
+      outline: none;
+      user-select: none;
+    }
+
+    input.switch-btn-enabled+label,
+    input.switch-btn-flash+label,
+    input.switch-btn+label {
+      padding: 2px;
+      width: calc(2 * var(--switch-diameter));
+      height: var(--switch-diameter);
+      background-color: var(--switch-bordercolor);
+      border-radius: var(--switch-diameter);
+    }
+
+    input.switch-btn-enabled+label::before,
+    input.switch-btn-enabled+label::after,
+    input.switch-btn-flash+label::before,
+    input.switch-btn-flash+label::after,
+    input.switch-btn+label::before,
+    input.switch-btn+label::after {
+      display: block;
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      bottom: 1px;
+      content: "";
+    }
+
+    input.switch-btn-enabled+label::before,
+    input.switch-btn-flash+label::before,
+    input.switch-btn+label::before {
+      right: 1px;
+      background-color: var(--switch-off-background);
+      border-radius: var(--switch-diameter);
+      transition: background 0.4s;
+    }
+
+    input.switch-btn-enabled+label::after,
+    input.switch-btn-flash+label::after,
+    input.switch-btn+label::after {
+      width: var(--switch-diameter);
+      background-color: var(--switch-color);
+      border-radius: 100%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      transition: margin 0.4s;
+    }
+
+    input.switch-btn:checked+label::before {
+      background-color: var(--switch-on-background);
+    }
+
+    input.switch-btn-enabled:checked+label::before {
+      background-color: var(--switch-enabled-background);
+    }
+    
+    input.switch-btn-flash:checked+label::before {
+      background-color: var(--switch-on-background);
+      -webkit-animation-name: switch-flash; /* Safari 4.0 - 8.0 */
+      -webkit-animation-duration: 2s; /* Safari 4.0 - 8.0 */
+      animation-name: switch-flash;
+      animation-duration: 2s;
+      animation-iteration-count: infinite;
+    }
+
+    input.switch-btn-enabled:checked+label::after,
+    input.switch-btn-flash:checked+label::after,
+    input.switch-btn:checked+label::after {
+      margin-left: var(--switch-diameter);
+    }
+    
+    /* Safari 4.0 - 8.0 */
+    @-webkit-keyframes switch-flash {
+      0% {background-color: var(--switch-on-background)}
+      50% {background-color: var(--switch-off-background)}
+      100% {background-color: var(--switch-on-background)}
+    }
+
+    /* Standard syntax */
+    @keyframes switch-flash {
+      0% {background-color: var(--switch-on-background)}
+      50% {background-color: var(--switch-off-background)}
+      100% {background-color: var(--switch-on-background)}
+    }
+    
+    .slidecontainer {
+      width: 100%;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      padding-right: 10px;
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: var(--slide-range-height);
+      background: var(--slide-background);
+      transition: background 0.4s;
+      -webkit-transition: .2s;
+      transition: opacity .2s;
+      border-radius: var(--slide-range-height);
+      outline: none;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: var(--slide-ball-diameter);
+      height: var(--slide-ball-diameter);
+      background: var(--slide-ball-color);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      border-radius: var(--slide-ball-diameter);
+      border: 0px;
+    }
+
+    .slider::-moz-range-thumb { 
+      width: var(--slide-ball-diameter);
+      height: var(--slide-ball-diameter);
+      background: var(--slide-ball-color);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+      border-radius: var(--slide-ball-diameter);
+      cursor: pointer;
+      border: 0px;
+    }
+
+    .slider::-moz-range-track {
+      background-color: var(--slide-background);
+    }
+
     .options_selector {
      
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
@@ -279,14 +425,15 @@
         row.deleteCell(2);
         row.deleteCell(1);
         cell1.setAttribute('colspan', '3');
-        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        cell4.innerHTML = "<div id='"+object.id+"'><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
         setButton(object.id, object.state);
       } else if (object.type == 'switch_program') {
         row.deleteCell(2);
         cell2.setAttribute('colspan', '2');
         //cell2.setAttribute('width', '100%');
         cell2.innerHTML = "<select id='selector_"+object.id+"' onchange='update(this);' class='options_selector'><option value='0'>Program</option></select>";
-        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        cell4.innerHTML = "<div id='"+object.id+"'><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
+        //cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
         option = document.getElementById('selector_'+object.id);
 
         try {
@@ -314,7 +461,8 @@
       } else if (object.type == 'setpoint_thermo') {
         cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='104' class='slider' output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
         cell3.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
-        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        cell4.innerHTML = "<div><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
+        //cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
         setSlider(object.id, object.spvalue);
         setButton(object.id, object.status);
       } else if (object.type == 'setpoint_freeze') {
@@ -326,7 +474,8 @@
           cell1.innerHTML = "SWG";
         cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='0' max='100' step='5' class='slider' output_id='"+object.id+"'' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
         cell3.innerHTML = "<label id='"+object.id+"' output_ext='%'></label>";
-        cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
+        cell4.innerHTML = "<div><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
+        //cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
         setSlider(object.id, object.value);
         setButton(object.id, object.state);
       }
@@ -345,7 +494,7 @@
         case "checkbox":
           //name = source.id.substr(11); //remove 'btn-toggle-''
           //state = source.checked?"on":"off";
-          cmd.command = source.id.substr(11);
+          cmd.command = source.id.substr(7);
         break;
         default:  // type is null because it's a selector
           //name = source.id.substr(9); //remove 'selector_''
@@ -354,7 +503,7 @@
         break;
       }
 
-      //console.log(cmd);
+      console.log(cmd);
       send_command(cmd);    
     }
     
@@ -363,6 +512,7 @@
     }
     
     function setButton(id, isOn) {
+      /*
       if ( (isOn != true && isOn != false) || Number.isInteger(isOn)){
         if (isOn != "enabled") {
           if (Number.isInteger(isOn))
@@ -376,6 +526,31 @@
       //NSF need to chance the button color if enadled is a sent state.
       if( (btn = document.getElementById('btn-toggle-' + id)) != null)
         btn.checked = isOn;
+      */
+     if ( (source = document.getElementById('switch-'+id)) == null)
+       return;
+
+     if (isOn == "on") {
+      source.classList.add('switch-btn-on');
+      source.classList.remove('switch-btn-flash');
+      source.classList.remove('switch-btn-enabled');
+      source.checked = true;
+     } else if (isOn == "enabled") {
+      source.classList.remove('switch-btn-on');
+      source.classList.remove('switch-btn-flash');
+      source.classList.add('switch-btn-enabled');
+      source.checked = true;
+     } else if (isOn == "flash") {
+      source.classList.remove('switch-btn-on');
+      source.classList.add('switch-btn-flash');
+      source.classList.remove('switch-btn-enabled');
+      source.checked = true;
+     } else {  // Off
+      source.classList.remove('switch-btn-on');
+      source.classList.remove('switch-btn-flash');
+      source.classList.remove('switch-btn-enabled');
+      source.checked = false;
+     }
     }
 
     function lock(source) {
@@ -490,7 +665,6 @@
 
   <body onload="init();">
     <div class="wrapper">
-
       <table border='0' width="100%" id="deviceList">
         <tr>
           <th colspan="4" id="title">AqualinkD</th>

@@ -30,6 +30,11 @@ Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
 * http://aqualink.ip/hk   <- (New, soon to be defaut)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
+## Updates is Release 1.0e
+* Simulator is now more stable.
+* updates to serial logger
+* UI updates
+* bug fix in MQTT_flash (still not prefect fix)
 ## Latest update in Release 1.0c
 * New Simple interface.
 * Start of a RS8 Simulator :-

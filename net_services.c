@@ -278,8 +278,8 @@ void send_mqtt_string_msg(struct mg_connection *nc, char *dev_name, char *msg) {
 void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 {
   static int cnt=0;
-  static long int lastFlashTm = 0;
-  static bool lastFlash = false;
+  //static long int lastFlashTm = 0;
+  //static bool lastFlash = false;
   bool force_update = false;
 
   if (cnt > 300) {  // 100 = about every 2 minutes.
@@ -445,6 +445,29 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
   // Loop over LED's and send any changes.
   for (i=0; i < TOTAL_BUTTONS; i++) {
+   if ( _aqualink_data->aqbuttons[i].led->state == FLASH && _aqualink_config->flash_mqtt_buttons == true ) {
+      // Simply send on or off depending on if current second is odd or even.
+      // will send too many off and on messages as we get hit multiple times a second, but most effecient way to handle this
+      // considering flash is not very often and not for long.
+      time_t     now;
+      now = time(NULL);
+      send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, (now % 2)?OFF:ON);
+      logMessage(LOG_DEBUG, "Flash button : %s %s\n",_aqualink_data->aqbuttons[i].name,(now % 2)?"off":"on");
+    } else if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state) {
+      _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
+      if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
+        send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+      } else {
+        send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
+      }
+        
+      if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX)
+        send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
+    }
+  }
+/*
+  // Loop over LED's and send any changes.
+  for (i=0; i < TOTAL_BUTTONS; i++) {
     //logMessage(LOG_NOTICE, "%s = %d, last=%d", _aqualink_data->aqbuttons[i].name,  _aqualink_data->aqbuttons[i].led->state, _last_mqtt_aqualinkdata.aqualinkleds[i].state);
     //logMessage(LOG_INFO, "LED %d : new state %d | old state %d\n", i, _aqualink_data->aqbuttons[i].led->state, _last_mqtt_aqualinkdata.aqualinkleds[i].state);
     if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state){
@@ -453,6 +476,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
           send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
         } else if (_aqualink_data->aqbuttons[i].led->state == FLASH && _aqualink_config->flash_mqtt_buttons == true) {
+          // This messed up the origional LED state, which means we send the flash to WEB UI as well.
           time_t     now;
           now = time(NULL);
           if ( now != lastFlashTm ) {
@@ -471,7 +495,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       //}
       // Send mqtt
     }
-  }
+  }*/
   //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: END\n");
 }
 

@@ -23,6 +23,7 @@
 #include <string.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/ioctl.h>
 
 #include "aq_serial.h"
 #include "utils.h"
@@ -37,7 +38,7 @@ static struct termios _oldtio;
 void log_packet(char *init_str, unsigned char* packet, int length)
 {
   if ( getLogLevel() < LOG_DEBUG_SERIAL) {
-    //logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", packet[6]);
+    //logMessage(LOG_INFO, "Send '0x%02hhx'|'0x%02hhx' to controller\n", packet[5] ,packet[6]);
     return;
   }
 
@@ -132,6 +133,11 @@ int init_serial_port(char* tty)
 
   logMessage(LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
   
+  // Need to change this to flock, but that depends on good exit.
+  if ( ioctl(fd, TIOCEXCL) != 0) {
+    displayLastSystemError("Locking serial port.");
+  }
+
 #ifdef BLOCKING_MODE
   fcntl(fd, F_SETFL, 0);
   newtio.c_cc[VMIN]= 1;
@@ -322,15 +328,30 @@ void send_messaged(int fd, unsigned char destination, char *message)
   log_packet("Sent ", msgPacket, length);
 }
 
+void _send_ack(int fd, unsigned char ack_type, unsigned char command);
+
+void send_extended_ack(int fd, unsigned char ack_type, unsigned char command)
+{
+  // ack_typ should only be ACK_NORMAL, ACK_SCREEN_BUSY, ACK_SCREEN_BUSY_DISPLAY
+  _send_ack(fd, ack_type, command);
+}
+
 void send_ack(int fd, unsigned char command)
 {
+  _send_ack(fd, ACK_NORMAL, command);
+}
+
+void _send_ack(int fd, unsigned char ack_type, unsigned char command)
+{
   const int length = 11;
-  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
+  // Default null ack with checksum generated, don't mess with it, just over right                    
+  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL }; 
   //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, NUL, NUL, NUL, 0x13, DLE, ETX, NUL };
 
   // Update the packet and checksum if command argument is not NUL.
-  if(command != NUL) {
+  if(command != NUL || ack_type != NUL) {
     //ackPacket[5] = 0x00 normal, 0x03 some pause, 0x01 some pause ending  (0x01 = Screen Busy (also return from logn message))
+    ackPacket[5] = ack_type;
     ackPacket[6] = command;
     ackPacket[7] = generate_checksum(ackPacket, length-1);
 

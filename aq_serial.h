@@ -36,9 +36,9 @@
 #define CMD_MSG_LONG    0x04
 
 /* ACK RETURN COMMANDS */
-#define NORMAL                 0x00
-#define SCREEN_BUSY            0x01
-#define SCREEN_BUSY_DISPLAY    0x03
+#define ACK_NORMAL               0x00
+#define ACK_SCREEN_BUSY          0x01 // Seems to be busy but can cache a message,
+#define ACK_SCREEN_BUSY_DISPLAY  0x03 // Seems to be don't send me shit.
 
 /* AquaRite commands */
 #define CMD_GETID       0x14  // May be remote control control
@@ -144,6 +144,7 @@ int init_serial_port(char* tty);
 void close_serial_port(int file_descriptor);
 int generate_checksum(unsigned char* packet, int length);
 void send_ack(int file_descriptor, unsigned char command);
+void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);
