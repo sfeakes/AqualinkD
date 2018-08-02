@@ -800,7 +800,40 @@ void main_loop() {
 
         // **** NSF  (Taken out while playing with Panel Simulator, put back in. ************)
        // send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+#define MAX_BLOCK_ACK 12
+#define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
+        // Wrap the mess just for sanity, the pre-process will clean it up.
+        if (! _aqualink_data.simulate_panel ||
+              _aqualink_data.active_thread.thread_id != 0) 
+        {
+          send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+        } else {  // We are in simlator mode, ack get's complicated now. 
+          // If have a command to send, send a normal ack.
+          // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
+          // pause ack strarts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
+          // if we send a command (ie keypress), the whole count needs to end and go back to sending normal ack.
+          // In code below, it jumps to sending ACK_SCREEN_BUSY, which still seems to work ok.
+          if ( strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0) 
+          { // Nothing to wait for, send normal ack.
+            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+            delayAckCnt = 0;
+          } else if ( get_aq_cmd_length() > 0 ) {
+            // Send command and jump directly "busy but can receive message"
+            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+            delayAckCnt = MAX_BUSY_ACK; // need to test jumping to MAX_BUSY_ACK here
+          } else {
+            logMessage(LOG_NOTICE, "Sending display busy due to Simulator mode \n");
+            if (delayAckCnt < MAX_BLOCK_ACK) // block all incomming messages
+              send_extended_ack(rs_fd, ACK_SCREEN_BUSY_BLOCK, pop_aq_cmd(&_aqualink_data));
+            else if (delayAckCnt < MAX_BUSY_ACK) // say we are pausing
+              send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
+            else // We timed out pause, send normal ack (This should also reset the display message on next message received)
+              send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
 
+            delayAckCnt++;
+          }
+        }
+        /*
         // Wrap the mess just for sanity, the pre-process will clean it up.
         if (! _aqualink_data.simulate_panel ) {
           send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
@@ -836,7 +869,7 @@ void main_loop() {
             delayAckCnt++;
           }
         }
-
+        */
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false) {

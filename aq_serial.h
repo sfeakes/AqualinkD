@@ -38,7 +38,7 @@
 /* ACK RETURN COMMANDS */
 #define ACK_NORMAL               0x00
 #define ACK_SCREEN_BUSY          0x01 // Seems to be busy but can cache a message,
-#define ACK_SCREEN_BUSY_DISPLAY  0x03 // Seems to be don't send me shit.
+#define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me shit.
 
 /* AquaRite commands */
 #define CMD_GETID       0x14  // May be remote control control

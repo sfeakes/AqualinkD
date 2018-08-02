@@ -26,6 +26,8 @@
       --slide-range-height: 16px;
       --slide-range-bordercolor: #dddddd;
 
+      --options-background: #f1f1f1;
+
       --error_background: rgb(143, 43, 43);
       --error_text: rgb(255, 255, 255);
     }
@@ -72,98 +74,6 @@
     .input-text {
       font-size: 16px;
     }
-/*
-    .btn-toggle {
-      position: absolute;
-      margin-left: -9999px;
-      visibility: hidden;
-    }
-
-    .btn-toggle+label {
-      display: block;
-      position: relative;
-      cursor: pointer;
-      outline: none;
-      user-select: none;
-    }
-
-    input.btn-toggle-round+label {
-      padding: 2px;
-      width: calc(2 * var(--diameter));
-      height: var(--diameter);
-      background-color: #dddddd;
-      border-radius: var(--diameter);
-    }
-
-    input.btn-toggle-round+label:before,
-    input.btn-toggle-round+label:after {
-      display: block;
-      position: absolute;
-      top: 1px;
-      left: 1px;
-      bottom: 1px;
-      content: '';
-    }
-
-    input.btn-toggle-round+label:before {
-      right: 1px;
-      background-color: #f1f1f1;
-      border-radius: var(--diameter);
-      transition: background 0.4s;
-    }
-
-    input.btn-toggle-round+label:after {
-      width: var(--diameter);
-      background-color: #ffffff;
-      border-radius: 100%;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-      transition: margin 0.4s;
-    }
-
-    input.btn-toggle-round:checked+label:before {
-      background-color: var(--highlight);
-    }
-    input.btn-toggle-round:checked+label:after {
-      margin-left: var(--diameter);
-    }
-    
-    .slidecontainer {
-      width: 100%;
-    }
-
-   
-    .slider {
-      -webkit-appearance: none;
-      height: 15px;
-      background: #f1f1f1;
-      transition: background 0.4s;
-      -webkit-transition: .2s;
-      transition: opacity .2s;
-      border-radius: var(--diameter);
-    }
-
-    .slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: var(--diameter);
-      height: var(--diameter);
-      background: var(--highlight);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      border-radius: var(--diameter);
-      border: 0px;
-    }
-
-    .slider::-moz-range-thumb {
-      width: var(--diameter);
-      height: var(--diameter);
-      background: var(--highlight);
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-      cursor: pointer;
-      border-radius: var(--diameter);
-      border: 0px;
-    }
-   */
 
    .switch {
       position: absolute;
@@ -308,15 +218,18 @@
       font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-size: 16px;
       /*background: var(--highlight);*/
-      background: var(--lowlight);
+      background: var(--options-background);
       border: 0;
       padding:5px;
-      /*
-       -webkit-appearance: none;
       -moz-appearance: none;
-      background-image: url("data:image/svg+xml;utf8,<svg fill='blue' height='40' viewBox='0 0 40 40' width='40' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h40v20H0z' fill='none'/></svg>");
-      background-repeat: no-repeat;
-      background-position-x: 100%;
+      -webkit-appearance: none;
+      border-radius: 20px;
+      text-align:center;
+      text-align-last:center;
+      outline: none;
+/*
+      padding-left: 20px;
+      padding-right: 20px;
 */
     }
   </style>

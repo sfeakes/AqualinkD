@@ -781,7 +781,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //aqualinkd/SWG/Percent_f/set
 
   if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
-    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT) ? round(degCtoF(value)) : round(value);
+    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT && _aqualink_config->convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
     if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set pool heater setpoint to %.2fc\n", value);
