@@ -7,7 +7,7 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 ## Donation
 If you like this project, you can buy me a cup of coffee :)
 <br>
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](SEGN9UNS38TXJ)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
 ## Builtin WEB Interface(s).
 
@@ -301,5 +301,5 @@ See License.md for more details.
 # Donation
 If you like this project, you can buy me a cup of coffee :)
 <br>
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](SEGN9UNS38TXJ)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
