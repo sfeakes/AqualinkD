@@ -3,9 +3,14 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
 
+
+## Donation
+If you like this project, you can buy me a cup of coffee :)
+<br>
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](SEGN9UNS38TXJ)
+
 ## Builtin WEB Interface(s).
-### Curren web UI, (soon to be deprecated)
-<img src="extras/web_ui.png?raw=true" width="700"></img>
+
 ### New WEB interface
 <img src="extras/IMG_0251.PNG?raw=true" width="350"></img>
 * The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.
@@ -14,9 +19,10 @@ linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT clie
 * Support live background imags (ie poll camera for still image every X seconds)
 * Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
 ### Other web Interface options
-Simple :- (Just another option if you don't default)<br>
+Simple :- (Another option if you don't default)<br>
 <img src="extras/simple.png?raw=true" width="350"></img>
-
+### Curren web UI, (soon to be deprecated)
+<img src="extras/web_ui.png?raw=true" width="700"></img>
 Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
 <img src="extras/simulator.png?raw=true" width="550">
 
@@ -26,11 +32,13 @@ Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
 ## All Web interfaces.
-* http://aqualink.ip/     <- (Default, soon to be deprecated, too much hard coding)
-* http://aqualink.ip/hk   <- (New, soon to be defaut)
+* http://aqualink.ip/     <- (New UI)
+* http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 ## Updates is Release 1.0e
+* Web UI out of Beta
+* MQTT fix setpoints
 * Simulator is now more stable.
 * updates to serial logger
 * UI updates
@@ -84,14 +92,15 @@ Manual install for init-d systems
 
 
 
-## New WEB interface (in beta)
-* Doesn't work in MS Edge or MS Exploder browsers. (Firefox, Chrome, Safari & mobile versions of each) all seem to be fine.
-* use http://aqualink.ip.address/hk/ to access new UI
+## New WEB interface(s)
+* Doesn't work in MS Edge or MS Exploder browsers. (Firefox, Chrome, Safari & mobile versions of each) all seem to be fine, use the old or simple.html interface if using those browsers.
+* use http://aqualink.ip.address/ to access new UI
 * look in `<install_dir>/web/hk` hopefully customizing icon and background images are self explanatory.
 * icons should be around 50x50 pixles and in PNG format, background any size in JPG or just delete the file if you want solid color.
-* edit `<install_dir>/web/hk/index.html` there are two arrays that can be modified
-    * `ignore_devices`  just lis any device you don;t want to see in there.
+* edit `<install_dir>/web/config.js` there are two arrays that can be modified
+    * `devices` List any device you want to see in there (commanent out the ones you don't), the odrer of that list will be the display order of devices.
     * `light_program`  If you have a programable light (and it's configured in `aqualinkd.conf`), then list the light modes here.
+    * Plenty of colors to change if you like. 
 
 
 
@@ -285,3 +294,12 @@ In meteohub create a new weatherstation plug-in, plug-in path is the path to the
 ## Non Commercial Project
 All non commercial projects can be run using our open source code under GPLv2 licensing. As long as your project remains in this category there is no charge.
 See License.md for more details.
+
+
+
+
+# Donation
+If you like this project, you can buy me a cup of coffee :)
+<br>
+[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](SEGN9UNS38TXJ)
+

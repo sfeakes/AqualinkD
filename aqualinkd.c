@@ -833,43 +833,7 @@ void main_loop() {
             delayAckCnt++;
           }
         }
-        /*
-        // Wrap the mess just for sanity, the pre-process will clean it up.
-        if (! _aqualink_data.simulate_panel ) {
-          send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-        } else {  // We are in simlator mode, ack get's complicated now.
-          // NSF Need to come back and clean this mess up at some point. 
-          // Logic. if we are in programming mode or have a command to send, send a normal ack.
-          // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
-          // pause ack strarts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
-          // if we send a command (ie keypress), the whole count needs to end and go back to sending normal ack.
-          // In code below, it jumps to sending ACK_SCREEN_BUSY, which still seems to work ok.
-          if ( _aqualink_data.active_thread.thread_id != 0 || 
-               strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0 || 
-               get_aq_cmd_length() > 0 ||
-               delayAckCnt > 62) 
-          {
-            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
 
-            if (delayAckCnt > 0)
-              delayAckCnt = 12;
-            else 
-              delayAckCnt = 0;
-          } else {
-            logMessage(LOG_NOTICE, "Sending display busy due to Simulator mode \n");
-
-            if (delayAckCnt < 12)
-              send_extended_ack(rs_fd, ACK_SCREEN_BUSY_DISPLAY, pop_aq_cmd(&_aqualink_data));
-            else if (delayAckCnt < 62)
-              send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
-            else {
-              send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-              delayAckCnt = 62;
-            }
-            delayAckCnt++;
-          }
-        }
-        */
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false) {

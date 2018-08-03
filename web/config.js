@@ -52,7 +52,7 @@
       */
       // Background image, delete or leave blank for solid color
       //var background_url = "http://192.168.144.224/snap.jpeg";
-      var background_url='background.jpg';
+      var background_url='hk/background.jpg';
       //var background_url='';
       // Reload background image every X seconds.(useful if camera snapshot)
       // 0 means only load once when page loads.
