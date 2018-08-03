@@ -11,18 +11,31 @@ If you like this project, you can buy me a cup of coffee :)
 
 ## Builtin WEB Interface(s).
 
-### New WEB interface
-<img src="extras/IMG_0251.PNG?raw=true" width="350"></img>
-* The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.
-* Customizable tile icons & background image. (can hide any tile)
-* Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press
-* Support live background imags (ie poll camera for still image every X seconds)
-* Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
-### Other web Interface options
-Simple :- (Another option if you don't default)<br>
-<img src="extras/simple.png?raw=true" width="350"></img><br>
+<table width="100%" border="0" cellpadding="20px">
+ <tr><th width="50%">Default web interface</th><th wifth="50%">Simple web interface</img></th><tr>
+ <tr><td><img src="extras/IMG_0251.PNG?raw=true" width="350"></img></td><td><img src="extras/simple.png?raw=true" width="350"</img></td></td></td>
+  <tr><td colspan="2">
+     Both Interfaces
+     <ul>
+        <li>If you load the web page in a mobile device browser, then save to desktop an app will be created for you.</li>
+        <li>Order and options shown are configurable</li>
+   </ul>
+   </td></tr>
+   <tr><td colspan="2">
+     Default Interfaces
+   <ul>
+     <li>The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.</li>
+      <li>Customizable tile icons & background image. (can hide any tile)</li>
+      <li>Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press</li>
+      <li>Support live background imags (ie poll camera for still image every X seconds)</li>
+      </ul>
+   </td></tr>
+ </table>
+
+
 ### Old web UI, (Still in release if you prefer it)
 <img src="extras/web_ui.png?raw=true" width="700"></img><br>
+### Simulator
 Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
 <img src="extras/simulator.png?raw=true" width="550">
 
@@ -114,6 +127,7 @@ Below are varified versions (But should work witn any AqualinkRS) :-
 | JANDY AquaLinkRS 8157 REV MMM      | Everything working  |
 | Jandy AquaLinkRS 8157 REV JJ       | Everything working  |
 | Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |
+| Jandy AquaLinkRS B0029235 REV T.1  | Everything working  |
 | Jandy iAqualink E0260801 REV R     | All working, but sometimes programming is hit 'n miss. This is a combo board iAqualink & AqualinkRS |  
 | AquaLink PDA / AquaPalm            | Not usable, work in progress.|
 
