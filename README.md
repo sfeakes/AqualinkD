@@ -36,7 +36,7 @@ If you like this project, you can buy me a cup of coffee :)
 ### Old web UI, (Still in release if you prefer it)
 <img src="extras/web_ui.png?raw=true" width="700"></img><br>
 ### Simulator
-Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
+Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you can use it to completley configure the master control panel<br>
 <img src="extras/simulator.png?raw=true" width="550">
 
 ### In Apple Home app.
