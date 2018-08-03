@@ -20,9 +20,9 @@ If you like this project, you can buy me a cup of coffee :)
 * Like the old UI, if you load the web page in a mobile device browser, then save to desktop an app will be created for you.
 ### Other web Interface options
 Simple :- (Another option if you don't default)<br>
-<img src="extras/simple.png?raw=true" width="350"></img>
-### Curren web UI, (soon to be deprecated)
-<img src="extras/web_ui.png?raw=true" width="700"></img>
+<img src="extras/simple.png?raw=true" width="350"></img><br>
+### Old web UI, (Still in release if you prefer it)
+<img src="extras/web_ui.png?raw=true" width="700"></img><br>
 Simulator :- (Designed to mimic AqualinkRS6 All Button keypad)<br>
 <img src="extras/simulator.png?raw=true" width="550">
 
