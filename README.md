@@ -222,11 +222,10 @@ aqualinkd/SWG                       (0 off, 2 on generating salt)
 aqualinkd/SWG/enabeled              (0 off, 2 on but not generating salt - SWG reported no-flow or equiv)
 
 Other Information (Salt Water Generator)
-aqualinkd/SWG/Percent
-aqualinkd/SWG/PPM
-aqualinkd/SWG/Percent/set           (set the SWG percent)
+aqualinkd/SWG/Percent               ( SWG Generating %, i.e. 50)
+aqualinkd/SWG/PPM                   ( SWG Parts Per Million i.e. 3100)
 aqualinkd/SWG/Percent_f             (since we use a homekit thermostat for SWG and use degC as %, we need to pass degF for US phone)
-aqualinkd/SWG/Percent_f/set
+
 ```
 
 To turn something on, or set information, simply add `set` to the end of the above topics, and post 1 or 0 in the message for a button, or a number for a setpoint. Topics Aqualinkd will act on.
@@ -240,6 +239,8 @@ aqualinkd/Pool_Heater/set
 aqualinkd/Spa_Heater/set
 aqualinkd/Pool_Heater/setpoint/set
 aqualinkd/Spa_Heater/setpoint/set
+aqualinkd/SWG/Percent/set           
+aqualinkd/SWG/Percent_f/set          ( Set % as a degF to degC conversion for Homekit)
 ```
 
 Example that would turn on the filter pump
