@@ -1,0 +1,320 @@
+#-----THESE Entries are entered in your Configuration.yaml
+
+#---- AQUALINK THERMOSTATS (Freeze, Pool, Spa) -------------
+climate:
+
+  - platform: honeywell
+    username: brian_sheedy@symantec.com
+    password: !secret honeywell_password
+    scan_interval: 2400
+    region: us
+
+  - platform: mqtt
+    name: Pool Heater
+    qos: 1
+    modes:
+      - 0
+      - 1
+    send_if_off: true
+#   Uncomment if you want HA to set it to an inital temperature when it boots up.
+#    initial: 70
+    payload_on: "1"
+    payload_off: "0"
+    current_temperature_topic: "aqualinkd/Temperature/Pool"
+    min_temp: 70
+    max_temp: 90
+    mode_command_topic: "aqualinkd/Pool_Heater/set "
+    mode_state_topic: "aqualinkd/Pool_Heater"
+    mode_state_template: "{{ value_json }}"
+    temperature_command_topic: "aqualinkd/Pool_Heater/setpoint/set "
+    temperature_state_topic: "aqualinkd/Pool_Heater/setpoint"
+    temperature_state_template: "{{ value_json }}"
+
+  - platform: mqtt
+    name: Spa Heater
+    modes:
+      - 0
+      - 1
+    send_if_off: true
+#   Uncomment if you want HA to set it to an inital temperature when it boots up.
+#    initial: 100
+    payload_on: "1"
+    payload_off: "0"
+    current_temperature_topic: "aqualinkd/Temperature/Spa"
+    min_temp: 80
+    max_temp: 104
+    mode_command_topic: "aqualinkd/Spa_Heater/set "
+    mode_state_topic: "aqualinkd/Spa_Heater"
+    mode_state_template: "{{ value_json }}"
+    temperature_command_topic: "aqualinkd/Spa_Heater/setpoint/set "
+    temperature_state_topic: "aqualinkd/Spa_Heater/setpoint"
+    temperature_state_template: "{{ value_json }}"
+
+  - platform: mqtt
+    name: Freeze Protect
+    modes:
+      - 0
+      - 1
+    send_if_off: true
+#   Uncomment if you want HA to set it to an inital temperature when it boots up.
+#    initial: 36
+    payload_on: "1"
+    payload_off: "0"
+    current_temperature_topic: "aqualinkd/Temperature/Air"
+    min_temp: 36
+    max_temp: 42
+    mode_command_topic: "aqualinkd/Freeze_Protect/set "
+    mode_state_topic: "aqualinkd/Freeze_Protect"
+    mode_state_template: "{{ value_json }}"
+    temperature_command_topic: "aqualinkd/Freeze_Protect/setpoint/set "
+    temperature_state_topic: "aqualinkd/Freeze_Protect/setpoint"
+    temperature_state_template: "{{ value_json }}"
+  
+#---- AQUALINK GROUPS -------------
+group:
+
+  ARS:
+    name: Pool
+    view: yes
+    entities:
+      - sensor.Air_Temp
+      - sensor.Pool_Temp
+      - sensor.Spa_Temp
+      - sensor.pool_check
+      - binary_sensor.Auto_Mode
+      - sensor.battery_check
+      - group.PL1
+      - group.SP1
+      - group.TC1
+      - group.SC1
+  PL1:
+    name: Pool Control
+    view: no
+    entities:
+      - switch.Filter_Pump
+      - switch.Cleaner
+      - switch.Low_Speed
+      - light.Pool_Light    
+      - switch.Waterfall      
+      - switch.Pool_Drain
+      - input_number.pooldrain
+      - switch.Pool_Fill
+      - input_number.poolfill
+      - switch.Pool_Mode  
+  SP1:
+    name: Spa Control
+    view: no
+    entities:    
+      - switch.Spa_Mode
+      - switch.Spa_Blower
+      - light.Spa_Light
+  TC1:
+    name: Temp Control
+    view: no
+    entities:   
+      - binary_sensor.Pool_Heater_Enabled
+      - climate.Pool_Heater
+      - binary_sensor.Spa_Heater_Enabled
+      - climate.Spa_Heater
+      - binary_sensor.Freeze_Enabled
+      - climate.Freeze_Protect
+  SC1:
+    name: Automation
+    view: no
+    entities:   
+      - script.summer_pool
+      - script.winter_pool
+      - script.waterfall
+      - script.spa
+
+#---- AQUALINK LIGHTS -------------    
+Light:
+
+  - platform: mqtt
+    name: "Spa Light"
+    state_topic: "aqualinkd/Aux_4"
+    command_topic: "aqualinkd/Aux_4/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Pool Light"
+    state_topic: "aqualinkd/Aux_5"
+    command_topic: "aqualinkd/Aux_5/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+    
+#----AQUALINK SWITCHES
+switch:
+
+  - platform: mqtt
+    name: "Freeze"
+    state_topic: "aqualinkd/Freeze_Protect"
+    command_topic: "aqualinkd/Freeze_Protect/set "
+    qos: 1
+    payload_on: "0"
+    payload_off: "1"
+    retain: false
+  - platform: mqtt
+    name: "Filter Pump"
+    state_topic: "aqualinkd/Filter_Pump"
+    command_topic: "aqualinkd/Filter_Pump/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Waterfall"
+    state_topic: "aqualinkd/Solar_Heater"
+    command_topic: "aqualinkd/Solar_Heater/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Spa Mode"
+    state_topic: "aqualinkd/Spa_Mode"
+    command_topic: "aqualinkd/Spa_Mode/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Cleaner"
+    state_topic: "aqualinkd/Aux_1"
+    command_topic: "aqualinkd/Aux_1/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Low Speed"
+    state_topic: "aqualinkd/Aux_2"
+    command_topic: "aqualinkd/Aux_2/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false  
+  - platform: mqtt
+    name: "Spa Blower"
+    state_topic: "aqualinkd/Aux_3"
+    command_topic: "aqualinkd/Aux_3/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Pool Heater"
+    state_topic: "aqualinkd/Pool_Heater"
+    command_topic: "aqualinkd/Pool_Heater/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+  - platform: mqtt
+    name: "Spa Heater"
+    state_topic: "aqualinkd/Spa_Heater"
+    command_topic: "aqualinkd/Spa_Heater/set "
+    qos: 1
+    payload_on: "1"
+    payload_off: "0"
+    retain: false
+    
+#----AQUALINK SENSORS
+sensor:
+
+  - platform: mqtt
+    state_topic: "aqualinkd/Temperature/Air"
+    name: "Air Temp"
+    value_template: "{{ value_json }}"    
+    unit_of_measurement: "°F"   
+  - platform: mqtt
+    state_topic: "aqualinkd/Temperature/Spa"
+    name: "Spa Temp"
+    value_template: "{{ value_json }}"    
+    unit_of_measurement: "°F"  
+  - platform: mqtt
+    state_topic: "aqualinkd/Temperature/Pool"
+    name: "Pool Temp"
+    value_template: "{{ value_json }}"    
+    unit_of_measurement: "°F"     
+  - platform: mqtt
+    state_topic: "aqualinkd/Pool_Heater/setpoint"
+    name: "Pool Temp Set"
+    value_template: "{{ value_json }}"    
+    unit_of_measurement: "°F"     
+  - platform: mqtt
+    state_topic: "aqualinkd/Spa_Heater/setpoint"
+    name: "Spa Temp Set"
+    value_template: "{{ value_json }}"    
+    unit_of_measurement: "°F"        
+  - platform: command_line
+    name: Battery
+    command: 'curl -k --silent "http://YOUR_IP_ADDRESS:PORT?command=status" | jq -r ".battery"'
+    value_template: "{{ value }}" 
+
+  - platform: template
+# This simple sensor shows the current state of the Aqualink battery...
+    sensors:
+      battery_check:
+        value_template: >-
+            {%- if states('sensor.Battery') == "ok" %}
+             OK
+            {% else %}
+             LOW
+            {%- endif %}
+        icon_template: >-
+            {%- if states('sensor.Battery') == "ok" %}
+             mdi:battery
+            {% else %}
+             mdi:battery-alert
+            {%- endif %}        
+        friendly_name: 'Battery'
+    
+#----AQUALINK BINARY SENSORS    
+binary_sensor:
+
+  - platform: mqtt
+    state_topic: "aqualinkd/Pool_Heater/enabeled"
+    name: "Pool Heater Enabled"
+    qos: 0
+    payload_on: "1"
+    payload_off: "0"        
+  - platform: mqtt
+    state_topic: "aqualinkd/Spa_Heater/enabeled"
+    name: "Spa Heater Enabled"
+    qos: 0
+    payload_on: "1"
+    payload_off: "0"    
+  - platform: mqtt
+    state_topic: "aqualinkd/Freeze_Protect"
+    name: "Freeze Enabled"
+    qos: 0
+    payload_on: "1"
+    payload_off: "0"
+
+#-----THESE Entries are entered in your automation.yaml file
+
+- alias: 'Notify of Low Pool Battery'
+  initial_state: 'on'
+  trigger:
+    platform: state
+    entity_id: sensor.battery_check
+    from: 'OK' 
+    to: 'LOW'
+  condition:
+    condition: time
+    after: '08:15:00'
+    before: '16:00:00'
+  action:
+# Change notify.ios.brianphone to whatever your phone name is...
+    - service: notify.ios_brianphone 
+      data:
+        message: 'The Aqualink Pool Controller Battery is LOW'
+        title: 'Home Assistant'
+
+
+    

@@ -44,6 +44,9 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * (Salt Water Generator is configured as Thermostat as it's the closest homekit accessory type, so &deg;=% and Cooling=Generating)
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
+### In Home Assistant 
+<img src="extras/HomeAssistant.png?raw=true" width="600"></img>
+
 ## All Web interfaces.
 * http://aqualink.ip/     <- (New UI)
 * http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
@@ -178,15 +181,16 @@ Other command like options for serial_ligger are :-
 ``` 
 Specifically, make sure you configure your MQTT, Pool Equiptment Labels & Domoticz ID's in there, looking at the file it should be self explanatory. 
 
-## Configuration with home automation hubs
-## Domoticz
-With MQTT
-* Enable MQTT in Domoticz, and install a MQTT broker. 
-* Create a virtual device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner.
-* Place the Domoticz IDX for each device in the aqualinkd.conf file under the appropiate button. Then modify each virtual device.
+#
+# Configuration with home automation hubs
 
-Without MQTT
-* Follow generic hub setup.
+AqualinkD offers 3 ways to connect to it from other devices MQTT, Web API's & Web Sockets.
+* MQTT is a realtime pub/sub style event system and will require you to install a MQTT server, like Mosquitto
+* WEB API's simple poll based way to get information and request something to be done
+* WEB Sockets is realtime and realy only applicable for the WEB UI's included. it's not documented. If someone wants to use this, let me know and I can document it. (or look at the index.html and it should be easy to work out)
+
+All Hubs will use either MQTT or WEB API to counicate with AqualinkD. MQTT is prefered, but it will depend on your setup and how you want to achieve the integration.  The Generic MQTT and WEB API defails are below, followed by specific implimentations for diferent hubs.
+All Hubs you will Create a device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner, Water Temperature etc then configure that device to use either the MQTT or API endpoints listed below to both get the status and set the status for that device.
 
 ## MQTT
 Aqualinkd supports generic MQTT implimentations, as well as specific Domoticz one described above.
@@ -243,30 +247,56 @@ Example that would turn on the filter pump
 aqualinkd/Filter_Pump/set 1
 ```
 
-## All other hubs (excluding Apple HomeKit) Amazon,Samsung,Google etc
-Create a device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner. Then add the following URL to program the switching of each device
+## Web API's
+The following URL is an example of how to turn the pump on
 ```
 http://aqualinkd.ip.address:port?command=Filter_Pump&value=on
 ```
-each button ie command=xxxxx uses the default Aqualink name so valid options are
-* Filter_Pump
-* Spa_Mode
-* Aux_1
-* Aux_2
-* Aux_3
-* Aux_4
-* Aux_5
-* Aux_6
-* Aux_7
-* Pool_Heater
-* Spa_Heater
-* Solar_Heater
+each button ie command=xxxxx uses the default Aqualink name, and the value=xx is simply on or off. Valid options for command are :-
+```
+Filter_Pump
+Spa_Mode
+Aux_1
+Aux_2
+Aux_3
+Aux_4
+Aux_5
+Aux_6
+Aux_7
+Pool_Heater
+Spa_Heater
+Solar_Heater
+```
 
-To get status than can be passed by any smart hub use the below url, a JSON string with the state of each device and current temprature will be returned.
+There are a few extended commands that will set Heater setpoints, Salt Water Generator %, and light mode (if configured), these are in the came form only the value is a number not a on/off
+```
+http://aqualinkd.ip.address:port?command=pool_htr_set_pnt&value=95
+```
+```
+poollightmode
+swg_percent
+pool_htr_set_pnt
+spa_htr_set_pnt
+frz_protect_set_pnt
+```
+To get status that can be passed by any smart hub use the below url, a JSON string with the state of each device and current temprature will be returned.
+Both return similar information, the `devices` will simply return more, but be harder to pass.  So pick which souits your configuration better.
 ```
 http://aqualinkd.ip.address:port?command=status
+or
+http://aqualinkd.ip.address:port?command=devices
+```
+The status of any device can be :-
+```
+on
+off
+enabled     -> (for heaters, they are on but not heating)
+flash       -> (delayed On or Off has been inicitated by the control panel)
 ```
 
+
+#
+# Specific Hub integrations
 
 ## Apple HomeKit
 For the moment, native Homekit support has been removed, it will be added back in the future under a different implimentation. 
@@ -289,8 +319,24 @@ Recomended option for HomeKit support is to make use of the MQTT interface and u
 
 You can of course use a myriad of other HomeKit bridges with the URL endpoints listed in the `All other hubs section`, or MQTT topics listed in the `MQTT` section. The majority of them (including HomeBridge the most popular) use Node and HAP-Node.JS, neither of which I am a fan of for the RaspberryPI. But HomeKit2MQTT seemed to have the least overhead of them all. So that's why the recomendation.
 
+#
+# Domoticz
+With MQTT
+* Enable MQTT in Domoticz, and install a MQTT broker. 
+* Create a virtual device for each piece of pool equiptment you have, eg Filter Pump, Spa Mode, Pool Light, Cleaner.
+* Place the Domoticz IDX for each device in the aqualinkd.conf file under the appropiate button. Then modify each virtual device.
 
-## MeteoHub
+Without MQTT
+* Follow generic hub setup.
+
+#
+# Home Assistant (HASS.IO)
+Copy the sections from 
+[`HASSIO Implimentation.txt`](https://github.com/sfeakes/aqualinkd/blob/master/extras/HASSIO.implimentation.txt)
+ into your config.yaml
+
+#
+# MeteoHub
 If you want to log/track water temps within MeteoHub, simple configure it to poll the below URL and water & air tempratures will be sent in a format native to MeteoHub. 
 ```
 http://aqualinkd.ip.address:port?command=mhstatus
