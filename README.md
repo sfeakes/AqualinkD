@@ -9,6 +9,9 @@ If you like this project, you can buy me a cup of coffee :)
 <br>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
+## Please see Wiki for install instructions
+https://github.com/sfeakes/AqualinkD/wiki
+
 ## Builtin WEB Interface(s).
 
 <table width="100%" border="0" cellpadding="20px">
@@ -74,6 +77,13 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * config changes for (spa temp as pool temp / light program mode options / enable homekit button flash)
 * updated to serial_logger.
 * freeze protect, heater temperature & SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support)
+
+# Please see Wiki for install instructions
+https://github.com/sfeakes/AqualinkD/wiki
+
+#
+<!--
+
 
 # TL;DR Install
 * For new install or update existing install follow the same procedures. Your configuration file will not be overriden, so on an update check you have added new config options to your config, your old config will work, you just may not have the new features enabeled. If you have modified any files in the web directory then you should back them up before upgrading.
@@ -167,7 +177,7 @@ Notice: ID 0x40 is not used
 Notice: ID 0x41 is not used 
 Notice: ID 0x42 is not used 
 Notice: ID 0x43 is not used 
-<-- snip -->
+
 Notice: ID 0x50 is not used 
 Notice: ID 0x58 is not used 
 Notice: ID 0x09 is not used  <-- can use for Aqualinkd
@@ -350,7 +360,7 @@ wget -O /dev/stdout 'http://your.ip.address.here/?command=mhstatus' 2>/dev/null
 ```
 
 In meteohub create a new weatherstation plug-in, plug-in path is the path to the above sctipt, and his save.  2 new sensors should now show up as thermo in the sensor page.
-
+-->
 # License
 ## Non Commercial Project
 All non commercial projects can be run using our open source code under GPLv2 licensing. As long as your project remains in this category there is no charge.
