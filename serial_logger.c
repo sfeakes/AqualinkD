@@ -11,7 +11,7 @@
 #include "utils.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 200
+#define PACKET_MAX 600
 
 /*
 typedef enum used {
@@ -34,6 +34,14 @@ unsigned char _filter = 0x00;
 void intHandler(int dummy) {
   _keepRunning = false;
   logMessage(LOG_NOTICE, "Stopping!");
+}
+
+void advance_cursor() {
+  static int pos=0;
+  char cursor[4]={'/','-','\\','|'};
+  printf("%c\b", cursor[pos]);
+  fflush(stdout);
+  pos = (pos+1) % 4;
 }
 
 bool canUse(unsigned char ID) {
@@ -135,7 +143,9 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);
 
-  logMessage(LOG_NOTICE, "Logging serial information, please wait!\n");
+  logMessage(LOG_NOTICE, "Logging serial information!\n");
+  if (logLevel < LOG_DEBUG)
+    printf("Please wait.");
 
   while (_keepRunning == true) {
     if (rs_fd < 0) {
@@ -189,6 +199,8 @@ int main(int argc, char *argv[]) {
     if (logPackets != 0 && received_packets >= logPackets) {
       _keepRunning = false;
     }
+    if (logLevel < LOG_DEBUG)
+      advance_cursor();
   }
 
   logMessage(LOG_DEBUG, "\n");

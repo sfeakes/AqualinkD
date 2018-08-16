@@ -412,9 +412,10 @@ int get_packet(int fd, unsigned char* packet)
       return 0;
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
-      if (retry > 10)
+      if (retry > 20) {
+        logMessage(LOG_WARNING, "Serial read timeout\n"); 
         return 0;
-        
+      }
       retry++;
       delay(10);
     } else if (bytesRead == 1) {

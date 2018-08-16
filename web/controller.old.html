@@ -13,7 +13,6 @@
   <script src='config.js'></script>
   <style>
     :root {
-      --fonts: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       --tile-width: 100px;
       --tile_icon-height: 35px;
       --tile_name-height: 32px;
@@ -29,29 +28,28 @@
       --tile_grid-gap: 20px;
       --tile_name-lineheight: 1.4;
       */
+
       /* These get overiden from config.js, don't edit */
       --body_background: rgb(235, 235, 235);
       --body_text: black;
+
       --options_pane_background: rgb(245, 245, 245);
       --options_pane_bordercolor: rgb(124, 124, 124);
       --options_slider_ball: 30;
       --options_slider_highlight: #2196F3;
       --options_slider_lowlight: #d3d3d3;
       --options_slider_height: 20px;
+
       --head_background: rgb(43, 106, 143);
       --head_text: #fff;
       --error_background: rgb(143, 43, 43);
+
       --tile_background: rgb(220, 220, 220);
       --tile_text: rgb(110, 110, 110);
       --tile_on_background: #fff;
       --tile_on_text: #000;
       --tile_status_text: rgb(87, 87, 87);
-
-      --options_radio_ball: 20px;
-      --options_radio_highlight: #2196F3;
-      --options_radio_lowlight: #d3d3d3;
     }
-
     div {
       -webkit-touch-callout: none;
       -webkit-user-select: none;
@@ -60,20 +58,15 @@
       -ms-user-select: none;
       user-select: none;
     }
-
     div::-moz-selection {
       background: transparent;
     }
-
     div::selection {
       background: transparent;
     }
-
-    html {}
-
-    body {
+    html {} body {
       background-color: var(--body_background);
-      font-family: var(--fonts);
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 14px;
       color: var(--body_text);
@@ -85,7 +78,6 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
     }
-
     .body_wrap {
       position: absolute;
       width: 100%;
@@ -97,21 +89,18 @@
       background-size: cover;
       height: 100%;
     }
-
     .opaque {
       top: 0px;
       left: 0px;
       filter: alpha(opacity=60);
       opacity: 0.6;
     }
-
     .vopaque {
       top: 0px;
       left: 0px;
       filter: alpha(opacity=40);
       opacity: 0.4;
     }
-
     .options_pane {
       background-color: var(--options_pane_background);
       border: 2px solid var(--options_pane_bordercolor);
@@ -121,10 +110,10 @@
       width: 345px;
       /*height:245px;*/
     }
-
     .options {
       top: 10px;
       /*left: 10px;*/
+
       position: fixed;
       display: flex;
       justify-content: center;
@@ -134,7 +123,6 @@
       height: 100%;
       */
     }
-
     /*
     .show {
       top: 0px;
@@ -146,38 +134,37 @@
       display: grid;
       /*grid-template-columns: repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));
       grid-auto-rows: 1fr, repeat(auto-fill, minmax(var(--tile-width), var(--tile-width)));*/
+
       grid-template-columns: repeat(auto-fit, minmax(var(--tile-width), auto));
       grid-auto-rows: 1fr, repeat(auto-fit, minmax(var(--tile-width), auto));
       grid-gap: var(--tile_grid-gap);
       padding: 0 !important;
       margin: 10px !important;
     }
-
     .head {
       /*background-color: rgb(124, 124, 124);*/
+
       background-color: var(--head_background);
       color: var(--head_text);
       border-radius: 5px;
       padding: 5px;
       grid-column: 1 / -1;
     }
-
     .error {
       background-color: var(--error_background) !important;
     }
-
     .hide {
       display: none;
       filter: alpha(opacity=0);
       opacity: 0.0;
     }
-
     .tile {
       background-color: var(--tile_background);
       color: var(--tile_text);
       border-radius: 10px;
       padding: 0px;
       /*font-size: 100%;*/
+
       box-sizing: border-box;
       padding: 5px;
       height: var(--tile-width);
@@ -185,61 +172,35 @@
       filter: alpha(opacity=90);
       opacity: 0.9;
     }
-
     .on {
       background-color: var(--tile_on_background);
       color: var(--tile_on_text);
       filter: alpha(opacity=100);
       opacity: 1.0;
     }
-
     .flash {
       color: var(--tile_on_text);
       filter: alpha(opacity=100);
       opacity: 0.9;
-      -webkit-animation-name: tile-flash;
-      /* Safari 4.0 - 8.0 */
-      -webkit-animation-duration: 2s;
-      /* Safari 4.0 - 8.0 */
+      -webkit-animation-name: tile-flash; /* Safari 4.0 - 8.0 */
+      -webkit-animation-duration: 2s; /* Safari 4.0 - 8.0 */
       animation-name: tile-flash;
       animation-duration: 2s;
       animation-iteration-count: infinite;
     }
-
     /* Safari 4.0 - 8.0 */
-
     @-webkit-keyframes tile-flash {
-      0% {
-        background-color: var(--tile_on_background);
-        opacity: 1.0;
-      }
-      50% {
-        background-color: var(--tile_background);
-        opacity: 0.9;
-      }
-      100% {
-        background-color: var(--tile_on_background);
-        opacity: 1.0;
-      }
+      0% {background-color: var(--tile_on_background); opacity: 1.0;}
+      50% {background-color: var(--tile_background); opacity: 0.9;}
+      100% {background-color: var(--tile_on_background); opacity: 1.0;}
     }
 
     /* Standard syntax */
-
     @keyframes tile-flash {
-      0% {
-        background-color: var(--tile_on_background);
-        opacity: 1.0;
-      }
-      50% {
-        background-color: var(--tile_background);
-        opacity: 0.9;
-      }
-      100% {
-        background-color: var(--tile_on_background);
-        opacity: 1.0;
-      }
+      0% {background-color: var(--tile_on_background); opacity: 1.0;}
+      50% {background-color: var(--tile_background); opacity: 0.9;}
+      100% {background-color: var(--tile_on_background); opacity: 1.0;}
     }
-
     /*
     .off {
       background-color: #ccc;
@@ -253,23 +214,22 @@
       margin: 0 auto;
       /*background-color: red;*/
     }
-
     .tile_name {
       height: var(--tile_name-height);
       /*background-color: green;*/
+
       line-height: var(--tile_name-lineheight);
     }
-
     .tile_status {
       color: var(--tile_status_text);
       height: var(--tile_status-height);
       /*background-color: blue;*/
     }
-
     .tile_icon_value {
       border-radius: calc(var(--tile_icon-height) / 2);
       font-weight: 600;
       /*border-radius: 27px;*/
+
       height: var(--tile_icon-height);
       min-width: var(--tile_icon-height);
       text-align: center;
@@ -278,27 +238,22 @@
       filter: alpha(opacity=100);
       opacity: 1.0;
     }
-
     .heat {
       background-color: rgb(255, 123, 0);
       color: rgb(255, 255, 255);
     }
-
     .cool {
       background-color: rgb(4, 159, 248);
       color: rgb(255, 255, 255);
     }
-
     .enabled {
       background-color: rgb(78, 196, 0);
       color: rgb(255, 255, 255);
     }
-
     .disabled {
       background-color: rgb(110, 110, 110);
       color: rgb(220, 220, 220);
     }
-
     /* All for options panel */
 
     .option_switch {
@@ -307,11 +262,9 @@
       width: 60px;
       height: 34px
     }
-
     .option_switch input {
       display: none;
     }
-
     .option_switch_slide {
       position: absolute;
       cursor: pointer;
@@ -324,7 +277,6 @@
       transition: .4s;
       border-radius: 34px;
     }
-
     .option_switch_slide:before {
       position: absolute;
       content: "";
@@ -337,21 +289,17 @@
       transition: .4s;
       border-radius: 50%;
     }
-
     input:checked+.option_switch_slide {
       background-color: var(--options_slider_highlight);
     }
-
     input:focus+.option_switch_slide {
       box-shadow: 0 0 1px var(--options_slider_highlight);
     }
-
     input:checked+.option_switch_slide:before {
       -webkit-transform: translateX(26px);
       -ms-transform: translateX(26px);
       transform: translateX(26px);
     }
-
     .option_slider {
       -webkit-appearance: none;
       width: 300px;
@@ -362,7 +310,6 @@
       transition: opacity .2s;
       border-radius: var(--options_slider_height);
     }
-
     .option_slider::-webkit-slider-thumb {
       -webkit-appearance: none;
       appearance: none;
@@ -372,7 +319,6 @@
       cursor: pointer;
       border-radius: calc(var(--options_slider_ball)*1px);
     }
-
     .option_slider::-moz-range-thumb {
       width: calc(var(--options_slider_ball)*1px);
       height: calc(var(--options_slider_ball)*1px);
@@ -380,142 +326,70 @@
       cursor: pointer;
       border-radius: var(--options_slider_height);
     }
-
     .options_title {
       /*background-color: rgb(124, 124, 124);
       color: #fff;
       font-weight: 200;*/
+
       font-size: 18px;
       overflow: hidden;
     }
-
     .options_selector {
-      font-family: var(--fonts);
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
     .options_button {
-      font-family: var(--fonts);
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
     .option_text {
-      font-family: var(--fonts);
+      font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
       font-weight: 600;
       font-size: 16px;
     }
-
-    .option_radiocontainer {
-      padding: 0.2em 0;
-      /*font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;*/
-      font-weight: 500;
-      font-size: 14px;
-    }
-
-    /* hide the "real" radios visually */
-
-    .radio input {
-      border: 0;
-      clip: rect(0 0 0 0);
-      height: 1px;
-      margin: -1px;
-      overflow: hidden;
-      padding: 0;
-      position: absolute;
-      width: 1px;
-    }
-
-    /* style the "fake" radios */
-
-    .option_radio-value {
-      background-color: var(--options_radio_lowlight);
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: 95% auto;
-      border-radius: 50%;
-      display: inline-block;
-      height: var(--options_radio_ball);
-      width: var(--options_radio_ball);
-      margin-right: 0.2em;
-      margin-left: 0.5em;
-      position: relative;
-      vertical-align: -0.3em;
-      /*  Beautify
-  border: 0.0625em solid #bbb;
-  box-shadow: inset 0 0.0625em 0 0.0625em rgba(0,0,0,0.075);*/
-    }
-
-    input:checked+.option_radio-value {
-      background-color: var(--options_radio_highlight);
-      /* Beautify
-  border-color: #169a9a;
-  box-shadow: 0 0.0625em 0 0.0625em rgba(0,0,0,0.075);*/
-    }
-
-    /*
     .timedate {
       font-size: 10px;
-    }*/
+    }
   </style>
 
   <script type='text/javascript'>
-    var _lightProgramDropdown = false;
     var _pressEvent;
     var _ignoreMouseEvent = false;
     var _temperature_units;
     var _aqualink_data;
     var _landscape = false;
     var _displayNames = [];
+
     //init();
     function init() {
       setSizeSpecifics();
-      populateLightProgram();
+      option = document.getElementById('pswitch_option_list');
+      try {
+         fLen = light_program.length;
+        for (i = 0; i < fLen; i++) {
+          var opt = document.createElement('option');
+          opt.value = i + 1;
+          opt.innerHTML = light_program[i];
+          option.appendChild(opt);
+        }
+      } catch (e) {}
+
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
+
       setColors();
       load_background();
       showTileOptions(false);
       startWebsockets();
       resetBackgroundSize();
     }
-
-    function populateLightProgram() {
-      if (_lightProgramDropdown) {
-        option = document.getElementById('pswitch_option_list');
-        try {
-          fLen = light_program.length;
-          for (i = 0; i < fLen; i++) {
-            var opt = document.createElement('option');
-            opt.value = i + 1;
-            opt.innerHTML = light_program[i];
-            option.appendChild(opt);
-          }
-        } catch (e) {}
-      } else {
-        var tbody = document.getElementById('pswitch_table').getElementsByTagName('tbody')[0];
-        var html1 = '';
-        var html2 = '';
-        fLen = light_program.length;
-        for (i = 0; i < fLen; i++) {
-          if (light_program[i].endsWith(" - Show"))
-            html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
-          else
-            html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
-        }
-        row = tbody.deleteRow(2);
-        row = tbody.insertRow(2);
-        row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
-        row = tbody.insertRow(3);
-        row.innerHTML = "<td align='left' valign='top'>" + html1 + "</td><td align='left' valign='top'>" + html2 + "</td>";
-      }
-    }
-
+    
     function setProp(name) {
       if (typeof window[name] !== 'undefined')
-        document.documentElement.style.setProperty('--' + name, window[name]);
+        document.documentElement.style.setProperty('--'+name, window[name]);
     }
 
     function setColors() {
@@ -550,10 +424,12 @@
         document.documentElement.style.setProperty('--tile_grid-gap', '20px');
         document.documentElement.style.setProperty('--tile_name-lineheight', '1.4');
       }
+
       if (w > h)
         _landscape = true;
       else
         _landscape = false;
+
       setOrientation(_landscape);
       /*
         Future change element sizes here if needed
@@ -567,7 +443,7 @@
         else
           _landscape = false;
         setOrientation(_landscape);
-        // Need to finish rendering before calling this, so wait a small time
+         // Need to finish rendering before calling this, so wait a small time
         setTimeout(resetBackgroundSize, 100);
       }, false);
     }
@@ -593,6 +469,7 @@
       image.onload = function() {
         document.getElementById("body_wrap").style.backgroundImage = "url('" + this.src + "')";
       };
+
       if (typeof background_reload !== 'undefined' && background_reload > 0) {
         image.src = background_url + '?' + new Date().getTime();
         setTimeout(load_background, (background_reload * 1000));
@@ -600,21 +477,25 @@
         image.src = background_url;
       }
     }
+
     // If the grid continer is larger than the page container, increase page so background looks nice
     // also reduce size if needed on page rotate.
     function resetBackgroundSize() {
-      if (typeof background_url === 'undefined' || background_url === undefined)
+       if (typeof background_url === 'undefined' || background_url === undefined)
         return;
+
       try {
         //inside = document.getElementById('wrapper');
         outside = document.getElementById('body_wrap');
         insideH = parseInt(window.getComputedStyle(document.getElementById('wrapper')).height);
         outsideH = parseInt(window.getComputedStyle(outside).height);
+
         var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
         var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+
         if (insideH > outsideH || outsideH > h) {
           //outside.style.height = ((insideH > h)?(insideH + 40)+'px':(h + 40)+'px');
-          outside.style.height = ((insideH > h) ? (insideH + 40) + 'px' : h + 'px');
+          outside.style.height = ((insideH > h)?(insideH + 40)+'px':h+'px');
           //alert("w:"+w+" h:"+h+" inH:"+insideH+" outH:"+outsideH+"\nUsed:"+outside.style.height);
         }
       } catch (e) {}
@@ -729,15 +610,10 @@
     }
 
     function setTileState(id, state) {
-      try {
-        if (state == (document.getElementById(id).getAttribute('status') == 'off')) {
-          send_command(id);
-          console.log("Switch state "+id+" to "+(state)?"on":"off");
-        } else {
-          console.log("state "+id+" to "+(state)?"on":"off")
-        }
-        setTileOn(id, ((state) ? "on" : "off"));
-      } catch(exception) {}
+      if (state == (document.getElementById(id).getAttribute('status') == 'off')) {
+        send_command(id);
+      }
+      setTileOn(id, ((state) ? "on" : "off"));
     }
 
     function setThermostatSetpoint(id, sp_value) {
@@ -753,15 +629,16 @@
       if (value == undefined || value.startsWith("-999") || value.startsWith(" "))
         value = '--';
       else {
-        try {
-          if ((type = document.getElementById(id).getAttribute('type')) != null) {
-            if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
-              ext = '&deg;';
-            else if (type == 'setpoint_swg')
-              ext = '%';
-          }
+        
+        try{
+        if ((type = document.getElementById(id).getAttribute('type')) != null) {
+          if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
+            ext = '&deg;';
+          else if (type == 'setpoint_swg')
+            ext = '%';
+        }
         } catch (e) {
-          console.log('ERROR id=' + id + ' Line 675');
+          console.log('ERROR id='+id+' Line 675');
         }
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
@@ -790,6 +667,7 @@
     }
 
     function setTileOn(id, status) {
+
       //function setTileOn(id, status, text) {
       var tile;
       var text;
@@ -826,6 +704,7 @@
             text = 'Turn on ' + tile.getAttribute('setpoint') + "&deg;";
           //else
           //  text = "On";
+        
         }
         //document.getElementById(id + '_status').innerHTML = "On";
       } else {
@@ -869,10 +748,10 @@
     function createTile(object) {
       if (object.name == 'NONE')
         return;
-      if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0)
+      if ( typeof devices !== 'undefined' && devices.indexOf(object.id) < 0)
         return;
       if (object.type == 'switch' || object.type == 'switch_program') {
-        add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + object.id + '-off.png', 'hk/' + object.id + '-on.png');
+        add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/'+object.id + '-off.png', 'hk/'+object.id + '-on.png');
         setTileOn(object.id, object.status, null);
       } else if (object.type == 'value' || object.type == 'temperature') {
         add_tile(object.id, object.name, object.state, 'value', object.type);
@@ -891,23 +770,24 @@
         var wrapH = document.getElementById('wrapper').clientHeight + 'px';
         if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_thermo') {
           active_option = document.getElementById('thermostat_options');
+          document.getElementById('thermostat_options').style.height = wrapH;
+          //document.getElementById('thermostat_options').style.display = 'flex';
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
           active_option = document.getElementById('pswitch_options');
+          document.getElementById('pswitch_options').style.height = wrapH;
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('swg_options').style.display = 'none';
+          //document.getElementById('pswitch_options').style.display = 'flex';
         } else /*if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg')*/ {
           active_option = document.getElementById('swg_options');
+          document.getElementById('swg_options').style.height = wrapH;
           document.getElementById('thermostat_options').style.display = 'none';
+          //document.getElementById('swg_options').style.display = 'flex';
           document.getElementById('pswitch_options').style.display = 'none';
         }
         active_option.style.display = 'flex';
-        optionH = window.getComputedStyle(active_option, null).getPropertyValue("height");
-        if (optionH <= wrapH)
-          active_option.style.height = wrapH;
-        
-        console.log("Option:"+optionH+" wrapH:"+wrapH);
         document.getElementById('wrapper').classList.add("opaque");
       } else {
         // Fake onclick to close and save any values if open
@@ -1001,6 +881,7 @@
             //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
           }
         }
+
         var cTime;
         try {
           cTime = performance.now();
@@ -1017,26 +898,11 @@
           document.getElementById("body_wrap").removeEventListener("click", clickHandler);
           state = oswitch.checked;
           if (type == 'switch_program') {
-            var mode=false;
-            if (_lightProgramDropdown) {
-              if (pswitch.selectedIndex > 0) {
-                send_light_mode(pswitch.selectedIndex);
-                mode=true;
-              }
-            } else {
-              var radio = document.getElementsByName("light_program");
-              for (x = 0; x < radio.length; x++) {
-                 if (radio[x].checked == true) {
-                   send_light_mode(radio[x].value);
-                   mode=true;
-                   break;
-                 }
-              }
-            }
-            if (mode == false) {
-             // if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
-                setTileState(id, state);
-            }
+            if (pswitch.selectedIndex > 0) {
+              //alert("send "+pswitch.selectedIndex);
+              send_light_mode(pswitch.selectedIndex);
+            } else if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
+              setTileState(id, state);
           } else {
             value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
@@ -1056,13 +922,15 @@
       _aqualink_data = data;
       var el = document.getElementById("datetime");
       el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
-      if (document.getElementById("name").innerHTML == "AqualinkD") {
-        if (data.status != "Ready") {
-          document.getElementById("message").innerHTML = formatSatus(data.status);
-        } else {
-          document.getElementById("message").innerHTML = '';
-        }
+  
+      if ( document.getElementById("name").innerHTML == "AqualinkD" ) {
+      if (data.status != "Ready") {
+        document.getElementById("message").innerHTML = formatSatus(data.status);
+      } else {
+        document.getElementById("message").innerHTML = '';
       }
+      }
+      
       // Hard code value updated as I can't be bothered to update source.
       // should come back and re-do these values.
       // The ID's should ultimatly come from json
@@ -1081,18 +949,21 @@
 
     function deviceSort(a, b) {
       try {
-        pa = devices.indexOf(a.id);
-        pb = devices.indexOf(b.id);
-        if (pa > pb)
-          return 1;
-        else if (pa < pb)
-          return -1;
-      } catch (e) {}
+      pa = devices.indexOf(a.id);
+      pb = devices.indexOf(b.id);
+      
+      if (pa > pb)
+        return 1;
+      else if (pa < pb)
+        return -1;
+      } catch (e){}
+
       return 0;
     }
-
+    
     function check_devices(data) {
       _temperature_units = data['temp_units'];
+      
       data['devices'].sort(deviceSort);
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
@@ -1191,7 +1062,6 @@
     }
 
     function send_light_mode(value) {
-      console.log("Set light mode "+value);
       var mode = {};
       mode.parameter = 'POOL_LIGHT_MODE';
       mode.value = value;
@@ -1212,29 +1082,12 @@
     }
 
     function showVersion(source) {
-      if ((message = document.getElementById("message")) != null) {
-        message.innerHTML = "AqualinkD : " + _aqualink_data.aqualinkd_version + " | AqualinkRS : " + _aqualink_data.version;
+      if ( (message = document.getElementById("message")) != null) {
+        message.innerHTML = "AqualinkD : "+_aqualink_data.aqualinkd_version+" | AqualinkRS : "+_aqualink_data.version;
       }
       source.innerHTML = "Version(s)";
-      setTimeout(function() {
-        source.innerHTML = "AqualinkD";
-      }, 5000);
-    }
 
-    function updatePwsitchOptions(source) {
-      if (source.type == 'radio') {
-        document.getElementById('pswitch_option_switch_text_value').innerHTML = light_program[source.value-1];
-        document.getElementById('pswitch_option_switch').checked = true;
-      } else if (source.type == 'checkbox') {
-        //console.log(source);
-        if (document.getElementById('pswitch_option_switch').checked == false) {
-          var radio = document.getElementsByName("light_program");
-          for (x = 0; x < radio.length; x++) {
-            radio[x].checked = false
-          }
-          document.getElementById('pswitch_option_switch_text_value').innerHTML = 'Off';
-        }
-      }
+      setTimeout(function(){ source.innerHTML = "AqualinkD"; }, 5000);
     }
   </script>
 </head>
@@ -1252,7 +1105,7 @@
             </td>
             <td align='center'><span class='title' id='message'></span>
             </td>
-            <td width="70px" align='right' id='td_timedate'><span class='timedate' id='datetime'></class>
+            <td  width="70px" align='right' id='td_timedate'><span class='timedate' id='datetime'></class>
           </td>
         </tr>
       </table>
@@ -1322,7 +1175,7 @@
     </div>
     <div id='pswitch_options' class='options hide'>
       <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
-        <table id='pswitch_table' border='0' cellpadding='10px' width="100%">
+        <table border='0' cellpadding='10px' width="100%">
           <tr class='options_title'>
             <th colspan='2'><span id="pswitch_option_title"></span>
             </th>
@@ -1332,12 +1185,11 @@
             </td>
             <td align='left' width='50%'>
               <label class="option_switch">
-                <input type="checkbox" id='pswitch_option_switch' onchange='updatePwsitchOptions(this);'>
+                <input type="checkbox" id='pswitch_option_switch'>
                 <span class="option_switch_slide"></span>
               </label>
             </td>
           </tr>
-
           <tr>
             <td colspan='2' align='center'>
               <select id='pswitch_option_list' class='options_selector'>
@@ -1345,7 +1197,6 @@
               </select>
             </td>
           </tr>
-
           <tr>
             <td colspan='2' align='center'>
               <input type="button" value="close" id='pswitch_options_close' class='options_button'>
@@ -1358,3 +1209,4 @@
 </body>
 
 </html>
+
