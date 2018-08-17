@@ -345,7 +345,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_OFF);*/
   }
 
-  if (_aqualink_data->ar_swg_status == 0x00) { // If the SWG is actually on
+  if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) { // If the SWG is actually on
     if (_aqualink_data->swg_percent != TEMP_UNKNOWN && (force_update || _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent)) {
       _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
       send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
@@ -358,6 +358,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_ppm, _aqualink_data->swg_ppm);
     }
   }
+  
   if (_aqualink_data->ar_swg_status != _last_mqtt_aqualinkdata.ar_swg_status) {
     if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF)
       send_mqtt_int_msg(nc, SWG_ENABELED_TOPIC, SWG_OFF);
@@ -366,61 +367,61 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
     switch (_aqualink_data->ar_swg_status) {
       // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
-      case 0x00:
+      case SWG_STATUS_ON:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure ON");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 1, "GENERATING CHLORINE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case 0x01:
+      case SWG_STATUS_NO_FLOW:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure No Flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "NO FLOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
-      case 0x02:
+      case SWG_STATUS_LOW_SALT:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Low Salt");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case 0x04:
+      case SWG_STATUS_VLOW_SALT:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Very No flow");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "VERY LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
-      case 0x08:
+      case SWG_STATUS_HIGH_CURRENT:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure High Current");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "HIGH CURRENT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case 0x09:
+      case SWG_STATUS_TURNING_OFF:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Turning Off");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 0, "TURNING OFF");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
-      case 0x10:
+      case SWG_STATUS_CLEAN_CELL:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Clean Cell");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "CLEAN CELL");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case 0x20:
+      case SWG_STATUS_LOW_VOLTS:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Low Voltage");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "LOW VOLTAGE");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case 0x40:
+      case SWG_STATUS_LOW_TEMP:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Water Temp Low");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "WATER TEMP LOW");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
-      case 0x80:
+      case SWG_STATUS_CHECK_PCB:
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure Check PCB");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "CHECK PCB");
@@ -1062,6 +1063,7 @@ void start_mqtt(struct mg_mgr *mgr) {
     for (i=0; i < TOTAL_BUTTONS; i++) {
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
     }
+    _last_mqtt_aqualinkdata.ar_swg_status = SWG_STATUS_UNKNOWN;
     _mqtt_exit_flag = false; // set here to stop multiple connects, if it fails truley fails it will get set to false.
   }
 }

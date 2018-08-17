@@ -35,13 +35,14 @@ static struct termios _oldtio;
 
 
 
-void log_packet(char *init_str, unsigned char* packet, int length)
+void log_packet(int level, char *init_str, unsigned char* packet, int length)
 {
-  if ( getLogLevel() < LOG_DEBUG_SERIAL) {
+  
+  if ( getLogLevel() <= level) {
     //logMessage(LOG_INFO, "Send '0x%02hhx'|'0x%02hhx' to controller\n", packet[5] ,packet[6]);
     return;
   }
-
+  
   int cnt;
   int i;
   char buff[MAXLEN];
@@ -53,7 +54,8 @@ void log_packet(char *init_str, unsigned char* packet, int length)
     cnt += sprintf(buff+cnt, "0x%02hhx|",packet[i]);
 
   cnt += sprintf(buff+cnt, "\n");
-  logMessage(LOG_DEBUG_SERIAL, buff);
+  logMessage(level, buff);
+  //logMessage(LOG_DEBUG_SERIAL, buff);
 /*
   int i;
   char temp_string[64];
@@ -133,11 +135,6 @@ int init_serial_port(char* tty)
 
   logMessage(LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
   
-  // Need to change this to flock, but that depends on good exit.
-  if ( ioctl(fd, TIOCEXCL) != 0) {
-    displayLastSystemError("Locking serial port.");
-  }
-
 #ifdef BLOCKING_MODE
   fcntl(fd, F_SETFL, 0);
   newtio.c_cc[VMIN]= 1;
@@ -150,7 +147,30 @@ int init_serial_port(char* tty)
   newtio.c_cc[VTIME]= 1;
   logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
 #endif
+/*
+// Need to change this to flock, but that depends on good exit.
+  if ( ioctl(fd, TIOCEXCL) != 0) {
+    displayLastSystemError("Locking serial port.");
+  }
 
+  struct flock fl;
+  fl.l_type = F_WRLCK;
+  fl.l_whence = SEEK_SET;
+  fl.l_start = 0;
+  fl.l_len = 0;
+
+  if (fcntl(fd, F_SETLK, &fl) == -1)
+  {
+    if (errno == EACCES || errno == EAGAIN)
+    {
+      displayLastSystemError("Locking serial port.");
+    }
+    else
+    {
+      displayLastSystemError("Unknown error Locking serial port.");
+    }
+  }
+*/
   tcgetattr(fd, &_oldtio); // save current port settings
     // set new port settings for canonical input processing
   newtio.c_cflag = BAUD | DATABITS | STOPBITS | PARITYON | PARITY | CLOCAL | CREAD;
@@ -259,7 +279,7 @@ void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned
   //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
-  log_packet("Sent ", ackPacket, length);
+  log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
 
 }
 void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
@@ -292,7 +312,7 @@ void send_command(int fd, unsigned char destination, unsigned char b1, unsigned 
   if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
     char buf[30];
     sprintf(buf, "Sent     %8.8s ", get_packet_type(ackPacket+1 , length));
-    log_packet(buf, ackPacket, length);
+    log_packet(LOG_DEBUG_SERIAL, buf, ackPacket, length);
   }
 }
 
@@ -325,7 +345,7 @@ void send_messaged(int fd, unsigned char destination, char *message)
   //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
-  log_packet("Sent ", msgPacket, length);
+  log_packet(LOG_DEBUG_SERIAL, "Sent ", msgPacket, length);
 }
 
 void _send_ack(int fd, unsigned char ack_type, unsigned char command);
@@ -384,7 +404,7 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
   //tcdrain(fd);
 #endif  
   
-  log_packet("Sent ", ackPacket, length);
+  log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
 }
 
 // Reads the bytes of the next incoming packet, and
@@ -413,7 +433,8 @@ int get_packet(int fd, unsigned char* packet)
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
       if (retry > 20) {
-        logMessage(LOG_WARNING, "Serial read timeout\n"); 
+        logMessage(LOG_WARNING, "Serial read timeout\n");
+        log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
         return 0;
       }
       retry++;
@@ -489,11 +510,11 @@ int get_packet(int fd, unsigned char* packet)
   
   if (generate_checksum(packet, index) != packet[index-3]){
     logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
-    log_packet("Bad packet ", packet, index);
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else if (index < AQ_MINPKTLEN) {
     logMessage(LOG_WARNING, "Serial read too small\n");
-    log_packet("Bad packet ", packet, index);
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
