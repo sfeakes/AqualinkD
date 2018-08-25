@@ -201,6 +201,8 @@ int main(int argc, char *argv[]) {
     }
     if (logLevel < LOG_DEBUG)
       advance_cursor();
+
+    //sleep(1);
   }
 
   logMessage(LOG_DEBUG, "\n");

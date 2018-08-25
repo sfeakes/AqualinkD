@@ -125,9 +125,9 @@
 #define SWG_STATUS_NO_FLOW      0x01 // no flow 0x01
 #define SWG_STATUS_LOW_SALT     0x02 // low salt 0x02
 #define SWG_STATUS_VLOW_SALT    0x04 // very low salt 0x04
-#define SWG_STATUS_HIGH_CURRENT 0x08 // high current 0x08
+#define SWG_STATUS_CLEAN_CELL   0x08 // clean cell 0x10
 #define SWG_STATUS_TURNING_OFF  0x09 // turning off 0x09
-#define SWG_STATUS_CLEAN_CELL   0x10 // clean cell 0x10
+#define SWG_STATUS_HIGH_CURRENT 0x10 // high current 0x08
 #define SWG_STATUS_LOW_VOLTS    0x20 // low voltage 0x20
 #define SWG_STATUS_LOW_TEMP     0x40 // low watertemp 0x40
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80

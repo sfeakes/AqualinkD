@@ -863,10 +863,11 @@ void main_loop() {
           interestedInNextAck = false;
         }
       }
+      /*
       if (getLogLevel() >= LOG_DEBUG_SERIAL) {
           logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
                                        (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
-      }
+      }*/
 
     }
     mg_mgr_poll(&mgr, 0);

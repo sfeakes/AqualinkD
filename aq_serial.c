@@ -407,12 +407,106 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
   log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
 }
 
+
+int get_packet(int fd, unsigned char* packet)
+{
+  unsigned char byte;
+  int bytesRead;
+  int index = 0;
+  bool endOfPacket = FALSE;
+  bool packetStarted = FALSE;
+  bool lastByteDLE = FALSE;
+  int retry = 0;
+
+  // Read packet in byte order below
+  // DLE STX ........ ETX DLE
+  // sometimes we get ETX DLE and no start, so for now just ignoring that.  Seem to be more applicable when busy RS485 traffic
+
+  while (!endOfPacket) {
+    bytesRead = read(fd, &byte, 1);
+    if (bytesRead < 0 && errno == EAGAIN && packetStarted == FALSE && lastByteDLE == FALSE) {
+      // We just have nothing to read
+      return 0;
+    } else if (bytesRead < 0 && errno == EAGAIN) {
+      // If we are in the middle of reading a packet, keep going
+      if (retry > 20) {
+        logMessage(LOG_WARNING, "Serial read timeout\n");
+        log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+        return 0;
+      }
+      retry++;
+      delay(10);
+    } else if (bytesRead == 1) {
+      if (lastByteDLE==TRUE) {
+        if (index == 0)
+          index++;
+
+        packet[index] = byte;
+        index++;
+        if (byte == STX && packetStarted == FALSE) {
+          packetStarted = TRUE;
+        } else if (byte == ETX && packetStarted == TRUE) {
+          endOfPacket = TRUE;
+        }
+      } else if (packetStarted) {
+        packet[index] = byte;
+        index++;
+      } else if (byte == DLE && packetStarted == FALSE) {
+        packet[index] = byte;
+      }
+
+      // // reset index incase we have EOP before start
+      if (packetStarted == FALSE)
+        index=0;
+      
+      if (byte == DLE) {
+        lastByteDLE = TRUE;
+      } else {
+        lastByteDLE = FALSE;
+      }
+    } else if(bytesRead < 0) {
+      // Got a read error. Wait one millisecond for the next byte to
+      // arrive.
+      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      if(errno == 9) {
+        // Bad file descriptor. Port has been disconnected for some reason.
+        // Return a -1.
+        return -1;
+      }
+      delay(100);
+    }
+
+    // Break out of the loop if we exceed maximum packet
+    // length.
+    if (index >= AQ_MAXPKTLEN) {
+      logMessage(LOG_WARNING, "Serial packet too large\n");
+      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      break;
+    }
+  }
+
+  if (generate_checksum(packet, index) != packet[index-3]){
+    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+    return 0;
+  } else if (index < AQ_MINPKTLEN && packetStarted) { //NSF. Sometimes we get END sequence only, so just ignore.
+  //} else if (index < AQ_MINPKTLEN) { //NSF. Sometimes we get END sequence only, so just ignore.
+    logMessage(LOG_WARNING, "Serial read too small\n");
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+    return 0;
+  }
+
+  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  // Return the packet length.
+  return index;
+}
+
 // Reads the bytes of the next incoming packet, and
 // returns when a good packet is available in packet
 // fd: the file descriptor to read the bytes from
 // packet: the unsigned char buffer to store the bytes in
 // returns the length of the packet
-int get_packet(int fd, unsigned char* packet)
+int get_packet_old(int fd, unsigned char* packet)
 {
   unsigned char byte;
   int bytesRead;

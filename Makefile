@@ -10,12 +10,14 @@ LIBS := -lpthread -lm
 $DBG =
 
 # define any compile-time flags
+GCCFLAGS = -Wall
+
 #CFLAGS = -Wall -g -lpthread -lwiringPi -lm -I. 
 #CFLAGS = -Wall -g $(LIBS) -I/usr/local/include/ -L/usr/local/lib/
 #CFLAGS = -Wall -g $(LIBS) -std=gnu11 -I/nas/data/Development/Raspberry/aqualink/libwebsockets-2.0-stable/lib -L/nas/data/Development/Raspberry/aqualink/libwebsockets-2.0-stable/lib
 #CFLAGS = -Wall -g $(LIBS)
 #CFLAGS = -Wall -g $(LIBS) -std=gnu11
-CFLAGS = -Wall $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
+CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 #CFLAGS = -Wall $(DBG) $(LIBS) -D MG_DISABLE_MQTT -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 
 INCLUDES = -I/nas/data/Development/Raspberry/aqualink/aqualinkd

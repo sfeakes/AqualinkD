@@ -55,14 +55,17 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
-## Updates is Release 1.0e
+## Latest update in Release 1.1
+* Changed the way AqualinkD reads USB, fixes the checksum & serial read too small errors that happened on some RS485 networks. 
+* Figex bug in SWG would read "high voltage" and not "check cell"
+## Updates in release 1.0e
 * Web UI out of Beta
 * MQTT fix setpoints
 * Simulator is now more stable.
 * updates to serial logger
 * UI updates
 * bug fix in MQTT_flash (still not prefect fix)
-## Latest update in Release 1.0c
+## Updates in Release 1.0c
 * New Simple interface.
 * Start of a RS8 Simulator :-
     * So you can program the AqualinkRS form a web interface and not control panel.
