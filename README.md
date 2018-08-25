@@ -85,6 +85,23 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 https://github.com/sfeakes/AqualinkD/wiki
 
 #
+
+# Aqualink Versions tested
+This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo controll panels. At the moment it will not work with Aqualink PDA / AquaPalm and NON Combo iAqualink.
+Below are varified versions (But should work witn any AqualinkRS) :-
+
+
+| Version | Notes | 
+| --- | --- |
+| JANDY AquaLinkRS 8157 REV MMM      | Everything working  |
+| Jandy AquaLinkRS 8157 REV JJ       | Everything working  |
+| Jandy AquaLinkRS B0029221 REV T    | Everything working  |
+| Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |
+| Jandy AquaLinkRS B0029235 REV T.1  | Everything working  |
+| Jandy iAqualink E0260801 REV R     | Everything working  |
+| AquaLink PDA / AquaPalm            | Not usable, work in progress.|
+
+#
 <!--
 
 
