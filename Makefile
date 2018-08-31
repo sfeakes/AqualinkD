@@ -9,6 +9,10 @@ LIBS := -lpthread -lm
 #$DBG = -g
 $DBG =
 
+# USe below to remove unused functions and global variables.
+#LFLAGS = -Wl,--gc-sections,--print-gc-sections
+#GCCFLAGS = -Wall -ffunction-sections -fdata-sections
+
 # define any compile-time flags
 GCCFLAGS = -Wall
 

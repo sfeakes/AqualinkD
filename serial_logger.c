@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
           }
         }
 
-        if (packet_buffer[PKT_DEST] == DEV_MASTER && packet_buffer[PKT_CMD] == CMD_ACK) {
+        if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
           //logMessage(LOG_DEBUG_SERIAL, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == lastID) {

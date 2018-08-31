@@ -102,12 +102,19 @@
 #define LNG_MSG_CLEANER_DELAY         "CLEANER WILL TURN ON AFTER SAFETY DELAY"
 #define LNG_MSG_BATTERY_LOW           "BATTERY LOW"
 
+
+
 #define MSG_AIR_TEMP   "AIR TEMP"
 #define MSG_POOL_TEMP  "POOL TEMP"
 #define MSG_SPA_TEMP   "SPA TEMP"
 #define MSG_AIR_TEMP_LEN   8
 #define MSG_POOL_TEMP_LEN  9
 #define MSG_SPA_TEMP_LEN   8
+
+// Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
+#define MSG_WATER_TEMP       "WATER TEMP"
+#define MSG_WATER_TEMP_LEN   10
+#define LNG_MSG_WATER_TEMP_SET "TEMP1 (HIGH TEMP) IS SET TO"
 
 #define MSG_SWG_PCT   "AQUAPURE"  // AquaPure 55%
 #define MSG_SWG_PPM   "SALT"  // Salt 3000 PPM

@@ -334,13 +334,13 @@ void processMessage(char *message)
       setUnits(msg);
   }
   else if(strncasecmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
-    _aqualink_data.air_temp = atoi(msg+8);
+    _aqualink_data.air_temp = atoi(msg+MSG_AIR_TEMP_LEN);
    
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
   }
   else if(strncasecmp(msg, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
-    _aqualink_data.pool_temp = atoi(msg+9);
+    _aqualink_data.pool_temp = atoi(msg+MSG_POOL_TEMP_LEN);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
@@ -351,7 +351,21 @@ void processMessage(char *message)
     */
   }
   else if(strncasecmp(msg, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
-    _aqualink_data.spa_temp = atoi(msg+8);
+    _aqualink_data.spa_temp = atoi(msg+MSG_SPA_TEMP_LEN);
+  }
+  // NSF Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
+  else if(strncasecmp(msg, MSG_WATER_TEMP, MSG_WATER_TEMP_LEN) == 0) {
+    _aqualink_data.pool_temp = atoi(msg+MSG_WATER_TEMP_LEN);
+    _aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
+  }
+  else if(stristr(msg, LNG_MSG_WATER_TEMP_SET) != NULL) {
+    _aqualink_data.spa_htr_set_point = atoi(message+21);
+    _aqualink_data.pool_htr_set_point = atoi(message+21);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
