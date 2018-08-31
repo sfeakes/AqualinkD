@@ -361,8 +361,8 @@ void processMessage(char *message)
       setUnits(msg);
   }
   else if(stristr(msg, LNG_MSG_WATER_TEMP_SET) != NULL) {
-    _aqualink_data.spa_htr_set_point = atoi(message+21);
-    _aqualink_data.pool_htr_set_point = atoi(message+21);
+    _aqualink_data.spa_htr_set_point = atoi(message+26);
+    _aqualink_data.pool_htr_set_point = atoi(message+26);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
