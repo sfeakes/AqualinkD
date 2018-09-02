@@ -31,7 +31,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[0].name = BTN_PUMP;
   //aqdata->aqbuttons[0].code = (unsigned char *)KEY_PUMP;
   aqdata->aqbuttons[0].code = KEY_PUMP;
-  aqdata->aqbuttons[0].dz_idx = 37;
+  aqdata->aqbuttons[0].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[0].pda_label = BTN_PDA_PUMP;
   
   aqdata->aqbuttons[1].led = &aqdata->aqualinkleds[6-1];
   aqdata->aqbuttons[1].led->state = LED_S_UNKNOWN;
@@ -40,7 +41,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[1].name = BTN_SPA;
   //aqdata->aqbuttons[1].code = (unsigned char *)KEY_SPA;
   aqdata->aqbuttons[1].code = KEY_SPA;
-  aqdata->aqbuttons[1].dz_idx = 38;
+  aqdata->aqbuttons[1].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[1].pda_label = BTN_PDA_SPA;
   
   aqdata->aqbuttons[2].led = &aqdata->aqualinkleds[5-1];
   aqdata->aqbuttons[2].led->state = LED_S_UNKNOWN;
@@ -49,7 +51,9 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[2].name = BTN_AUX1;
   //aqdata->aqbuttons[2].code = (unsigned char *)KEY_AUX1;
   aqdata->aqbuttons[2].code = KEY_AUX1;
-  aqdata->aqbuttons[2].dz_idx = 39;
+  aqdata->aqbuttons[2].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[2].pda_label = BTN_PDA_AUX1;
+  //aqdata->aqbuttons[2].pda_label = "CLEANER";
   
   aqdata->aqbuttons[3].led = &aqdata->aqualinkleds[4-1];
   aqdata->aqbuttons[3].led->state = LED_S_UNKNOWN;
@@ -58,7 +62,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[3].name = BTN_AUX2;
   //aqdata->aqbuttons[3].code = (unsigned char *)KEY_AUX2;
   aqdata->aqbuttons[3].code = KEY_AUX2;
-  aqdata->aqbuttons[3].dz_idx = 40;
+  aqdata->aqbuttons[3].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[3].pda_label = BTN_PDA_AUX2;
   
   aqdata->aqbuttons[4].led = &aqdata->aqualinkleds[3-1];
   aqdata->aqbuttons[4].led->state = LED_S_UNKNOWN;
@@ -67,7 +72,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[4].name = BTN_AUX3;
   //aqdata->aqbuttons[4].code = (unsigned char *)KEY_AUX3;
   aqdata->aqbuttons[4].code = KEY_AUX3;
-  aqdata->aqbuttons[4].dz_idx = 41;
+  aqdata->aqbuttons[4].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[4].pda_label = BTN_PDA_AUX3;
   
   aqdata->aqbuttons[5].led = &aqdata->aqualinkleds[9-1];
   aqdata->aqbuttons[5].led->state = LED_S_UNKNOWN;
@@ -76,7 +82,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[5].name = BTN_AUX4;
   //aqdata->aqbuttons[5].code = (unsigned char *)KEY_AUX4;
   aqdata->aqbuttons[5].code = KEY_AUX4;
-  aqdata->aqbuttons[5].dz_idx = 42;
+  aqdata->aqbuttons[5].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[5].pda_label = BTN_PDA_AUX4;
   
   aqdata->aqbuttons[6].led = &aqdata->aqualinkleds[8-1];
   aqdata->aqbuttons[6].led->state = LED_S_UNKNOWN;
@@ -85,7 +92,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[6].name = BTN_AUX5;
   //aqdata->aqbuttons[6].code = (unsigned char *)KEY_AUX5;
   aqdata->aqbuttons[6].code = KEY_AUX5;
-  aqdata->aqbuttons[6].dz_idx = 43;
+  aqdata->aqbuttons[6].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[6].pda_label = BTN_PDA_AUX5;
   
   aqdata->aqbuttons[7].led = &aqdata->aqualinkleds[12-1];
   aqdata->aqbuttons[7].led->state = LED_S_UNKNOWN;
@@ -94,6 +102,7 @@ void initButtons(struct aqualinkdata *aqdata)
   //aqdata->aqbuttons[7].code = (unsigned char *)KEY_AUX6;
   aqdata->aqbuttons[7].code = KEY_AUX6;
   aqdata->aqbuttons[7].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[7].pda_label = BTN_PDA_AUX6;
   
   aqdata->aqbuttons[8].led = &aqdata->aqualinkleds[1-1];
   aqdata->aqbuttons[8].led->state = LED_S_UNKNOWN;
@@ -102,6 +111,7 @@ void initButtons(struct aqualinkdata *aqdata)
   //aqdata->aqbuttons[8].code = (unsigned char *)KEY_AUX7;
   aqdata->aqbuttons[8].code = KEY_AUX7;
   aqdata->aqbuttons[8].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[8].pda_label = BTN_PDA_AUX7;
   
   aqdata->aqbuttons[9].led = &aqdata->aqualinkleds[15-1];
   aqdata->aqbuttons[9].led->state = LED_S_UNKNOWN;
@@ -110,7 +120,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[9].name = BTN_POOL_HTR;
   //aqdata->aqbuttons[9].code = (unsigned char *)KEY_POOL_HTR;
   aqdata->aqbuttons[9].code = KEY_POOL_HTR;
-  aqdata->aqbuttons[9].dz_idx = 44;
+  aqdata->aqbuttons[9].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[9].pda_label = BTN_PDA_POOL_HTR;
   
   aqdata->aqbuttons[10].led = &aqdata->aqualinkleds[17-1];
   aqdata->aqbuttons[10].led->state = LED_S_UNKNOWN;
@@ -119,7 +130,8 @@ void initButtons(struct aqualinkdata *aqdata)
   aqdata->aqbuttons[10].name = BTN_SPA_HTR;
   //aqdata->aqbuttons[10].code = (unsigned char *)KEY_SPA_HTR;
   aqdata->aqbuttons[10].code = KEY_SPA_HTR;
-  aqdata->aqbuttons[10].dz_idx = 44;
+  aqdata->aqbuttons[10].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[10].pda_label = BTN_PDA_SPA_HTR;
   
   aqdata->aqbuttons[11].led = &aqdata->aqualinkleds[19-1];
   aqdata->aqbuttons[11].led->state = LED_S_UNKNOWN;
@@ -129,5 +141,6 @@ void initButtons(struct aqualinkdata *aqdata)
   //aqdata->aqbuttons[11].code = (unsigned char *)KEY_SOLAR_HTR;
   aqdata->aqbuttons[11].code = KEY_SOLAR_HTR;
   aqdata->aqbuttons[11].dz_idx = DZ_NULL_IDX;
+  aqdata->aqbuttons[11].pda_label = BTN_PDA_SOLAR_HTR;
   
 }

@@ -259,6 +259,7 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->override_freeze_protect = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {
               config_parameters->pda_mode = text2bool(indx+1);
+              set_pda_mode(config_parameters->pda_mode);
             } else if (strncasecmp (b_ptr, "convert_mqtt_temp_to_c", 22) == 0) {
               config_parameters->convert_mqtt_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "convert_dz_temp_to_c", 21) == 0) {
@@ -280,6 +281,9 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               } else if (strncasecmp (b_ptr+9, "_dzidx", 6) == 0) {
                 //logMessage (LOG_DEBUG, "     dzidx %d\n", strtoul(indx+1, NULL, 10));
                 aqdata->aqbuttons[num].dz_idx = strtoul(indx+1, NULL, 10);
+              } else if (strncasecmp (b_ptr+9, "_PDA_label", 10) == 0) {
+                //logMessage (LOG_DEBUG, "     dzidx %d\n", strtoul(indx+1, NULL, 10));
+                aqdata->aqbuttons[num].pda_label = cleanalloc(indx+1);
               }
             }
           } 

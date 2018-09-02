@@ -24,21 +24,37 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <stdbool.h>
 
 #include "aq_serial.h"
 #include "utils.h"
+#include "config.h"
 
 //#define BLOCKING_MODE
 
 static struct termios _oldtio;
 
+//static struct aqconfig *_config_parameters;
+//static struct aqconfig *_aqualink_config;
+bool _pda_mode = false;
 
+void set_pda_mode(bool mode)
+{
+  if (mode)
+    logMessage(LOG_NOTICE, "AqualinkD is using PDA mode\n");
 
+  _pda_mode = mode;
+}
+
+bool pda_mode()
+{
+  return _pda_mode;
+}
 
 void log_packet(int level, char *init_str, unsigned char* packet, int length)
 {
   
-  if ( getLogLevel() <= level) {
+  if ( getLogLevel() < level) {
     //logMessage(LOG_INFO, "Send '0x%02hhx'|'0x%02hhx' to controller\n", packet[5] ,packet[6]);
     return;
   }
@@ -89,8 +105,10 @@ const char* get_packet_type(unsigned char* packet , int length)
       return "Status";
     break;
     case CMD_MSG:
-    case CMD_MSG_LONG:
       return "Message";
+    break;
+    case CMD_MSG_LONG:
+      return "Lng Message";
     break;
     case CMD_PROBE:
       return "Probe";
@@ -104,12 +122,28 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_PPM:
       return "AR PPM";
     break;
+    case CMD_PDA_0x05:
+      return "PDA Unknown";
+    break;
+    case CMD_PDA_HIGHLIGHT:
+      return "PDA Hlight";
+    break;
+    case CMD_PDA_CLEAR:
+      return "PDA Clear";
+    break;
+    case CMD_PDA_SHIFTLINES:
+      return "PDA Shiftlines";
+    break;
+    case CMD_PDA_HIGHLIGHTCHARS:
+      return "PDA C_HlightChar";
+    break;
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;
     break;
   }
 }
+
 
 /*
 Open and Initialize the serial communications port to the Aqualink RS8 device.
@@ -358,7 +392,10 @@ void send_extended_ack(int fd, unsigned char ack_type, unsigned char command)
 
 void send_ack(int fd, unsigned char command)
 {
-  _send_ack(fd, ACK_NORMAL, command);
+  if (! _pda_mode)
+    _send_ack(fd, ACK_NORMAL, command);
+  else
+    _send_ack(fd, ACK_PDA, command);
 }
 
 void _send_ack(int fd, unsigned char ack_type, unsigned char command)
@@ -437,7 +474,12 @@ int get_packet(int fd, unsigned char* packet)
       retry++;
       delay(10);
     } else if (bytesRead == 1) {
-      if (lastByteDLE==TRUE) {
+//printf("Byte 0x%02hhx\n",byte);
+      if (lastByteDLE==TRUE && byte == NUL) {
+        // Check for DLE | NULL (that's escape DLE so delete the NULL)
+        //printf("IGNORE THIS PACKET\n");
+        lastByteDLE = FALSE;
+      } else if (lastByteDLE==TRUE) {
         if (index == 0)
           index++;
 
@@ -484,6 +526,8 @@ int get_packet(int fd, unsigned char* packet)
       break;
     }
   }
+
+  //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
 
   if (generate_checksum(packet, index) != packet[index-3]){
     logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
@@ -601,7 +645,7 @@ int get_packet_old(int fd, unsigned char* packet)
       delay(100);
     }
   }
-  
+
   if (generate_checksum(packet, index) != packet[index-3]){
     logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);

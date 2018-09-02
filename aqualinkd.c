@@ -15,6 +15,8 @@
  */
 
 
+#define _GNU_SOURCE 1 // for strcasestr & strptime
+#define __USE_XOPEN 1
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -25,8 +27,6 @@
 #include <termios.h>
 #include <signal.h>
 
-#define _GNU_SOURCE 1
-#define __USE_XOPEN 1
 #include <time.h>      // Need GNU_SOURCE & XOPEN defined for strptime
 
 #include "mongoose.h"
@@ -37,6 +37,7 @@
 #include "init_buttons.h"
 #include "aq_programmer.h"
 #include "net_services.h"
+#include "pda_menu.h"
 #include "version.h"
 
 
@@ -433,7 +434,7 @@ void processMessage(char *message)
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
 }
-
+/*
 void processPDAMessage(char *message)
 {
   static bool nextMessageTemp = false;
@@ -469,7 +470,211 @@ void processPDAMessage(char *message)
   kick_aq_program_thread(&_aqualink_data);
   
 }
+*/
+/*
+void process_status_packet(unsigned char *packet, int length) 
+{
+  logMessage(LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+  memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
+  processLEDstate();
+  if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF) {
+    _aqualink_data.pool_temp = TEMP_UNKNOWN;
+    _aqualink_data.spa_temp = TEMP_UNKNOWN;
+    //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
+  } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF) {
+    //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
+    _aqualink_data.spa_temp = TEMP_UNKNOWN;
+  } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON) {
+    _aqualink_data.pool_temp = TEMP_UNKNOWN;
+  }
+}
+*/
+void set_pda_led(struct aqualinkled *led, char state)
+{
+  if (state == 'N')
+    led->state = ON;
+  else if (state == 'A')
+    led->state = ENABLE;
+  else if (state == '*')
+    led->state = FLASH;
+  else
+    led->state = OFF;
+}
 
+void pass_pda_equiptment_status_item(char* msg)
+{
+  static char *index;
+  int i;
+  // Check message for status of device
+  // Loop through all buttons and match the PDA text.
+  if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
+  {
+    //int aq = atoi(index + strlen(MSG_SWG_PCT));
+    //printf("Aquapure PERCENT message %d\n", aq);
+    _aqualink_data.swg_percent = atoi(index + strlen(MSG_SWG_PCT));
+  }
+  else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
+  {
+    //int aq = atoi(index + strlen(MSG_SWG_PPM));
+    //printf("Aquapure SALT message %d\n", aq);
+    _aqualink_data.swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
+  }
+  else
+  {
+    // These are listed as "  FILTER PUMP   "
+    for (i = 0; i < TOTAL_BUTTONS; i++)
+    {
+      if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL)
+      {
+        //printf("*** Found Status for %s = '%.*s'\n", _aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+        // It's on if it's listed here.
+        _aqualink_data.aqbuttons[i].led->state = ON;
+      }
+    }
+  }
+}
+
+bool process_pda_packet(unsigned char* packet, int length)
+{
+  bool rtn = true;
+  int i;
+  char *msg;
+  static bool init = false;
+  static time_t _lastStatus;
+
+  process_pda_menu_packet(packet, length);
+
+  // NSF.
+
+  //_aqualink_data.last_msg_was_status = false;
+
+  //debugPacketPrint(0x00, packet, length);
+
+  switch (packet[PKT_CMD]) {
+    
+    case CMD_ACK:
+      logMessage(LOG_DEBUG, "RS Received ACK length %d.\n",length);
+      break;
+      
+    case CMD_STATUS:
+      _aqualink_data.last_display_message[0] = '\0';
+      /*
+      if (!init) {
+        aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+        init=true;
+      }*/
+      //add time this, if it hasn't happened for 1 minute probably all off, to to into the main equiptment menu and check.
+      // If we get a status packet, and we are on the status menu, this is a list of what's on,
+      // so turn everything off, and just turn on items that are listed.
+      // This is the only way to update a device that's been turned off elcewhere.
+      if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
+        //printf("*** SET ALL OFF ****\n");
+        for (i = 0; i < TOTAL_BUTTONS; i++) {
+          _aqualink_data.aqbuttons[i].led->state = OFF;
+        }
+        for (i = 1; i < PDA_LINES; i++) {
+          pass_pda_equiptment_status_item(pda_m_line(i));
+        }
+        time(&_lastStatus);
+      } else {
+        time_t now;
+        time(&now);
+        if (init && difftime(now, _lastStatus) > 60){
+          logMessage(LOG_DEBUG,"OVER 60 SECONDS SINCE LAST STATUS UPDATE, forcing refresh\n");
+          // Reset aquapure to nothing since it must be off at this point
+          _aqualink_data.pool_temp = TEMP_UNKNOWN;
+          _aqualink_data.spa_temp = TEMP_UNKNOWN;
+          time(&_lastStatus);
+          aq_programmer(AQ_PDA_DEVICE_STATUS, NULL, &_aqualink_data);
+        }
+      }
+      break;
+    case CMD_MSG_LONG: {
+      msg = (char*)packet+PKT_DATA+1;
+
+      if (packet[PKT_DATA] == 0x82) { // Air & Water temp is always this ID
+        // NSF Probably need to check "AIR....POOL" and AIR....SPA"
+        //           'AIR         POOL'
+        //           ' 86`     86`    '
+        //           'AIR   SPA       '
+        //           ' 86` 86`        '
+        //           'AIR             '
+        //           ' 86`            '
+        _aqualink_data.temp_units = FAHRENHEIT; // Force FAHRENHEIT
+        if (stristr(pda_m_line(1), "AIR") != NULL)
+          _aqualink_data.air_temp = atoi(msg);
+        if (stristr(pda_m_line(1), "SPA") != NULL) {
+          _aqualink_data.spa_temp = atoi(msg+4);
+          _aqualink_data.pool_temp = TEMP_UNKNOWN;
+        } else if (stristr(pda_m_line(1), "POOL") != NULL) {
+          _aqualink_data.pool_temp = atoi(msg+7);
+          _aqualink_data.spa_temp = TEMP_UNKNOWN;
+        }
+        //printf("Air Temp = %d | Water Temp = %d\n",atoi(msg),atoi(msg+7));
+      } else if (packet[PKT_DATA] == 0x40) {
+        // message "     SAT 8:46AM "
+        //         "     SAT 10:29AM"
+        //         "     SAT 4:23PM "
+        //printf("TIME = '%.*s'\n",AQ_MSGLEN,msg );
+        //printf("TIME = '%c'\n",msg[AQ_MSGLEN-1] );
+        if (msg[AQ_MSGLEN-1] == ' ') {
+          //printf("TIME = '%.*s'\n",6,msg+9);
+          strncpy(_aqualink_data.time, msg+9, 6);
+        } else {
+          //printf("TIME = '%.*s'\n",7,msg+9);
+          strncpy(_aqualink_data.time, msg+9, 7);
+        }   
+        // NSF  strcpy(_aqualink_data.date, msg);
+        //printf("DAY = '%.*s'\n",3,msg+5);
+        strncpy(_aqualink_data.date, msg+5,3);
+        // NSF Come back and change the above to correctly check date and time in future
+      //} else if (pda_m_hlightindex() == -1 && strcmp(pda_m_line(0), "EQUIPMENT STATUS") == 0) {
+      } else if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
+        pass_pda_equiptment_status_item(msg);
+      } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
+        // These are listed as "FILTER PUMP  OFF"
+        for (i = 0; i < TOTAL_BUTTONS; i++) {
+            if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL) {
+              //printf("*** Found Status for %s = '%.*s'\n",_aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+              set_pda_led(_aqualink_data.aqbuttons[i].led, msg[AQ_MSGLEN-1]);
+            }
+        }
+      //} else if (pda_m_hlightindex() == -1) { // There is a chance this is a message we are interested in.  
+      //} else if (stristr(pda_m_line(1), "AIR") == 0) {
+      } else if (pda_m_type() == PM_MAIN) {
+        if (stristr(msg, "POOL MODE") != NULL) {
+          set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
+        }else if (stristr(msg, "POOL HEATER") != NULL) {
+          set_pda_led(_aqualink_data.aqbuttons[9].led, msg[AQ_MSGLEN-1]);
+        }else if (stristr(msg, "SPA MODE") != NULL) {
+          set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
+          set_pda_led(_aqualink_data.aqbuttons[1].led, msg[AQ_MSGLEN-1]);
+        }else if (stristr(msg, "SPA HEATER") != NULL) {
+          set_pda_led(_aqualink_data.aqbuttons[10].led, msg[AQ_MSGLEN-1]);
+        }
+      } 
+      // If we haven't initilixed and we are on line 4, then initilize
+      if (! init && pda_m_hlightindex() == 4) {
+        //printf("** INITILIZE ADD LINE BACK\n");
+        aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+        time(&_lastStatus);
+        init = true;
+      }
+       
+    }
+    //printf("** Line index='%d' Highligh='%s' Message='%.*s'\n",pda_m_hlightindex(), pda_m_hlight(), AQ_MSGLEN, msg);
+    logMessage(LOG_INFO,"PDA Menu '%d' Selectedline '%s', Last line received '%.*s'\n", pda_m_type(), pda_m_hlight(), AQ_MSGLEN, msg);
+    break;
+  }
+
+  if ( packet[PKT_CMD] == CMD_MSG_LONG || 
+       packet[PKT_CMD] == CMD_PDA_HIGHLIGHT || 
+       packet[PKT_CMD] == CMD_PDA_SHIFTLINES) {
+     // We processed the next message, kick any threads waiting on the message.
+      kick_aq_program_thread(&_aqualink_data);
+  }
+  return rtn;
+}
 
 bool process_packet(unsigned char* packet, int length)
 {
@@ -487,6 +692,10 @@ bool process_packet(unsigned char* packet, int length)
     rtn = true;
   }
   
+  if (_config_parameters.pda_mode == true) {
+    return process_pda_packet(packet, length);
+  }
+  
   if (processing_long_msg > 0 && packet[PKT_CMD] != CMD_MSG_LONG) {
     processing_long_msg = 0;
     //logMessage(LOG_ERR, "RS failed to receive complete long message, received '%s'\n",message);
@@ -499,26 +708,24 @@ bool process_packet(unsigned char* packet, int length)
     logMessage(LOG_DEBUG, "RS Received ACK length %d.\n",length);
     break;
   case CMD_STATUS:
-    logMessage(LOG_DEBUG, "RS Received STATUS length %d.\n",length);
-    memcpy(_aqualink_data.raw_status, packet+4, AQ_PSTLEN);
-    processLEDstate(); 
-    if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF ) {
+    logMessage(LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
+    processLEDstate();
+    if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
+    {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
       //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
-    } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF ) {
+    }
+    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF)
+    {
       //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
-    } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON ) {
+    }
+    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON)
+    {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
     }
-    //logMessage(LOG_DEBUG, "RS Pool temp set to %d | Spa temp %d\n",_aqualink_data.pool_temp,_aqualink_data.spa_temp);
-    /*
-    strcpy(message, "AquaPure 1%");
-    processMessage(message);
-    strcpy(message, "Salt 3200 PPM");
-    processMessage(message);
-    */
     break;
   case CMD_MSG:
     memset(message, 0, AQ_MSGLONGLEN+1);
@@ -534,12 +741,6 @@ bool process_packet(unsigned char* packet, int length)
     break;
   case CMD_MSG_LONG:
     // First in sequence is normal message.
-    if (_config_parameters.pda_mode == true) {
-      strncpy(message, (char*)packet+PKT_DATA+1, AQ_MSGLEN);
-      //logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",(char*)packet);
-      //logMessage(LOG_DEBUG_SERIAL, "RS deciphered message '%s'\n",message);
-      processPDAMessage(message);
-    } else {
       processing_long_msg++;
       strncpy(&message[processing_long_msg*AQ_MSGLEN], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
       //logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
@@ -548,7 +749,6 @@ bool process_packet(unsigned char* packet, int length)
         processMessage(message);
         processing_long_msg=0;
       }
-    }
     break;
   case CMD_PROBE:
     logMessage(LOG_DEBUG, "RS Received PROBE length %d.\n",length);
@@ -679,7 +879,7 @@ int main(int argc, char *argv[]) {
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
 
   for (i=0; i < TOTAL_BUTONS; i++) {
-    logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
+    logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | PDAlabel %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx);
     //logMessage(LOG_NOTICE, "Button %d\n", i+1, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
   }
 
@@ -720,7 +920,8 @@ void debugPacketPrint(unsigned char ID, unsigned char *packet_buffer, int packet
   else
     cnt += sprintf(buff+cnt,"\n");
 
-  logMessage(LOG_NOTICE, "- AQUA SWG - \n%s", buff);
+  //logMessage(LOG_NOTICE, "- AQUA SWG - \n%s", buff);
+  logMessage(LOG_NOTICE, "%s", buff);
 }
 void debugPacket(unsigned char *packet_buffer, int packet_length)
 {
@@ -775,6 +976,9 @@ void main_loop() {
   rs_fd = init_serial_port(_config_parameters.serial_port);
   logMessage(LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _config_parameters.serial_port);
 
+  if (_config_parameters.pda_mode == true)
+    set_pda_mode(true);
+
   while (_keepRunning == true) {
     while ((rs_fd < 0 || blank_read >= MAX_ZERO_READ_BEFORE_RECONNECT) && _keepRunning == true) {
       if (rs_fd < 0) {
@@ -820,7 +1024,11 @@ void main_loop() {
         if (! _aqualink_data.simulate_panel ||
               _aqualink_data.active_thread.thread_id != 0) 
         {
-          send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+          // Can only send command to status message on PDA.
+          if (_config_parameters.pda_mode == true && packet_buffer[PKT_CMD] != CMD_STATUS)
+            send_ack(rs_fd, NUL);
+          else
+            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         } else {  // We are in simlator mode, ack get's complicated now. 
           // If have a command to send, send a normal ack.
           // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack

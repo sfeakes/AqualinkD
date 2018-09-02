@@ -55,7 +55,11 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
-## Latest update in Release 1.1
+## Updates in Release 1.2
+* PDA support in BETA. (Please see install wiki and make sure Labels are accurate)
+* Fixed bug in posting Heater Emables topics to MQTT. (order was reversed)
+* Serial read change. (detect escaped DTX in packet, 1 in 10000 chance or happening) 
+## Updates in Release 1.1
 * Changed the way AqualinkD reads USB, fixes the checksum & serial read too small errors that happened on some RS485 networks. 
 * Figex bug in SWG would read "high voltage" and not "check cell"
 ## Updates in release 1.0e
@@ -100,7 +104,7 @@ Below are varified versions (But should work with any AqualinkRS) :-
 | Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |
 | Jandy AquaLinkRS B0029235 REV T.1  | Everything working  |
 | Jandy iAqualink E0260801 REV R     | Everything working  |
-| AquaLink PDA / AquaPalm            | Not usable, work in progress.|
+| AquaLink PDA / AquaPalm            | Beta available, Limited functionality, please see WiKi.|
 
 If you have tested a version not listed here, please let me know by opening an issue
 #

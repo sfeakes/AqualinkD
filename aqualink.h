@@ -31,6 +31,7 @@ typedef struct aqualinkkey
   aqled *led;
   char *label;
   char *name;
+  char *pda_label;
   unsigned char code;
   int dz_idx;
 } aqkey;
@@ -92,6 +93,7 @@ struct aqualinkdata
   unsigned char ar_swg_status;
   int swg_delayed_percent;
   bool simulate_panel;
+  //bool last_msg_was_status;
   //bool ar_swg_connected;
 };
 

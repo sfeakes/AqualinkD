@@ -192,17 +192,18 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
 
 void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
 {
+
   static char mqtt_pub_topic[250];
 
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
 
   if (state == ENABLE) {
     send_mqtt(nc, mqtt_pub_topic, MQTT_OFF);
-    sprintf(mqtt_pub_topic, "%s/%s/%s",ENABELED_SUBT,_aqualink_config->mqtt_aq_topic, dev_name);
+    sprintf(mqtt_pub_topic, "%s/%s%s",_aqualink_config->mqtt_aq_topic, dev_name, ENABELED_SUBT);
     send_mqtt(nc, mqtt_pub_topic, MQTT_ON);
   } else {
     send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
-    sprintf(mqtt_pub_topic, "%s/%s/%s",ENABELED_SUBT,_aqualink_config->mqtt_aq_topic, dev_name);
+    sprintf(mqtt_pub_topic, "%s/%s%s",_aqualink_config->mqtt_aq_topic, dev_name, ENABELED_SUBT);
     send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
   }
 }
@@ -522,6 +523,11 @@ int getTempforMeteohub(char *buffer)
 
 void set_light_mode(char *value) 
 {
+  if (_aqualink_config->pda_mode == true) {
+    logMessage(LOG_ERR, "Light mode control not supported in PDA mode\n");
+    return;
+  }
+
   char buf[LIGHT_MODE_BUFER];
   // 5 below is light index, need to look this up so it's not hard coded.
   sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
@@ -619,8 +625,15 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           // aq_programmer(AQ_SEND_CMD, (char
           // *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
           logMessage(LOG_DEBUG, "WEB: Message request '%s' change state to '%s'\n", command, value);
-
-          if (strcmp(value, "on") == 0) {
+          
+          if (_aqualink_config->pda_mode == true) {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (strcmp(value, "on") == 0)?ON:OFF);
+            //printf("******* '%s' ********\n",msg);
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+            rtn = GET_RTN_OK;
+          }
+          else if (strcmp(value, "on") == 0) {
             if (_aqualink_data->aqbuttons[i].led->state == OFF || _aqualink_data->aqbuttons[i].led->state == FLASH) {
               aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
               rtn = GET_RTN_OK;
@@ -718,7 +731,13 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
         if (strcmp(request.first.value, _aqualink_data->aqbuttons[i].name) == 0) {
           logMessage (LOG_INFO, "WS: button '%s' pressed\n",_aqualink_data->aqbuttons[i].name);
           // send_command( (unsigned char)_aqualink_data->aqbuttons[i].code);
-          aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          if (_aqualink_config->pda_mode == false) {
+            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          } else {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (_aqualink_data->aqbuttons[i].led->state!=OFF)?OFF:ON);
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+          }
           break;
           // NSF place check we found command here
         }
@@ -762,7 +781,8 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   char *pt2 = NULL;
   char *pt3 = NULL;
 
-  for (i=10; i < msg->topic.len; i++) {
+  //for (i=10; i < msg->topic.len; i++) {
+  for (i=strlen(_aqualink_config->mqtt_aq_topic)+1; i < msg->topic.len; i++) {
     if ( msg->topic.p[i] == '/' ) {
       if (pt2 == NULL) {
         pt2 = (char *)&msg->topic.p[++i];
@@ -855,7 +875,14 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
           logMessage(LOG_INFO, "MQTT: received '%s' for '%s', already '%s', Ignoring\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (value==0?"OFF":"ON"));
         } else {
           logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
-          aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          if (_aqualink_config->pda_mode == false) {
+            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          } else {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (value==0?OFF:ON) );
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+          }
           // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
           // This causes a good MQTT button to flash on/off once before getting the latest update.  Need to find a better way
           //_last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
@@ -892,7 +919,14 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
             logMessage(LOG_NOTICE, "MQTT: DZ: received '%s' for '%s', IGNORING as we are programming light mode\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name);
           } else {
             logMessage(LOG_INFO, "MQTT: DZ: received '%s' for '%s', turning '%s'\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(nvalue==DZ_OFF?"OFF":"ON"));
-            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            if (_aqualink_config->pda_mode == false) {
+              aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            } else {
+              char msg[PTHREAD_ARG];
+              sprintf(msg, "%-5d%-5d",i, (nvalue == DZ_OFF?OFF:ON) );
+              aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+            }
           }
         }
         break; // no need to continue in for loop, we found button.

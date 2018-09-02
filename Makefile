@@ -29,21 +29,24 @@ INCLUDES = -I/nas/data/Development/Raspberry/aqualink/aqualinkd
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda_menu.c mongoose.c
 
 SL_SRC = serial_logger.c aq_serial.c utils.c
-AL_SRC = aquarite_logger.c aq_serial.c utils.c
-AR_SRC = aquarite/aquarited.c aquarite/ar_net_services.c aquarite/ar_config.c aq_serial.c utils.c mongoose.c json_messages.c config.c
+PDA_SRC = pda_test.c pda_menu.c aq_serial.c utils.c
+#AL_SRC = aquarite_logger.c aq_serial.c utils.c
+#AR_SRC = aquarite/aquarited.c aquarite/ar_net_services.c aquarite/ar_config.c aq_serial.c utils.c mongoose.c json_messages.c config.c
 
 OBJS = $(SRCS:.c=.o)
 SL_OBJS = $(SL_SRC:.c=.o)
-AL_OBJS = $(AL_SRC:.c=.o)
-AR_OBJS = $(AR_SRC:.c=.o)
+PDA_OBJS = $(PDA_SRC:.c=.o)
+#AL_OBJS = $(AL_SRC:.c=.o)
+#AR_OBJS = $(AR_SRC:.c=.o)
 
 # define the executable file
 MAIN = ./release/aqualinkd
 SLOG = ./release/serial_logger
-AQUARITELOG = ./release/aquarite_logger
+PDA = ./release/pda_test
+#AQUARITELOG = ./release/aquarite_logger
 AQUARITED = ./release/aquarited
 
 all:    $(MAIN) 
@@ -59,11 +62,18 @@ slog:	$(SLOG)
 $(SLOG): $(SL_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS)
 
-aquaritelog:	$(AQUARITELOG)
-  @echo: $(AQUARITELOG) have been compiled
+pda:	$(PDA)
+  @echo: $(PDA) have been compiled
 
-$(AQUARITELOG): $(AL_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(AQUARITELOG) $(AL_OBJS)
+$(PDA): $(PDA_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(PDA) $(PDA_OBJS)
+
+
+#aquaritelog:	$(AQUARITELOG)
+#  @echo: $(AQUARITELOG) have been compiled
+
+#$(AQUARITELOG): $(AL_OBJS)
+#	$(CC) $(CFLAGS) $(INCLUDES) -o $(AQUARITELOG) $(AL_OBJS)
 
 aquarited:	$(AQUARITED)
   @echo: $(AQUARITED) have been compiled

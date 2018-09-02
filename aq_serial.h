@@ -39,6 +39,7 @@
 #define ACK_NORMAL               0x00
 #define ACK_SCREEN_BUSY          0x01 // Seems to be busy but can cache a message,
 #define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me shit.
+#define ACK_PDA                  0x40
 
 /* AquaRite commands */
 #define CMD_GETID       0x14  // May be remote control control
@@ -50,8 +51,8 @@
 #define KEY_PDA_DOWN   0x05
 #define KEY_PDA_BACK   0x02
 #define KEY_PDA_SELECT 0x04
-#define KEY_PDA_PGUP   0x05
-#define KEY_PDA_PGDN   0x05
+#define KEY_PDA_PGUP   0x01
+#define KEY_PDA_PGDN   0x03
 
 /* KEY/BUTTON CODES */
 #define KEY_PUMP      0x02
@@ -86,6 +87,19 @@
 #define BTN_POOL_HTR  "Pool_Heater"
 #define BTN_SPA_HTR   "Spa_Heater"
 #define BTN_SOLAR_HTR "Solar_Heater"
+
+#define BTN_PDA_PUMP      "FILTER PUMP"
+#define BTN_PDA_SPA       "SPA"
+#define BTN_PDA_AUX1      "AUX1"
+#define BTN_PDA_AUX2      "AUX2"
+#define BTN_PDA_AUX3      "AUX3"
+#define BTN_PDA_AUX4      "AUX4"
+#define BTN_PDA_AUX5      "AUX5"
+#define BTN_PDA_AUX6      "AUX6"
+#define BTN_PDA_AUX7      "AUX7"
+#define BTN_PDA_POOL_HTR  "POOL HEAT"
+#define BTN_PDA_SPA_HTR   "SPA HEAT"
+#define BTN_PDA_SOLAR_HTR "EXTRA AUX"
 
 #define BUTTON_LABEL_LENGTH 20
 #define TOTAL_LEDS          20
@@ -139,7 +153,11 @@
 #define SWG_STATUS_LOW_TEMP     0x40 // low watertemp 0x40
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80
 
-
+#define CMD_PDA_0x05           0x05
+#define CMD_PDA_HIGHLIGHT      0x08
+#define CMD_PDA_CLEAR          0x09
+#define CMD_PDA_SHIFTLINES     0x0F
+#define CMD_PDA_HIGHLIGHTCHARS 0x10
 
 typedef enum {
   ON,
@@ -164,6 +182,8 @@ enum {
 
 int init_serial_port(char* tty);
 void close_serial_port(int file_descriptor);
+void set_pda_mode(bool mode);
+bool pda_mode();
 int generate_checksum(unsigned char* packet, int length);
 void send_ack(int file_descriptor, unsigned char command);
 void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);

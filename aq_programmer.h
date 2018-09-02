@@ -12,7 +12,8 @@
 #define SWG_PERCENT_MAX 101
 #define SWG_PERCENT_MIN 0
 
-#define LIGHT_MODE_BUFER 25
+#define PTHREAD_ARG 25
+#define LIGHT_MODE_BUFER PTHREAD_ARG
 
 typedef enum {
   AQP_NULL = -1,
@@ -27,13 +28,15 @@ typedef enum {
   AQ_GET_PROGRAMS,
   AQ_SET_COLORMODE,
   AQ_PDA_INIT,
-  AQ_SET_SWG_PERCENT
+  AQ_SET_SWG_PERCENT,
+  AQ_PDA_DEVICE_STATUS,
+  AQ_PDA_DEVICE_ON_OFF
 } program_type;
 
 struct programmingThreadCtrl {
   pthread_t thread_id;
   //void *thread_args;
-  char thread_args[25];
+  char thread_args[PTHREAD_ARG];
   struct aqualinkdata *aq_data;
 };
 
