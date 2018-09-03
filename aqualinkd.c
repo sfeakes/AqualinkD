@@ -647,8 +647,9 @@ bool process_pda_packet(unsigned char* packet, int length)
         }else if (stristr(msg, "POOL HEATER") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[9].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "SPA MODE") != NULL) {
-          set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
           set_pda_led(_aqualink_data.aqbuttons[1].led, msg[AQ_MSGLEN-1]);
+          if (_aqualink_data.aqbuttons[1].led == ON)
+            set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "SPA HEATER") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[10].led, msg[AQ_MSGLEN-1]);
         }

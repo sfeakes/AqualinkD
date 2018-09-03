@@ -29,6 +29,7 @@ typedef struct serial_id_log {
 bool _keepRunning = true;
 
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
+unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
 unsigned char _filter = 0x00;
 
 void intHandler(int dummy) {
@@ -46,11 +47,23 @@ void advance_cursor() {
 
 bool canUse(unsigned char ID) {
   int i;
-  for (i = 0; i < strlen((char *)_goodID); i++) {
+  for (i = 0; i < 4; i++) {
     if (ID == _goodID[i])
       return true;
   }
   return false;
+}
+char* canUseExtended(unsigned char ID) {
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodID[i])
+      return " <-- can use for Aqualinkd";
+  }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodPDAID[i])
+      return " <-- can use for Aqualinkd (PDA mode only)";
+  }
+  return "";
 }
 
 
@@ -110,6 +123,7 @@ int main(int argc, char *argv[]) {
   //int logLevel; 
   //char buffer[256];
   //bool idMode = true;
+
 
   if (getuid() != 0) {
     fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
@@ -210,8 +224,11 @@ int main(int argc, char *argv[]) {
     logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
   logMessage(LOG_NOTICE, "ID's found\n");
   for (i = 0; i <= sindex; i++) {
+    //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+    //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
+
     logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
-               (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
+               (slog[i].inuse == false)?canUseExtended(slog[i].ID):"");
   }
 
   return 0;
