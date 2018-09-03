@@ -12,6 +12,12 @@ If you like this project, you can buy me a cup of coffee :)
 ## Please see Wiki for install instructions
 https://github.com/sfeakes/AqualinkD/wiki
 
+Information on Control panel versions and upgrading the chips.<br>
+https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
+
+Started to document what I know about the Jandy RS485 protocol.<br>
+https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
+
 ## Builtin WEB Interface(s).
 
 <table width="100%" border="0" cellpadding="20px">
@@ -56,7 +62,7 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 ## Updates in Release 1.2
-* PDA support in BETA. (Please see install wiki and make sure Labels are accurate)
+* PDA support in BETA. (Please see WiKi for details)
 * Fixed bug in posting Heater Emables topics to MQTT. (order was reversed)
 * Serial read change. (detect escaped DTX in packet, 1 in 10000 chance or happening) 
 ## Updates in Release 1.1
