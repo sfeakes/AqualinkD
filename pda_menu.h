@@ -10,7 +10,8 @@ typedef enum pda_menu_type {
   PM_MAIN,
   PM_SETTINGS,
   PM_EQUIPTMENT_CONTROL,
-  PM_EQUIPTMENT_STATUS
+  PM_EQUIPTMENT_STATUS,
+  PM_BUILDING_MAIN
 } pda_menu_type;
 
 bool pda_mode();

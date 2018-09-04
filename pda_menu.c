@@ -49,7 +49,7 @@ pda_menu_type pda_m_type()
   else if (strncmp(_menu[0],"    MAIN MENU    ", 16) == 0)
     return PM_SETTINGS;
   else if ((_menu[0] == '\0' && _hlightindex == -1) || strncmp(_menu[4], "POOL MODE", 9) == 0 )// IF we are building the main menu this may be valid
-    return PM_MAIN;
+    return PM_BUILDING_MAIN;
 
   return PM_UNKNOWN;
 }

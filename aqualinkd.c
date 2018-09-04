@@ -357,13 +357,13 @@ void processMessage(char *message)
   // NSF Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
   else if(strncasecmp(msg, MSG_WATER_TEMP, MSG_WATER_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(msg+MSG_WATER_TEMP_LEN);
-    _aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
+    //_aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
   }
   else if(stristr(msg, LNG_MSG_WATER_TEMP_SET) != NULL) {
-    _aqualink_data.spa_htr_set_point = atoi(message+26);
-    _aqualink_data.pool_htr_set_point = atoi(message+26);
+    _aqualink_data.spa_htr_set_point = atoi(message+28);
+    _aqualink_data.pool_htr_set_point = atoi(message+28);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
@@ -641,7 +641,7 @@ bool process_pda_packet(unsigned char* packet, int length)
         }
       //} else if (pda_m_hlightindex() == -1) { // There is a chance this is a message we are interested in.  
       //} else if (stristr(pda_m_line(1), "AIR") == 0) {
-      } else if (pda_m_type() == PM_MAIN) {
+      } else if (pda_m_type() == PM_MAIN || pda_m_type() == PM_BUILDING_MAIN) {
         if (stristr(msg, "POOL MODE") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "POOL HEATER") != NULL) {

@@ -445,6 +445,23 @@ bool select_pda_main_menu(struct aqualinkdata *aq_data)
   return true;
 }
 
+bool wait_pda_selected_item()
+{
+  int i=0;
+
+  i=0;
+  while (pda_m_hlightindex() == -1){
+    if (i++ > 10)
+      break;
+    delay(100);
+  }
+
+  if (pda_m_hlightindex() == -1)
+    return false;
+  else
+   return true;
+}
+
 bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_item)
 {
   int i=0;
@@ -463,6 +480,11 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_
     menu = "EQUIPMENT ON/OFF";
   else
     return false;
+
+  if (!wait_pda_selected_item()){
+    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
+    return false;
+  }
 
   while ( strncmp(pda_m_hlight(), menu, strlen(menu)) != 0 ) {
     if (_pgm_command == NUL) {
@@ -514,14 +536,21 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
-  
+/*  
   i=0;
   while (pda_m_hlightindex() == -1){
     if (i++ > 10)
       break;
     delay(100);
   }
-
+*/
+  delay(500);
+printf("Wait for select\n");
+  if (!wait_pda_selected_item()){
+    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
+    return false;
+  }
+printf("End wait select\n");
   i=0;
   int len = strlen(aq_data->aqbuttons[device].pda_label);
   while ( (found = strncmp(pda_m_hlight(), aq_data->aqbuttons[device].pda_label, len)) != 0 ) {
@@ -582,7 +611,7 @@ void *get_aqualink_PDA_device_status( void *ptr )
   // Just loop over all the dvices 18 times should do it.
   for (i=0; i < 18; i++) {
     send_cmd(KEY_PDA_DOWN, aq_data);
-    while (_pgm_command != NUL) { delay(500); } 
+    while (_pgm_command != NUL) { delay(100); } 
   }
 
   //printf("*** GET MAIN MENU ***\n");
