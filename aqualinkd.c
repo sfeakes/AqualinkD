@@ -653,7 +653,17 @@ bool process_pda_packet(unsigned char* packet, int length)
         }else if (stristr(msg, "SPA HEATER") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[10].led, msg[AQ_MSGLEN-1]);
         }
-      } 
+      } else if (pda_m_type() == PM_UNKNOWN) {
+        // Lets make a guess here and just see if there is an ON/OFF/ENA/*** at the end of the line
+        if ( msg[AQ_MSGLEN-1] == 'N' || msg[AQ_MSGLEN-1] == 'F' || msg[AQ_MSGLEN-1] == 'A' || msg[AQ_MSGLEN-1] == '*') {
+          for (i = 0; i < TOTAL_BUTTONS; i++) {
+            if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL) {
+              //printf("*** Found Status for %s = '%.*s'\n",_aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+              set_pda_led(_aqualink_data.aqbuttons[i].led, msg[AQ_MSGLEN-1]);
+            }
+          }
+        }
+      }
       // If we haven't initilixed and we are on line 4, then initilize
       if (! init && pda_m_hlightindex() == 4) {
         //printf("** INITILIZE ADD LINE BACK\n");
