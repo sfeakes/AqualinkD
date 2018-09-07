@@ -37,5 +37,7 @@
 #define MQTT_ON "1"
 #define MQTT_OFF "0"
 
+#define MQTT_LWM_TOPIC "Alive"
+
 
 #endif // AQ_MQTT_H_

@@ -962,6 +962,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct mg_mqtt_message *mqtt_msg;
   struct http_message *http_msg;
   struct websocket_message *ws_msg;
+  char aq_topic[30];
   //static double last_control_time;
 
   // logMessage (LOG_DEBUG, "Event\n");
@@ -1004,6 +1005,11 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     opts.password = _aqualink_config->mqtt_passwd;
     opts.keep_alive = 5;
     opts.flags |= MG_MQTT_CLEAN_SESSION; // NFS Need to readup on this
+
+    snprintf(aq_topic, 24, "%s/%s", _aqualink_config->mqtt_aq_topic,MQTT_LWM_TOPIC);
+    opts.will_topic = aq_topic;
+    opts.will_message = MQTT_OFF;
+
     mg_set_protocol_mqtt(nc);
     mg_send_mqtt_handshake_opt(nc, _aqualink_config->mqtt_ID, opts);
     logMessage(LOG_INFO, "MQTT: Subscribing mqtt with id of: %s\n", _aqualink_config->mqtt_ID);
@@ -1013,7 +1019,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   case MG_EV_MQTT_CONNACK:
     {
       struct mg_mqtt_topic_expression topics[2];
-      char aq_topic[30];
+      
       int qos=0;// can't be bothered with ack, so set to 0
 
       logMessage(LOG_INFO, "MQTT: Connection acknowledged\n");
@@ -1053,6 +1059,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     break;
   case MG_EV_MQTT_SUBACK:
     logMessage(LOG_INFO, "MQTT: Subscription(s) acknowledged\n");
+    snprintf(aq_topic, 24, "%s/%s", _aqualink_config->mqtt_aq_topic,MQTT_LWM_TOPIC);
+    send_mqtt(nc, aq_topic ,MQTT_ON);
     break;
   case MG_EV_MQTT_PUBLISH: 
     mqtt_msg = (struct mg_mqtt_message *)ev_data;

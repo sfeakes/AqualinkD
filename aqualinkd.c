@@ -173,101 +173,7 @@ void queueGetProgramData()
   aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, &_aqualink_data);
   //aq_programmer(AQ_GET_PROGRAMS, NULL, &_aqualink_data); // only displays to log at present, also seems to confuse getting set_points
 }
-/*
-void processMessage_OLD(char *message)
-{
-  char *msg;
-  static bool _initWithRS = false;
-  static bool _gotREV = false;
-  // NSF replace message with msg 
-  msg = cleanwhitespace(message);
-  _aqualink_data.last_message = msg;
-  
-  //aqualink_strcpy(_aqualink_data.message, msg);
-  
-  logMessage(LOG_DEBUG, "RS Message :- '%s'\n",msg);
-  
-  // Check long messages in this if/elseif block first, as some messages are similar.  
-  // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
-  // 
-  if(stristr(message, LNG_MSG_BATTERY_LOW) != NULL) {
-    _aqualink_data.battery = LOW;
-  }
-  else if(stristr(message, LNG_MSG_POOL_TEMP_SET) != NULL) {
-    //logMessage(LOG_DEBUG, "pool htr long message: %s", &message[20]);
-    _aqualink_data.pool_htr_set_point = atoi(message+20);
-  }
-  else if(stristr(message, LNG_MSG_SPA_TEMP_SET) != NULL) {
-    //logMessage(LOG_DEBUG, "spa htr long message: %s", &message[19]);
-    _aqualink_data.spa_htr_set_point = atoi(message+19);
-  }
-  else if(stristr(message, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
-    //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
-    _aqualink_data.frz_protect_set_point = atoi(message+28);
-  }
-  else if(strncasecmp(msg, MSG_AIR_TEMP, MSG_AIR_TEMP_LEN) == 0) {
-    _aqualink_data.air_temp = atoi(msg+8);
-    if (msg[strlen(msg)-1] == 'F')
-    _aqualink_data.temp_units = FAHRENHEIT;
-    else if (msg[strlen(msg)-1] == 'C')
-    _aqualink_data.temp_units = CELSIUS;
-    else
-    _aqualink_data.temp_units = UNKNOWN;
-  }
-  else if(strncasecmp(message, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0) {
-    _aqualink_data.pool_temp = atoi(message+9);
-  }
-  else if(strncasecmp(message, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
-    _aqualink_data.spa_temp = atoi(message+8);
-  }
-  else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
-    strcpy(_aqualink_data.date, msg);
-  }
-  else if(strncasecmp(message, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0) {
-    _aqualink_data.swg_percent = atoi(message+MSG_SWG_PCT_LEN);
-    logMessage(LOG_DEBUG, "Stored SWG Percent as %d\n", _aqualink_data.swg_percent);
-  }
-  else if(strncasecmp(message, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0) {
-    _aqualink_data.swg_ppm = atoi(message+MSG_SWG_PPM_LEN);
-    logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
-  }
-  else if( (msg[1] == ':' || msg[2] == ':') && msg[strlen(msg)-1] == 'M') { // time in format '9:45 AM'
-    strcpy(_aqualink_data.time, msg);
-    // Setting time takes a long time, so don't try until we have all other programmed data.
-    if ( (_initWithRS == true) && strlen(_aqualink_data.date) > 1 && checkAqualinkTime() != true ) {
-      logMessage(LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data.time, _aqualink_data.date);
-      aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);
-    } else {
-      logMessage(LOG_DEBUG, "RS time is accurate '%s %s'\n", _aqualink_data.time, _aqualink_data.date);
-    }
-    // If we get a time message before REV, the controller didn't see us as we started too quickly.
-    if ( _gotREV == false ) {
-      logMessage(LOG_NOTICE, "Getting control panel information\n",msg);
-      aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, &_aqualink_data);
-      _gotREV = true; // Force it to true just incase we don't understand the model#
-    }
-  }
-  else if(strstr(msg, " REV ") != NULL) {  // '8157 REV MMM'
-    // A master firmware revision message.
-    strcpy(_aqualink_data.version, msg);
-    _gotREV = true;
-    logMessage(LOG_NOTICE, "Control Panel %s\n",msg);
-    if ( _initWithRS == false) {
-      queueGetProgramData();
-      _initWithRS = true;
-    }
-  }
-  else if(stristr(msg, " TURNS ON") != NULL) {
-    logMessage(LOG_NOTICE, "Program data '%s'\n",msg);
-  }
-  else {
-    logMessage(LOG_DEBUG, "Ignoring '%s'\n",msg);
-  }
-  
-  // We processed the next message, kick any threads waiting on the message.
-  kick_aq_program_thread(&_aqualink_data);
-}
-*/
+
 void setUnits(char *msg)
 {
   //logMessage(LOG_INFO, "Getting temp from %s, looking at %c", msg, msg[strlen(msg)-1]);
@@ -434,61 +340,8 @@ void processMessage(char *message)
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
 }
-/*
-void processPDAMessage(char *message)
-{
-  static bool nextMessageTemp = false;
-  char *msg;
 
-  msg = stripwhitespace(message);
-  strcpy(_aqualink_data.last_message, msg);
 
-  logMessage(LOG_INFO, "RS PDA Message :- '%s'\n",msg);
-
-  if (nextMessageTemp == true) {
-    nextMessageTemp = false;
-    _aqualink_data.temp_units = FAHRENHEIT;
-    // RS PDA Message :- '73`     66`'
-    _aqualink_data.air_temp = atoi(msg);
-    _aqualink_data.pool_temp = atoi(msg+8);
-    logMessage(LOG_DEBUG, "Air = %d : Pool = %d\n",_aqualink_data.air_temp, _aqualink_data.pool_temp);
-
-    //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
-    aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
-  } 
-  else if (strncasecmp(_aqualink_data.last_message, "AIR", 3) == 0) {
-    nextMessageTemp = true; 
-  } 
-  else if(strstr(msg, "REV ") != NULL) {  // 'REV MMM'
-    //aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
-  }
-
-  //_aqualink_data.last_message = msg;
-  strncpy(_aqualink_data.last_message, msg,AQ_MSGLONGLEN);
-
-  // We processed the next message, kick any threads waiting on the message.
-  kick_aq_program_thread(&_aqualink_data);
-  
-}
-*/
-/*
-void process_status_packet(unsigned char *packet, int length) 
-{
-  logMessage(LOG_DEBUG, "RS Received STATUS length %d.\n", length);
-  memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
-  processLEDstate();
-  if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF) {
-    _aqualink_data.pool_temp = TEMP_UNKNOWN;
-    _aqualink_data.spa_temp = TEMP_UNKNOWN;
-    //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
-  } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF) {
-    //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
-    _aqualink_data.spa_temp = TEMP_UNKNOWN;
-  } else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON) {
-    _aqualink_data.pool_temp = TEMP_UNKNOWN;
-  }
-}
-*/
 void set_pda_led(struct aqualinkled *led, char state)
 {
   if (state == 'N')
@@ -563,10 +416,10 @@ bool process_pda_packet(unsigned char* packet, int length)
         aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
         init=true;
       }*/
-      //add time this, if it hasn't happened for 1 minute probably all off, to to into the main equiptment menu and check.
+      
       // If we get a status packet, and we are on the status menu, this is a list of what's on,
       // so turn everything off, and just turn on items that are listed.
-      // This is the only way to update a device that's been turned off elcewhere.
+      // This is the only way to update a device that's been turned off by a real PDA / keypad.
       if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
         //printf("*** SET ALL OFF ****\n");
         for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -593,7 +446,6 @@ bool process_pda_packet(unsigned char* packet, int length)
       msg = (char*)packet+PKT_DATA+1;
 
       if (packet[PKT_DATA] == 0x82) { // Air & Water temp is always this ID
-        // NSF Probably need to check "AIR....POOL" and AIR....SPA"
         //           'AIR         POOL'
         //           ' 86`     86`    '
         //           'AIR   SPA       '
@@ -611,24 +463,20 @@ bool process_pda_packet(unsigned char* packet, int length)
           _aqualink_data.spa_temp = TEMP_UNKNOWN;
         }
         //printf("Air Temp = %d | Water Temp = %d\n",atoi(msg),atoi(msg+7));
-      } else if (packet[PKT_DATA] == 0x40) {
+      } else if (packet[PKT_DATA] == 0x40) { // Time is always on this ID
         // message "     SAT 8:46AM "
         //         "     SAT 10:29AM"
         //         "     SAT 4:23PM "
         //printf("TIME = '%.*s'\n",AQ_MSGLEN,msg );
         //printf("TIME = '%c'\n",msg[AQ_MSGLEN-1] );
         if (msg[AQ_MSGLEN-1] == ' ') {
-          //printf("TIME = '%.*s'\n",6,msg+9);
           strncpy(_aqualink_data.time, msg+9, 6);
         } else {
-          //printf("TIME = '%.*s'\n",7,msg+9);
           strncpy(_aqualink_data.time, msg+9, 7);
         }   
-        // NSF  strcpy(_aqualink_data.date, msg);
-        //printf("DAY = '%.*s'\n",3,msg+5);
         strncpy(_aqualink_data.date, msg+5,3);
         // NSF Come back and change the above to correctly check date and time in future
-      //} else if (pda_m_hlightindex() == -1 && strcmp(pda_m_line(0), "EQUIPMENT STATUS") == 0) {
+// If it wasn't a specific msg, (above) then run through and see what kind of message it is depending on the PDA menu
       } else if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
         pass_pda_equiptment_status_item(msg);
       } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
@@ -639,8 +487,6 @@ bool process_pda_packet(unsigned char* packet, int length)
               set_pda_led(_aqualink_data.aqbuttons[i].led, msg[AQ_MSGLEN-1]);
             }
         }
-      //} else if (pda_m_hlightindex() == -1) { // There is a chance this is a message we are interested in.  
-      //} else if (stristr(pda_m_line(1), "AIR") == 0) {
       } else if (pda_m_type() == PM_MAIN || pda_m_type() == PM_BUILDING_MAIN) {
         if (stristr(msg, "POOL MODE") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
@@ -655,6 +501,8 @@ bool process_pda_packet(unsigned char* packet, int length)
         }
       } else if (pda_m_type() == PM_UNKNOWN) {
         // Lets make a guess here and just see if there is an ON/OFF/ENA/*** at the end of the line
+        // When you turn on/off a piece of equiptment, a clear screen followed by single message is sent.
+        // So we are not in any PDA menu, try to catch that message here so we catch new device state ASAP.
         if ( msg[AQ_MSGLEN-1] == 'N' || msg[AQ_MSGLEN-1] == 'F' || msg[AQ_MSGLEN-1] == 'A' || msg[AQ_MSGLEN-1] == '*') {
           for (i = 0; i < TOTAL_BUTTONS; i++) {
             if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL) {
