@@ -176,7 +176,7 @@ void queueGetProgramData()
 
 void setUnits(char *msg)
 {
-  //logMessage(LOG_INFO, "Getting temp from %s, looking at %c", msg, msg[strlen(msg)-1]);
+  logMessage(LOG_DEBUG, "Getting temp units from message %s, looking at %c", msg, msg[strlen(msg)-1]);
 
   if (msg[strlen(msg)-1] == 'F')
        _aqualink_data.temp_units = FAHRENHEIT;
@@ -263,13 +263,18 @@ void processMessage(char *message)
   // NSF Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
   else if(strncasecmp(msg, MSG_WATER_TEMP, MSG_WATER_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(msg+MSG_WATER_TEMP_LEN);
-    //_aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
+    _aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
   }
-  else if(stristr(msg, LNG_MSG_WATER_TEMP_SET) != NULL) {
-    _aqualink_data.spa_htr_set_point = atoi(message+28);
+  else if(stristr(msg, LNG_MSG_WATER_TEMP1_SET) != NULL) {
     _aqualink_data.pool_htr_set_point = atoi(message+28);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
+  }
+  else if(stristr(msg, LNG_MSG_WATER_TEMP2_SET) != NULL) {
+    _aqualink_data.spa_htr_set_point = atoi(message+27);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
@@ -821,6 +826,7 @@ void main_loop() {
   _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
+  _aqualink_data.single_device = false;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {

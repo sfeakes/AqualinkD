@@ -163,7 +163,7 @@
           "statusTargetTemperature": "aqualinkd/Pool_Heater/setpoint",
           "statusCurrentTemperature": "aqualinkd/Temperature/Pool",
           "setTargetHeatingCoolingState": "aqualinkd/Pool_Heater/set",
-          "statusTargetHeatingCoolingState": "aqualinkd/Pool_Heater/enabeled",
+          "statusTargetHeatingCoolingState": "aqualinkd/Pool_Heater/enabled",
           "statusCurrentHeatingCoolingState": "aqualinkd/Pool_Heater"
         },
         "payload": {},
@@ -201,7 +201,7 @@
           "statusTargetTemperature": "aqualinkd/Spa_Heater/setpoint",
           "statusCurrentTemperature": "aqualinkd/Temperature/Spa",
           "setTargetHeatingCoolingState": "aqualinkd/Spa_Heater/set",
-          "statusTargetHeatingCoolingState": "aqualinkd/Spa_Heater/enabeled",
+          "statusTargetHeatingCoolingState": "aqualinkd/Spa_Heater/enabled",
           "statusCurrentHeatingCoolingState": "aqualinkd/Spa_Heater"
         },
         "payload": {},
@@ -238,7 +238,7 @@
           "setTargetTemperature": "aqualinkd/SWG/Percent_f/set",
           "statusTargetTemperature": "aqualinkd/SWG/Percent_f",
           "statusCurrentTemperature": "aqualinkd/SWG/Percent_f",
-          "statusTargetHeatingCoolingState": "aqualinkd/SWG/enabeled",
+          "statusTargetHeatingCoolingState": "aqualinkd/SWG/enabled",
           "statusCurrentHeatingCoolingState": "aqualinkd/SWG"
         },
         "payload": {},

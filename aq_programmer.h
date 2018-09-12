@@ -5,10 +5,16 @@
 
 // need to get the C values from aqualink manual and add those just incase
 // someone has the controller set to C.
-#define HEATER_MAX 104
-#define MEATER_MIN 36
-#define FREEZE_PT_MAX 42
-#define FREEZE_PT_MIN 36
+#define HEATER_MAX_F 104
+#define HEATER_MIN_F 36
+#define FREEZE_PT_MAX_F 42
+#define FREEZE_PT_MIN_F 36
+
+#define HEATER_MAX_C 40
+#define HEATER_MIN_C 0
+#define FREEZE_PT_MAX_C 5
+#define FREEZE_PT_MIN_C 1
+
 #define SWG_PERCENT_MAX 101
 #define SWG_PERCENT_MIN 0
 
@@ -56,5 +62,6 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 //void *get_aqualink_pool_spa_heater_temps( void *ptr );
 
 int get_aq_cmd_length();
+int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
 
 #endif

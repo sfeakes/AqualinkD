@@ -338,6 +338,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
     send_mqtt_string_msg(nc, FREEZE_PROTECT, MQTT_OFF); // Blindly send off, maybe change this in future if we can read whn freeze protect is active.
+    send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
     /*
     send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
     //send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_rfz_protect, _aqualink_data->frz_protect_set_point);
@@ -351,6 +352,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
       send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
       send_mqtt_float_msg(nc, SWG_PERCENT_F_TOPIC, roundf(degFtoC(_aqualink_data->swg_percent)));
+      send_mqtt_float_msg(nc, SWG_SETPOINT_TOPIC, roundf(degFtoC(_aqualink_data->swg_percent)));
       send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_percent, _aqualink_data->swg_percent);
     }
     if (_aqualink_data->swg_ppm != TEMP_UNKNOWN && ( force_update || _aqualink_data->swg_ppm != _last_mqtt_aqualinkdata.swg_ppm)) {
@@ -609,9 +611,14 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "homebridge") == 0 || strcmp(command, "devices") == 0) {
+    } else if (strcmp(command, "devices") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
+      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, false);
+      mg_send_head(nc, 200, size, "Content-Type: application/json");
+      mg_send(nc, message, size);
+    } else if (strcmp(command, "homebridge") == 0) {
+      char message[JSON_LABEL_SIZE*10];
+      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, true);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else {
@@ -717,7 +724,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, labels);
     } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
+      build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, false);
       ws_send(nc, message);
     } else if ( strcmp(request.first.value, "simulator") == 0) {
       _aqualink_data->simulate_panel = true;
@@ -751,7 +758,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       aq_programmer(AQ_SET_POOL_HEATER_TEMP, request.second.value, _aqualink_data);
     } else if (strcmp(request.first.value, "SPA_HTR") == 0 || strcmp(request.first.value, BTN_SPA_HTR) == 0) {
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, SWG_PERCENT_TOPIC) == 0) {
+    } else if (strcmp(request.first.value, SWG_TOPIC) == 0) {
       aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
     } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) {
       //aq_programmer(AQ_SET_COLORMODE, request.second.value, _aqualink_data);
@@ -804,22 +811,46 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
     int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT && _aqualink_config->convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
     if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(POOL_HTR_SETOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
+      if (val != _aqualink_data->unactioned.value) {
+        logMessage(LOG_ERR, "MQTT: request to set Pool Heater to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
+      } else {
+        logMessage(LOG_INFO, "MQTT: request to set Pool Heater to %.2fc, setting to %d\n", value, val);
+      }
+      /*
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set pool heater setpoint to %.2fc\n", value);
         _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
       } else {
         logMessage(LOG_ERR, "MQTT: request to set pool heater setpoint to %.2fc is outside of range\n", value);
         send_mqtt_setpoint_msg(nc, BTN_POOL_HTR, _aqualink_data->pool_htr_set_point);
-      }
+      }*/
     } else if (strncmp(pt1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(SPA_HTR_SETOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
+      if (val != _aqualink_data->unactioned.value) {
+        logMessage(LOG_ERR, "MQTT: request to set Spa Heater to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
+      } else {
+        logMessage(LOG_INFO, "MQTT: request to set Spa Heater to %.2fc, setting to %d\n", value, val);
+      }
+      /*
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", value);
         _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
       } else {
         logMessage(LOG_ERR, "MQTT: request to set spa heater setpoint to %.2fc is outside of range\n", value);
         send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
-      } 
+      } */
     } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(FREEZE_SETPOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = FREEZE_SETPOINT;
+      if (val != _aqualink_data->unactioned.value) {
+        logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc/%df is outside range, using %d\n", value, val, _aqualink_data->unactioned.value); 
+      } else {
+        logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", value);
+      }
+/*
       if (val <= FREEZE_PT_MAX && val >= FREEZE_PT_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
         _aqualink_data->unactioned.type = FREEZE_SETPOINT;
@@ -831,6 +862,29 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
         logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc/%df is outside range using %df\n", value, val, _aqualink_data->unactioned.value);
         _aqualink_data->unactioned.type = FREEZE_SETPOINT;
       }
+      */
+    } else if (strncmp(pt1, "SWG", 3) == 0) {  // If we get SWG percent as setpoint message.
+      int val = round(degCtoF(value));
+      _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
+      if (val != _aqualink_data->unactioned.value) {
+        logMessage(LOG_ERR, "MQTT: request to set SWG to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
+      } else {
+        logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
+      }
+      /*
+      int val = round(degCtoF(value));
+      if (0 != ( val % 5) )
+        val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
+
+      if (val > SWG_PERCENT_MAX) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MAX;
+      } else if ( val < SWG_PERCENT_MIN) {
+         _aqualink_data->unactioned.value = SWG_PERCENT_MIN;
+      }
+      logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
+      */
     } else {
       // Not sure what the setpoint is, ignore.
       logMessage(LOG_DEBUG, "MQTT: ignoring %.*s don't recognise button setpoint\n", msg->topic.len, msg->topic.p);
@@ -846,6 +900,14 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       } else {
         val = _aqualink_data->unactioned.value = round(value);
       }
+      _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
+      if (val != _aqualink_data->unactioned.value) {
+        logMessage(LOG_ERR, "MQTT: request to set SWG to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
+      } else {
+        logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
+      }
+/*
       // Convert number to nearest 5, since those are the incruments, NSF check 100 or 101
       if (0 != (val % 5) )
         val = _aqualink_data->unactioned.value = ((val + 5) / 10) * 10;
@@ -856,7 +918,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
          _aqualink_data->unactioned.value = SWG_PERCENT_MIN;
       }
       logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
-      _aqualink_data->unactioned.type = SWG_SETPOINT;
+      _aqualink_data->unactioned.type = SWG_SETPOINT;*/
   } else if (pt2 != NULL && (strncmp(pt2, "set", 3) == 0) && (strncmp(pt2, "setpoint", 8) != 0)) {
     // Must be a switch on / off
     for (i=0; i < TOTAL_BUTTONS; i++) {

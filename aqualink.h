@@ -80,6 +80,7 @@ struct aqualinkdata
   int pool_temp;
   int spa_temp;
   int temp_units;
+  bool single_device; // Pool or Spa only, not Pool & Spa (Thermostat setpoints are different)
   int battery;
   //int freeze_protection;
   int frz_protect_set_point;

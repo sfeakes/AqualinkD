@@ -109,6 +109,51 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
   return cmd;
 }
 
+int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
+{
+  int rtn = value;
+  int max = 0;
+  int min = 0;
+
+  switch(type) {
+    case POOL_HTR_SETOINT:
+    case SPA_HTR_SETOINT:
+      if ( aqdata->temp_units == CELSIUS ) {
+        max = HEATER_MAX_C;
+        min = HEATER_MIN_C;
+      } else {
+        max = HEATER_MAX_F;
+        min = HEATER_MIN_F;
+      }   
+    break;
+    case FREEZE_SETPOINT:
+      if ( aqdata->temp_units == CELSIUS ) {
+        max = FREEZE_PT_MAX_C;
+        min = FREEZE_PT_MIN_C;
+      } else {
+        max = FREEZE_PT_MAX_F;
+        min = FREEZE_PT_MIN_F;
+      }
+    break;
+    case SWG_SETPOINT:
+      max = SWG_PERCENT_MAX;
+      min = SWG_PERCENT_MIN;
+    break;
+  }
+
+  if (rtn > max)
+    rtn = max;
+  else if (rtn < min)
+    rtn = min;
+
+  // If SWG make sure it's 0,5,10,15,20......
+  if (type == SWG_SETPOINT) {
+    if (0 != ( rtn % 5) )
+        rtn = ((rtn + 5) / 10) * 10;
+  }
+
+  return rtn;
+}
 
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
@@ -284,7 +329,7 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
   char searchBuf[20];
     
   sprintf(searchBuf, "^%s", value_label);
-  
+  int i=0;
   do 
   {
     if (waitForMessage(aq_data, searchBuf, 3) != true) {
@@ -311,6 +356,11 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
       // Just send ENTER. We are at the right value.
       sprintf(searchBuf, "%s %d", value_label, current_val);
       send_cmd(KEY_ENTER, aq_data);
+    }
+
+    if (i++ >= 100) {
+      logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', to '%d'\n",value_label,value);
+      break;
     }
   } while(value != current_val); 
   
@@ -384,8 +434,9 @@ void *set_aqualink_SWG( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_SWG_PERCENT);
 
   int val = atoi((char*)threadCtrl->thread_args);
-
+  val = setpoint_check(SWG_SETPOINT, val, aq_data);
   // Just recheck it's in multiple of 5.
+  /*
   if (0 != (val % 5) )
     val = ((val + 5) / 10) * 10;
 
@@ -394,7 +445,7 @@ void *set_aqualink_SWG( void *ptr )
   } else if ( val < SWG_PERCENT_MIN) {
     val = SWG_PERCENT_MIN;
   }
-
+  */
   logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
@@ -757,16 +808,28 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  
+  char *name;
+  char *menu_name;
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_POOL_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
+  /*
   if (val > HEATER_MAX) {
     val = HEATER_MAX;
   } else if ( val < MEATER_MIN) {
     val = MEATER_MIN;
   }
-  
+  */
+  val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+  // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
+  if (aq_data->single_device == true ){
+    name = "TEMP1";
+    menu_name = "SET TEMP1";
+  } else {
+    name = "POOL";
+    menu_name = "SET POOL TEMP";
+  }
+
   logMessage(LOG_DEBUG, "Setting pool heater setpoint to %d\n", val);
   //setAqualinkTemp(aq_data, "SET TEMP", "SET POOL TEMP", NULL, "POOL", val);
   
@@ -777,14 +840,16 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     return ptr;
   }     
            
-  if (select_sub_menu_item(aq_data, "SET POOL TEMP") != true) {
+  //if (select_sub_menu_item(aq_data, "SET POOL TEMP") != true) {
+  if (select_sub_menu_item(aq_data, menu_name) != true) {
     logMessage(LOG_WARNING, "Could not select SET POOL TEMP menu\n");
     cancel_menu(aq_data);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
   
-  setAqualinkNumericField(aq_data, "POOL", val);
+  //setAqualinkNumericField(aq_data, "POOL", val);
+  setAqualinkNumericField(aq_data, name, val);
   
   // usually miss this message, not sure why, but wait anyway to make sure programming has ended
   waitForMessage(threadCtrl->aq_data, "POOL TEMP IS SET TO", 1); 
@@ -802,10 +867,23 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_SPA_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
+  char *name;
+  char *menu_name;
+  /*
   if (val > HEATER_MAX) {
     val = HEATER_MAX;
   } else if ( val < MEATER_MIN) {
     val = MEATER_MIN;
+  }*/
+  val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+  // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
+
+  if (aq_data->single_device == true ){
+    name = "TEMP2";
+    menu_name = "SET TEMP2";
+  } else {
+    name = "SPA";
+    menu_name = "SET SPA TEMP";
   }
 
   logMessage(LOG_DEBUG, "Setting spa heater setpoint to %d\n", val);
@@ -818,14 +896,16 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     return ptr;
   }     
            
-  if (select_sub_menu_item(aq_data, "SET SPA TEMP") != true) {
+  //if (select_sub_menu_item(aq_data, "SET SPA TEMP") != true) {
+  if (select_sub_menu_item(aq_data, menu_name) != true) {
     logMessage(LOG_WARNING, "Could not select SET SPA TEMP menu\n");
     cancel_menu(aq_data);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
   
-  setAqualinkNumericField(aq_data, "SPA", val);
+  //setAqualinkNumericField(aq_data, "SPA", val);
+  setAqualinkNumericField(aq_data, name, val);
   
   // usually miss this message, not sure why, but wait anyway to make sure programming has ended
   waitForMessage(threadCtrl->aq_data, "SPA TEMP IS SET TO", 1);
@@ -844,12 +924,15 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_FRZ_PROTECTION_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
+  /*
   if (val > FREEZE_PT_MAX) {
     val = FREEZE_PT_MAX;
   } else if ( val < FREEZE_PT_MIN) {
     val = FREEZE_PT_MIN;
   }
-  
+  */
+  val = setpoint_check(FREEZE_SETPOINT, val, aq_data);
+
   logMessage(LOG_DEBUG, "Setting sfreeze protection to %d\n", val);
 
   //setAqualinkTemp(aq_data, "SYSTEM SETUP", "FRZ PROTECT", "TEMP SETTING", "FRZ", val);

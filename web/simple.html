@@ -301,13 +301,18 @@
       
       setSlider("Pool_Heater", data.pool_htr_set_pnt);
       setSlider("Spa_Heater", data.spa_htr_set_pnt);
-      setSlider("SWG/Percent", data.swg_percent);
+      setSlider("SWG", data.swg_percent);
       setSlider("Freeze_Protect", data.frz_protect_set_pnt);
       setLabel("SWG/PPM", data.swg_ppm);
+      setLabel("Temperature/Air", data.air_temp);
+      setLabel("Temperature/Pool", data.pool_temp);
+      setLabel("Temperature/Spa", data.spa_temp);
+      /*
       setLabel("Air", data.air_temp);
       setLabel("Pool_Water", data.pool_temp);
       setLabel("Spa_Water", data.spa_temp);
-      
+      */
+
       for (var obj in data.leds) {
         setButton(obj.toString(), data.leds[obj])
       }
@@ -372,14 +377,22 @@
         cell4.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
         setLabel(object.id, object.value);
       } else if (object.type == 'setpoint_thermo') {
-        cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='104' class='slider' output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        if (_temperature_units != 'c')
+          cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='104' class='slider' output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        else
+          cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='0' max='40' class='slider' output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        
         cell3.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
         cell4.innerHTML = "<div><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
         //cell4.innerHTML = "<div class='switch'><input id='btn-toggle-"+object.id+"' name='"+object.id+"' class='btn-toggle btn-toggle-round' type='checkbox' onclick='update(this);'><label for='btn-toggle-"+object.id+"'></label></div>";
         setSlider(object.id, object.spvalue);
         setButton(object.id, object.status);
       } else if (object.type == 'setpoint_freeze') {
-        cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='42' class='slider'  output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        if (_temperature_units != 'c')
+          cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='36' max='42' class='slider'  output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+        else
+          cell2.innerHTML = "<div class='slidecontainer'><input type='range' id='slider_"+object.id+"' min='1' max='5' class='slider'  output_id='"+object.id+"' oninput='sliderchange(this);' onmousedown='lock(this);' onmouseup='update(this);unlock(this);'></div>";
+
         cell4.innerHTML = "<label id='"+object.id+"' output_ext='&deg;"+_temperature_units+"'></label>";
         setSlider(object.id, object.spvalue);
       } else if (object.type == 'setpoint_swg') {

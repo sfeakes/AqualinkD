@@ -128,7 +128,8 @@
 // Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
 #define MSG_WATER_TEMP       "WATER TEMP"
 #define MSG_WATER_TEMP_LEN   10
-#define LNG_MSG_WATER_TEMP_SET "TEMP1 (HIGH TEMP) IS SET TO"
+#define LNG_MSG_WATER_TEMP1_SET "TEMP1 (HIGH TEMP) IS SET TO"
+#define LNG_MSG_WATER_TEMP2_SET "TEMP2 (LOW TEMP) IS SET TO"
 
 #define MSG_SWG_PCT   "AQUAPURE"  // AquaPure 55%
 #define MSG_SWG_PPM   "SALT"  // Salt 3000 PPM

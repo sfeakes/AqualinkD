@@ -761,7 +761,7 @@
               ext = '%';
           }
         } catch (e) {
-          console.log('ERROR id=' + id + ' Line 675');
+          console.log('ERROR id=' + id + ' Line 764 | element = '+document.getElementById(id));
         }
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
@@ -867,10 +867,12 @@
     }
 
     function createTile(object) {
-      if (object.name == 'NONE')
+      if (object.name == 'NONE') {
         return;
-      if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0)
+      }
+      if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
         return;
+      }
       if (object.type == 'switch' || object.type == 'switch_program') {
         add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + object.id + '-off.png', 'hk/' + object.id + '-on.png');
         setTileOn(object.id, object.status, null);
@@ -882,6 +884,8 @@
         document.getElementById(object.id).setAttribute('setpoint', object.spvalue);
         setTileValue(object.id, object.value);
         setTileOn(object.id, object.status);
+      } else {
+        //console.log("Unknown Device");   
       }
     }
 
@@ -967,13 +971,25 @@
           slider.max = 100;
           slider.step = 5;
         } else if (type == 'setpoint_freeze') {
-          slider.min = 36;
-          slider.max = 42;
-          slider.step = 1;
+          if (_temperature_units != 'c') { // Change to DegF
+            slider.min = 36;
+            slider.max = 42;
+            slider.step = 1;
+          } else { // Change to DegF
+            slider.min = 1;
+            slider.max = 5;
+            slider.step = 1;
+          }
         } else if (type == 'setpoint_thermo') {
-          slider.min = 36;
-          slider.max = 104;
-          slider.step = 1;
+          if (_temperature_units != 'c') { // Change to DegF
+            slider.min = 36;
+            slider.max = 104;
+            slider.step = 1;
+          } else { // Change to DegF
+            slider.min = 0;
+            slider.max = 40;
+            slider.step = 1;
+          }
         }
         title.innerHTML = document.getElementById(id + '_name').innerHTML;
         if (type == 'switch_program') {
@@ -1068,12 +1084,16 @@
       // The ID's should ultimatly come from json
       setThermostatTile("Pool_Heater", data.pool_temp, data.pool_htr_set_pnt);
       setThermostatTile("Spa_Heater", data.spa_temp, data.spa_htr_set_pnt);
-      setThermostatTile("SWG/Percent", data.swg_percent, data.swg_percent);
+      setThermostatTile("SWG", data.swg_percent, data.swg_percent);
       setThermostatTile("Freeze_Protect", data.air_temp, data.frz_protect_set_pnt);
       setTileValue("SWG/PPM", data.swg_ppm);
+      setTileValue("Temperature/Air", data.air_temp);
+      setTileValue("Temperature/Pool", data.pool_temp);
+      setTileValue("Temperature/Spa", data.spa_temp);
+      /*
       setTileValue("Air", data.air_temp);
       setTileValue("Pool_Water", data.pool_temp);
-      setTileValue("Spa_Water", data.spa_temp);
+      setTileValue("Spa_Water", data.spa_temp);*/
       for (var obj in data.leds) {
         setTileOn(obj.toString(), data.leds[obj])
       }
@@ -1097,7 +1117,6 @@
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
           _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
-          //console.log("Create "+data['devices'][obj].id);
           createTile(data['devices'][obj]);
         } else {
           //console.log("old type "+document.getElementById(data['devices'][obj].id).getAttribute('type')+" | new "+data['devices'][obj].type);
