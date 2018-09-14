@@ -94,6 +94,7 @@ struct aqualinkdata
   unsigned char ar_swg_status;
   int swg_delayed_percent;
   bool simulate_panel;
+  aqledstate frz_protect_state;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
 };

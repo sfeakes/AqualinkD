@@ -114,19 +114,31 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   int rtn = value;
   int max = 0;
   int min = 0;
+  char *type_msg;
 
   switch(type) {
     case POOL_HTR_SETOINT:
-    case SPA_HTR_SETOINT:
-      if ( aqdata->temp_units == CELSIUS ) {
+       type_msg = (aqdata->single_device?"Temp1":"Pool");
+       if ( aqdata->temp_units == CELSIUS ) {
         max = HEATER_MAX_C;
-        min = HEATER_MIN_C;
+        min = (aqdata->single_device?HEATER_MIN_C:HEATER_MIN_C-1);
       } else {
         max = HEATER_MAX_F;
+        min = (aqdata->single_device?HEATER_MIN_F:HEATER_MIN_F-1);
+      }   
+    break;
+    case SPA_HTR_SETOINT:
+      type_msg = (aqdata->single_device?"Temp2":"Spa");
+      if ( aqdata->temp_units == CELSIUS ) {
+        max = (aqdata->single_device?HEATER_MAX_C:HEATER_MAX_C-1);
+        min = HEATER_MIN_C;
+      } else {
+        max = (aqdata->single_device?HEATER_MAX_F:HEATER_MAX_F-1);
         min = HEATER_MIN_F;
       }   
     break;
     case FREEZE_SETPOINT:
+      type_msg = "Freeze protect";
       if ( aqdata->temp_units == CELSIUS ) {
         max = FREEZE_PT_MAX_C;
         min = FREEZE_PT_MIN_C;
@@ -136,8 +148,12 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       }
     break;
     case SWG_SETPOINT:
+      type_msg = "Salt Water Generator";
       max = SWG_PERCENT_MAX;
       min = SWG_PERCENT_MIN;
+    break;
+    default:
+      type_msg = "Unknown";
     break;
   }
 
@@ -151,6 +167,11 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
     if (0 != ( rtn % 5) )
         rtn = ((rtn + 5) / 10) * 10;
   }
+  
+  if (rtn != value)
+    logMessage(LOG_WARNING, "Setpoint of %d for %s is outside range, using %d\n",value,type_msg,rtn);
+  else
+    logMessage(LOG_NOTICE, "Setting setpoint of %s to %d\n",type_msg,rtn);
 
   return rtn;
 }

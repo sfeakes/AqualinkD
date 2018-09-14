@@ -813,11 +813,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
       _aqualink_data->unactioned.value = setpoint_check(POOL_HTR_SETOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
+      /*
       if (val != _aqualink_data->unactioned.value) {
         logMessage(LOG_ERR, "MQTT: request to set Pool Heater to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
       } else {
         logMessage(LOG_INFO, "MQTT: request to set Pool Heater to %.2fc, setting to %d\n", value, val);
-      }
+      }*/
       /*
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set pool heater setpoint to %.2fc\n", value);
@@ -829,11 +830,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     } else if (strncmp(pt1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
       _aqualink_data->unactioned.value = setpoint_check(SPA_HTR_SETOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
+      /*
       if (val != _aqualink_data->unactioned.value) {
         logMessage(LOG_ERR, "MQTT: request to set Spa Heater to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
       } else {
         logMessage(LOG_INFO, "MQTT: request to set Spa Heater to %.2fc, setting to %d\n", value, val);
-      }
+      }*/
       /*
       if (val <= HEATER_MAX && val >= MEATER_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", value);
@@ -845,11 +847,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
     } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
       _aqualink_data->unactioned.value = setpoint_check(FREEZE_SETPOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = FREEZE_SETPOINT;
+      /*
       if (val != _aqualink_data->unactioned.value) {
         logMessage(LOG_ERR, "MQTT: request to set freeze protect to %.2fc/%df is outside range, using %d\n", value, val, _aqualink_data->unactioned.value); 
       } else {
         logMessage(LOG_INFO, "MQTT: request to set spa heater setpoint to %.2fc\n", value);
-      }
+      }*/
 /*
       if (val <= FREEZE_PT_MAX && val >= FREEZE_PT_MIN) {
         logMessage(LOG_INFO, "MQTT: request to set freeze protect to %.2fc\n", value);
@@ -867,11 +870,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       int val = round(degCtoF(value));
       _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = SWG_SETPOINT;
+      /*
       if (val != _aqualink_data->unactioned.value) {
         logMessage(LOG_ERR, "MQTT: request to set SWG to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
       } else {
         logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
-      }
+      }*/
       /*
       int val = round(degCtoF(value));
       if (0 != ( val % 5) )
@@ -902,11 +906,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       }
       _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = SWG_SETPOINT;
+      /*
       if (val != _aqualink_data->unactioned.value) {
         logMessage(LOG_ERR, "MQTT: request to set SWG to %.2fc/%df, is outside range, using to %d\n", value, val, _aqualink_data->unactioned.value);
       } else {
         logMessage(LOG_INFO, "MQTT: request to set SWG to %.2fc, setting to %d\n", value, val);
-      }
+      }*/
 /*
       // Convert number to nearest 5, since those are the incruments, NSF check 100 or 101
       if (0 != (val % 5) )

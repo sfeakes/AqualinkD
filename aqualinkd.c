@@ -185,7 +185,7 @@ void setUnits(char *msg)
   else
       _aqualink_data.temp_units = UNKNOWN;
 
-  logMessage(LOG_INFO, "Temp Units set to %d (F=0, C=1, Unknown=3)", _aqualink_data.temp_units);
+  logMessage(LOG_INFO, "Temp Units set to %d (F=0, C=1, Unknown=3)", _aqualink_data.temp_units); 
 }
 
 
@@ -236,6 +236,7 @@ void processMessage(char *message)
   else if(stristr(msg, LNG_MSG_FREEZE_PROTECTION_SET) != NULL) {
     //logMessage(LOG_DEBUG, "frz protect long message: %s", &message[28]);
     _aqualink_data.frz_protect_set_point = atoi(message+28);
+    _aqualink_data.frz_protect_state = ENABLE;
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
@@ -266,18 +267,38 @@ void processMessage(char *message)
     _aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
+    
+    if (_aqualink_data.single_device != true) {
+      _aqualink_data.single_device = true;
+      logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n"); 
+    }
   }
   else if(stristr(msg, LNG_MSG_WATER_TEMP1_SET) != NULL) {
     _aqualink_data.pool_htr_set_point = atoi(message+28);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
+
+    if (_aqualink_data.single_device != true) {
+      _aqualink_data.single_device = true;
+      logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n"); 
+    }
   }
   else if(stristr(msg, LNG_MSG_WATER_TEMP2_SET) != NULL) {
     _aqualink_data.spa_htr_set_point = atoi(message+27);
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
+
+    if (_aqualink_data.single_device != true) {
+      _aqualink_data.single_device = true;
+      logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n"); 
+    } 
+  }
+  else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
+    // ADD Code Set FREEZE protection on (from enabeled).
+    // Need to figure out a way to turn know when it's off though before uncommeting.
+    //_aqualink_data.frz_protect_state = ON;
   }
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
@@ -581,12 +602,12 @@ bool process_packet(unsigned char* packet, int length)
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
       //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
     }
-    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF)
+    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF && _aqualink_data.single_device != true)
     {
       //_aqualink_data.spa_temp = _config_parameters.report_zero_spa_temp?-18:TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
     }
-    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON)
+    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON && _aqualink_data.single_device != true)
     {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
     }
@@ -634,6 +655,7 @@ void action_delayed_request()
   snprintf(sval, 9, "%d", _aqualink_data.unactioned.value);
 
   if (_aqualink_data.unactioned.type == POOL_HTR_SETOINT) {
+    _aqualink_data.unactioned.value = setpoint_check(POOL_HTR_SETOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if ( _aqualink_data.pool_htr_set_point != _aqualink_data.unactioned.value ) {
       aq_programmer(AQ_SET_POOL_HEATER_TEMP, sval, &_aqualink_data);
       logMessage(LOG_NOTICE, "Setting pool heater setpoint to %d\n",_aqualink_data.unactioned.value);
@@ -641,6 +663,7 @@ void action_delayed_request()
       logMessage(LOG_NOTICE, "Pool heater setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
     }
   } else if (_aqualink_data.unactioned.type == SPA_HTR_SETOINT) {
+    _aqualink_data.unactioned.value = setpoint_check(SPA_HTR_SETOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if ( _aqualink_data.spa_htr_set_point != _aqualink_data.unactioned.value ) {
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, sval, &_aqualink_data);
       logMessage(LOG_NOTICE, "Setting spa heater setpoint to %d\n",_aqualink_data.unactioned.value);
@@ -648,6 +671,7 @@ void action_delayed_request()
       logMessage(LOG_NOTICE, "Spa heater setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
     }
   } else if (_aqualink_data.unactioned.type == FREEZE_SETPOINT) {
+    _aqualink_data.unactioned.value = setpoint_check(FREEZE_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if ( _aqualink_data.frz_protect_set_point != _aqualink_data.unactioned.value ) {
       aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, sval, &_aqualink_data);
       logMessage(LOG_NOTICE, "Setting freeze protect to %d\n",_aqualink_data.unactioned.value);
@@ -655,13 +679,14 @@ void action_delayed_request()
       logMessage(LOG_NOTICE, "Freeze setpoint is already %d, not changing\n",_aqualink_data.unactioned.value);
     }
   } else if (_aqualink_data.unactioned.type == SWG_SETPOINT) {
+    _aqualink_data.unactioned.value = setpoint_check(SWG_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF ) {
       // SWG is off, can't set %, so delay the set until it's on.
       _aqualink_data.swg_delayed_percent = _aqualink_data.unactioned.value;
     } else {
       if ( _aqualink_data.swg_percent != _aqualink_data.unactioned.value ) {
         aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
-        logMessage(LOG_NOTICE, "Setting SWG % to %d\n",_aqualink_data.unactioned.value);
+        logMessage(LOG_NOTICE, "Setting SWG %% to %d\n",_aqualink_data.unactioned.value);
       } else {
         logMessage(LOG_NOTICE, "SWG % is already %d, not changing\n",_aqualink_data.unactioned.value);
       } 
@@ -827,6 +852,7 @@ void main_loop() {
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
   _aqualink_data.single_device = false;
+  _aqualink_data.frz_protect_state = OFF;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
@@ -936,7 +962,7 @@ void main_loop() {
               char sval[10];
               snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
               aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
-              logMessage(LOG_NOTICE, "Setting SWG % to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
+              logMessage(LOG_NOTICE, "Setting SWG %% to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
               _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
             }
           }

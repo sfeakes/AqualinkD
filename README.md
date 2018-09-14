@@ -61,7 +61,8 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
-## Update in Release 1.2.1
+## Update in Release 1.2.2
+* Support for Spa OR Pool OLNY mode with setpoints, (previous setpoints expected Spa & Pool mode)
 * Added support for MQTT Last Will Message
 * Fix spelling errors will effect your conficuration, and the install.sh script will not overwrite.
     * Please compare /var/www/aqualinkd/config.js to the new one, you will need to manualy edit or overide
