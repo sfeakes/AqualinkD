@@ -842,7 +842,7 @@
       tile_icon = document.getElementById(id + '_tile_icon_value');
       type = tile.getAttribute('type');
       if (status != null && tile_icon != null) {
-        if (status == 'enabled') {
+        if (status == 'enabled' || status == 'flash') {
           tile_icon.classList.add("enabled");
           tile_icon.classList.remove("disabled");
           tile_icon.classList.remove("cool");

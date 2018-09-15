@@ -252,16 +252,14 @@ void processMessage(char *message)
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
-    /* NSF  add config option to support
-    if (_config_parameters.spa_temp_follow_pool == true && _aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF ) {
-      _aqualink_data.spa_temp = _aqualink_data.pool_temp
-    }
-    */
   }
   else if(strncasecmp(msg, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0) {
     _aqualink_data.spa_temp = atoi(msg+MSG_SPA_TEMP_LEN);
+
+    if (_aqualink_data.temp_units == UNKNOWN)
+      setUnits(msg);
   }
-  // NSF Will get water temp rather than pool in some cases. not sure if it's REV specific or device (ie no spa) specific yet
+  // NSF If get water temp rather than pool or spa in some cases, then we are in Pool OR Spa ONLY mode
   else if(strncasecmp(msg, MSG_WATER_TEMP, MSG_WATER_TEMP_LEN) == 0) {
     _aqualink_data.pool_temp = atoi(msg+MSG_WATER_TEMP_LEN);
     _aqualink_data.spa_temp = atoi(msg+MSG_WATER_TEMP_LEN);
