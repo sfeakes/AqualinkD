@@ -194,6 +194,7 @@ void processMessage(char *message)
   char *msg;
   static bool _initWithRS = false;
   static bool _gotREV = false;
+  static int freeze_msg_count = 0;
   // NSF replace message with msg 
   msg = stripwhitespace(message);
   strcpy(_aqualink_data.last_message, msg);
@@ -213,6 +214,13 @@ void processMessage(char *message)
     //_aqualink_data.display_message = NULL;
     _aqualink_data.last_display_message[0] = '\0';
   }
+
+  // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
+  if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10) {
+    _aqualink_data.frz_protect_state = ENABLE;
+    freeze_msg_count = 0;
+  }
+
   //else
   //_aqualink_data.display_last_message = false;
 
@@ -296,7 +304,8 @@ void processMessage(char *message)
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
     // ADD Code Set FREEZE protection on (from enabeled).
     // Need to figure out a way to turn know when it's off though before uncommeting.
-    //_aqualink_data.frz_protect_state = ON;
+    _aqualink_data.frz_protect_state = ON;
+    freeze_msg_count = 0;
   }
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
@@ -703,6 +712,7 @@ int main(int argc, char *argv[]) {
 
   int i;
   char *cfgFile = DEFAULT_CONFIG_FILE;
+  int cmdln_loglevel = -1;
   
 
   // struct lws_context_creation_info info;
@@ -724,12 +734,17 @@ int main(int argc, char *argv[]) {
       _config_parameters.deamonize = false;
     } else if (strcmp(argv[i], "-c") == 0) {
       cfgFile = argv[++i];
+    } else if (strcmp(argv[i], "-v") == 0) {
+      cmdln_loglevel = LOG_DEBUG;
     }
   }
 
   initButtons(&_aqualink_data);
 
   readCfg(&_config_parameters, &_aqualink_data, cfgFile);
+
+  if (cmdln_loglevel != -1)
+    _config_parameters.log_level = cmdln_loglevel;
 
   setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file);
 

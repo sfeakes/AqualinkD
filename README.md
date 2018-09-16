@@ -110,7 +110,7 @@ Below are varified versions (But should work with any AqualinkRS) :-
 
 | Version | Notes | 
 | --- | --- |
-| Jandy Aqualink   6524 REV GG       | Everything working except water temp |
+| Jandy Aqualink   6524 REV GG       | Everything working  |
 | Jandy AquaLinkRS 8157 REV JJ       | Everything working  |
 | Jandy AquaLinkRS 8157 REV MMM      | Everything working  |
 | Jandy AquaLinkRS B0029221 REV T    | Everything working  |
