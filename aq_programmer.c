@@ -345,11 +345,12 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
 {
   logMessage(LOG_DEBUG,"Setting menu item '%s' to %d\n",value_label, value);
   //char leading[10];  // description of the field (POOL, SPA, FRZ)
-  int current_val;        // integer value of the current set point
+  int current_val=-1;        // integer value of the current set point
   //char trailing[10];      // the degrees and scale
   char searchBuf[20];
     
   sprintf(searchBuf, "^%s", value_label);
+  int val_len = strlen(value_label);
   int i=0;
   do 
   {
@@ -360,7 +361,8 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
     }
 //logMessage(LOG_DEBUG,"WAITING for kick value=%d\n",current_val);     
     //sscanf(aq_data->last_message, "%s %d%s", leading, &current_val, trailing);
-    sscanf(aq_data->last_message, "%*[^0123456789]%d", &current_val);
+    //sscanf(aq_data->last_message, "%*[^0123456789]%d", &current_val);
+    sscanf(&aq_data->last_message[val_len], "%*[^0123456789]%d", &current_val);
     logMessage(LOG_DEBUG, "%s set to %d, looking for %d\n",value_label,current_val,value);
     
     if(value > current_val) {
