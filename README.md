@@ -113,6 +113,7 @@ Below are varified versions (But should work with any AqualinkRS) :-
 | Jandy Aqualink   6524 REV GG       | Everything working  |
 | Jandy AquaLinkRS 8157 REV JJ       | Everything working  |
 | Jandy AquaLinkRS 8157 REV MMM      | Everything working  |
+| Jandy AquaLinkRS 8159 REV MMM      | Everything working  |
 | Jandy AquaLinkRS B0029221 REV T    | Everything working  |
 | Jandy AquaLinkRS B0029223 REV T.2  | Everything working  |
 | Jandy AquaLinkRS B0029235 REV T.1  | Everything working  |
