@@ -16,6 +16,12 @@ function print_usage {
   echoerr ""
 }
 
+function upgrade_self {
+  if [ -f "$AQUA/extras/aqua.sh" ]; then
+    cp "$AQUA/extras/aqua.sh" $0
+  fi
+}
+
 function git_install {
   sudo apt-get install git
 }
@@ -49,7 +55,7 @@ function upgrade {
 
 function clean {
   cd ~
-  sudo "$AQUA/release/install.sh clean"
+  sudo "$AQUA/release/install.sh" "clean"
   remove
 }
 
@@ -83,5 +89,8 @@ else
 fi
 
 install
+upgrade_self
+
+echo "Installed "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
 
 cd $CWD
