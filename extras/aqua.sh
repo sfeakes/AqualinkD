@@ -90,7 +90,7 @@ fi
 
 install
 
-echo "Installed "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
+echo "\nInstalled "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
 
 upgrade_self
 cd $CWD
