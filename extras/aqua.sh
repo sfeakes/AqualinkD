@@ -94,3 +94,5 @@ echo "Installed "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
 
 upgrade_self
 cd $CWD
+
+echo "Please make sure to read release notes https://github.com/sfeakes/AqualinkD/blob/master/README.md#release"
