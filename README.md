@@ -61,6 +61,7 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
+#<a name="release"></a>
 ## Update in Release 1.2.2
 * Support for Spa OR Pool OLNY mode with setpoints, (previous setpoints expected Spa & Pool mode)
 * Added support for MQTT Last Will Message
