@@ -89,8 +89,8 @@ else
 fi
 
 install
-upgrade_self
 
 echo "Installed "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
 
+upgrade_self
 cd $CWD
