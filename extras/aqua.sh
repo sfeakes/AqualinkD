@@ -76,6 +76,7 @@ elif [ "$1" == "upgrade" ]; then
   upgrade
 elif [ "$1" == "clean" ]; then
   clean
+  exit
 else
   print_usage
   exit;
