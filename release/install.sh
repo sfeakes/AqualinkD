@@ -38,6 +38,28 @@ command -v systemctl >/dev/null 2>&1 || { echo "This script needs systemd's syst
 systemctl stop $SERVICE > /dev/null 2>&1
 SERVICE_EXISTS=$(echo $?)
 
+# Clean everything if requested.
+if [ "$1" == "clean" ]; then
+  echo "Deleting install"
+  if [ -f $BINLocation/$BIN ]; then
+    rm -f $BINLocation/$BIN
+  fi
+  if [ -f $SRVLocation/$SRV ]; then
+    rm -f $SRVLocation/$SRV
+  fi
+  if [ -f $CFGLocation/$CFG ]; then
+    rm -f $CFGLocation/$CFG
+  fi
+  if [ -f $DEFLocation/$DEF ]; then
+    rm -f $DEFLocation/$DEF
+  fi
+  if [ -d $WEBLocation ]; then
+    rm -rf $WEBLocation
+  fi
+  systemctl daemon-reload
+  exit
+fi
+
 # copy files to locations, but only copy cfg if it doesn;t already exist
 
 cp $BUILD/$BIN $BINLocation/$BIN
