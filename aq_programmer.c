@@ -877,7 +877,10 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     // Before going to numeric field.
     waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
     send_cmd(KEY_LEFT, aq_data);
-    waitForMessage(threadCtrl->aq_data, name, 5);
+    while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
+      delay(500);
+    }
+    //waitForMessage(threadCtrl->aq_data, name, 5);
     //waitForMessage(threadCtrl->aq_data, name, 3); 
   } 
 
@@ -943,7 +946,10 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     // Before going to numeric field.
     waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
     send_cmd(KEY_LEFT, aq_data);
-    waitForMessage(threadCtrl->aq_data, name, 5);
+    while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
+      delay(500);
+    }
+    //waitForMessage(threadCtrl->aq_data, name, 5);
     //waitForMessage(threadCtrl->aq_data, name, 3); 
   } 
   
