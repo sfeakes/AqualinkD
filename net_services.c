@@ -773,6 +773,11 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
   int i;
   //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
+  // If message doesn't end in set we don't care about it.
+  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0) {
+    logMessage(LOG_DEBUG, "MQTT: Ignore %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
+    return;
+  }
   logMessage(LOG_DEBUG, "MQTT: topic %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
 
   //Need to do this in a better manor, but for present it's ok.

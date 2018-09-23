@@ -125,7 +125,14 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       } else {
         max = HEATER_MAX_F;
         min = (aqdata->single_device?HEATER_MIN_F:HEATER_MIN_F-1);
-      }   
+      }
+      // if single device then TEMP1 & 2 (not pool & spa), TEMP1 must be set higher than TEMP2
+      if (aqdata->single_device && 
+          aqdata->spa_htr_set_point != TEMP_UNKNOWN &&
+          min <= aqdata->spa_htr_set_point) 
+      {
+        min = aqdata->spa_htr_set_point + 1;
+      }
     break;
     case SPA_HTR_SETOINT:
       type_msg = (aqdata->single_device?"Temp2":"Spa");
@@ -135,7 +142,14 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       } else {
         max = (aqdata->single_device?HEATER_MAX_F:HEATER_MAX_F-1);
         min = HEATER_MIN_F;
-      }   
+      }
+      // if single device then TEMP1 & 2 (not pool & spa), TEMP2 must be set lower than TEMP1
+      if (aqdata->single_device && 
+          aqdata->pool_htr_set_point != TEMP_UNKNOWN &&
+          max >= aqdata->pool_htr_set_point) 
+      {
+        max = aqdata->pool_htr_set_point - 1;
+      }
     break;
     case FREEZE_SETPOINT:
       type_msg = "Freeze protect";
@@ -880,8 +894,6 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
       delay(500);
     }
-    //waitForMessage(threadCtrl->aq_data, name, 5);
-    //waitForMessage(threadCtrl->aq_data, name, 3); 
   } 
 
   //setAqualinkNumericField(aq_data, "POOL", val);
@@ -942,15 +954,13 @@ void *set_aqualink_spa_heater_temps( void *ptr )
 
   if (aq_data->single_device == true ){
     // Need to get pass this message 'TEMP2 MUST BE SET LOWER THAN TEMP1'
-    // and get this message 'TEMP1 20�C ~*'
+    // and get this message 'TEMP2 20�C ~*'
     // Before going to numeric field.
     waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
     send_cmd(KEY_LEFT, aq_data);
     while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
       delay(500);
     }
-    //waitForMessage(threadCtrl->aq_data, name, 5);
-    //waitForMessage(threadCtrl->aq_data, name, 3); 
   } 
   
   //setAqualinkNumericField(aq_data, "SPA", val);
