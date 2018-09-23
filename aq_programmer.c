@@ -871,6 +871,16 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     return ptr;
   }
   
+  if (aq_data->single_device == true ){
+    // Need to get pass this message 'TEMP1 MUST BE SET HIGHER THAN TEMP2'
+    // and get this message 'TEMP1 20�C ~*'
+    // Before going to numeric field.
+    waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
+    send_cmd(KEY_LEFT, aq_data);
+    waitForMessage(threadCtrl->aq_data, name, 5);
+    //waitForMessage(threadCtrl->aq_data, name, 3); 
+  } 
+
   //setAqualinkNumericField(aq_data, "POOL", val);
   setAqualinkNumericField(aq_data, name, val);
   
@@ -926,6 +936,16 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
+
+  if (aq_data->single_device == true ){
+    // Need to get pass this message 'TEMP2 MUST BE SET LOWER THAN TEMP1'
+    // and get this message 'TEMP1 20�C ~*'
+    // Before going to numeric field.
+    waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
+    send_cmd(KEY_LEFT, aq_data);
+    waitForMessage(threadCtrl->aq_data, name, 5);
+    //waitForMessage(threadCtrl->aq_data, name, 3); 
+  } 
   
   //setAqualinkNumericField(aq_data, "SPA", val);
   setAqualinkNumericField(aq_data, name, val);
