@@ -71,7 +71,7 @@ void init_parameters (struct aqconfig * parms)
   parms->light_programming_mode = 0;
   parms->light_programming_initial_on = 15;
   parms->light_programming_initial_off = 12;
-  parms->light_programming_button = 5;
+  parms->light_programming_button = 0;
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
@@ -93,7 +93,7 @@ char *cleanalloc(char*str)
   //printf("Result=%s\n",result);
   return result;
 }
-
+/*
 char *cleanallocindex(char*str, int index)
 {
   char *result;
@@ -128,7 +128,7 @@ char *cleanallocindex(char*str, int index)
 
   return result;
 }
-
+*/
 // Find the first network interface with valid MAC and put mac address into buffer upto length
 bool mac(char *buf, int len)
 {
@@ -182,10 +182,8 @@ char *generate_mqtt_id(char *buf, int len) {
 
   return buf;
 }
-
-
-//void readCfg (char *cfgFile)
-void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
+/*
+void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
 {
   FILE * fp ;
   char bufr[MAXCFGLINE];
@@ -268,11 +266,7 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
               config_parameters->flash_mqtt_buttons = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
               config_parameters->report_zero_spa_temp = text2bool(indx+1);
-            }/*else if (strncasecmp (b_ptr, "pool_thermostat_dzidx", 21) == 0) {      // removed until domoticz has a better virtual thermostat
-              config_parameters->dzidx_pool_thermostat = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "spa_thermostat_dzidx", 20) == 0) {
-              config_parameters->dzidx_spa_thermostat = strtoul(indx+1, NULL, 10);
-            } */else if (strncasecmp (b_ptr, "button_", 7) == 0) {
+            } else if (strncasecmp (b_ptr, "button_", 7) == 0) {
               int num = strtoul(b_ptr+7, NULL, 10) - 1;
               //logMessage (LOG_DEBUG, "Button %d\n", strtoul(b_ptr+7, NULL, 10));
               if (strncasecmp (b_ptr+9, "_label", 6) == 0) {
@@ -293,6 +287,161 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
     }
     fclose(fp);
   } else {
+    
+    displayLastSystemError(cfgFile);
+    exit (EXIT_FAILURE);
+  }
+}
+*/
+
+bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value) {
+  bool rtn = false;
+
+  if (strncasecmp(param, "socket_port", 11) == 0) {
+    config_parameters->socket_port = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "serial_port", 11) == 0) {
+    config_parameters->serial_port = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "log_level", 9) == 0) {
+    config_parameters->log_level = text2elevel(cleanalloc(value));
+    rtn=true;
+  } else if (strncasecmp(param, "device_id", 9) == 0) {
+    config_parameters->device_id = strtoul(cleanalloc(value), NULL, 16);
+    rtn=true;
+  } else if (strncasecmp(param, "web_directory", 13) == 0) {
+    config_parameters->web_directory = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "log_file", 8) == 0) {
+    config_parameters->log_file = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_address", 12) == 0) {
+    config_parameters->mqtt_server = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_dz_sub_topic", 17) == 0) {
+    config_parameters->mqtt_dz_sub_topic = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_dz_pub_topic", 17) == 0) {
+    config_parameters->mqtt_dz_pub_topic = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_aq_topic", 13) == 0) {
+    config_parameters->mqtt_aq_topic = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_user", 9) == 0) {
+    config_parameters->mqtt_user = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_passwd", 11) == 0) {
+    config_parameters->mqtt_passwd = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "air_temp_dzidx", 14) == 0) {
+    config_parameters->dzidx_air_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "pool_water_temp_dzidx", 21) == 0) {
+    config_parameters->dzidx_pool_water_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "spa_water_temp_dzidx", 20) == 0) {
+    config_parameters->dzidx_spa_water_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "light_programming_mode", 21) == 0) {
+    config_parameters->light_programming_mode = atof(cleanalloc(value)); // should free this
+    rtn=true;
+  } else if (strncasecmp(param, "light_programming_initial_on", 28) == 0) {
+    config_parameters->light_programming_initial_on = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "light_programming_initial_off", 29) == 0) {
+    config_parameters->light_programming_initial_off = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "light_programming_button", 21) == 0) {
+    config_parameters->light_programming_button = strtoul(value, NULL, 10) - 1;
+    rtn=true;
+  } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
+    config_parameters->dzidx_swg_percent = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "SWG_PPM_dzidx", 13) == 0) {
+    config_parameters->dzidx_swg_ppm = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "SWG_Status_dzidx", 14) == 0) {
+    config_parameters->dzidx_swg_status = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "override_freeze_protect", 23) == 0) {
+    config_parameters->override_freeze_protect = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "pda_mode", 8) == 0) {
+    config_parameters->pda_mode = text2bool(value);
+    set_pda_mode(config_parameters->pda_mode);
+    rtn=true;
+  } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
+    config_parameters->convert_mqtt_temp = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "convert_dz_temp_to_c", 20) == 0) {
+    config_parameters->convert_dz_temp = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "flash_mqtt_buttons", 18) == 0) {
+    config_parameters->flash_mqtt_buttons = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
+    config_parameters->report_zero_spa_temp = text2bool(value);
+    rtn=true;
+  } 
+  // removed until domoticz has a better virtual thermostat
+  /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
+              config_parameters->dzidx_pool_thermostat = strtoul(value, NULL, 10);
+              rtn=true;
+            } else if (strncasecmp (param, "spa_thermostat_dzidx", 20) == 0) {
+              config_parameters->dzidx_spa_thermostat = strtoul(value, NULL, 10);
+              rtn=true;
+            } */
+  else if (strncasecmp(param, "button_", 7) == 0) {
+    int num = strtoul(param + 7, NULL, 10) - 1;
+    if (strncasecmp(param + 9, "_label", 6) == 0) {
+      aqdata->aqbuttons[num].label = cleanalloc(value);
+      rtn=true;
+    } else if (strncasecmp(param + 9, "_dzidx", 6) == 0) {
+      aqdata->aqbuttons[num].dz_idx = strtoul(value, NULL, 10);
+      rtn=true;
+    } else if (strncasecmp(param + 9, "_PDA_label", 10) == 0) {
+      aqdata->aqbuttons[num].pda_label = cleanalloc(value);
+      rtn=true;
+    }
+  }
+
+  return rtn;
+}
+
+
+void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
+{
+  FILE * fp ;
+  char bufr[MAXCFGLINE];
+  //const char delim[2] = ";";
+  //char *buf;
+  //int line = 0;
+  //int tokenindex = 0;
+  char *b_ptr;
+
+  config_parameters->config_file = cleanalloc(cfgFile);
+
+  if( (fp = fopen(cfgFile, "r")) != NULL){
+    while(! feof(fp)){
+      if (fgets(bufr, MAXCFGLINE, fp) != NULL)
+      {
+        b_ptr = &bufr[0];
+        char *indx;
+        // Eat leading whitespace
+        while(isspace(*b_ptr)) b_ptr++;
+        if ( b_ptr[0] != '\0' && b_ptr[0] != '#')
+        {
+          indx = strchr(b_ptr, '=');  
+          if ( indx != NULL) 
+          {
+            if ( ! setConfigValue(config_parameters, aqdata, b_ptr, indx+1))
+              logMessage(LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr)-1, b_ptr);
+          } 
+        }
+      }
+    }
+    fclose(fp);
+  } else {
     /* error processing, couldn't open file */
     displayLastSystemError(cfgFile);
     exit (EXIT_FAILURE);
@@ -304,6 +453,140 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
 
 
 
+//DEBUG_DERIAL, DEBUG, INFO, NOTICE, WARNING, ERROR
+char *errorlevel2text(int level) 
+{
+  switch(level) {
+    case LOG_DEBUG_SERIAL:
+      return "DEBUG_SERIAL";
+      break;
+    case LOG_DEBUG:
+      return "DEBUG";
+      break;
+    case LOG_INFO:
+      return "INFO";
+      break;
+    case LOG_NOTICE:
+      return "NOTICE";
+      break;
+    case LOG_WARNING:
+      return "WARNING";
+      break;
+    case LOG_ERR:
+     default:
+      return "ERROR";
+      break;
+  }
+  
+  return "";
+}
 
+bool remount_root_ro(bool readonly) {
+  // NSF Check if config is RO_ROOT set
+/*
+  if (readonly) {
+    logMessage(LOG_INFO, "reMounting root RO\n");
+    mount (NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL);
+    return true;
+  } else {
+    struct statvfs fsinfo;
+    statvfs("/", &fsinfo);
+    if ((fsinfo.f_flag & ST_RDONLY) == 0) // We are readwrite, ignore
+      return false;
 
+    logMessage(LOG_INFO, "reMounting root RW\n");
+    mount (NULL, "/", NULL, MS_REMOUNT, NULL);
+    return true;
+  }
+  */
+ return true;
+}
 
+void writeCharValue (FILE *fp, char *msg, char *value)
+{
+  if (value == NULL)
+    fprintf(fp, "#%s = \n",msg);
+  else
+    fprintf(fp, "%s = %s\n", msg, value);
+}
+void writeIntValue (FILE *fp, char *msg, int value)
+{
+  if (value <= 0)
+    fprintf(fp, "#%s = \n",msg);
+  else
+    fprintf(fp, "%s = %d\n", msg, value);
+}
+
+bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
+{
+  FILE *fp;
+  int i;
+  bool fs = remount_root_ro(false);
+
+  fp = fopen(config_parameters->config_file, "w");
+  if (fp == NULL) {
+    logMessage(LOG_ERR, "Open config file failed '%s'\n", config_parameters->config_file);
+    remount_root_ro(true);
+    //fprintf(stdout, "Open file failed 'sprinkler.cron'\n");
+    return false;
+  }
+  fprintf(fp, "#***** AqualinkD configuration *****\n");
+
+  fprintf(fp, "socket_port = %s\n", config_parameters->socket_port);
+  fprintf(fp, "serial_port = %s\n", config_parameters->serial_port);
+  fprintf(fp, "device_id = 0x%02hhx\n", config_parameters->device_id);
+  writeCharValue(fp, "log_level", errorlevel2text(config_parameters->log_level));
+  writeCharValue(fp, "web_directory", config_parameters->web_directory);
+  writeCharValue(fp, "log_file", config_parameters->log_file);
+  fprintf(fp, "pda_mode = %s\n", bool2text(config_parameters->pda_mode)); 
+
+  fprintf(fp, "\n#** MQTT Configuration **\n");
+  writeCharValue(fp, "mqtt_address", config_parameters->mqtt_server);
+  writeCharValue(fp, "mqtt_dz_sub_topic", config_parameters->mqtt_dz_sub_topic);
+  writeCharValue(fp, "mqtt_dz_pub_topic", config_parameters->mqtt_dz_pub_topic);
+  writeCharValue(fp, "mqtt_aq_topic", config_parameters->mqtt_aq_topic);
+  writeCharValue(fp, "mqtt_user", config_parameters->mqtt_user);
+  writeCharValue(fp, "mqtt_passwd", config_parameters->mqtt_passwd);
+
+  fprintf(fp, "\n#** General **\n");
+  fprintf(fp, "convert_mqtt_temp_to_c = %s\n", bool2text(config_parameters->convert_mqtt_temp));
+  fprintf(fp, "override_freeze_protect = %s\n", bool2text(config_parameters->override_freeze_protect));        
+  fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
+  fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(config_parameters->report_zero_spa_temp));
+
+  fprintf(fp, "\n#** Programmable light **\n");
+  if (config_parameters->light_programming_button <= 0) {
+    fprintf(fp, "#light_programming_button = %d\n", config_parameters->light_programming_button); 
+    fprintf(fp, "#light_programming_mode = %f\n", config_parameters->light_programming_mode);  
+    fprintf(fp, "#light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
+    fprintf(fp, "#light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
+  } else {
+    fprintf(fp, "light_programming_button = %d\n", config_parameters->light_programming_button); 
+    fprintf(fp, "light_programming_mode = %f\n", config_parameters->light_programming_mode);  
+    fprintf(fp, "light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
+    fprintf(fp, "light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
+  }
+
+  fprintf(fp, "\n#** Domoticz **\n");
+  fprintf(fp, "convert_dz_temp_to_c = %s\n", bool2text(config_parameters->convert_dz_temp));
+  writeIntValue(fp, "air_temp_dzidx", config_parameters->dzidx_air_temp); 
+  writeIntValue(fp, "pool_water_temp_dzidx", config_parameters->dzidx_pool_water_temp);     
+  writeIntValue(fp, "spa_water_temp_dzidx", config_parameters->dzidx_spa_water_temp); 
+  writeIntValue(fp, "SWG_percent_dzidx", config_parameters->dzidx_swg_percent); 
+  writeIntValue(fp, "SWG_PPM_dzidx", config_parameters->dzidx_swg_ppm); 
+  writeIntValue(fp, "SWG_Status_dzidx", config_parameters->dzidx_swg_status);    
+
+  fprintf(fp, "\n#** Buttons **\n");
+  for (i=0; i < TOTAL_BUTTONS; i++) 
+  {
+    fprintf(fp, "button_%.2d_label = %s\n", i+1, aqdata->aqbuttons[i].label);
+    if (aqdata->aqbuttons[i].dz_idx > 0)
+      fprintf(fp, "button_%.2d_dzidx = %d\n", i+1, aqdata->aqbuttons[i].dz_idx);
+    if (aqdata->aqbuttons[i].pda_label != NULL)
+      fprintf(fp, "button_%.2d_PDA_label = %s\n", i+1, aqdata->aqbuttons[i].pda_label);
+  }
+  fclose(fp);
+  remount_root_ro(fs);
+
+  return true;
+}

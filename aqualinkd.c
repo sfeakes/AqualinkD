@@ -887,8 +887,9 @@ void main_loop() {
     while ((rs_fd < 0 || blank_read >= MAX_ZERO_READ_BEFORE_RECONNECT) && _keepRunning == true) {
       if (rs_fd < 0) {
         // sleep(1);
+        sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
         logMessage(LOG_ERR, "Aqualink daemon attempting to connect to master device...\n");
-        broadcast_aqualinkstate_error(mgr.active_connections, "No connection to RS control panel");
+        broadcast_aqualinkstate_error(mgr.active_connections, CONNECTION_ERROR);
         mg_mgr_poll(&mgr, 1000); // Sevice messages
         mg_mgr_poll(&mgr, 3000); // should donothing for 3 seconds.
         // broadcast_aqualinkstate_error(mgr.active_connections, "No connection to RS control panel");

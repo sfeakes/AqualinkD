@@ -4,6 +4,7 @@
 #define GET_RTN_OK "Ok"
 #define GET_RTN_UNKNOWN "Unknown command"
 #define GET_RTN_NOT_CHANGED "Not Changed"
+#define GET_RTN_ERROR "Error"
 
 //void main_server();
 //void main_server_TEST(struct aqualinkdata *aqdata, char *s_http_port);

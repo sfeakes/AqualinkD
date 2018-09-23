@@ -622,6 +622,30 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, true);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
+    } else if (strcmp(command, "setconfigprm") == 0) {
+      char value[20];
+      char param[30];
+      char *webrtn;
+      mg_get_http_var(&http_msg->query_string, "param", param, sizeof(param));
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      
+      if (setConfigValue(_aqualink_config, _aqualink_data, param, value)) {
+        webrtn = GET_RTN_OK;
+        logMessage(LOG_INFO, "Web: request to config %s to %s\n", param, value);
+      } else {
+        webrtn = GET_RTN_ERROR;
+        logMessage(LOG_ERR, "Web: request to config %s to %s failed\n", param, value);
+      }
+      mg_send_head(nc, 200, strlen(webrtn), "Content-Type: text/plain");
+      mg_send(nc, webrtn, strlen(webrtn));
+    } else if (strcmp(command, "writeconfig") == 0) {
+      if (writeCfg (_aqualink_config, _aqualink_data)) {
+        mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+        mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+      } else {
+        mg_send_head(nc, 200, strlen(GET_RTN_ERROR), "Content-Type: text/plain");
+        mg_send(nc, GET_RTN_ERROR, strlen(GET_RTN_ERROR));
+      }
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {

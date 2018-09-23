@@ -16,6 +16,7 @@
 #define TOTAL_BUTTONS     12
 
 #define TEMP_UNKNOWN    -999
+//#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
 
 enum {

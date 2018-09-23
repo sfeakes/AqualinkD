@@ -23,6 +23,7 @@
 
 struct aqconfig
 {
+  char *config_file;
   char *serial_port;
   unsigned int log_level;
   char *socket_port;
@@ -64,5 +65,7 @@ void init_parameters (struct aqconfig * parms);
 //bool parse_config (struct aqconfig * parms, char *cfgfile);
 //void readCfg (struct aqconfig *config_parameters, char *cfgFile);
 void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqualink_data, char *cfgFile);
+bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata);
+bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value);
 
 #endif

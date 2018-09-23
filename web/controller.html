@@ -783,9 +783,11 @@
         if ((name = _displayNames[aux]) != undefined) {
           status = status.substr(0, index) + name + status.substr(index + 4);
         }
+      } else if ((index = status.indexOf("ERROR")) >= 0) {
+        status = status;
       } else {
         status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
-      }
+      } 
       return status;
     }
 
@@ -1071,7 +1073,10 @@
       //console.log("Received Update Satus");
       _aqualink_data = data;
       var el = document.getElementById("datetime");
-      el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
+
+      if (data.time.toString() != "" && data.time.toString() != "xx") 
+        el.innerHTML = data.time.toLowerCase().replace(" ", "&nbsp;") + ((_landscape) ? "&nbsp;" : "<br>") + data.date.toLowerCase().replace(" ", "&nbsp;");
+      
       if (document.getElementById("name").innerHTML == "AqualinkD") {
         if (data.status != "Ready") {
           document.getElementById("message").innerHTML = formatSatus(data.status);
@@ -1079,6 +1084,10 @@
           document.getElementById("message").innerHTML = '';
         }
       }
+     
+      if (data.status.indexOf("ERROR") >= 0)
+        document.getElementById("header").classList.add("error");
+
       // Hard code value updated as I can't be bothered to update source.
       // should come back and re-do these values.
       // The ID's should ultimatly come from json

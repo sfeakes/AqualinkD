@@ -4,6 +4,8 @@
 
 #include <termios.h>
 
+#define CONNECTION_ERROR "ERROR No connection to RS control panel"
+
 // packet offsets
 #define PKT_DEST        2
 #define PKT_CMD         3
