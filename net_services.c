@@ -315,7 +315,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp) {
       _last_mqtt_aqualinkdata.spa_temp = TEMP_UNKNOWN;
       send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, (_aqualink_config->convert_mqtt_temp?-18:0));
-    } else {
+    } else if (_aqualink_data->spa_temp != TEMP_UNKNOWN) {
       _last_mqtt_aqualinkdata.spa_temp = _aqualink_data->spa_temp;
       send_mqtt_temp_msg(nc, SPA_TEMP_TOPIC, _aqualink_data->spa_temp);
       send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->spa_temp);

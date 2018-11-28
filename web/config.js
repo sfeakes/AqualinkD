@@ -85,3 +85,6 @@
      // var tile_text = "#B9B9B9";
      // var tile_status_text = "#B2B2B2";
      // var head_background = "#000D53";
+
+     // REMOVE THIS.
+     //document.writeln("<script type='text/javascript' src='extra/extra.js'></script>");

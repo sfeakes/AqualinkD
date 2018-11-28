@@ -1160,7 +1160,7 @@ void *get_freeze_protect_temp( void *ptr )
     return ptr;
   }
   
-  waitForMessage(aq_data, "FREEZE PROTECTION IS SET TO", 3);
+  waitForMessage(aq_data, "FREEZE PROTECTION IS SET TO", 6); // Changed from 3 to wait for multiple items to be listed
   //cancel_menu(aq_data); 
   cleanAndTerminateThread(threadCtrl);
   

@@ -62,6 +62,8 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.2.4
+* Small fix for Freeze Protect.
 ## Update in Release 1.2.3
 * Fix for setpoints on "Pool Only" configurations.
 ## Update in Release 1.2.2
