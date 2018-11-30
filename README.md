@@ -9,6 +9,11 @@ If you like this project, you can buy me a cup of coffee :)
 <br>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
+## AqualinkD forum now open
+http://aqualinkd.freeforums.net
+(Please use this for questions / issues / problems)
+For Bugs use issues link on top of page
+
 ## Please see Wiki for install instructions
 https://github.com/sfeakes/AqualinkD/wiki
 
