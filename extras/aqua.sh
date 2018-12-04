@@ -200,5 +200,4 @@ if [ "$0" == "bash"]; then
   echo "Source directory $AQUA"
   echo "To run this script in the future, $AQUA/$SOURCE_LOCATION"
 fi
-echo $0
-echo $1
+
