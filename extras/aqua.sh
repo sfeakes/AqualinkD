@@ -193,3 +193,6 @@ upgrade_self
 #cd $CWD
 
 echo "Please make sure to read release notes https://github.com/sfeakes/AqualinkD/blob/master/README.md#release"
+
+echo $0
+echo $1
