@@ -112,6 +112,12 @@ function clean {
 }
 
 function install {
+  if [ ! -f "$AQUA/release/install.sh" ]; then
+    echo "ERROR Can not find install script, please download from git using either :-"
+    echo "$0 release"
+    echo "$0 latest"
+    exit 1
+  fi
   echo "Installing $NAME"
   #cd ~
   sudo "$AQUA/release/install.sh"
@@ -184,7 +190,8 @@ elif [ "$1" == "force_latest" ]; then
   check_curl_installed
   check_git_installed
   force_dev_download
-#elif [ "$1" == "install" ]; then
+elif [ "$1" == "install" ]; then
+  echo -n ""
 #  install 
 elif [ "$1" == "clean" ]; then
   clean
@@ -204,10 +211,10 @@ upgrade_self
 echo ""
 echo "Please make sure to read release notes https://github.com/sfeakes/AqualinkD/blob/master/README.md#release"
 
-#if [ "$0" == "bash" ]; then
+if [ "$0" == "bash" ]; then
   # Was probably run from curl
   echo -n "Source directory " 
   echo $AQUA | tr -s '/' '/'
   echo -n "To run this script in the future, "
   echo $AQUA/$SOURCE_LOCATION | tr -s '/' '/'
-#fi
+fi
