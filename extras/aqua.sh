@@ -40,6 +40,8 @@ function upgrade_self {
   if [ "$LOC" == "/nas/data/Development/Raspberry/AqualinkD/extras/aqua.sh" ]; then
     echo "NOT UPGRADING SELF, (Development environment)"
     return
+  elif [ "$0" == "bash" ] || "$0" == "$AQUA/$SOURCE_LOCATION" ]; then
+    return
   fi
 
   if [ -f "$AQUA/$SOURCE_LOCATION" ]; then
