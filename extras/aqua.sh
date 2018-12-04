@@ -141,8 +141,8 @@ function release_version_download {
       else
         mv "$AQUA" "$AQUA-$RANDOM"
       fi
-      ln -s "$BASE/AqualinkD-$ver" "$AQUA"
     fi
+    ln -s "$BASE/AqualinkD-$ver" "$AQUA"
   else
     echo "Local $NAME version $version is latest, not downloading"
   fi
