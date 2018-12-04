@@ -33,8 +33,8 @@ function print_usage {
 }
 
 function upgrade_self {
-  echo "NOT UPGRADING SELF, MAKE SURE TO EDIT BEFORE COMMIT"
-  return;
+  #echo "NOT UPGRADING SELF, MAKE SURE TO EDIT BEFORE COMMIT"
+  #return;
   if [ -f "$AQUA/extras/aqua.sh" ]; then
     cp "$AQUA/extras/aqua.sh" $0
   fi
