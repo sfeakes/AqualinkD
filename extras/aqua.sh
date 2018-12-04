@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #  Run using
-#  curl -s https://raw.githubusercontent.com/sfeakes/AqualinkD/master/extras/aqua.sh | bash -s --
+#  curl -s https://raw.githubusercontent.com/sfeakes/AqualinkD/master/extras/aqua.sh | bash -s <script parms> --
 #
 #  list latest release version (This is zip install)
 #  curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'
@@ -131,7 +131,7 @@ function release_version_download {
     #tar_url=$(curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tarball_url": "\K.*?(?=")')
     #curl --silent -L "$tar_url" | tar xz
     # Use this tar instead, it's correct dir structure
-    curl --silent -L "https://github.com/sfeakes/AqualinkD/archive/$git_version.tar.gz" | tar xz -C "$AQUA" .
+    curl --silent -L "https://github.com/sfeakes/AqualinkD/archive/$git_version.tar.gz" | tar xz -C "$BASE"
 
     ver=$(echo $git_version  | sed 's/^.//' )
     
