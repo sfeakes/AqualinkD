@@ -9,6 +9,8 @@
 #  list latest dev version
 #   curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2 | tr '\n'
 #
+
+
 NAME="AqualinkD"
 SOURCE_LOCATION="/extras/aqua.sh"
 
@@ -34,6 +36,12 @@ function print_usage {
 function upgrade_self {
   #echo "NOT UPGRADING SELF, MAKE SURE TO EDIT BEFORE COMMIT"
   #return;
+  LOC=$(realpath $0)
+  if [ "$LOC" == "/nas/data/Development/Raspberry/AqualinkD/extras/aqua.sh" ]; then
+    echo "NOT UPGRADING SELF, (Development environment)"
+    return
+  fi
+
   if [ -f "$AQUA/$SOURCE_LOCATION" ]; then
     cp "$AQUA/$SOURCE_LOCATION" $0
   fi
