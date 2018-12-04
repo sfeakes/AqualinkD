@@ -9,9 +9,8 @@
 #  list latest dev version
 #   curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2 | tr '\n'
 #
-NAME=AqualinkD
-#CWD=$(cd)
-#cd ~
+NAME="AqualinkD"
+SOURCE_LOCATION="/extras/aqua.sh"
 
 HOMEDIR=~
 eval HOMEDIR=$HOMEDIR
@@ -35,8 +34,8 @@ function print_usage {
 function upgrade_self {
   #echo "NOT UPGRADING SELF, MAKE SURE TO EDIT BEFORE COMMIT"
   #return;
-  if [ -f "$AQUA/extras/aqua.sh" ]; then
-    cp "$AQUA/extras/aqua.sh" $0
+  if [ -f "$AQUA/$SOURCE_LOCATION" ]; then
+    cp "$AQUA/$SOURCE_LOCATION" $0
   fi
 }
 
@@ -194,5 +193,12 @@ upgrade_self
 
 echo "Please make sure to read release notes https://github.com/sfeakes/AqualinkD/blob/master/README.md#release"
 
+
+if [ "$0" == "bash"]; then
+  # Was probably run from curl
+  echo ""
+  echo "Source directory $AQUA"
+  echo "To run this script in the future, $AQUA/$SOURCE_LOCATION"
+fi
 echo $0
 echo $1
