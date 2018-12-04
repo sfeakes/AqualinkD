@@ -202,8 +202,10 @@ upgrade_self
 echo ""
 echo "Please make sure to read release notes https://github.com/sfeakes/AqualinkD/blob/master/README.md#release"
 
-if [ "$0" == "bash" ]; then
+#if [ "$0" == "bash" ]; then
   # Was probably run from curl
-  echo "Source directory "echo $AQUA | tr -s '/' '/'
-  echo "To run this script in the future, "echo $AQUA/$SOURCE_LOCATION | tr -s '/' '/'
-fi
+  echo -n "Source directory " 
+  echo $AQUA | tr -s '/' '/'
+  echo -n "To run this script in the future, "
+  echo $AQUA/$SOURCE_LOCATION | tr -s '/' '/'
+#fi
