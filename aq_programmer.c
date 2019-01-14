@@ -640,8 +640,11 @@ printf("Wait for select\n");
   }
 printf("End wait select\n");
   i=0;
-  int len = strlen(aq_data->aqbuttons[device].pda_label);
-  while ( (found = strncmp(pda_m_hlight(), aq_data->aqbuttons[device].pda_label, len)) != 0 ) {
+  char labelBuff[AQ_MSGLEN];
+  strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
+  labelBuff[AQ_MSGLEN-4] = 0;
+
+  while ( (found = strcasecmp(stripwhitespace(labelBuff), aq_data->aqbuttons[device].pda_label)) != 0 ) {
     if (_pgm_command == NUL) {
       send_cmd(KEY_PDA_DOWN, aq_data);
       //printf("*** Send Down for %s ***\n",pda_m_hlight());
@@ -651,6 +654,8 @@ printf("End wait select\n");
       break;
     }
     delay(500);
+    strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
+    labelBuff[AQ_MSGLEN-4] = 0;
   }
 
   if (found == 0) {

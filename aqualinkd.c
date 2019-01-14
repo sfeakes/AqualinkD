@@ -391,6 +391,15 @@ void pass_pda_equiptment_status_item(char* msg)
 {
   static char *index;
   int i;
+
+  //	 EQUIPMENT STATUS
+  //
+  //	  AquaPure 100%
+  //	  SALT 25500 PPM
+  //	   FILTER PUMP
+  //	    POOL HEAT
+  //	   SPA HEAT ENA
+
   // Check message for status of device
   // Loop through all buttons and match the PDA text.
   if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
@@ -407,16 +416,33 @@ void pass_pda_equiptment_status_item(char* msg)
   }
   else
   {
+	char labelBuff[AQ_MSGLEN+1];
+	strncpy(labelBuff, msg, AQ_MSGLEN+1);
+	msg = stripwhitespace(labelBuff);
+
     // These are listed as "  FILTER PUMP   "
-    for (i = 0; i < TOTAL_BUTTONS; i++)
-    {
-      if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL)
-      {
-        //printf("*** Found Status for %s = '%.*s'\n", _aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
-        // It's on if it's listed here.
-        _aqualink_data.aqbuttons[i].led->state = ON;
-      }
-    }
+
+	if (strcasecmp(msg, "POOL HEAT ENA") == 0)
+	{
+		_aqualink_data.aqbuttons[POOL_HEAT_INDEX].led->state = ENABLE;
+	}
+	else if (strcasecmp(msg, "SPA HEAT ENA") == 0)
+	{
+		_aqualink_data.aqbuttons[SPA_HEAT_INDEX].led->state = ENABLE;
+	}
+	else
+	{
+		for (i = 0; i < TOTAL_BUTTONS; i++)
+		{
+		  if (strcasecmp(msg, _aqualink_data.aqbuttons[i].pda_label) == 0)
+		  {
+			logMessage(LOG_DEBUG,"*** Found Status for %s = '%.*s'\n", _aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+			// It's on if it's listed here.
+			_aqualink_data.aqbuttons[i].led->state = ON;
+			break;
+		  }
+		}
+	}
   }
 }
 
@@ -514,23 +540,27 @@ bool process_pda_packet(unsigned char* packet, int length)
         pass_pda_equiptment_status_item(msg);
       } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
         // These are listed as "FILTER PUMP  OFF"
+      	char labelBuff[AQ_MSGLEN+1];
+      	strncpy(labelBuff, msg, AQ_MSGLEN-4);
+      	labelBuff[AQ_MSGLEN-4] = 0;
+
         for (i = 0; i < TOTAL_BUTTONS; i++) {
-            if (stristr(msg, _aqualink_data.aqbuttons[i].pda_label) != NULL) {
-              //printf("*** Found Status for %s = '%.*s'\n",_aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
-              set_pda_led(_aqualink_data.aqbuttons[i].led, msg[AQ_MSGLEN-1]);
+            if (strcasecmp(stripwhitespace(labelBuff), _aqualink_data.aqbuttons[i].pda_label) == 0) {
+            	logMessage(LOG_DEBUG, "*** Found EQ CTL Status for %s = '%.*s'\n",_aqualink_data.aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+            	set_pda_led(_aqualink_data.aqbuttons[i].led, msg[AQ_MSGLEN-1]);
             }
         }
       } else if (pda_m_type() == PM_MAIN || pda_m_type() == PM_BUILDING_MAIN) {
         if (stristr(msg, "POOL MODE") != NULL) {
-          set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
+          set_pda_led(_aqualink_data.aqbuttons[PUMP_INDEX].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "POOL HEATER") != NULL) {
-          set_pda_led(_aqualink_data.aqbuttons[9].led, msg[AQ_MSGLEN-1]);
+          set_pda_led(_aqualink_data.aqbuttons[POOL_HEAT_INDEX].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "SPA MODE") != NULL) {
-          set_pda_led(_aqualink_data.aqbuttons[1].led, msg[AQ_MSGLEN-1]);
-          if (_aqualink_data.aqbuttons[1].led == ON)
-            set_pda_led(_aqualink_data.aqbuttons[0].led, msg[AQ_MSGLEN-1]);
+          set_pda_led(_aqualink_data.aqbuttons[SPA_INDEX].led, msg[AQ_MSGLEN-1]);
+          if (_aqualink_data.aqbuttons[SPA_INDEX].led == ON)
+            set_pda_led(_aqualink_data.aqbuttons[PUMP_INDEX].led, msg[AQ_MSGLEN-1]);
         }else if (stristr(msg, "SPA HEATER") != NULL) {
-          set_pda_led(_aqualink_data.aqbuttons[10].led, msg[AQ_MSGLEN-1]);
+          set_pda_led(_aqualink_data.aqbuttons[SPA_HEAT_INDEX].led, msg[AQ_MSGLEN-1]);
         }
       } else if (pda_m_type() == PM_UNKNOWN) {
         // Lets make a guess here and just see if there is an ON/OFF/ENA/*** at the end of the line
