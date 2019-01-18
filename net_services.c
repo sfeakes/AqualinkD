@@ -300,7 +300,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     //send_mqtt_temp_msg_new(nc, AIR_TEMPERATURE_TOPIC, _aqualink_data->air_temp);
     send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_air_temp, _aqualink_data->air_temp);
   }
-
+/*
   if (_aqualink_data->pool_temp != TEMP_UNKNOWN && _aqualink_data->pool_temp != _last_mqtt_aqualinkdata.pool_temp) {
     _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
     send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
@@ -310,6 +310,20 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
 
   }
+*/
+  if (_aqualink_data->pool_temp != _last_mqtt_aqualinkdata.pool_temp) {
+    if (_aqualink_data->pool_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_pool_temp) {
+      _last_mqtt_aqualinkdata.pool_temp = TEMP_UNKNOWN;
+      send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, (_aqualink_config->convert_mqtt_temp?-18:0));
+    } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN) {
+      _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
+      send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
+      send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
+      // IF spa is off, report pool water temp to Domoticz.
+      if (_aqualink_data->spa_temp == TEMP_UNKNOWN)
+        send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
+    }
+  } 
   
   if (_aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
     if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp) {

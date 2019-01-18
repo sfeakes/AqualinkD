@@ -53,6 +53,7 @@ struct aqconfig
   bool convert_mqtt_temp;
   bool convert_dz_temp;
   bool flash_mqtt_buttons;
+  bool report_zero_pool_temp;
   bool report_zero_spa_temp;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better
