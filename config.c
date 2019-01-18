@@ -77,6 +77,7 @@ void init_parameters (struct aqconfig * parms)
   parms->pda_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
+  parms->report_zero_pool_temp = false;
   parms->report_zero_spa_temp = false;
   parms->report_zero_pool_temp = false;
 
@@ -265,6 +266,8 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
               config_parameters->convert_dz_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "flash_mqtt_buttons", 18) == 0) {
               config_parameters->flash_mqtt_buttons = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
+              config_parameters->report_zero_pool_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
               config_parameters->report_zero_spa_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
@@ -381,6 +384,9 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
     rtn=true;
   } else if (strncasecmp(param, "flash_mqtt_buttons", 18) == 0) {
     config_parameters->flash_mqtt_buttons = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "report_zero_pool_temp", 21) == 0) {
+    config_parameters->report_zero_pool_temp = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
     config_parameters->report_zero_spa_temp = text2bool(value);
@@ -558,6 +564,7 @@ bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
   fprintf(fp, "convert_mqtt_temp_to_c = %s\n", bool2text(config_parameters->convert_mqtt_temp));
   fprintf(fp, "override_freeze_protect = %s\n", bool2text(config_parameters->override_freeze_protect));        
   fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
+  fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
   fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(config_parameters->report_zero_spa_temp));
   fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
 
