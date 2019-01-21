@@ -347,6 +347,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_OFF);*/
   }
 
+  if (_aqualink_data->frz_protect_state != _last_mqtt_aqualinkdata.frz_protect_state) {
+    _last_mqtt_aqualinkdata.frz_protect_state = _aqualink_data->frz_protect_state;
+    send_mqtt_string_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_state==ON?MQTT_ON:MQTT_OFF); 
+  }
+
   if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) { // If the SWG is actually on
     if (_aqualink_data->swg_percent != TEMP_UNKNOWN && (force_update || _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent)) {
       _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
