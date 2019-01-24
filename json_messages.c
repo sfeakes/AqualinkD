@@ -176,8 +176,10 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char*
     length += sprintf(buffer+length, "{\"type\": \"setpoint_freeze\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\" },",
                                      FREEZE_PROTECT,
                                     "Freeze Protection",
-                                    JSON_OFF,
-                                    JSON_ENABLED,
+                                    //JSON_OFF,
+                                    aqdata->frz_protect_state==ON?JSON_ON:JSON_OFF,
+                                    //JSON_ENABLED,
+                                    aqdata->frz_protect_state==ON?LED2text(ON):LED2text(ENABLE),
                                     ((homekit)?2:0),
                                     ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->frz_protect_set_point):aqdata->frz_protect_set_point),
                                     ((homekit)?2:0),
@@ -335,7 +337,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   }
   //NSF Need to come back and read what the display states when Freeze protection is on
   if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, JSON_ENABLED);
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, aqdata->frz_protect_state==ON?JSON_ON:JSON_ENABLED);
   }
 
   length += sprintf(buffer+length, "}}" );

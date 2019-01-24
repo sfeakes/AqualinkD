@@ -22,6 +22,8 @@
 #define FREEZE_PROTECT "Freeze_Protect"
 #define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT
 
+#define BATTERY_STATE "Battery"
+
 #define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
 #define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
 /*

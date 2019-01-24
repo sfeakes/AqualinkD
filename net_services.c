@@ -337,7 +337,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
-    send_mqtt_string_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_state==ON?MQTT_ON:MQTT_OFF); 
+    send_mqtt_string_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_state==ON?MQTT_ON:MQTT_OFF);
+    _last_mqtt_aqualinkdata.frz_protect_state = _aqualink_data->frz_protect_state;
     send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
     /*
     send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
@@ -350,6 +351,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->frz_protect_state != _last_mqtt_aqualinkdata.frz_protect_state) {
     _last_mqtt_aqualinkdata.frz_protect_state = _aqualink_data->frz_protect_state;
     send_mqtt_string_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_state==ON?MQTT_ON:MQTT_OFF); 
+  }
+
+  if (_aqualink_data->battery != _last_mqtt_aqualinkdata.battery) {
+    _last_mqtt_aqualinkdata.battery = _aqualink_data->battery;
+    send_mqtt_string_msg(nc, BATTERY_STATE, _aqualink_data->battery==OK?MQTT_ON:MQTT_OFF); 
   }
 
   if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) { // If the SWG is actually on
@@ -1124,6 +1130,8 @@ void start_mqtt(struct mg_mgr *mgr) {
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
     }
     _last_mqtt_aqualinkdata.ar_swg_status = SWG_STATUS_UNKNOWN;
+    _last_mqtt_aqualinkdata.battery = -1;
+    _last_mqtt_aqualinkdata.frz_protect_state = -1;
     _mqtt_exit_flag = false; // set here to stop multiple connects, if it fails truley fails it will get set to false.
   }
 }

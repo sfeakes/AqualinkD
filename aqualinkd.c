@@ -302,8 +302,6 @@ void processMessage(char *message)
     } 
   }
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
-    // ADD Code Set FREEZE protection on (from enabeled).
-    // Need to figure out a way to turn know when it's off though before uncommeting.
     _aqualink_data.frz_protect_state = ON;
     freeze_msg_count = 0;
   }
@@ -866,6 +864,7 @@ void main_loop() {
   _aqualink_data.temp_units = UNKNOWN;
   _aqualink_data.single_device = false;
   _aqualink_data.frz_protect_state = OFF;
+  _aqualink_data.battery = OK;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
