@@ -78,6 +78,7 @@ void init_parameters (struct aqconfig * parms)
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
   parms->report_zero_spa_temp = false;
+  parms->report_zero_pool_temp = false;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -266,6 +267,8 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
               config_parameters->flash_mqtt_buttons = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
               config_parameters->report_zero_spa_temp = text2bool(indx+1);
+            } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
+              config_parameters->report_zero_pool_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "button_", 7) == 0) {
               int num = strtoul(b_ptr+7, NULL, 10) - 1;
               //logMessage (LOG_DEBUG, "Button %d\n", strtoul(b_ptr+7, NULL, 10));
@@ -382,7 +385,10 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
     config_parameters->report_zero_spa_temp = text2bool(value);
     rtn=true;
-  } 
+  } else if (strncasecmp (param, "report_zero_pool_temp", 21) == 0) {
+    config_parameters->report_zero_pool_temp = text2bool(value);
+    rtn=true;
+  }
   // removed until domoticz has a better virtual thermostat
   /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
               config_parameters->dzidx_pool_thermostat = strtoul(value, NULL, 10);
@@ -553,6 +559,7 @@ bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
   fprintf(fp, "override_freeze_protect = %s\n", bool2text(config_parameters->override_freeze_protect));        
   fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
   fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(config_parameters->report_zero_spa_temp));
+  fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
 
   fprintf(fp, "\n#** Programmable light **\n");
   if (config_parameters->light_programming_button <= 0) {
