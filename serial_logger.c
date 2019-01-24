@@ -30,7 +30,8 @@ bool _keepRunning = true;
 
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
 unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
-unsigned char _filter = 0x00;
+unsigned char _filter[10];
+int _filters=0;
 
 void intHandler(int dummy) {
   _keepRunning = false;
@@ -82,13 +83,30 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
   //if (_filter != 0x00 && ID != _filter && packet_buffer[PKT_DEST] != _filter )
   //  return;
 
+  if (_filters != 0)
+  {
+    int i;
+    bool dest_match = false;
+    bool src_match = false;
+
+    for (i=0; i < _filters; i++) {
+      if ( packet_buffer[PKT_DEST] == _filter[i])
+        dest_match = true;
+      if ( ID == _filter[i])
+        src_match = true;
+    }
+
+    if(dest_match == false && src_match == false)
+      return;
+  }
+/*
   if (_filter != 0x00) {
     if ( packet_buffer[PKT_DEST]==0x00 && ID != _filter )
       return;
     if ( packet_buffer[PKT_DEST]!=0x00 && packet_buffer[PKT_DEST] != _filter )
       return;
   }
-
+*/
   if (packet_buffer[PKT_DEST] != 0x00)
     printf("\n");
 
@@ -145,7 +163,9 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[i], "-i") == 0 && i+1 < argc) {
       unsigned int n;
       sscanf(argv[i+1], "0x%2x", &n);
-      _filter = n;
+      _filter[_filters] = n;
+      _filters++;
+      printf("Add filter %i 0x%02hhx\n",_filters, _filter[_filters]);
       logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
     }
   }
