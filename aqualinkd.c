@@ -226,6 +226,7 @@ void processMessage(char *message)
 
   if(stristr(msg, LNG_MSG_BATTERY_LOW) != NULL) {
     _aqualink_data.battery = LOW;
+    strcpy(_aqualink_data.last_display_message, msg); // Also display the message on web UI
   }
   else if(stristr(msg, LNG_MSG_POOL_TEMP_SET) != NULL) {
     //logMessage(LOG_DEBUG, "pool htr long message: %s", &message[20]);
@@ -304,6 +305,7 @@ void processMessage(char *message)
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
     _aqualink_data.frz_protect_state = ON;
     freeze_msg_count = 0;
+    strcpy(_aqualink_data.last_display_message, msg); // Also display the message on web UI
   }
   else if(msg[2] == '/' && msg[5] == '/' && msg[8] == ' ') {// date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
