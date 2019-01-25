@@ -118,8 +118,8 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 
   switch(type) {
     case POOL_HTR_SETOINT:
-       type_msg = (aqdata->single_device?"Temp1":"Pool");
-       if ( aqdata->temp_units == CELSIUS ) {
+      type_msg = (aqdata->single_device?"Temp1":"Pool");
+      if ( aqdata->temp_units == CELSIUS ) {
         max = HEATER_MAX_C;
         min = (aqdata->single_device?HEATER_MIN_C:HEATER_MIN_C-1);
       } else {

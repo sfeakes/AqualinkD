@@ -566,6 +566,8 @@ void set_light_mode(char *value)
   aq_programmer(AQ_SET_COLORMODE, buf, _aqualink_data);
 }
 
+
+
 void action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
   // struct http_message *http_msg = (struct http_message *)ev_data;
   if (getLogLevel() >= LOG_INFO) { // Simply for log message, check we are at
@@ -863,7 +865,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //aqualinkd/SWG/Percent_f/set
 
   if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
-    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units == FAHRENHEIT && _aqualink_config->convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
+    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units != CELSIUS && _aqualink_config->convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
     if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
       _aqualink_data->unactioned.value = setpoint_check(POOL_HTR_SETOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = POOL_HTR_SETOINT;

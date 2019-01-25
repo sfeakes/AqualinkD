@@ -567,18 +567,25 @@ bool process_pda_packet(unsigned char* packet, int length)
             }
         }else if (stristr(msg, "POOL HEATER") != NULL) {
           set_pda_led(_aqualink_data.aqbuttons[POOL_HEAT_INDEX].led, msg[AQ_MSGLEN-1]);
-        }else if (stristr(msg, "SPA MODE") != NULL) {
-            // when SPA mode is on the filter may be on or pending
-            if (msg[AQ_MSGLEN-1] == 'N') {
-                _aqualink_data.aqbuttons[PUMP_INDEX].led->state = ON;
-                _aqualink_data.aqbuttons[SPA_INDEX].led->state = ON;
-            } else if (msg[AQ_MSGLEN-1] == '*') {
-                _aqualink_data.aqbuttons[PUMP_INDEX].led->state = FLASH;
-                _aqualink_data.aqbuttons[SPA_INDEX].led->state = ON;
-            } else {
-                _aqualink_data.aqbuttons[SPA_INDEX].led->state = OFF;
-            }
-        }else if (stristr(msg, "SPA HEATER") != NULL) {
+        }
+        else if (stristr(msg, "SPA MODE") != NULL) {
+          // when SPA mode is on the filter may be on or pending
+          if (msg[AQ_MSGLEN - 1] == 'N') {
+            _aqualink_data.aqbuttons[PUMP_INDEX].led->state = ON;
+            _aqualink_data.aqbuttons[SPA_INDEX].led->state = ON;
+          }
+          else if (msg[AQ_MSGLEN - 1] == '*')
+          {
+            _aqualink_data.aqbuttons[PUMP_INDEX].led->state = FLASH;
+            _aqualink_data.aqbuttons[SPA_INDEX].led->state = ON;
+          }
+          else
+          {
+            _aqualink_data.aqbuttons[SPA_INDEX].led->state = OFF;
+          }
+        }
+        else if (stristr(msg, "SPA HEATER") != NULL)
+        {
           set_pda_led(_aqualink_data.aqbuttons[SPA_HEAT_INDEX].led, msg[AQ_MSGLEN-1]);
         }
       } else if (pda_m_type() == PM_UNKNOWN) {
@@ -709,6 +716,10 @@ void action_delayed_request()
 {
   char sval[10];
   snprintf(sval, 9, "%d", _aqualink_data.unactioned.value);
+
+  // If we don't know the units yet, we can't action, so wait until we do.
+  if (_aqualink_data.temp_units == UNKNOWN && _aqualink_data.unactioned.type != SWG_SETPOINT)
+    return;
 
   if (_aqualink_data.unactioned.type == POOL_HTR_SETOINT) {
     _aqualink_data.unactioned.value = setpoint_check(POOL_HTR_SETOINT, _aqualink_data.unactioned.value, &_aqualink_data);
