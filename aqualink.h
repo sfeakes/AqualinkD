@@ -115,6 +115,8 @@ struct aqualinkdata
   int open_websockets;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
+  struct timespec last_active_time;
+  struct timespec start_active_time;
 };
 
 

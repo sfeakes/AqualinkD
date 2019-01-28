@@ -40,7 +40,10 @@ bool pda_shouldSleep() {
 
   // NSF NEED TO CHECK ACTIVE THREADS.
   if (_aqualink_data->active_thread.thread_id != 0) {
-    logMessage(LOG_DEBUG, "PDA can't sleep as thread is active");
+    logMessage(LOG_DEBUG, "PDA can't sleep as thread %d,%p is active",
+               _aqualink_data->active_thread.ptype,
+               _aqualink_data->active_thread.thread_id);
+
     _pda_loop_cnt = 0;
     return false;
   }

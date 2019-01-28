@@ -20,6 +20,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
+#include <time.h>
 
 
 #include "aqualink.h"
@@ -30,6 +31,7 @@
 #include "pda_menu.h"
 #include "init_buttons.h"
 #include "pda_aq_programmer.h"
+#include "timespec_subtract.h"
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
@@ -210,7 +212,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
   if (aq_data->active_thread.thread_id != 0) {
-    logMessage(LOG_DEBUG, "Kicking thread\n");
+    logMessage(LOG_DEBUG, "Kicking thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
     pthread_cond_broadcast(&aq_data->active_thread.thread_cond);
   }
 }
@@ -386,24 +388,40 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   }
 
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
-    logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
+    logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
+                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                threadCtrl->aq_data->active_thread.thread_id);
     sleep(waitTime);
   }
   
   if (i >= tries) {
-    logMessage (LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
+    logMessage (LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
+                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                threadCtrl->aq_data->active_thread.thread_id);
     free(threadCtrl);
     pthread_exit(0);
   }
  
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
-  logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
+  clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
+  logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
+              threadCtrl->aq_data->active_thread.ptype,
+              threadCtrl->aq_data->active_thread.thread_id);
 }
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
-  logMessage(LOG_DEBUG, "Thread %d finished\n",threadCtrl->thread_id);
+  struct timespec elapsed;
+
+  clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
+  timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
+
+  logMessage(LOG_DEBUG, "Thread %d,%p finished in %d.%03ld sec\n",
+             threadCtrl->aq_data->active_thread.ptype,
+             threadCtrl->aq_data->active_thread.thread_id,
+             elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
+  // :TODO: This delay should not be needed
   // Quick delay to allow for last message to be sent.
   delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;

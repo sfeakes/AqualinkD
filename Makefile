@@ -27,7 +27,7 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c pentair_messages.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c pentair_messages.c mongoose.c timespec_subtract.c
 
 SL_SRC = serial_logger.c aq_serial.c utils.c
 LR_SRC = log_reader.c aq_serial.c utils.c

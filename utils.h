@@ -1,5 +1,6 @@
 #include <syslog.h>
 #include <stdbool.h>
+#include <time.h>
 
 #ifndef UTILS_H_
 #define UTILS_H_

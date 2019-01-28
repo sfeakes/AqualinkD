@@ -232,7 +232,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   //int found;
   char device_name[15];
   
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_ON_OFF);
   
   char *buf = (char*)threadCtrl->thread_args;
   unsigned int device = atoi(&buf[0]);
@@ -363,7 +363,7 @@ void *set_aqualink_PDA_wakeinit( void *ptr )
 
   // At this point, we should probably just exit if there is a thread already going as 
   // it means the wake was called due to changing a device.
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_WAKE_INIT);
 
   logMessage(LOG_DEBUG, "PDA Wake Init\n");
 
