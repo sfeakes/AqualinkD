@@ -961,6 +961,7 @@ void main_loop() {
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
+  _aqualink_data.last_active_time = 0;
 
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
@@ -1005,16 +1006,20 @@ void main_loop() {
       blank_read++;
     } else if (packet_length > 0) {
       blank_read = 0;
-
-//debugPacket(packet_buffer, packet_length);
-
+      if ((getLogLevel() >= LOG_DEBUG) && (packet_length > 0))
+        {
+          debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
+        }
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
         /*
         send_ack(rs_fd, _aqualink_data.aq_command);
         _aqualink_data.aq_command = NUL;
         */
         if (getLogLevel() >= LOG_DEBUG)
-          logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer , packet_length), packet_length);
+          {
+            //logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer , packet_length), packet_length);
+            //debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
+          }
 
         // **** NSF  (Taken out while playing with Panel Simulator, put back in. ************)
        // send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
@@ -1024,11 +1029,53 @@ void main_loop() {
         if (! _aqualink_data.simulate_panel ||
               _aqualink_data.active_thread.thread_id != 0) 
         {
-          // Can only send command to status message on PDA.
-          if (_config_parameters.pda_mode == true && packet_buffer[PKT_CMD] != CMD_STATUS)
-            send_ack(rs_fd, NUL);
-          else
-            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+            bool bPDA_in_standby = false;
+            if (_aqualink_data.active_thread.thread_id == 0)
+              {
+                time_t now;
+                time (&now);
+                if (difftime (now, _aqualink_data.last_active_time) > 65)
+                  {
+                    aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
+                                   &_aqualink_data);
+                  }
+                else if (difftime (now, _aqualink_data.last_active_time) > 5)
+                  {
+                    bPDA_in_standby = true;
+                    pda_m_clear ();
+                  }
+              }
+            // Can only send command to status message on PDA.
+            if (_config_parameters.pda_mode == true
+                && packet_buffer[PKT_CMD] == CMD_STATUS)
+              {
+                if ((_aqualink_data.active_thread.thread_id == 0)
+                    && bPDA_in_standby)
+                  {
+                    logMessage (LOG_DEBUG, "NO STATUS ACK\n");
+                  }
+                else
+                  {
+                    send_ack (rs_fd, pop_aq_cmd (&_aqualink_data));
+                  }
+              }
+            else if (_config_parameters.pda_mode == true
+                && packet_buffer[PKT_CMD] == CMD_PROBE)
+              {
+                if ((_aqualink_data.active_thread.thread_id == 0)
+                    && bPDA_in_standby)
+                  {
+                    logMessage (LOG_DEBUG, "NO PROBE ACK\n");
+                  }
+                else
+                  {
+                    send_ack (rs_fd, NUL);
+                  }
+              }
+            else
+          {
+                send_ack(rs_fd, NUL);
+          }
         } else {  // We are in simlator mode, ack get's complicated now. 
           // If have a command to send, send a normal ack.
           // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
@@ -1124,4 +1171,3 @@ void main_loop() {
   logMessage(LOG_NOTICE, "Exit!\n");
   exit(EXIT_FAILURE);
 }
-

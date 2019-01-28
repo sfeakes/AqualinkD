@@ -345,6 +345,7 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
   delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
   threadCtrl->aq_data->active_thread.ptype = AQP_NULL;
+  time(&threadCtrl->aq_data->last_active_time);
   threadCtrl->thread_id = 0;
   free(threadCtrl);
   pthread_exit(0);

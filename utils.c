@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <ctype.h>
+#include <sys/time.h>
 
 #ifndef _UTILS_C_
 #define _UTILS_C_
@@ -321,7 +322,12 @@ void logMessage(int msg_level, char *format, ...)
     if (msg_level == LOG_ERR) {
       fprintf(stderr, "%s", buffer);
     } else {
-      printf("%s", buffer);
+      struct timespec tspec;
+      struct tm localtm;
+      clock_gettime(CLOCK_REALTIME, &tspec);
+      char timeStr[TIMESTAMP_LENGTH];
+      strftime(timeStr, sizeof(timeStr), "%H:%M:%S", localtime_r(&tspec.tv_sec, &localtm));
+      printf("%s.%03ld %s", timeStr, tspec.tv_nsec / 1000000L, buffer);
     }
   }
 }
@@ -346,7 +352,7 @@ void daemonise (char *pidFile, void (*main_function) (void))
   if (rc)
   {
     if (EWOULDBLOCK == errno)
-    ; // another instance is running
+    // another instance is running
     //fputs ("\nAnother instance is already running\n", stderr);
     logMessage(LOG_ERR,"\nAnother instance is already running\n");
     exit (EXIT_FAILURE);

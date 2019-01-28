@@ -21,5 +21,6 @@ int pda_m_hlightindex();
 char *pda_m_hlight();
 char *pda_m_line(int index);
 pda_menu_type pda_m_type();
+bool pda_m_clear();
 
 #endif
