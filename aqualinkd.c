@@ -475,7 +475,12 @@ bool process_pda_packet(unsigned char* packet, int length)
   int i;
   char *msg;
   static bool init = false;
-  static time_t _lastStatus;
+  static time_t _lastStatus = 0;
+
+  if (_lastStatus == 0)
+    {
+      time(&_lastStatus);
+    }
 
   process_pda_menu_packet(packet, length);
 
@@ -961,8 +966,7 @@ void main_loop() {
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
-  _aqualink_data.last_active_time = 0;
-
+  time(&_aqualink_data.last_active_time);
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
     logMessage(LOG_ERR, "Can not start webserver on port %s.\n", _config_parameters.socket_port);
@@ -1034,7 +1038,7 @@ void main_loop() {
               {
                 time_t now;
                 time (&now);
-                if (difftime (now, _aqualink_data.last_active_time) > 65)
+                if (difftime (now, _aqualink_data.last_active_time) > 35)
                   {
                     aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
                                    &_aqualink_data);

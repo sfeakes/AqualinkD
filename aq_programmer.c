@@ -87,6 +87,7 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
   //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
+  // :TODO: is this true for PDA?
   // can only send a command every other ack.
   if (_last_sent_was_cmd == true) {
     _last_sent_was_cmd= false;
@@ -94,6 +95,7 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
   else if (aq_data->active_thread.thread_id != 0) {
     cmd = _pgm_command;
     _pgm_command = NUL;
+    logMessage(LOG_INFO, "Pop send '0x%02hhx' to controller\n", cmd);
   }
   else if (_stack_place > 0) {
     cmd = _commands[0];
@@ -321,31 +323,42 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   int tries = 120;
   static int waitTime = 1;
   int i=0;
-  
+
+  // :TODO: use a mutex or semaphore instead of polling
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
-    logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
+    logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
+                type, threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                threadCtrl->aq_data->active_thread.thread_id);
     sleep(waitTime);
   }
   
   if (i >= tries) {
-    logMessage (LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
+    logMessage (LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
+                type, threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                threadCtrl->aq_data->active_thread.thread_id);
     free(threadCtrl);
     pthread_exit(0);
   }
   
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
-  logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
+  time(&threadCtrl->aq_data->start_active_time);
+  logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
+              threadCtrl->aq_data->active_thread.ptype,
+              threadCtrl->aq_data->active_thread.thread_id);
 }
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
-  logMessage(LOG_DEBUG, "Thread %d finished\n",threadCtrl->thread_id);
+  time(&threadCtrl->aq_data->last_active_time);
+
+  logMessage(LOG_DEBUG, "Thread %d,%p finished in %d sec\n",
+             threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id,
+             (threadCtrl->aq_data->last_active_time - threadCtrl->aq_data->start_active_time));
   // Quick delay to allow for last message to be sent.
   delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
   threadCtrl->aq_data->active_thread.ptype = AQP_NULL;
-  time(&threadCtrl->aq_data->last_active_time);
   threadCtrl->thread_id = 0;
   free(threadCtrl);
   pthread_exit(0);
@@ -555,6 +568,7 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_
 {
   int i=0;
   char *menu;
+  unsigned char direction = KEY_PDA_UP;
   
   if (! select_pda_main_menu(aq_data))
     return false;
@@ -563,21 +577,46 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_
   
   if (menu_item == PM_MAIN)
     return true;
-  else if (menu_item == PM_SETTINGS)
-    menu = "MENU";
-  else if (menu_item == PM_EQUIPTMENT_CONTROL)
-    menu = "EQUIPMENT ON/OFF";
-  else
-    return false;
 
   if (!wait_pda_selected_item()){
     logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
     return false;
   }
+//  PDA Line 0 =
+//  PDA Line 1 = AIR
+//  PDA Line 2 =
+//  PDA Line 3 =
+//  PDA Line 4 = POOL MODE    OFF
+//  PDA Line 5 = POOL HEATER  OFF
+//  PDA Line 6 = SPA MODE     OFF
+//  PDA Line 7 = SPA HEATER   OFF
+//  PDA Line 8 = MENU
+//  PDA Line 9 = EQUIPMENT ON/OFF
+
+  if (menu_item == PM_SETTINGS)
+    {
+      if ((pda_m_hlightindex() < 8) && (pda_m_hlightindex() > 5))
+        {
+          direction = KEY_PDA_DOWN;
+        }
+      menu = "MENU";
+    }
+  else if (menu_item == PM_EQUIPTMENT_CONTROL)
+    {
+      menu = "EQUIPMENT ON/OFF";
+      if (pda_m_hlightindex() > 6)
+        {
+          direction = KEY_PDA_DOWN;
+        }
+    }
+  else
+    {
+      return false;
+    }
 
   while ( strncmp(pda_m_hlight(), menu, strlen(menu)) != 0 ) {
     if (_pgm_command == NUL) {
-      send_cmd(KEY_PDA_DOWN, aq_data);
+      send_cmd(direction, aq_data);
       logMessage(LOG_DEBUG, "PDA Device programmer selected sub menu\n");
       waitForMessage(aq_data, NULL, 1);
     }
@@ -587,13 +626,9 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_
   }
 
   send_cmd(KEY_PDA_SELECT, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
+  while (_pgm_command != NUL) { delay(100); }
 
   return true;
-  /*
-  send_cmd(KEY_PDA_DOWN, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
-  */
 }
 
 void *set_aqualink_PDA_device_on_off( void *ptr )
@@ -604,7 +639,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   int i=0;
   int found;
   
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_ON_OFF);
   
   char *buf = (char*)threadCtrl->thread_args;
   int device = atoi(&buf[0]);
@@ -687,40 +722,36 @@ void *get_aqualink_PDA_device_status( void *ptr )
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  int i;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
   
-  //int val = atoi((char*)threadCtrl->thread_args);
-
   logMessage(LOG_DEBUG, "PDA Device Status\n");
   
   if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
     logMessage(LOG_ERR, "PDA Device Status :- can't find main menu\n");
     cleanAndTerminateThread(threadCtrl);
-    return ptr;
+    return NULL;
   }
-  //select_pda_main_menu_item(aq_data, "EQUIPMENT ON/OFF");
+  logMessage(LOG_DEBUG, "PDA Device Status at PM_EQUIPTMENT_CONTROL\n");
 
-  // Just loop over all the dvices 18 times should do it.
-  for (i=0; i < 18; i++) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
-    while (_pgm_command != NUL) { delay(100); } 
+  // Go up once to get to bottom of menu
+  send_cmd(KEY_PDA_UP, aq_data);
+  while (_pgm_command != NUL) {
+      delay(100);
   }
 
-  //printf("*** GET MAIN MENU ***\n");
+  logMessage(LOG_DEBUG, "PDA Device Status back to PM_MAIN\n");
 
-  select_pda_main_menu_item(aq_data, PM_MAIN);
-
-  //printf("*** FINISHED ***\n");
-  /*
   send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
-  */
+  while (_pgm_command != NUL) {
+      delay(100);
+  }
+
+  logMessage(LOG_DEBUG, "PDA Device Status complete\n");
+
   cleanAndTerminateThread(threadCtrl);
   
-  // just stop compiler error, ptr is not valid as it's just been freed
-  return ptr;
+  return NULL;
 }
 
 void *set_aqualink_PDA_init( void *ptr )
@@ -728,14 +759,9 @@ void *set_aqualink_PDA_init( void *ptr )
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  int i=0;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
   
-  //int val = atoi((char*)threadCtrl->thread_args);
-
-  //logMessage(LOG_DEBUG, "PDA Init\n", val);
-
   logMessage(LOG_DEBUG, "PDA Init\n");
   
   if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
@@ -743,19 +769,27 @@ void *set_aqualink_PDA_init( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
-  //select_pda_main_menu_item(aq_data, "EQUIPMENT ON/OFF");
 
-  // Just loop over all the dvices 20 times should do it.
-  for (i=0; i < 18; i++) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
-    while (_pgm_command != NUL) { delay(500); } 
+  logMessage(LOG_DEBUG, "PDA Init at PM_EQUIPTMENT_CONTROL\n");
+
+  // Go up once to get to bottom of menu
+  send_cmd(KEY_PDA_UP, aq_data);
+  while (_pgm_command != NUL) {
+      delay(100);
   }
 
-  select_pda_main_menu_item(aq_data, PM_MAIN);
+  logMessage(LOG_DEBUG, "PDA Init back to PM_MAIN\n");
+
+  send_cmd(KEY_PDA_BACK, aq_data);
+  while (_pgm_command != NUL) {
+      delay(100);
+  }
 
   printf("*** PDA Init :- add code to find setpoints ***\n");
   
   // Run through menu and find freeze setpoints / heater setpoints etc.
+
+  logMessage(LOG_DEBUG, "PDA Init complete\n");
 
   cleanAndTerminateThread(threadCtrl);
   
