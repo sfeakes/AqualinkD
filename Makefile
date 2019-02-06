@@ -89,7 +89,7 @@ $(AQUARITED): $(AR_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
-	$(RM) *.o *~ $(MAIN) $(MAIN_U)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_U)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^
