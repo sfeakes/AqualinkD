@@ -82,7 +82,7 @@ $(PLAY): $(PL_OBJS) $(PL_EXOBJ)
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
-	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^
