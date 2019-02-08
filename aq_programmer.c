@@ -20,7 +20,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <time.h>
 
 #include "aqualink.h"
 #include "utils.h"
@@ -195,7 +195,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
   if (aq_data->active_thread.thread_id != 0) {
-    logMessage(LOG_DEBUG, "Kicking thread\n");
+    logMessage(LOG_DEBUG, "Kicking thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
     pthread_cond_broadcast(&aq_data->active_thread.thread_cond);
   }
 }
@@ -342,7 +342,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
-  time(&threadCtrl->aq_data->start_active_time);
+  clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
   logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
               threadCtrl->aq_data->active_thread.ptype,
               threadCtrl->aq_data->active_thread.thread_id);
@@ -350,13 +350,17 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
-  time(&threadCtrl->aq_data->last_active_time);
+  struct timespec elapsed;
 
-  logMessage(LOG_DEBUG, "Thread %d,%p finished in %d sec\n",
+  clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
+  timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
+
+  logMessage(LOG_DEBUG, "Thread %d,%p finished in %d.%03ld sec\n",
              threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id,
-             (threadCtrl->aq_data->last_active_time - threadCtrl->aq_data->start_active_time));
+             elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
+  // :TODO: This delay should not be needed
   // Quick delay to allow for last message to be sent.
-  delay(500);
+  // delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
   threadCtrl->aq_data->active_thread.ptype = AQP_NULL;
   threadCtrl->thread_id = 0;

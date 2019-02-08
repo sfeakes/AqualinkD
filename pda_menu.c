@@ -103,7 +103,9 @@ clear the menu
 */
 bool pda_m_clear()
 {
-    _hlightindex = -1;
-    memset(_menu, 0, PDA_LINES * (AQ_MSGLEN+1));
-	return true;
+  logMessage(LOG_DEBUG, "PDA menu clear\n");
+
+  _hlightindex = -1;
+  memset(_menu, 0, PDA_LINES * (AQ_MSGLEN+1));
+  return true;
 }

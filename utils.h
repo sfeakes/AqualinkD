@@ -1,5 +1,6 @@
 #include <syslog.h>
 #include <stdbool.h>
+#include <time.h>
 
 #ifndef UTILS_H_
 #define UTILS_H_
@@ -49,6 +50,9 @@ float degFtoC(float degF);
 float degCtoF(float degC);
 char* stristr(const char* haystack, const char* needle);
 int ascii(char *destination, char *source);
+int timespec_subtract (struct timespec *result, const struct timespec *x,
+                       const struct timespec *y);
+
 
 
 //#ifndef _UTILS_C_

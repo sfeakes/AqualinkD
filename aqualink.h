@@ -99,8 +99,8 @@ struct aqualinkdata
   aqledstate frz_protect_state;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
-  time_t last_active_time;
-  time_t start_active_time;
+  struct timespec last_active_time;
+  struct timespec start_active_time;
 };
 
 

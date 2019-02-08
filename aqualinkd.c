@@ -624,14 +624,6 @@ bool process_pda_packet(unsigned char* packet, int length)
           }
         }
       }
-      // If we haven't initilixed and we are on line 4, then initilize
-      if (! init && pda_m_hlightindex() == 4) {
-        //printf("** INITILIZE ADD LINE BACK\n");
-        aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
-        time(&_lastStatus);
-        init = true;
-      }
-       
     }
     //printf("** Line index='%d' Highligh='%s' Message='%.*s'\n",pda_m_hlightindex(), pda_m_hlight(), AQ_MSGLEN, msg);
     logMessage(LOG_INFO,"PDA Menu '%d' Selectedline '%s', Last line received '%.*s'\n", pda_m_type(), pda_m_hlight(), AQ_MSGLEN, msg);
@@ -966,7 +958,9 @@ void main_loop() {
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
-  time(&_aqualink_data.last_active_time);
+
+  clock_gettime(CLOCK_REALTIME, &_aqualink_data.last_active_time);
+
 
   if (!start_net_services(&mgr, &_aqualink_data, &_config_parameters)) {
     logMessage(LOG_ERR, "Can not start webserver on port %s.\n", _config_parameters.socket_port);
@@ -980,8 +974,10 @@ void main_loop() {
   rs_fd = init_serial_port(_config_parameters.serial_port);
   logMessage(LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _config_parameters.serial_port);
 
-  if (_config_parameters.pda_mode == true)
-    set_pda_mode(true);
+  if (_config_parameters.pda_mode == true) {
+      set_pda_mode(true);
+      aq_programmer(AQ_PDA_INIT, NULL, &_aqualink_data);
+  }
 
   while (_keepRunning == true) {
     while ((rs_fd < 0 || blank_read >= MAX_ZERO_READ_BEFORE_RECONNECT) && _keepRunning == true) {
@@ -1034,19 +1030,23 @@ void main_loop() {
               _aqualink_data.active_thread.thread_id != 0) 
         {
             bool bPDA_in_standby = false;
-            if (_aqualink_data.active_thread.thread_id == 0)
+            if ((_aqualink_data.active_thread.thread_id == 0) &&
+                ((packet_buffer[PKT_CMD] == CMD_STATUS) ||
+                 (packet_buffer[PKT_CMD] == CMD_PROBE)))
               {
-                time_t now;
-                time (&now);
-                if (difftime (now, _aqualink_data.last_active_time) > 35)
-                  {
-                    aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
-                                   &_aqualink_data);
-                  }
-                else if (difftime (now, _aqualink_data.last_active_time) > 5)
+                struct timespec now;
+                struct timespec elapsed;
+                clock_gettime(CLOCK_REALTIME, &now);
+                timespec_subtract(&elapsed, &now, &(_aqualink_data.last_active_time));
+                if (elapsed.tv_sec <= 30)
                   {
                     bPDA_in_standby = true;
                     pda_m_clear ();
+                  }
+                else
+                  {
+                    aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
+                                   &_aqualink_data);
                   }
               }
             // Can only send command to status message on PDA.
