@@ -186,6 +186,9 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
 {
   static char mqtt_pub_topic[250];
 
+  sprintf(mqtt_pub_topic, "%s/%s/delay",_aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, (state==FLASH?MQTT_ON:MQTT_OFF));
+
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
@@ -359,6 +362,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->spa_htr_set_point != TEMP_UNKNOWN && _aqualink_data->spa_htr_set_point != _last_mqtt_aqualinkdata.spa_htr_set_point) {
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
+  }
+
+  if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
+    _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
+    send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==ON?MQTT_ON:MQTT_OFF);
   }
 
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {

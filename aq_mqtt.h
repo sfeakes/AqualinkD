@@ -9,6 +9,8 @@
 //#define POOL_SETPT_TOPIC "Pool_Heater/setpoint"
 //#define SPA_SETPT_TOPIC "Spa_Heater/setpoint"
 
+#define SERVICE_MODE_TOPIC "Service_Mode"
+
 #define ENABELED_SUBT "/enabled"
 
 #define SWG_TOPIC "SWG"

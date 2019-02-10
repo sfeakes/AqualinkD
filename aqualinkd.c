@@ -195,6 +195,7 @@ void processMessage(char *message)
   static bool _initWithRS = false;
   static bool _gotREV = false;
   static int freeze_msg_count = 0;
+  static int service_msg_count = 0;
   // NSF replace message with msg 
   msg = stripwhitespace(message);
   strcpy(_aqualink_data.last_message, msg);
@@ -213,6 +214,12 @@ void processMessage(char *message)
   if(stristr(msg, "JANDY AquaLinkRS") != NULL) {
     //_aqualink_data.display_message = NULL;
     _aqualink_data.last_display_message[0] = '\0';
+  }
+
+  // If we have more than 10 messages without "Service Mode is active" assume it's off.
+  if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
+    _aqualink_data.service_mode_state = OFF;
+    service_msg_count = 0;
   }
 
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
@@ -301,6 +308,12 @@ void processMessage(char *message)
       _aqualink_data.single_device = true;
       logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n"); 
     } 
+  }
+  else if (stristr(msg, LNG_MSG_SERVICE_ACTIVE) != NULL) {
+    if (_aqualink_data.service_mode_state == OFF)
+      logMessage(LOG_NOTICE, "AqualinkD set to Service Mode\n"); 
+    _aqualink_data.service_mode_state = ON;
+    service_msg_count = 0;
   }
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
     _aqualink_data.frz_protect_state = ON;
@@ -925,6 +938,7 @@ void main_loop() {
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
   _aqualink_data.single_device = false;
+  _aqualink_data.service_mode_state = OFF;
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.battery = OK;
 
