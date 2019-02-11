@@ -387,33 +387,49 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
     pthread_exit(0);
   }
 
-  while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
-    logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
-                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
-                threadCtrl->aq_data->active_thread.thread_id);
-    sleep(waitTime);
-  }
   
-  if (i >= tries) {
-    logMessage (LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
-                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
-                threadCtrl->aq_data->active_thread.thread_id);
-    free(threadCtrl);
-    pthread_exit(0);
-  }
- 
+  int ret;
+  struct timespec max_wait;
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 30;
+
+  pthread_mutex_lock(&threadCtrl->aq_data->mutex);
+  while (threadCtrl->aq_data->active_thread.thread_id != 0)
+    {
+      logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
+                  type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                  threadCtrl->aq_data->active_thread.thread_id);
+      if ((ret = pthread_cond_timedwait(&threadCtrl->aq_data->thread_finished_cond,
+                                        &threadCtrl->aq_data->mutex, &max_wait)))
+        {
+          logMessage (LOG_ERR, "Thread %d,%p err %s waiting for thread %d,%p to finish\n",
+                      type, &threadCtrl->thread_id, strerror(ret),
+                      threadCtrl->aq_data->active_thread.ptype,
+                      threadCtrl->aq_data->active_thread.thread_id);
+
+          if ((ret = pthread_mutex_unlock(&threadCtrl->aq_data->mutex)))
+            {
+              logMessage (LOG_ERR, "waitForSingleThreadOrTerminate mutex unlock ret %s\n", strerror(ret));
+            }
+          free(threadCtrl);
+          pthread_exit(0);
+        }
+    }
+
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
   logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
               threadCtrl->aq_data->active_thread.ptype,
               threadCtrl->aq_data->active_thread.thread_id);
+  pthread_mutex_unlock(&threadCtrl->aq_data->mutex);
 }
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
   struct timespec elapsed;
 
+  pthread_mutex_lock(&threadCtrl->aq_data->mutex);
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
   timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
 
@@ -426,6 +442,9 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
   delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
   threadCtrl->aq_data->active_thread.ptype = AQP_NULL;
+  pthread_cond_signal(&threadCtrl->aq_data->thread_finished_cond);
+  pthread_mutex_unlock(&threadCtrl->aq_data->mutex);
+
   threadCtrl->thread_id = 0;
   free(threadCtrl);
   pthread_exit(0);
