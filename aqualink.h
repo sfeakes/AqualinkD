@@ -248,6 +248,8 @@ struct aqualinkdata
   struct timespec last_active_time;
   struct timespec start_active_time;
   #endif
+  pthread_mutex_t mutex;
+  pthread_cond_t thread_finished_cond;
 };
 
 
