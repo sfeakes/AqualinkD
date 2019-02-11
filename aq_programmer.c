@@ -42,7 +42,6 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr );
 void *get_aqualink_programs( void *ptr );
 void *get_freeze_protect_temp( void *ptr );
 void *get_aqualink_diag_model( void *ptr );
-void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
@@ -319,50 +318,63 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
 
 void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type)
 {
-  //static int tries = 120;
-  int tries = 120;
-  static int waitTime = 1;
-  int i=0;
+  int ret;
+  struct timespec max_wait;
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 30;
 
-  // :TODO: use a mutex or semaphore instead of polling
-  while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
-    logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
-                type, threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
-                threadCtrl->aq_data->active_thread.thread_id);
-    sleep(waitTime);
-  }
-  
-  if (i >= tries) {
-    logMessage (LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
-                type, threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
-                threadCtrl->aq_data->active_thread.thread_id);
-    free(threadCtrl);
-    pthread_exit(0);
-  }
-  
+  pthread_mutex_lock(&threadCtrl->aq_data->mutex);
+  while (threadCtrl->aq_data->active_thread.thread_id != 0)
+    {
+      logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
+                  type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+                  threadCtrl->aq_data->active_thread.thread_id);
+      if ((ret = pthread_cond_timedwait(&threadCtrl->aq_data->thread_finished_cond,
+                                        &threadCtrl->aq_data->mutex, &max_wait)))
+        {
+          logMessage (LOG_ERR, "Thread %d,%p err %s waiting for thread %d,%p to finish\n",
+                      type, &threadCtrl->thread_id, strerror(ret),
+                      threadCtrl->aq_data->active_thread.ptype,
+                      threadCtrl->aq_data->active_thread.thread_id);
+
+          if ((ret = pthread_mutex_unlock(&threadCtrl->aq_data->mutex)))
+            {
+              logMessage (LOG_ERR, "waitForSingleThreadOrTerminate mutex unlock ret %s\n", strerror(ret));
+            }
+          free(threadCtrl);
+          pthread_exit(0);
+        }
+    }
+
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
   logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
               threadCtrl->aq_data->active_thread.ptype,
               threadCtrl->aq_data->active_thread.thread_id);
+  pthread_mutex_unlock(&threadCtrl->aq_data->mutex);
 }
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
   struct timespec elapsed;
 
+  pthread_mutex_lock(&threadCtrl->aq_data->mutex);
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
   timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
 
   logMessage(LOG_DEBUG, "Thread %d,%p finished in %d.%03ld sec\n",
-             threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id,
+             threadCtrl->aq_data->active_thread.ptype,
+             threadCtrl->aq_data->active_thread.thread_id,
              elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
   // :TODO: This delay should not be needed
   // Quick delay to allow for last message to be sent.
   // delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
   threadCtrl->aq_data->active_thread.ptype = AQP_NULL;
+  pthread_cond_signal(&threadCtrl->aq_data->thread_finished_cond);
+  pthread_mutex_unlock(&threadCtrl->aq_data->mutex);
+
   threadCtrl->thread_id = 0;
   free(threadCtrl);
   pthread_exit(0);

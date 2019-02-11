@@ -4,6 +4,8 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <pthread.h>
+
 #include "aq_serial.h"
 #include "aq_programmer.h"
 
@@ -101,6 +103,8 @@ struct aqualinkdata
   //bool ar_swg_connected;
   struct timespec last_active_time;
   struct timespec start_active_time;
+  pthread_mutex_t mutex;
+  pthread_cond_t thread_finished_cond;
 };
 
 
