@@ -962,6 +962,9 @@ void main_loop() {
 
   clock_gettime(CLOCK_REALTIME, &_aqualink_data.last_active_time);
 
+  pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
+  pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
+
   pthread_mutex_init(&_aqualink_data.mutex, NULL);
   pthread_cond_init(&_aqualink_data.thread_finished_cond, NULL);
 

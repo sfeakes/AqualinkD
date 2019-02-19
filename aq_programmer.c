@@ -30,7 +30,7 @@
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
-void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
+static bool send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
 void cancel_menu(struct aqualinkdata *aq_data);
 
 
@@ -47,6 +47,7 @@ void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
 
 void *get_aqualink_PDA_device_status( void *ptr );
+bool get_aqualink_PDA_device_status_op();
 void *set_aqualink_PDA_device_on_off( void *ptr );
 
 bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate state, int numMessageReceived);
@@ -55,14 +56,15 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
 bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* message2, int numMessageReceived);
 
 bool push_aq_cmd(unsigned char cmd);
+bool wait_pda_selected_item();
 
 #define MAX_STACK 20
 int _stack_place = 0;
 unsigned char _commands[MAX_STACK];
 //unsigned char pgm_commands[MAX_STACK];
-unsigned char _pgm_command = NUL;
-
-bool _last_sent_was_cmd = false;
+static unsigned char _pgm_command = NUL;
+static pthread_mutex_t _pgm_command_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t _pgm_command_sent_cond = PTHREAD_COND_INITIALIZER;
 
 bool push_aq_cmd(unsigned char cmd) {
   //logMessage(LOG_DEBUG, "push_aq_cmd\n");
@@ -84,17 +86,21 @@ int get_aq_cmd_length()
 
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
+  static bool _last_sent_was_cmd = false;
+
   unsigned char cmd = NUL;
   //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
   // :TODO: is this true for PDA?
   // can only send a command every other ack.
-  if (_last_sent_was_cmd == true) {
+  if (!pda_mode() && (_last_sent_was_cmd == true)) {
     _last_sent_was_cmd= false;
   }
   else if (aq_data->active_thread.thread_id != 0) {
+    pthread_mutex_lock(&_pgm_command_mutex);
     cmd = _pgm_command;
     _pgm_command = NUL;
-    logMessage(LOG_INFO, "Pop send '0x%02hhx' to controller\n", cmd);
+    pthread_cond_signal(&_pgm_command_sent_cond);
+    pthread_mutex_unlock(&_pgm_command_mutex);
   }
   else if (_stack_place > 0) {
     cmd = _commands[0];
@@ -318,7 +324,7 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
 
 void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type)
 {
-  int ret;
+  int ret = 0;
   struct timespec max_wait;
   clock_gettime(CLOCK_REALTIME, &max_wait);
   max_wait.tv_sec += 30;
@@ -542,58 +548,61 @@ void *set_aqualink_SWG( void *ptr )
 
 bool select_pda_main_menu(struct aqualinkdata *aq_data)
 {
-  int i=0;
+  int i;
+  struct timespec max_wait;
+
+  logMessage(LOG_DEBUG, "PDA Device programmer select main menu\n");
+
   // Check to see if we are at the main menu
-  if (pda_m_type() == PM_MAIN) {
+  if ((pda_m_type() == PM_MAIN) || (pda_m_type() == PM_BUILDING_MAIN)){
     return true;
   }
-  // First send back
-  send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) { 
-    delay(500);
-    if (i++ > 6) return false;
-  }
-  //delay(1000);
-  i=0;
-  while (pda_m_type() != PM_MAIN) { 
-    delay(500);
-    if (i++ > 6) return false;
+  for (i = 0; i < PDA_MAX_MENU_DEPTH; i++)
+    {
+      // First send back
+      send_cmd(KEY_PDA_BACK, aq_data);
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 5;
+      if (!wait_pda_m_hlightindex_update(&max_wait)) {
+        break;
+      }
+      if ((pda_m_type() == PM_MAIN) || (pda_m_type() == PM_BUILDING_MAIN)) {
+        return true;
+      }
   }
 
-  return true;
+  return false;
 }
 
 bool wait_pda_selected_item()
 {
-  int i=0;
+  struct timespec max_wait;
 
-  i=0;
-  while (pda_m_hlightindex() == -1){
-    if (i++ > 10)
-      break;
-    delay(100);
-  }
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 5;
 
-  if (pda_m_hlightindex() == -1)
-    return false;
-  else
-   return true;
+  return (wait_pda_m_hlightindex(&max_wait) != -1);
 }
 
-bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_item)
+bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_main_menu_item_type menu_item)
 {
-  int i=0;
-  char *menu;
+  static const char *main_menu_strs[] = {
+    "POOL MODE","POOL HEATER","SPA MODE","SPA HEATER","MENU",
+    "EQUIPMENT ON/OFF"};
   unsigned char direction = KEY_PDA_UP;
-  
-  if (! select_pda_main_menu(aq_data))
+  struct timespec max_wait;
+  int i = 0;
+
+  if ((menu_item < PMMI_POOL_MODE) || (menu_item > PMMI_EQUIPMENT_ON_OFF)) {
+    logMessage(LOG_ERR, "PDA Device programmer invalid main menu item\n");
     return false;
-  
+  }
+  if (! select_pda_main_menu(aq_data)) {
+    logMessage(LOG_ERR, "PDA Device programmer failed to select main menu\n");
+    return false;
+  }
   logMessage(LOG_DEBUG, "PDA Device programmer at main menu\n");
   
-  if (menu_item == PM_MAIN)
-    return true;
-
   if (!wait_pda_selected_item()){
     logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
     return false;
@@ -609,40 +618,28 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_
 //  PDA Line 8 = MENU
 //  PDA Line 9 = EQUIPMENT ON/OFF
 
-  if (menu_item == PM_SETTINGS)
+  if (((pda_m_hlightindex() < (menu_item+4)) &&
+       (pda_m_hlightindex() > (menu_item+1))) ||
+      (pda_m_hlightindex() > (menu_item+7)))
     {
-      if ((pda_m_hlightindex() < 8) && (pda_m_hlightindex() > 5))
-        {
-          direction = KEY_PDA_DOWN;
-        }
-      menu = "MENU";
-    }
-  else if (menu_item == PM_EQUIPTMENT_CONTROL)
-    {
-      menu = "EQUIPMENT ON/OFF";
-      if (pda_m_hlightindex() > 6)
-        {
-          direction = KEY_PDA_DOWN;
-        }
-    }
-  else
-    {
-      return false;
+      direction = KEY_PDA_DOWN;
     }
 
-  while ( strncmp(pda_m_hlight(), menu, strlen(menu)) != 0 ) {
-    if (_pgm_command == NUL) {
-      send_cmd(direction, aq_data);
-      logMessage(LOG_DEBUG, "PDA Device programmer selected sub menu\n");
-      waitForMessage(aq_data, NULL, 1);
-    }
-    if (i++ > (PDA_LINES * 2))
+  while ( strncmp(pda_m_hlight(), main_menu_strs[menu_item],
+                  strlen(main_menu_strs[menu_item])) != 0 ) {
+    // if direction is set correctly item is max of 3 presses away
+    if (i++ > 3) {
       return false;
-    delay(500);
+    }
+    send_cmd(direction, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 1;
+    if (!wait_pda_m_hlightindex_change(&max_wait)) {
+      return false;
+    }
   }
 
   send_cmd(KEY_PDA_SELECT, aq_data);
-  while (_pgm_command != NUL) { delay(100); }
 
   return true;
 }
@@ -671,7 +668,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
 
   //printf("DEVICE LABEL = %s\n",aq_data->aqbuttons[device].pda_label);
   
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
+  if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
     logMessage(LOG_ERR, "PDA Device On/Off :- can't find main menu\n");
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -716,7 +713,6 @@ printf("End wait select\n");
       //printf("*** Select State ***\n");
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
       send_cmd(KEY_PDA_SELECT, aq_data);
-      while (_pgm_command != NUL) { delay(500); }
     } else {
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
     }
@@ -725,9 +721,6 @@ printf("End wait select\n");
     logMessage(LOG_ERR, "PDA Device On/Off, device '%s' not found\n",aq_data->aqbuttons[device].pda_label);
   }
 
-  select_pda_main_menu_item(aq_data, PM_MAIN);
-  //while (_pgm_command != NUL) { delay(500); }
-
   cleanAndTerminateThread(threadCtrl);
   
   // just stop compiler error, ptr is not valid as it's just been freed
@@ -735,70 +728,47 @@ printf("End wait select\n");
 }
 void *get_aqualink_PDA_device_status( void *ptr )
 {
-  struct programmingThreadCtrl *threadCtrl;
-  threadCtrl = (struct programmingThreadCtrl *) ptr;
-  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  struct programmingThreadCtrl *threadCtrl = (struct programmingThreadCtrl *) ptr;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
   
+  if (! get_aqualink_PDA_device_status_op(threadCtrl->aq_data)) {
+    logMessage(LOG_ERR, "PDA Device Status Op Failed.\n");
+  }
+
+  cleanAndTerminateThread(threadCtrl);
+
+  return NULL;
+}
+
+bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
+{
   logMessage(LOG_DEBUG, "PDA Device Status\n");
   
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
+  if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
     logMessage(LOG_ERR, "PDA Device Status :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return NULL;
+    return false;
   }
   logMessage(LOG_DEBUG, "PDA Device Status at PM_EQUIPTMENT_CONTROL\n");
 
   // Go up once to get to bottom of menu
   send_cmd(KEY_PDA_UP, aq_data);
-  while (_pgm_command != NUL) {
-      delay(100);
-  }
-
-  logMessage(LOG_DEBUG, "PDA Device Status back to PM_MAIN\n");
-
-  send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) {
-      delay(100);
-  }
 
   logMessage(LOG_DEBUG, "PDA Device Status complete\n");
-
-  cleanAndTerminateThread(threadCtrl);
   
-  return NULL;
+  return true;
 }
 
 void *set_aqualink_PDA_init( void *ptr )
 {
-  struct programmingThreadCtrl *threadCtrl;
-  threadCtrl = (struct programmingThreadCtrl *) ptr;
-  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  struct programmingThreadCtrl *threadCtrl = (struct programmingThreadCtrl *) ptr;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
   
   logMessage(LOG_DEBUG, "PDA Init\n");
   
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
-    logMessage(LOG_ERR, "PDA Init :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
-  }
-
-  logMessage(LOG_DEBUG, "PDA Init at PM_EQUIPTMENT_CONTROL\n");
-
-  // Go up once to get to bottom of menu
-  send_cmd(KEY_PDA_UP, aq_data);
-  while (_pgm_command != NUL) {
-      delay(100);
-  }
-
-  logMessage(LOG_DEBUG, "PDA Init back to PM_MAIN\n");
-
-  send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) {
-      delay(100);
+  if (! get_aqualink_PDA_device_status_op(threadCtrl->aq_data)) {
+    logMessage(LOG_ERR, "PDA Device Status Op Failed.\n");
   }
 
   printf("*** PDA Init :- add code to find setpoints ***\n");
@@ -1296,20 +1266,34 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 }
 */
 
-void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
+bool send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 {
-  int i=0;
-  // If there is an unsent command, wait.
-  while ( (_pgm_command != NUL) && ( i++ < 10) ) {
-    //sleep(1); // NSF Change to smaller time.
-    //logMessage(LOG_ERR, "********  QUEUE IS FULL ********  delay\n", pgm_command);
-    delay(500);
-  }
-  
-  _pgm_command = cmd;
-  //delay(200);
+  bool ret=true;
+  int pret = 0;
+  struct timespec max_wait;
 
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 5;
+
+  pthread_mutex_lock(&_pgm_command_mutex);
+  _pgm_command = cmd;
   logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", _pgm_command);
+  while (_pgm_command != NUL)
+    {
+      if ((pret = pthread_cond_timedwait(&_pgm_command_sent_cond,
+                                        &_pgm_command_mutex, &max_wait)))
+        {
+          logMessage (LOG_ERR, "send_cmd 0x%02hhx err %s\n",
+                      cmd, strerror(pret));
+          ret = false;
+          break;
+        }
+    }
+  if (ret) {
+      logMessage(LOG_INFO, "sent '0x%02hhx' to controller\n", _pgm_command);
+  }
+  pthread_mutex_unlock(&_pgm_command_mutex);
+  return ret;
 }
 
 /*
@@ -1342,7 +1326,6 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 {
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS1;
   char* msgS2;
@@ -1388,7 +1371,6 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
     }
     
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message1 '%s'\n",message1,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message1 '%s'\n",i,numMessageReceived,message1,aq_data->last_message);
   }
@@ -1411,7 +1393,7 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
 {
   logMessage(LOG_DEBUG, "waitForMessage %s %d\n",message,numMessageReceived);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
+
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS;
   char* ptr;
@@ -1442,7 +1424,6 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     }
     
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message '%s'\n",message,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
   }
@@ -1543,7 +1524,6 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
 {
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
@@ -1556,7 +1536,6 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
     }
 
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message '%s'\n",message,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
   }
