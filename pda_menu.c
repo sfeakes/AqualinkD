@@ -185,6 +185,7 @@ bool pda_m_clear()
   logMessage(LOG_DEBUG, "PDA menu clear\n");
 
   _hlightindex = -1;
+  _pda_m_type = PM_UNKNOWN;
   memset(_menu, 0, PDA_LINES * (AQ_MSGLEN+1));
   return true;
 }

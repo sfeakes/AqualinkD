@@ -646,11 +646,12 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_main_menu_item_
 
 void *set_aqualink_PDA_device_on_off( void *ptr )
 {
-  struct programmingThreadCtrl *threadCtrl;
-  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct programmingThreadCtrl *threadCtrl =
+      (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   int i=0;
   int found;
+  struct timespec max_wait;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_ON_OFF);
   
@@ -661,70 +662,66 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   if (device < 0 || device > TOTAL_BUTTONS) {
     logMessage(LOG_ERR, "PDA Device On/Off :- bad device number '%d'\n",device);
     cleanAndTerminateThread(threadCtrl);
-    return ptr;
+    return NULL;
   }
 
   logMessage(LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].pda_label,state);
 
-  //printf("DEVICE LABEL = %s\n",aq_data->aqbuttons[device].pda_label);
-  
-  if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
-    logMessage(LOG_ERR, "PDA Device On/Off :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
+  if (pda_m_type() != PM_EQUIPTMENT_CONTROL) {
+      if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
+          logMessage(LOG_ERR, "PDA Device On/Off can't find main menu\n");
+          cleanAndTerminateThread(threadCtrl);
+          return NULL;
+      }
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 5;
+      wait_pda_m_hlightindex_update(&max_wait);
+      if (pda_m_type() != PM_EQUIPTMENT_CONTROL) {
+        logMessage(LOG_ERR, "PDA Device On/Off can't find equip control\n");
+        cleanAndTerminateThread(threadCtrl);
+        return NULL;
+      }
   }
-/*  
-  i=0;
-  while (pda_m_hlightindex() == -1){
-    if (i++ > 10)
-      break;
-    delay(100);
-  }
-*/
-  delay(500);
-printf("Wait for select\n");
+
+  logMessage(LOG_DEBUG, "Wait for select\n");
   if (!wait_pda_selected_item()){
-    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
-    return false;
+    logMessage(LOG_ERR, "PDA Device On/Off didn't find a selected item\n");
+    cleanAndTerminateThread(threadCtrl);
+    return NULL;
   }
-printf("End wait select\n");
-  i=0;
+
   char labelBuff[AQ_MSGLEN];
   strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
   labelBuff[AQ_MSGLEN-4] = 0;
 
   while ( (found = strcasecmp(stripwhitespace(labelBuff), aq_data->aqbuttons[device].pda_label)) != 0 ) {
-    if (_pgm_command == NUL) {
-      send_cmd(KEY_PDA_DOWN, aq_data);
-      //printf("*** Send Down for %s ***\n",pda_m_hlight());
-      waitForMessage(aq_data, NULL, 1);
+    send_cmd(KEY_PDA_DOWN, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 1;
+    if (!wait_pda_m_hlightindex_change(&max_wait)) {
+        cleanAndTerminateThread(threadCtrl);
+        return NULL;
     }
     if (i++ > (PDA_LINES * 2)) {
       break;
     }
-    delay(500);
     strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
     labelBuff[AQ_MSGLEN-4] = 0;
   }
 
   if (found == 0) {
-    //printf("*** FOUND ITEM %s ***\n",pda_m_hlight());
     if (aq_data->aqbuttons[device].led->state != state) {
-      //printf("*** Select State ***\n");
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
       send_cmd(KEY_PDA_SELECT, aq_data);
     } else {
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
     }
   } else {
-    //printf("*** NOT FOUND ITEM ***\n");
     logMessage(LOG_ERR, "PDA Device On/Off, device '%s' not found\n",aq_data->aqbuttons[device].pda_label);
   }
 
   cleanAndTerminateThread(threadCtrl);
-  
-  // just stop compiler error, ptr is not valid as it's just been freed
-  return ptr;
+  return NULL;
 }
 void *get_aqualink_PDA_device_status( void *ptr )
 {
