@@ -544,11 +544,15 @@ bool process_pda_packet(unsigned char* packet, int length)
         _aqualink_data.temp_units = FAHRENHEIT; // Force FAHRENHEIT
         if (stristr(pda_m_line(1), "AIR") != NULL)
           _aqualink_data.air_temp = atoi(msg);
+
         if (stristr(pda_m_line(1), "SPA") != NULL) {
           _aqualink_data.spa_temp = atoi(msg+4);
           _aqualink_data.pool_temp = TEMP_UNKNOWN;
         } else if (stristr(pda_m_line(1), "POOL") != NULL) {
           _aqualink_data.pool_temp = atoi(msg+7);
+          _aqualink_data.spa_temp = TEMP_UNKNOWN;
+        } else {
+          _aqualink_data.pool_temp = TEMP_UNKNOWN;
           _aqualink_data.spa_temp = TEMP_UNKNOWN;
         }
         //printf("Air Temp = %d | Water Temp = %d\n",atoi(msg),atoi(msg+7));

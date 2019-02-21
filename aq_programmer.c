@@ -27,6 +27,7 @@
 #include "aq_programmer.h"
 #include "aq_serial.h"
 #include "pda_menu.h"
+#include "init_buttons.h"
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
@@ -740,10 +741,41 @@ void *get_aqualink_PDA_device_status( void *ptr )
 
 bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
 {
+  struct timespec max_wait;
+
   logMessage(LOG_DEBUG, "PDA Device Status\n");
   
+  if (pda_m_type() == PM_UNKNOWN) {
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 5;
+    if (!wait_pda_m_type_change(&max_wait)) {
+      logMessage(LOG_ERR, "PDA Device Status: PM_UNKNOWN wait_pda_m_type_change\n");
+    }
+  }
+  if (pda_m_type() == PM_FW_VERSION) {
+    logMessage(LOG_DEBUG, "PDA Device Status at PM_FW_VERSION\n");
+    send_cmd(KEY_PDA_BACK, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 5;
+    if (!wait_pda_m_hlightindex_update(&max_wait)) {
+        logMessage(LOG_ERR, "PDA Device Status: no highlight update\n");
+        return false;
+    }
+  }
+  // If the filter pump is running wait for status
+  if (aq_data->aqbuttons[PUMP_INDEX].led->state == ON)
+    {
+      logMessage(LOG_DEBUG, "PDA Device Status wait for PM_EQUIPTMENT_STATUS\n");
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 15;
+      if (!wait_pda_m_type(PM_EQUIPTMENT_STATUS, &max_wait)) {
+          logMessage(LOG_ERR, "PDA Device Status: no PM_EQUIPTMENT_STATUS\n");
+      } else {
+          return true;
+      }
+    }
   if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
-    logMessage(LOG_ERR, "PDA Device Status :- can't find main menu\n");
+    logMessage(LOG_ERR, "PDA Device Status: can't find main menu\n");
     return false;
   }
   logMessage(LOG_DEBUG, "PDA Device Status at PM_EQUIPTMENT_CONTROL\n");

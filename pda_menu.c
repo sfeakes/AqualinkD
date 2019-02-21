@@ -138,11 +138,43 @@ bool update_pda_menu_type()
 
   return ret;
 }
+
 pda_menu_type pda_m_type()
 {
   return _pda_m_type;
 }
 
+bool wait_pda_m_type_change(struct timespec *max_wait)
+{
+  int ret = 0;
+  pthread_mutex_lock(&_pda_menu_mutex);
+  pda_menu_type old_m_type  = _pda_m_type;
+  while (_pda_m_type == old_m_type)
+    {
+      if ((ret = pthread_cond_timedwait(&_pda_menu_type_change_cond,
+                                        &_pda_menu_mutex, max_wait)))
+        {
+          logMessage (LOG_ERR, "wait_pda_m_type_change err %s\n",
+                      strerror(ret));
+          break;
+        }
+    }
+  pthread_mutex_unlock(&_pda_menu_mutex);
+
+  return ((_pda_m_type != old_m_type));
+}
+
+bool wait_pda_m_type(pda_menu_type menu, struct timespec *max_wait)
+{
+  while (_pda_m_type != menu)
+    {
+      if (! wait_pda_m_type_change(max_wait))
+        {
+          break;
+        }
+    }
+  return ((_pda_m_type == menu));
+}
 
 bool process_pda_menu_packet(unsigned char* packet, int length)
 {
