@@ -49,6 +49,7 @@ static struct aqconfig _config_parameters;
 static struct aqualinkdata _aqualink_data;
 
 
+static void ack_packet(int rs_fd, unsigned char *packet_buffer);
 void main_loop();
 
 void intHandler(int dummy) {
@@ -507,12 +508,16 @@ bool process_pda_packet(unsigned char* packet, int length)
       // If we get a status packet, and we are on the status menu, this is a list of what's on
       // or pending so unless flash turn everything off, and just turn on items that are listed.
       // This is the only way to update a device that's been turned off by a real PDA / keypad.
+      // Note: if the last line of the status menu is present it may be cut off
       if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
-          //printf("*** SET ALL OFF ****\n");
-          for (i = 0; i < TOTAL_BUTTONS; i++) {
-              if (_aqualink_data.aqbuttons[i].led->state != FLASH) {
-                  _aqualink_data.aqbuttons[i].led->state = OFF;
+          if (pda_m_line(PDA_LINES-1)[0] == '\0') {
+              for (i = 0; i < TOTAL_BUTTONS; i++) {
+                  if (_aqualink_data.aqbuttons[i].led->state != FLASH) {
+                      _aqualink_data.aqbuttons[i].led->state = OFF;
+                  }
               }
+          } else {
+              logMessage(LOG_DEBUG,"PDA Equipment status may be truncated.\n");
           }
         for (i = 1; i < PDA_LINES; i++) {
           pass_pda_equiptment_status_item(pda_m_line(i));
@@ -932,6 +937,95 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
   }
 }
 
+#define MAX_BLOCK_ACK 12
+#define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
+
+void ack_packet(int rs_fd, unsigned char *packet_buffer)
+{
+  static int delayAckCnt = 0;
+
+  if (! _aqualink_data.simulate_panel ||
+      _aqualink_data.active_thread.thread_id != 0)
+    {
+      bool bPDA_in_standby = false;
+      if ((_aqualink_data.active_thread.thread_id == 0) &&
+          ((packet_buffer[PKT_CMD] == CMD_STATUS) ||
+              (packet_buffer[PKT_CMD] == CMD_PROBE)))
+        {
+          struct timespec now;
+          struct timespec elapsed;
+          clock_gettime(CLOCK_REALTIME, &now);
+          timespec_subtract(&elapsed, &now, &(_aqualink_data.last_active_time));
+          if (elapsed.tv_sec <= 30)
+            {
+              bPDA_in_standby = true;
+              pda_m_clear ();
+            }
+          else
+            {
+              aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
+                             &_aqualink_data);
+            }
+        }
+      // Can only send command to status message on PDA.
+      if (_config_parameters.pda_mode == true
+          && packet_buffer[PKT_CMD] == CMD_STATUS)
+        {
+          if ((_aqualink_data.active_thread.thread_id == 0)
+              && bPDA_in_standby)
+            {
+              logMessage (LOG_DEBUG, "NO STATUS ACK\n");
+            }
+          else
+            {
+              send_ack (rs_fd, pop_aq_cmd (&_aqualink_data));
+            }
+        }
+      else if (_config_parameters.pda_mode == true
+          && packet_buffer[PKT_CMD] == CMD_PROBE)
+        {
+          if ((_aqualink_data.active_thread.thread_id == 0)
+              && bPDA_in_standby)
+            {
+              logMessage (LOG_DEBUG, "NO PROBE ACK\n");
+            }
+          else
+            {
+              send_ack (rs_fd, NUL);
+            }
+        }
+      else
+        {
+          send_ack(rs_fd, NUL);
+        }
+    } else {  // We are in simlator mode, ack get's complicated now.
+        // If have a command to send, send a normal ack.
+        // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
+        // pause ack strarts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
+        // if we send a command (ie keypress), the whole count needs to end and go back to sending normal ack.
+        // In code below, it jumps to sending ACK_SCREEN_BUSY, which still seems to work ok.
+        if ( strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0)
+          { // Nothing to wait for, send normal ack.
+            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+            delayAckCnt = 0;
+          } else if ( get_aq_cmd_length() > 0 ) {
+              // Send command and jump directly "busy but can receive message"
+              send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+              delayAckCnt = MAX_BUSY_ACK; // need to test jumping to MAX_BUSY_ACK here
+          } else {
+              logMessage(LOG_NOTICE, "Sending display busy due to Simulator mode \n");
+              if (delayAckCnt < MAX_BLOCK_ACK) // block all incomming messages
+                send_extended_ack(rs_fd, ACK_SCREEN_BUSY_BLOCK, pop_aq_cmd(&_aqualink_data));
+              else if (delayAckCnt < MAX_BUSY_ACK) // say we are pausing
+                send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
+              else // We timed out pause, send normal ack (This should also reset the display message on next message received)
+                send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+
+              delayAckCnt++;
+          }
+    }
+
+}
 
 void main_loop() {
   struct mg_mgr mgr;
@@ -939,7 +1033,6 @@ void main_loop() {
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
   bool interestedInNextAck;
-  int delayAckCnt = 0;
 
 
   // NSF need to find a better place to init this.
@@ -1008,151 +1101,53 @@ void main_loop() {
 
     packet_length = get_packet(rs_fd, packet_buffer);
     if (packet_length == -1) {
-      // Unrecoverable read error. Force an attempt to reconnect.
-      logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
-      blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
+        // Unrecoverable read error. Force an attempt to reconnect.
+        logMessage(LOG_ERR, "Bad packet length, reconnecting\n");
+        blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
     } else if (packet_length == 0) {
-      //logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
-      blank_read++;
+        //logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
+        blank_read++;
     } else if (packet_length > 0) {
-      blank_read = 0;
-      if ((getLogLevel() >= LOG_DEBUG) && (packet_length > 0))
-        {
-          debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
-        }
-      if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
-        /*
-        send_ack(rs_fd, _aqualink_data.aq_command);
-        _aqualink_data.aq_command = NUL;
-        */
-        if (getLogLevel() >= LOG_DEBUG)
+        blank_read = 0;
+        if ((getLogLevel() >= LOG_DEBUG) && (packet_length > 0))
           {
-            //logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer , packet_length), packet_length);
-            //debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
+            debugPacketPrint(packet_buffer[PKT_DEST], packet_buffer, packet_length);
           }
+        if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id) {
 
-        // **** NSF  (Taken out while playing with Panel Simulator, put back in. ************)
-       // send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-#define MAX_BLOCK_ACK 12
-#define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
-        // Wrap the mess just for sanity, the pre-process will clean it up.
-        if (! _aqualink_data.simulate_panel ||
-              _aqualink_data.active_thread.thread_id != 0) 
-        {
-            bool bPDA_in_standby = false;
-            if ((_aqualink_data.active_thread.thread_id == 0) &&
-                ((packet_buffer[PKT_CMD] == CMD_STATUS) ||
-                 (packet_buffer[PKT_CMD] == CMD_PROBE)))
-              {
-                struct timespec now;
-                struct timespec elapsed;
-                clock_gettime(CLOCK_REALTIME, &now);
-                timespec_subtract(&elapsed, &now, &(_aqualink_data.last_active_time));
-                if (elapsed.tv_sec <= 30)
-                  {
-                    bPDA_in_standby = true;
-                    pda_m_clear ();
-                  }
-                else
-                  {
-                    aq_programmer (AQ_PDA_DEVICE_STATUS, NULL,
-                                   &_aqualink_data);
-                  }
-              }
-            // Can only send command to status message on PDA.
-            if (_config_parameters.pda_mode == true
-                && packet_buffer[PKT_CMD] == CMD_STATUS)
-              {
-                if ((_aqualink_data.active_thread.thread_id == 0)
-                    && bPDA_in_standby)
-                  {
-                    logMessage (LOG_DEBUG, "NO STATUS ACK\n");
-                  }
-                else
-                  {
-                    send_ack (rs_fd, pop_aq_cmd (&_aqualink_data));
-                  }
-              }
-            else if (_config_parameters.pda_mode == true
-                && packet_buffer[PKT_CMD] == CMD_PROBE)
-              {
-                if ((_aqualink_data.active_thread.thread_id == 0)
-                    && bPDA_in_standby)
-                  {
-                    logMessage (LOG_DEBUG, "NO PROBE ACK\n");
-                  }
-                else
-                  {
-                    send_ack (rs_fd, NUL);
-                  }
-              }
-            else
-          {
-                send_ack(rs_fd, NUL);
-          }
-        } else {  // We are in simlator mode, ack get's complicated now. 
-          // If have a command to send, send a normal ack.
-          // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
-          // pause ack strarts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
-          // if we send a command (ie keypress), the whole count needs to end and go back to sending normal ack.
-          // In code below, it jumps to sending ACK_SCREEN_BUSY, which still seems to work ok.
-          if ( strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0) 
-          { // Nothing to wait for, send normal ack.
-            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-            delayAckCnt = 0;
-          } else if ( get_aq_cmd_length() > 0 ) {
-            // Send command and jump directly "busy but can receive message"
-            send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-            delayAckCnt = MAX_BUSY_ACK; // need to test jumping to MAX_BUSY_ACK here
-          } else {
-            logMessage(LOG_NOTICE, "Sending display busy due to Simulator mode \n");
-            if (delayAckCnt < MAX_BLOCK_ACK) // block all incomming messages
-              send_extended_ack(rs_fd, ACK_SCREEN_BUSY_BLOCK, pop_aq_cmd(&_aqualink_data));
-            else if (delayAckCnt < MAX_BUSY_ACK) // say we are pausing
-              send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
-            else // We timed out pause, send normal ack (This should also reset the display message on next message received)
-              send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-
-            delayAckCnt++;
-          }
-        }
-
-        // Process the packet. This includes deriving general status, and identifying
-        // warnings and errors.  If something changed, notify any listeners
-        if (process_packet(packet_buffer, packet_length) != false) {
-          broadcast_aqualinkstate(mgr.active_connections);
-        }
-
-      } else if (packet_length > 0 && _config_parameters.read_all_devices == true) {
-
-        //logPacket(packet_buffer, packet_length);
-
-        if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
-          if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
-            _aqualink_data.ar_swg_status = packet_buffer[5];
-            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00) { // We have a delayed % to set.
-              char sval[10];
-              snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
-              aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
-              logMessage(LOG_NOTICE, "Setting SWG %% to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
-              _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
+            // Process the packet. This includes deriving general status, and identifying
+            // warnings and errors.  If something changed, notify any listeners
+            if (process_packet(packet_buffer, packet_length) != false) {
+                broadcast_aqualinkstate(mgr.active_connections);
             }
-          }
-          interestedInNextAck = false;
-        } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00 ) {
-          _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
-          interestedInNextAck = false;
-        } else if (packet_buffer[PKT_DEST] == SWG_DEV_ID) {
-          interestedInNextAck = true;
-        } else {
-          interestedInNextAck = false;
+
+            ack_packet(rs_fd, packet_buffer);
+
+        } else if (packet_length > 0 && _config_parameters.read_all_devices == true) {
+
+            //logPacket(packet_buffer, packet_length);
+              
+            if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
+                if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
+                    _aqualink_data.ar_swg_status = packet_buffer[5];
+                    if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00) { // We have a delayed % to set.
+                        char sval[10];
+                        snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
+                        aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
+                        logMessage(LOG_NOTICE, "Setting SWG %% to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
+                        _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
+                    }
+                }
+                interestedInNextAck = false;
+            } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00 ) {
+                _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+                interestedInNextAck = false;
+            } else if (packet_buffer[PKT_DEST] == SWG_DEV_ID) {
+                interestedInNextAck = true;
+            } else {
+                interestedInNextAck = false;
+            }
         }
-      }
-      /*
-      if (getLogLevel() >= LOG_DEBUG_SERIAL) {
-          logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
-                                       (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
-      }*/
 
     }
     mg_mgr_poll(&mgr, 0);

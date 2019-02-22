@@ -771,7 +771,15 @@ bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
       if (!wait_pda_m_type(PM_EQUIPTMENT_STATUS, &max_wait)) {
           logMessage(LOG_ERR, "PDA Device Status: no PM_EQUIPTMENT_STATUS\n");
       } else {
-          return true;
+          clock_gettime(CLOCK_REALTIME, &max_wait);
+          max_wait.tv_sec += 2;
+          if (!wait_pda_m_update_complete(&max_wait)) {
+              logMessage(LOG_ERR, "PDA Device Status: incomplete PM_EQUIPTMENT_STATUS\n");
+          } else if (pda_m_line(PDA_LINES-1)[0] == '\0') {
+            // If the last line of the status menu is empty status is not cut off
+            // no need to go to the equipment on off menu
+            return true;
+          }
       }
     }
   if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {

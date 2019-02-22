@@ -14,6 +14,7 @@ static pda_menu_type _pda_m_type = PM_UNKNOWN;
 static pthread_mutex_t _pda_menu_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t _pda_menu_type_change_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t _pda_menu_hlight_change_cond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t _pda_menu_update_complete_cond = PTHREAD_COND_INITIALIZER;
 
 void print_menu()
 {
@@ -176,11 +177,33 @@ bool wait_pda_m_type(pda_menu_type menu, struct timespec *max_wait)
   return ((_pda_m_type == menu));
 }
 
+// menu update is complete when highlight or status is received
+// currently this waiting until status is received for menus that have
+// highlight is is better to use wait_m_hightindex_update()
+bool wait_pda_m_update_complete(struct timespec *max_wait)
+{
+  int ret = 0;
+  pthread_mutex_lock(&_pda_menu_mutex);
+
+  if ((ret = pthread_cond_timedwait(&_pda_menu_update_complete_cond,
+                                    &_pda_menu_mutex, max_wait)))
+    {
+      logMessage (LOG_ERR, "wait_pda_m_update_complete err %s\n",
+                  strerror(ret));
+    }
+  pthread_mutex_unlock(&_pda_menu_mutex);
+
+  return ((ret == 0));
+}
+
 bool process_pda_menu_packet(unsigned char* packet, int length)
 {
   bool rtn = true;
   pthread_mutex_lock(&_pda_menu_mutex);
   switch (packet[PKT_CMD]) {
+    case CMD_STATUS:
+      pthread_cond_signal(&_pda_menu_update_complete_cond);
+    break;
     case CMD_PDA_CLEAR:
       rtn = pda_m_clear();
     break;

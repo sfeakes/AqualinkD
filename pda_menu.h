@@ -46,5 +46,6 @@ bool wait_pda_m_hlightindex_change(struct timespec *max_wait);
 int wait_pda_m_hlightindex(struct timespec *max_wait);
 bool wait_pda_m_type_change(struct timespec *max_wait);
 bool wait_pda_m_type(pda_menu_type menu, struct timespec *max_wait);
+bool wait_pda_m_update_complete(struct timespec *max_wait);
 
 #endif
