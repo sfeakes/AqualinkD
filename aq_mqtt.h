@@ -9,6 +9,8 @@
 //#define POOL_SETPT_TOPIC "Pool_Heater/setpoint"
 //#define SPA_SETPT_TOPIC "Spa_Heater/setpoint"
 
+#define SERVICE_MODE_TOPIC "Service_Mode"
+
 #define ENABELED_SUBT "/enabled"
 
 #define SWG_TOPIC "SWG"
@@ -18,6 +20,7 @@
 #define SWG_PERCENT_TOPIC SWG_TOPIC "/Percent"
 #define SWG_PERCENT_F_TOPIC SWG_TOPIC "/Percent_f"
 #define SWG_SETPOINT_TOPIC SWG_TOPIC "/setpoint"
+#define SWG_EXTENDED_TOPIC SWG_TOPIC "/fullstatus"
 
 #define FREEZE_PROTECT "Freeze_Protect"
 #define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT

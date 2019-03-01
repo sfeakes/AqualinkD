@@ -294,6 +294,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START\n");
 
+  if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
+     _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
+     send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==ON?MQTT_ON:MQTT_OFF);
+  }
+
   if (_aqualink_data->air_temp != TEMP_UNKNOWN && _aqualink_data->air_temp != _last_mqtt_aqualinkdata.air_temp) {
     _last_mqtt_aqualinkdata.air_temp = _aqualink_data->air_temp;
     send_mqtt_temp_msg(nc, AIR_TEMP_TOPIC, _aqualink_data->air_temp);
@@ -388,6 +393,9 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   }
   
   if (_aqualink_data->ar_swg_status != _last_mqtt_aqualinkdata.ar_swg_status) {
+    
+    send_mqtt_int_msg(nc, SWG_EXTENDED_TOPIC, (int)_aqualink_data->ar_swg_status);
+
     if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF)
       send_mqtt_int_msg(nc, SWG_ENABELED_TOPIC, SWG_OFF);
     else
@@ -413,10 +421,10 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 2, "LOW SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
-      case SWG_STATUS_VLOW_SALT:
+      case SWG_STATUS_HI_SALT:
         if (!_aqualink_data->simulate_panel)
-          sprintf(_aqualink_data->last_display_message, "AquaPure Very No flow");
-        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "VERY LOW SALT");
+          sprintf(_aqualink_data->last_display_message, "AquaPure High Salt");
+        send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "HIGH SALT");
         send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
         break;
       case SWG_STATUS_HIGH_CURRENT:

@@ -79,6 +79,7 @@ void init_parameters (struct aqconfig * parms)
   parms->convert_dz_temp = true;
   parms->report_zero_spa_temp = false;
   parms->report_zero_pool_temp = false;
+  parms->read_all_devices = true;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -388,6 +389,9 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp (param, "report_zero_pool_temp", 21) == 0) {
     config_parameters->report_zero_pool_temp = text2bool(value);
     rtn=true;
+  } else if (strncasecmp (param, "read_all_devices", 16) == 0) {
+    config_parameters->read_all_devices = text2bool(value);
+    rtn=true;
   }
   // removed until domoticz has a better virtual thermostat
   /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
@@ -541,6 +545,7 @@ bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
   fprintf(fp, "socket_port = %s\n", config_parameters->socket_port);
   fprintf(fp, "serial_port = %s\n", config_parameters->serial_port);
   fprintf(fp, "device_id = 0x%02hhx\n", config_parameters->device_id);
+  fprintf(fp, "read_all_devices = %s", bool2text(config_parameters->read_all_devices));
   writeCharValue(fp, "log_level", errorlevel2text(config_parameters->log_level));
   writeCharValue(fp, "web_directory", config_parameters->web_directory);
   writeCharValue(fp, "log_file", config_parameters->log_file);
