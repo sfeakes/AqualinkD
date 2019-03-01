@@ -382,9 +382,10 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp(param, "convert_dz_temp_to_c", 20) == 0) {
     config_parameters->convert_dz_temp = text2bool(value);
     rtn=true;
+    /*
   } else if (strncasecmp(param, "flash_mqtt_buttons", 18) == 0) {
     config_parameters->flash_mqtt_buttons = text2bool(value);
-    rtn=true;
+    rtn=true;*/
   } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
     config_parameters->report_zero_spa_temp = text2bool(value);
     rtn=true;
@@ -564,7 +565,7 @@ bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
   fprintf(fp, "\n#** General **\n");
   fprintf(fp, "convert_mqtt_temp_to_c = %s\n", bool2text(config_parameters->convert_mqtt_temp));
   fprintf(fp, "override_freeze_protect = %s\n", bool2text(config_parameters->override_freeze_protect));        
-  fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
+  //fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
   fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(config_parameters->report_zero_spa_temp));
   fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
 

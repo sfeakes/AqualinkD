@@ -67,6 +67,10 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.2.6c
+* Fix some merge issues
+* Added MQTT topic for delayed start on buttons.
+* Removed MQTT flash option for delayed start (never worked well anyway)
 ## Update in Release 1.2.6b
 * Added MQTT topic for full SWG status (MQTT section in see wiki)
 * Config option to turn on/of listening to extended device information.

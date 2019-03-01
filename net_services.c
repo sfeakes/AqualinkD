@@ -491,6 +491,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
   // Loop over LED's and send any changes.
   for (i=0; i < TOTAL_BUTTONS; i++) {
+    /*
    if ( _aqualink_data->aqbuttons[i].led->state == FLASH && _aqualink_config->flash_mqtt_buttons == true ) {
       // Simply send on or off depending on if current second is odd or even.
       // will send too many off and on messages as we get hit multiple times a second, but most effecient way to handle this
@@ -499,7 +500,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       now = time(NULL);
       send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, (now % 2)?OFF:ON);
       logMessage(LOG_DEBUG, "Flash button : %s %s\n",_aqualink_data->aqbuttons[i].name,(now % 2)?"off":"on");
-    } else if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state) {
+    } else */if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state) {
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
       if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
         send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
