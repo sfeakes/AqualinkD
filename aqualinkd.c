@@ -215,6 +215,11 @@ void processMessage(char *message)
     //_aqualink_data.display_message = NULL;
     _aqualink_data.last_display_message[0] = '\0';
   }
+  // If we have more than 10 messages without "Service Mode is active" assume it's off.
+  if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
+    _aqualink_data.service_mode_state = OFF;
+    service_msg_count = 0;
+  }
 
   // If we have more than 10 messages without "Service Mode is active" assume it's off.
   if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
@@ -828,6 +833,7 @@ int main(int argc, char *argv[]) {
   logMessage(LOG_NOTICE, "Config serial_port       = %s\n", _config_parameters.serial_port);
   logMessage(LOG_NOTICE, "Config web_directory     = %s\n", _config_parameters.web_directory);
   logMessage(LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _config_parameters.device_id);
+  logMessage(LOG_NOTICE, "Config read_all_devices  = %s\n", bool2text(_config_parameters.read_all_devices));
   logMessage(LOG_NOTICE, "Config override frz prot = %s\n", bool2text(_config_parameters.override_freeze_protect));
 #ifndef MG_DISABLE_MQTT
   logMessage(LOG_NOTICE, "Config mqtt_server       = %s\n", _config_parameters.mqtt_server);
@@ -911,6 +917,19 @@ void debugPacket(unsigned char *packet_buffer, int packet_length)
   lastID = packet_buffer[PKT_DEST];
 }
 
+void logPacket(unsigned char *packet_buffer, int packet_length)
+{
+  static unsigned char last_packet_buffer[AQ_MAXPKTLEN];
+  static int last_packet_length;
+
+  if (packet_buffer[PKT_DEST] != DEV_MASTER) {
+    memcpy(last_packet_buffer, packet_buffer, packet_length);
+    last_packet_length = packet_length;
+  } else {
+    debugPacketPrint(last_packet_buffer[PKT_DEST], last_packet_buffer, last_packet_length);
+    debugPacketPrint(last_packet_buffer[PKT_DEST], packet_buffer, packet_length);
+  }
+}
 
 
 void main_loop() {
@@ -940,6 +959,7 @@ void main_loop() {
   _aqualink_data.single_device = false;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.frz_protect_state = OFF;
+  _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
 
 
@@ -1042,8 +1062,10 @@ void main_loop() {
           broadcast_aqualinkstate(mgr.active_connections);
         }
 
-      } else if (packet_length > 0) {
-        // printf("packet not for us %02x\n",packet_buffer[PKT_DEST]);
+      } else if (packet_length > 0 && _config_parameters.read_all_devices == true) {
+
+        //logPacket(packet_buffer, packet_length);
+
         if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true) {
           if ( packet_buffer[PKT_CMD] == CMD_PPM ) {
             _aqualink_data.ar_swg_status = packet_buffer[5];
