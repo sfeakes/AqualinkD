@@ -221,6 +221,12 @@ void processMessage(char *message)
     service_msg_count = 0;
   }
 
+  // If we have more than 10 messages without "Service Mode is active" assume it's off.
+  if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
+    _aqualink_data.service_mode_state = OFF;
+    service_msg_count = 0;
+  }
+
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
   if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10) {
     _aqualink_data.frz_protect_state = ENABLE;
@@ -309,10 +315,10 @@ void processMessage(char *message)
     } 
   }
   else if (stristr(msg, LNG_MSG_SERVICE_ACTIVE) != NULL) {
-     if (_aqualink_data.service_mode_state == OFF)
-       logMessage(LOG_NOTICE, "AqualinkD set to Service Mode\n"); 
-     _aqualink_data.service_mode_state = ON;
-     service_msg_count = 0;
+    if (_aqualink_data.service_mode_state == OFF)
+      logMessage(LOG_NOTICE, "AqualinkD set to Service Mode\n"); 
+    _aqualink_data.service_mode_state = ON;
+    service_msg_count = 0;
   }
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL) {
     _aqualink_data.frz_protect_state = ON;
@@ -951,6 +957,7 @@ void main_loop() {
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
   _aqualink_data.single_device = false;
+  _aqualink_data.service_mode_state = OFF;
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;

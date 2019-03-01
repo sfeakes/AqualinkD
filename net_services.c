@@ -186,6 +186,9 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
 {
   static char mqtt_pub_topic[250];
 
+  sprintf(mqtt_pub_topic, "%s/%s/delay",_aqualink_config->mqtt_aq_topic, dev_name);
+  send_mqtt(nc, mqtt_pub_topic, (state==FLASH?MQTT_ON:MQTT_OFF));
+
   sprintf(mqtt_pub_topic, "%s/%s",_aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
@@ -328,6 +331,20 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
     }
   }
+*/
+  if (_aqualink_data->pool_temp != _last_mqtt_aqualinkdata.pool_temp) {
+    if (_aqualink_data->pool_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_pool_temp) {
+      _last_mqtt_aqualinkdata.pool_temp = TEMP_UNKNOWN;
+      send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, (_aqualink_config->convert_mqtt_temp?-18:0));
+    } else if (_aqualink_data->pool_temp != TEMP_UNKNOWN) {
+      _last_mqtt_aqualinkdata.pool_temp = _aqualink_data->pool_temp;
+      send_mqtt_temp_msg(nc, POOL_TEMP_TOPIC, _aqualink_data->pool_temp);
+      send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_pool_water_temp, _aqualink_data->pool_temp);
+      // IF spa is off, report pool water temp to Domoticz.
+      if (_aqualink_data->spa_temp == TEMP_UNKNOWN)
+        send_domoticz_mqtt_temp_msg(nc, _aqualink_config->dzidx_spa_water_temp, _aqualink_data->pool_temp);
+    }
+  } 
   
   if (_aqualink_data->spa_temp != _last_mqtt_aqualinkdata.spa_temp) {
     if (_aqualink_data->spa_temp == TEMP_UNKNOWN && _aqualink_config->report_zero_spa_temp) {
@@ -350,6 +367,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->spa_htr_set_point != TEMP_UNKNOWN && _aqualink_data->spa_htr_set_point != _last_mqtt_aqualinkdata.spa_htr_set_point) {
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
+  }
+
+  if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
+    _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
+    send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==ON?MQTT_ON:MQTT_OFF);
   }
 
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
