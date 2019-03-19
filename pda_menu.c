@@ -119,15 +119,29 @@ bool update_pda_menu_type()
   if (strncmp(_menu[1]," PDA-PS4 Combo", 14) == 0) {
     new_m_type = PM_FW_VERSION;
   } else if (strncmp(_menu[1],"AIR  ", 5) == 0) {
-    new_m_type = PM_MAIN;
+    new_m_type = PM_HOME;
   } else if (strncmp(_menu[0],"EQUIPMENT STATUS", 16) == 0) {
     new_m_type = PM_EQUIPTMENT_STATUS;
   } else if (strncmp(_menu[0],"   EQUIPMENT    ", 16) == 0) {
     new_m_type = PM_EQUIPTMENT_CONTROL;
-  } else if (strncmp(_menu[0],"    MAIN MENU    ", 16) == 0) {
-    new_m_type = PM_SETTINGS;
+  } else if (strncmp(_menu[0],"   MAIN MENU    ", 16) == 0) {
+    new_m_type = PM_MAIN_MENU;
   } else if (strncmp(_menu[4], "POOL MODE", 9) == 0 ) {
-    new_m_type = PM_BUILDING_MAIN;
+    new_m_type = PM_BUILDING_HOME;
+  } else if (strncmp(_menu[0],"  SYSTEM SETUP  ", 16) == 0) {
+    new_m_type = PM_SYSTEM_SETUP;
+  } else if (strncmp(_menu[0],"    SET TEMP    ", 16) == 0) {
+    new_m_type = PM_SET_TEMP;
+  } else if (strncmp(_menu[0],"    SPA HEAT    ", 16) == 0) {
+    new_m_type = PM_SPA_HEAT;
+  } else if (strncmp(_menu[0],"   POOL HEAT    ", 16) == 0) {
+    new_m_type = PM_POOL_HEAT;
+  } else if ((strncmp(_menu[6],"Use ARROW KEYS  ", 16) == 0) &&
+      (strncmp(_menu[0]," FREEZE PROTECT ", 16) == 0)) {
+    new_m_type = PM_FREEZE_PROTECT;
+  } else if ((strncmp(_menu[1],"    DEVICES     ", 16) == 0) &&
+    (strncmp(_menu[0]," FREEZE PROTECT ", 16) == 0)) {
+  new_m_type = PM_FREEZE_PROTECT_DEVICES;
   }
 
   if (new_m_type != _pda_m_type) {
@@ -199,6 +213,11 @@ bool wait_pda_m_update_complete(struct timespec *max_wait)
 bool process_pda_menu_packet(unsigned char* packet, int length)
 {
   bool rtn = true;
+  signed char first_line;
+  signed char last_line;
+  signed char line_shift;
+  signed char i;
+
   pthread_mutex_lock(&_pda_menu_mutex);
   switch (packet[PKT_CMD]) {
     case CMD_STATUS:
@@ -213,16 +232,50 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
         strncpy(_menu[packet[PKT_DATA]], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
         _menu[packet[PKT_DATA]][AQ_MSGLEN] = '\0';
       }
+      if (packet[PKT_DATA] == _hlightindex) {
+          logMessage(LOG_DEBUG, "process_pda_menu_packet: hlight changed from shift or up/down value\n");
+          pthread_cond_signal(&_pda_menu_hlight_change_cond);
+      }
       if (getLogLevel() >= LOG_DEBUG){print_menu();}
       update_pda_menu_type();
     break;
     case CMD_PDA_HIGHLIGHT:
-      _hlightindex = packet[4];
+      // when switching from hlight to hlightchars index 255 is sent to turn off hlight
+      if (packet[4] <= PDA_LINES) {
+        _hlightindex = packet[4];
+      } else {
+        _hlightindex = -1;
+      }
+      pthread_cond_signal(&_pda_menu_hlight_change_cond);
+      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+    break;
+    case CMD_PDA_HIGHLIGHTCHARS:
+      if (packet[4] <= PDA_LINES) {
+        _hlightindex = packet[4];
+      } else {
+        _hlightindex = -1;
+      }
       pthread_cond_signal(&_pda_menu_hlight_change_cond);
       if (getLogLevel() >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
-      memcpy(_menu[1], _menu[2], (PDA_LINES-1) * (AQ_MSGLEN+1) );
+      // press up from top - shift menu down by 1
+      //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0x01|0x8d|0x10|0x03|
+      // press down from bottom - shift menu up by 1
+      //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0xff|0x8b|0x10|0x03|
+      first_line = (signed char)(packet[4]);
+      last_line = (signed char)(packet[5]);
+      line_shift = (signed char)(packet[6]);
+      logMessage(LOG_DEBUG, "\n");
+      if (line_shift < 0) {
+          for (i = first_line-line_shift; i <= last_line; i++) {
+              memcpy(_menu[i+line_shift], _menu[i], AQ_MSGLEN+1);
+          }
+      } else {
+          for (i = last_line; i >= first_line+line_shift; i--) {
+              memcpy(_menu[i], _menu[i-line_shift], AQ_MSGLEN+1);
+          }
+      }
       if (getLogLevel() >= LOG_DEBUG){print_menu();}
     break;
     

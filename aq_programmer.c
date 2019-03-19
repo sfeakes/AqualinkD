@@ -59,6 +59,23 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 bool push_aq_cmd(unsigned char cmd);
 bool wait_pda_selected_item();
 
+static bool select_pda_home_menu(struct aqualinkdata *aq_data);
+static bool select_pda_main_menu(struct aqualinkdata *aq_data);
+static bool select_pda_home_menu_item(struct aqualinkdata *aq_data,
+                                      pda_home_menu_item_type menu_item);
+static bool select_pda_main_menu_item(struct aqualinkdata *aq_data,
+                               pda_main_menu_item_type menu_item);
+static bool wait_pda_menu_not_unknown_or_fw_version(struct aqualinkdata *aq_data);
+static bool select_pda_set_temp_menu(struct aqualinkdata *aq_data);
+static bool select_pda_set_temp_item(struct aqualinkdata *aq_data,
+                               pda_set_temp_item_type menu_item);
+static void set_aqualink_PDA_pool_heater_temps(struct aqualinkdata *aq_data, int val);
+static void set_aqualink_PDA_spa_heater_temps(struct aqualinkdata *aq_data, int val);
+static bool select_pda_system_setup_menu(struct aqualinkdata *aq_data);
+static bool select_pda_system_setup_item(struct aqualinkdata *aq_data,
+                               pda_system_setup_item_type menu_item);
+
+
 #define MAX_STACK 20
 int _stack_place = 0;
 unsigned char _commands[MAX_STACK];
@@ -132,7 +149,11 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
         min = (aqdata->single_device?HEATER_MIN_C:HEATER_MIN_C-1);
       } else {
         max = HEATER_MAX_F;
-        min = (aqdata->single_device?HEATER_MIN_F:HEATER_MIN_F-1);
+        if (pda_mode() == true) {
+           min = PDA_HEATER_MIN_F;
+        } else {
+            min = (aqdata->single_device?HEATER_MIN_F:HEATER_MIN_F-1);
+        }
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP1 must be set higher than TEMP2
       if (aqdata->single_device && 
@@ -149,7 +170,11 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
         min = HEATER_MIN_C;
       } else {
         max = (aqdata->single_device?HEATER_MAX_F:HEATER_MAX_F-1);
-        min = HEATER_MIN_F;
+        if (pda_mode() == true) {
+           min = PDA_HEATER_MIN_F;
+        } else {
+           min = HEATER_MIN_F;
+        }
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP2 must be set lower than TEMP1
       if (aqdata->single_device && 
@@ -166,7 +191,11 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
         min = FREEZE_PT_MIN_C;
       } else {
         max = FREEZE_PT_MAX_F;
-        min = FREEZE_PT_MIN_F;
+        if (pda_mode() == true) {
+           min = PDA_FREEZE_PT_MIN_F;
+        } else {
+            min = FREEZE_PT_MIN_F;
+        }
       }
     break;
     case SWG_SETPOINT:
@@ -213,7 +242,10 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
   if (pda_mode() == true) {
     if (type != AQ_PDA_INIT && 
         type != AQ_PDA_DEVICE_STATUS && 
-        type != AQ_PDA_DEVICE_ON_OFF) {
+        type != AQ_PDA_DEVICE_ON_OFF  &&
+        type != AQ_SET_POOL_HEATER_TEMP &&
+        type != AQ_SET_SPA_HEATER_TEMP &&
+        type != AQ_SET_FRZ_PROTECTION_TEMP) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
     }
@@ -547,15 +579,15 @@ void *set_aqualink_SWG( void *ptr )
   return ptr;
 }
 
-bool select_pda_main_menu(struct aqualinkdata *aq_data)
+bool select_pda_home_menu(struct aqualinkdata *aq_data)
 {
   int i;
   struct timespec max_wait;
 
-  logMessage(LOG_DEBUG, "PDA Device programmer select main menu\n");
+  logMessage(LOG_DEBUG, "PDA Device programmer select home menu\n");
 
   // Check to see if we are at the main menu
-  if ((pda_m_type() == PM_MAIN) || (pda_m_type() == PM_BUILDING_MAIN)){
+  if ((pda_m_type() == PM_HOME) || (pda_m_type() == PM_BUILDING_HOME)){
     return true;
   }
   for (i = 0; i < PDA_MAX_MENU_DEPTH; i++)
@@ -567,12 +599,223 @@ bool select_pda_main_menu(struct aqualinkdata *aq_data)
       if (!wait_pda_m_hlightindex_update(&max_wait)) {
         break;
       }
-      if ((pda_m_type() == PM_MAIN) || (pda_m_type() == PM_BUILDING_MAIN)) {
+      if ((pda_m_type() == PM_HOME) || (pda_m_type() == PM_BUILDING_HOME)) {
         return true;
       }
   }
 
   return false;
+}
+
+bool select_pda_main_menu(struct aqualinkdata *aq_data)
+{
+  int i;
+  struct timespec max_wait;
+
+  logMessage(LOG_DEBUG, "PDA Device programmer select main menu\n");
+
+  // Check to see if we are at the main menu
+  if (pda_m_type() == PM_MAIN_MENU){
+    return true;
+  }
+  wait_pda_menu_not_unknown_or_fw_version(aq_data);
+
+  for (i = 0; i < PDA_MAX_MENU_DEPTH; i++)
+    {
+      // First send back
+      send_cmd(KEY_PDA_BACK, aq_data);
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 5;
+      if (!wait_pda_m_hlightindex_update(&max_wait)) {
+        break;
+      }
+      if (pda_m_type() == PM_MAIN_MENU){
+        return true;
+      }
+      if ((pda_m_type() == PM_HOME) || (pda_m_type() == PM_BUILDING_HOME)) {
+        if (!select_pda_home_menu_item(aq_data,PHMI_MENU)) {
+            break;
+        }
+        clock_gettime(CLOCK_REALTIME, &max_wait);
+        max_wait.tv_sec += 5;
+        if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          break;
+        }
+        return true;
+      }
+  }
+
+  logMessage(LOG_ERR, "PDA Device programmer select main menu failed\n");
+
+  return false;
+}
+
+bool select_pda_set_temp_menu(struct aqualinkdata *aq_data)
+{
+  int i;
+  struct timespec max_wait;
+
+  logMessage(LOG_DEBUG, "PDA Device programmer select set temp menu\n");
+
+  wait_pda_menu_not_unknown_or_fw_version(aq_data);
+
+  for (i = 0; i < PDA_MAX_MENU_DEPTH + 3; i++)
+    {
+      if (pda_m_type() == PM_SET_TEMP){
+        return true;
+      } else if (pda_m_type() == PM_MAIN_MENU){
+          if (!select_pda_main_menu_item(aq_data,PMMI_SET_TEMP)) {
+              break;
+          }
+          clock_gettime(CLOCK_REALTIME, &max_wait);
+          max_wait.tv_sec += 5;
+          if (!wait_pda_m_hlightindex_update(&max_wait)) {
+            break;
+          }
+      } else if ((pda_m_type() == PM_HOME) || (pda_m_type() == PM_BUILDING_HOME)) {
+        if (!select_pda_home_menu_item(aq_data,PHMI_MENU)) {
+            break;
+        }
+        clock_gettime(CLOCK_REALTIME, &max_wait);
+        max_wait.tv_sec += 5;
+        if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          break;
+        }
+      } else {
+        // send back
+        send_cmd(KEY_PDA_BACK, aq_data);
+        clock_gettime(CLOCK_REALTIME, &max_wait);
+        max_wait.tv_sec += 5;
+        if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          break;
+        }
+      }
+  }
+
+  logMessage(LOG_ERR, "PDA Device programmer select set temp menu failed\n");
+
+  return false;
+}
+
+bool select_pda_system_setup_menu(struct aqualinkdata *aq_data)
+{
+  int i;
+  struct timespec max_wait;
+
+  logMessage(LOG_DEBUG, "PDA Device programmer select system setup menu\n");
+
+  wait_pda_menu_not_unknown_or_fw_version(aq_data);
+
+  for (i = 0; i < PDA_MAX_MENU_DEPTH + 3; i++)
+    {
+      if (pda_m_type() == PM_SYSTEM_SETUP){
+        return true;
+      } else if (pda_m_type() == PM_MAIN_MENU){
+          if (!select_pda_main_menu_item(aq_data,PMMI_SYSTEM_SETUP)) {
+              break;
+          }
+          clock_gettime(CLOCK_REALTIME, &max_wait);
+          max_wait.tv_sec += 5;
+          if (!wait_pda_m_hlightindex_update(&max_wait)) {
+            break;
+          }
+      } else if ((pda_m_type() == PM_HOME) || (pda_m_type() == PM_BUILDING_HOME)) {
+        if (!select_pda_home_menu_item(aq_data,PHMI_MENU)) {
+            break;
+        }
+        clock_gettime(CLOCK_REALTIME, &max_wait);
+        max_wait.tv_sec += 5;
+        if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          break;
+        }
+      } else {
+        // send back
+        send_cmd(KEY_PDA_BACK, aq_data);
+        clock_gettime(CLOCK_REALTIME, &max_wait);
+        max_wait.tv_sec += 5;
+        if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          break;
+        }
+      }
+  }
+
+  logMessage(LOG_ERR, "PDA Device programmer select system setup menu failed\n");
+
+  return false;
+}
+
+bool select_pda_system_setup_item(struct aqualinkdata *aq_data,
+                               pda_system_setup_item_type menu_item)
+{
+  static const char *menu_strs[] = {
+    "LABEL AUX     ",
+    "FREEZE PROTECT",
+    "AIR TEMP      ",
+    "DEGREES C/F   ",
+    "TEMP CALIBRATE",
+    "SOLAR PRIORITY",
+    "PUMP LOCKOUT  ",
+    "ASSIGN JVAs   ",
+    "COLOR LIGHTS  ",
+    "SPA SWITCH    ",
+    "SERVICE INFO  ",
+    "CLEAR MEMORY  ",
+  };
+
+  struct timespec max_wait;
+  int i = 0;
+
+  logMessage(LOG_DEBUG, "select_pda_system_setup_item %s\n", menu_strs[menu_item]);
+
+  if ((menu_item < PSSI_LABEL_AUX) || (menu_item > PSSI_CLEAR_MEMORY)) {
+    logMessage(LOG_ERR, "select_pda_system_setup_item invalid set temp item\n");
+    return false;
+  }
+  if (! select_pda_system_setup_menu(aq_data)) {
+    logMessage(LOG_ERR, "select_pda_system_setup_item failed to select main menu\n");
+    return false;
+  }
+  logMessage(LOG_DEBUG, "select_pda_system_setup_item at main menu looking for %d:%s\n",
+             menu_item, menu_strs[menu_item]);
+
+  if (!wait_pda_selected_item()){
+    logMessage(LOG_ERR, "select_pda_system_setup_item didn't find a selected item\n");
+    return false;
+  }
+
+  // PDA Line 0 =   SYSTEM SETUP
+  // PDA Line 1 = LABEL AUX      >
+  // PDA Line 2 = FREEZE PROTECT >
+  // PDA Line 3 = AIR TEMP       >
+  // PDA Line 4 = DEGREES C/F    >
+  // PDA Line 5 = TEMP CALIBRATE >
+  // PDA Line 6 = SOLAR PRIORITY >
+  // PDA Line 7 = PUMP LOCKOUT   >
+  // PDA Line 8 = ASSIGN JVAs    >
+  // PDA Line 9 =    ^^ MORE __
+  // PDA Line 5 = COLOR LIGHTS   >
+  // PDA Line 6 = SPA SWITCH     >
+  // PDA Line 7 = SERVICE INFO   >
+  // PDA Line 8 = CLEAR MEMORY   >
+
+  while ( strncmp(pda_m_hlight(), menu_strs[menu_item],
+                  strlen(menu_strs[menu_item])) != 0 ) {
+    // if direction is set correctly item is max of 10 presses away
+    if (i++ > 10) {
+      return false;
+    }
+    send_cmd(KEY_PDA_DOWN, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 1;
+    if (!wait_pda_m_hlightindex_update(&max_wait)) {
+      logMessage(LOG_ERR, "select_pda_system_setup_item no hlight change\n");
+      return false;
+    }
+  }
+
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  logMessage(LOG_DEBUG, "select_pda_system_setup_item complete\n");
+  return true;
 }
 
 bool wait_pda_selected_item()
@@ -585,20 +828,50 @@ bool wait_pda_selected_item()
   return (wait_pda_m_hlightindex(&max_wait) != -1);
 }
 
-bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_main_menu_item_type menu_item)
+bool wait_pda_menu_not_unknown_or_fw_version(struct aqualinkdata *aq_data)
 {
-  static const char *main_menu_strs[] = {
+  struct timespec max_wait;
+
+  if (pda_m_type() == PM_UNKNOWN) {
+      if (pda_m_line(0)[0] != '\0') {
+          logMessage(LOG_DEBUG, "wait_pda_menu_not_unknown_or_fw_version unknown not unset\n");
+          return false;
+      }
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 5;
+      if (!wait_pda_m_type_change(&max_wait)) {
+          logMessage(LOG_ERR, "wait_pda_menu_not_unknown_or_fw_version: PM_UNKNOWN wait_pda_m_type_change\n");
+          return false;
+      }
+  }
+  if (pda_m_type() == PM_FW_VERSION) {
+      logMessage(LOG_DEBUG, "wait_pda_menu_not_unknown_or_fw_version at PM_FW_VERSION\n");
+      send_cmd(KEY_PDA_BACK, aq_data);
+      clock_gettime(CLOCK_REALTIME, &max_wait);
+      max_wait.tv_sec += 5;
+      if (!wait_pda_m_hlightindex_update(&max_wait)) {
+          logMessage(LOG_ERR, "wait_pda_menu_not_unknown_or_fw_version: no highlight update\n");
+          return false;
+      }
+  }
+  return true;
+}
+
+
+bool select_pda_home_menu_item(struct aqualinkdata *aq_data, pda_home_menu_item_type menu_item)
+{
+  static const char *home_menu_strs[] = {
     "POOL MODE","POOL HEATER","SPA MODE","SPA HEATER","MENU",
     "EQUIPMENT ON/OFF"};
   unsigned char direction = KEY_PDA_UP;
   struct timespec max_wait;
   int i = 0;
 
-  if ((menu_item < PMMI_POOL_MODE) || (menu_item > PMMI_EQUIPMENT_ON_OFF)) {
+  if ((menu_item < PHMI_POOL_MODE) || (menu_item > PHMI_EQUIPMENT_ON_OFF)) {
     logMessage(LOG_ERR, "PDA Device programmer invalid main menu item\n");
     return false;
   }
-  if (! select_pda_main_menu(aq_data)) {
+  if (! select_pda_home_menu(aq_data)) {
     logMessage(LOG_ERR, "PDA Device programmer failed to select main menu\n");
     return false;
   }
@@ -626,8 +899,8 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_main_menu_item_
       direction = KEY_PDA_DOWN;
     }
 
-  while ( strncmp(pda_m_hlight(), main_menu_strs[menu_item],
-                  strlen(main_menu_strs[menu_item])) != 0 ) {
+  while ( strncmp(pda_m_hlight(), home_menu_strs[menu_item],
+                  strlen(home_menu_strs[menu_item])) != 0 ) {
     // if direction is set correctly item is max of 3 presses away
     if (i++ > 3) {
       return false;
@@ -642,6 +915,135 @@ bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_main_menu_item_
 
   send_cmd(KEY_PDA_SELECT, aq_data);
 
+  return true;
+}
+
+bool select_pda_main_menu_item(struct aqualinkdata *aq_data,
+                               pda_main_menu_item_type menu_item)
+{
+  static const char *main_menu_strs[] = {
+      "HELP",
+      "PROGRAM",
+      "SET TEMP",
+      "SET TIME",
+      "PDA OPTIONS",
+      "SYSTEM SETUP",
+      "-",
+      "BOOST"
+  };
+  unsigned char direction = KEY_PDA_UP;
+  struct timespec max_wait;
+  int i = 0;
+
+  if ((menu_item < PMMI_HELP) || (menu_item > PMMI_BOOST)) {
+    logMessage(LOG_ERR, "PDA Device programmer invalid main menu item\n");
+    return false;
+  }
+  if (! select_pda_main_menu(aq_data)) {
+    logMessage(LOG_ERR, "PDA Device programmer failed to select main menu\n");
+    return false;
+  }
+  logMessage(LOG_DEBUG, "PDA Device programmer at main menu looking for %d:%s\n",
+             menu_item, main_menu_strs[menu_item]);
+
+  if (!wait_pda_selected_item()){
+    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
+    return false;
+  }
+  // PDA Line 0 =    MAIN MENU
+  // PDA Line 1 =
+  // PDA Line 2 = HELP           >
+  // PDA Line 3 = PROGRAM        >
+  // PDA Line 4 = SET TEMP       >
+  // PDA Line 5 = SET TIME       >
+  // PDA Line 6 = PDA OPTIONS    >
+  // PDA Line 7 = SYSTEM SETUP   >
+  // PDA Line 8 =
+  // PDA Line 9 = BOOST
+
+  if (((pda_m_hlightindex()-2 < (menu_item)) &&
+       ((pda_m_hlightindex()+1) > menu_item)) ||
+      (pda_m_hlightindex()-2 > (menu_item+4)))
+    {
+      direction = KEY_PDA_DOWN;
+    }
+
+  while ( strncmp(pda_m_hlight(), main_menu_strs[menu_item],
+                  strlen(main_menu_strs[menu_item])) != 0 ) {
+    // if direction is set correctly item is max of 4 presses away
+    if (i++ > 4) {
+      return false;
+    }
+    send_cmd(direction, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 1;
+    if (!wait_pda_m_hlightindex_change(&max_wait)) {
+      return false;
+    }
+  }
+
+  send_cmd(KEY_PDA_SELECT, aq_data);
+
+  return true;
+}
+
+bool select_pda_set_temp_item(struct aqualinkdata *aq_data,
+                               pda_set_temp_item_type menu_item)
+{
+  static const char *menu_strs[] = {
+    "POOL HEAT",
+    "SPA HEAT"
+  };
+
+  struct timespec max_wait;
+  int i = 0;
+
+  logMessage(LOG_DEBUG, "select_pda_set_temp_item %s\n", menu_strs[menu_item]);
+
+  if ((menu_item < PSTI_POOL_HEAT) || (menu_item > PSTI_SPA_HEAT)) {
+    logMessage(LOG_ERR, "select_pda_set_temp_item invalid set temp item\n");
+    return false;
+  }
+  if (! select_pda_set_temp_menu(aq_data)) {
+    logMessage(LOG_ERR, "select_pda_set_temp_item failed to select main menu\n");
+    return false;
+  }
+  logMessage(LOG_DEBUG, "select_pda_set_temp_item at main menu looking for %d:%s\n",
+             menu_item, menu_strs[menu_item]);
+
+  if (!wait_pda_selected_item()){
+    logMessage(LOG_ERR, "select_pda_set_temp_item didn't find a selected item\n");
+    return false;
+  }
+
+  // PDA Line 0 =     SET TEMP
+  // PDA Line 1 = POOL HEAT   99`F
+  // PDA Line 2 = SPA HEAT    99`F
+  // PDA Line 3 =
+  // PDA Line 4 =
+  // PDA Line 5 =
+  // PDA Line 6 =
+  // PDA Line 7 = Highlight an
+  // PDA Line 8 = item and press
+  // PDA Line 9 = SELECT
+
+  while ( strncmp(pda_m_hlight(), menu_strs[menu_item],
+                  strlen(menu_strs[menu_item])) != 0 ) {
+    // if direction is set correctly item is max of 1 presses away
+    if (i++ > 1) {
+      return false;
+    }
+    send_cmd(KEY_PDA_DOWN, aq_data);
+    clock_gettime(CLOCK_REALTIME, &max_wait);
+    max_wait.tv_sec += 1;
+    if (!wait_pda_m_hlightindex_change(&max_wait)) {
+      logMessage(LOG_ERR, "select_pda_set_temp_item no hlight change\n");
+      return false;
+    }
+  }
+
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  logMessage(LOG_DEBUG, "select_pda_set_temp_item complete\n");
   return true;
 }
 
@@ -669,7 +1071,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   logMessage(LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].pda_label,state);
 
   if (pda_m_type() != PM_EQUIPTMENT_CONTROL) {
-      if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
+      if (! select_pda_home_menu_item(aq_data, PHMI_EQUIPMENT_ON_OFF)) {
           logMessage(LOG_ERR, "PDA Device On/Off can't find main menu\n");
           cleanAndTerminateThread(threadCtrl);
           return NULL;
@@ -712,8 +1114,20 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
 
   if (found == 0) {
     if (aq_data->aqbuttons[device].led->state != state) {
-      logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
+      logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing to %d\n",
+                 aq_data->aqbuttons[device].pda_label, state);
       send_cmd(KEY_PDA_SELECT, aq_data);
+      // If you are turning on a heater there will be a sub menu to set temp
+      if ((state == ON) && ((device == POOL_HEAT_INDEX) || (device == SPA_HEAT_INDEX))) {
+          clock_gettime(CLOCK_REALTIME, &max_wait);
+          max_wait.tv_sec += 5;
+          if (!wait_pda_m_type_change(&max_wait)) {
+            logMessage(LOG_ERR, "PDA Device On/Off: %s on - wait_pda_m_type_change\n",
+                       aq_data->aqbuttons[device].pda_label);
+          } else {
+              send_cmd(KEY_PDA_SELECT, aq_data);
+          }
+      }
     } else {
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
     }
@@ -739,50 +1153,59 @@ void *get_aqualink_PDA_device_status( void *ptr )
   return NULL;
 }
 
-bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
+bool select_pda_equipment_status(struct aqualinkdata *aq_data)
 {
   struct timespec max_wait;
 
-  logMessage(LOG_DEBUG, "PDA Device Status\n");
-  
-  if (pda_m_type() == PM_UNKNOWN) {
-    clock_gettime(CLOCK_REALTIME, &max_wait);
-    max_wait.tv_sec += 5;
-    if (!wait_pda_m_type_change(&max_wait)) {
-      logMessage(LOG_ERR, "PDA Device Status: PM_UNKNOWN wait_pda_m_type_change\n");
-    }
-  }
-  if (pda_m_type() == PM_FW_VERSION) {
-    logMessage(LOG_DEBUG, "PDA Device Status at PM_FW_VERSION\n");
-    send_cmd(KEY_PDA_BACK, aq_data);
-    clock_gettime(CLOCK_REALTIME, &max_wait);
-    max_wait.tv_sec += 5;
-    if (!wait_pda_m_hlightindex_update(&max_wait)) {
-        logMessage(LOG_ERR, "PDA Device Status: no highlight update\n");
-        return false;
-    }
-  }
-  // If the filter pump is running wait for status
-  if (aq_data->aqbuttons[PUMP_INDEX].led->state == ON)
-    {
+  logMessage(LOG_DEBUG, "select_pda_equipment_status: goto home menu\n");
+  if (! select_pda_home_menu(aq_data)) {
+      logMessage(LOG_ERR, "select_pda_equipment_status: failed to select main menu\n");
+  } else {
       logMessage(LOG_DEBUG, "PDA Device Status wait for PM_EQUIPTMENT_STATUS\n");
+      // From the home menu it takes ~10 seconds for PM_EQUIPTMENT_STATUS
       clock_gettime(CLOCK_REALTIME, &max_wait);
       max_wait.tv_sec += 15;
       if (!wait_pda_m_type(PM_EQUIPTMENT_STATUS, &max_wait)) {
-          logMessage(LOG_ERR, "PDA Device Status: no PM_EQUIPTMENT_STATUS\n");
+          logMessage(LOG_ERR, "select_pda_equipment_status: no PM_EQUIPTMENT_STATUS\n");
       } else {
+          struct timespec now;
+          struct timespec elapsed;
+
+          clock_gettime(CLOCK_REALTIME, &now);
+          now.tv_sec += 15;
+          timespec_subtract(&elapsed, &now, &max_wait);
+
+          logMessage(LOG_DEBUG, "select_pda_equipment_status: PM_EQUIPTMENT_STATUS in %d.%03ld sec\n",
+                     elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
+
           clock_gettime(CLOCK_REALTIME, &max_wait);
           max_wait.tv_sec += 2;
           if (!wait_pda_m_update_complete(&max_wait)) {
-              logMessage(LOG_ERR, "PDA Device Status: incomplete PM_EQUIPTMENT_STATUS\n");
+              logMessage(LOG_ERR, "select_pda_equipment_status: incomplete PM_EQUIPTMENT_STATUS\n");
           } else if (pda_m_line(PDA_LINES-1)[0] == '\0') {
-            // If the last line of the status menu is empty status is not cut off
-            // no need to go to the equipment on off menu
-            return true;
+              // If the last line of the status menu is empty status is not cut off
+              // no need to go to the equipment on off menu
+              return true;
           }
       }
-    }
-  if (! select_pda_main_menu_item(aq_data, PMMI_EQUIPMENT_ON_OFF)) {
+  }
+  return false;
+}
+
+bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
+{
+  logMessage(LOG_DEBUG, "PDA Device Status\n");
+  
+  wait_pda_menu_not_unknown_or_fw_version(aq_data);
+
+  // If the filter pump is running wait for status
+  // :TODO: this may not be worth doing since aquapure can be captured directly
+  if (aq_data->aqbuttons[PUMP_INDEX].led->state == ON) {
+      if (select_pda_equipment_status(aq_data)) {
+          return true;
+      }
+  }
+  if (! select_pda_home_menu_item(aq_data, PHMI_EQUIPMENT_ON_OFF)) {
     logMessage(LOG_ERR, "PDA Device Status: can't find main menu\n");
     return false;
   }
@@ -799,6 +1222,7 @@ bool get_aqualink_PDA_device_status_op(struct aqualinkdata *aq_data)
 void *set_aqualink_PDA_init( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct timespec max_wait;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
   
@@ -808,9 +1232,31 @@ void *set_aqualink_PDA_init( void *ptr )
     logMessage(LOG_ERR, "PDA Device Status Op Failed.\n");
   }
 
-  printf("*** PDA Init :- add code to find setpoints ***\n");
-  
+  logMessage(LOG_DEBUG, "PDA Init get freeze setpoints\n");
+
   // Run through menu and find freeze setpoints / heater setpoints etc.
+  if (! select_pda_system_setup_item(threadCtrl->aq_data, PSSI_FREEZE_PROTECT)) {
+    logMessage(LOG_ERR, "PDA Device Init: can't find PSSI_FREEZE_PROTECT\n");
+  }
+  send_cmd(KEY_PDA_SELECT, threadCtrl->aq_data);
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 5;
+  if (!wait_pda_m_hlightindex_update(&max_wait)) {
+      logMessage(LOG_ERR, "PDA Device Status: incomplete FREEZE_PROTECT\n");
+  }
+
+ logMessage(LOG_DEBUG, "PDA Init get temp setpoints\n");
+
+  // Run through menu and find freeze setpoints / heater setpoints etc.
+  if (! select_pda_main_menu_item(threadCtrl->aq_data, PMMI_SET_TEMP)) {
+    logMessage(LOG_ERR, "PDA Device Init: can't find PMMI_SET_TEMP\n");
+  }
+
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 2;
+  if (!wait_pda_m_update_complete(&max_wait)) {
+      logMessage(LOG_ERR, "PDA Device Status: incomplete SET TEMP\n");
+  }
 
   logMessage(LOG_DEBUG, "PDA Init complete\n");
 
@@ -903,6 +1349,38 @@ void *set_aqualink_light_colormode( void *ptr )
   // just stop compiler error, ptr is not valid as it's just been freed
   return ptr;
 }
+
+void set_aqualink_PDA_pool_heater_temps(struct aqualinkdata *aq_data, int val)
+{
+  int i;
+
+  if (val == aq_data->pool_htr_set_point) {
+    logMessage(LOG_DEBUG, "set_aqualink_PDA_pool_heater_temps: temp already %d\n",
+               val);
+    return;
+  } else if (! select_pda_set_temp_item(aq_data, PSTI_POOL_HEAT)) {
+    logMessage(LOG_ERR, "set_aqualink_PDA_pool_heater_temps: Could not select PSTI_POOL_HEAT\n");
+    return;
+  }
+
+  if (val < aq_data->pool_htr_set_point) {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_pool_heater_temps: lower temp from %d to %d\n",
+                 aq_data->pool_htr_set_point, val);
+    for (i = aq_data->pool_htr_set_point; i > val; i--) {
+      send_cmd(KEY_PDA_DOWN, aq_data);
+    }
+  } else {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_pool_heater_temps: raise temp from %d to %d\n",
+                 aq_data->pool_htr_set_point, val);
+    for (i = aq_data->pool_htr_set_point; i < val; i++) {
+      send_cmd(KEY_PDA_UP, aq_data);
+    }
+  }
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  logMessage(LOG_DEBUG, "set_aqualink_PDA_pool_heater_temps: temp set to %d\n",
+             aq_data->pool_htr_set_point);
+}
+
 void *set_aqualink_pool_heater_temps( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -913,15 +1391,16 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_POOL_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  /*
-  if (val > HEATER_MAX) {
-    val = HEATER_MAX;
-  } else if ( val < MEATER_MIN) {
-    val = MEATER_MIN;
-  }
-  */
+
   val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
+
+  if (pda_mode() == true) {
+      set_aqualink_PDA_pool_heater_temps(aq_data, val);
+      cleanAndTerminateThread(threadCtrl);
+      return NULL;
+  }
+
   if (aq_data->single_device == true ){
     name = "TEMP1";
     menu_name = "SET TEMP1";
@@ -969,6 +1448,38 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   // just stop compiler error, ptr is not valid as it's just been freed
   return ptr;
 }
+
+void set_aqualink_PDA_spa_heater_temps(struct aqualinkdata *aq_data, int val)
+{
+  int i;
+
+  if (val == aq_data->spa_htr_set_point) {
+    logMessage(LOG_DEBUG, "set_aqualink_PDA_spa_heater_temps: temp already %d\n",
+               val);
+    return;
+  } else if (! select_pda_set_temp_item(aq_data, PSTI_SPA_HEAT)) {
+    logMessage(LOG_ERR, "set_aqualink_PDA_spa_heater_temps: Could not select PSTI_SPA_HEAT\n");
+    return;
+  }
+
+  if (val < aq_data->spa_htr_set_point) {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_spa_heater_temps: lower temp from %d to %d\n",
+                 aq_data->spa_htr_set_point, val);
+    for (i = aq_data->spa_htr_set_point; i > val; i--) {
+      send_cmd(KEY_PDA_DOWN, aq_data);
+    }
+  } else {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_spa_heater_temps: raise temp from %d to %d\n",
+                 aq_data->spa_htr_set_point, val);
+    for (i = aq_data->spa_htr_set_point; i < val; i++) {
+      send_cmd(KEY_PDA_UP, aq_data);
+    }
+  }
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  logMessage(LOG_DEBUG, "set_aqualink_PDA_spa_heater_temps: temp set to %d\n",
+             aq_data->spa_htr_set_point);
+}
+
 void *set_aqualink_spa_heater_temps( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -980,14 +1491,17 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   int val = atoi((char*)threadCtrl->thread_args);
   char *name;
   char *menu_name;
-  /*
-  if (val > HEATER_MAX) {
-    val = HEATER_MAX;
-  } else if ( val < MEATER_MIN) {
-    val = MEATER_MIN;
-  }*/
+
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
+
+  logMessage(LOG_DEBUG, "Setting spa heater setpoint to %d\n", val);
+
+  if (pda_mode() == true) {
+      set_aqualink_PDA_spa_heater_temps(aq_data, val);
+      cleanAndTerminateThread(threadCtrl);
+      return NULL;
+  }
 
   if (aq_data->single_device == true ){
     name = "TEMP2";
@@ -997,8 +1511,6 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     menu_name = "SET SPA TEMP";
   }
 
-  logMessage(LOG_DEBUG, "Setting spa heater setpoint to %d\n", val);
-   
   //setAqualinkTemp(aq_data, "SET TEMP", "SET SPA TEMP", NULL, "SPA", val);
   if ( select_menu_item(aq_data, "SET TEMP") != true ) {
     logMessage(LOG_WARNING, "Could not select SET TEMP menu\n");
@@ -1037,6 +1549,44 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   return ptr;
 }
 
+void set_aqualink_PDA_freeze_heater_temps(struct aqualinkdata *aq_data, int val)
+{
+  int i;
+  struct timespec max_wait;
+
+  if (val == aq_data->frz_protect_set_point) {
+    logMessage(LOG_DEBUG, "set_aqualink_PDA_freeze_heater_temps: temp already %d\n",
+               val);
+    return;
+  } else if (! select_pda_system_setup_item(aq_data, PSSI_FREEZE_PROTECT)) {
+    logMessage(LOG_ERR, "set_aqualink_PDA_freeze_heater_temps: Could not select PSSI_FREEZE_PROTECT\n");
+    return;
+  }
+
+  if (val < aq_data->frz_protect_set_point) {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_freeze_heater_temps: lower temp from %d to %d\n",
+                 aq_data->frz_protect_set_point, val);
+    for (i = aq_data->frz_protect_set_point; i > val; i--) {
+      send_cmd(KEY_PDA_DOWN, aq_data);
+    }
+  } else {
+      logMessage(LOG_DEBUG, "set_aqualink_PDA_freeze_heater_temps: raise temp from %d to %d\n",
+                 aq_data->frz_protect_set_point, val);
+    for (i = aq_data->frz_protect_set_point; i < val; i++) {
+      send_cmd(KEY_PDA_UP, aq_data);
+    }
+  }
+  send_cmd(KEY_PDA_SELECT, aq_data);
+  logMessage(LOG_DEBUG, "set_aqualink_PDA_freeze_heater_temps: temp set to %d\n",
+             aq_data->frz_protect_set_point);
+  clock_gettime(CLOCK_REALTIME, &max_wait);
+  max_wait.tv_sec += 5;
+  if (!wait_pda_m_hlightindex_update(&max_wait)) {
+      logMessage(LOG_ERR, "PDA Device Status: incomplete FREEZE_PROTECT\n");
+  }
+
+}
+
 void *set_aqualink_freeze_heater_temps( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -1056,6 +1606,12 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
   val = setpoint_check(FREEZE_SETPOINT, val, aq_data);
 
   logMessage(LOG_DEBUG, "Setting sfreeze protection to %d\n", val);
+
+  if (pda_mode() == true) {
+      set_aqualink_PDA_freeze_heater_temps(aq_data, val);
+      cleanAndTerminateThread(threadCtrl);
+      return NULL;
+  }
 
   //setAqualinkTemp(aq_data, "SYSTEM SETUP", "FRZ PROTECT", "TEMP SETTING", "FRZ", val);
   if ( select_menu_item(aq_data, "SYSTEM SETUP") != true ) {
@@ -1327,7 +1883,7 @@ bool send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
         }
     }
   if (ret) {
-      logMessage(LOG_INFO, "sent '0x%02hhx' to controller\n", _pgm_command);
+      logMessage(LOG_INFO, "sent '0x%02hhx' to controller\n", cmd);
   }
   pthread_mutex_unlock(&_pgm_command_mutex);
   return ret;

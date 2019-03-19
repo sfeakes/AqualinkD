@@ -7,8 +7,10 @@
 // someone has the controller set to C.
 #define HEATER_MAX_F 104
 #define HEATER_MIN_F 36
+#define PDA_HEATER_MIN_F 34
 #define FREEZE_PT_MAX_F 42
 #define FREEZE_PT_MIN_F 36
+#define PDA_FREEZE_PT_MIN_F 34
 
 #define HEATER_MAX_C 40
 #define HEATER_MIN_C 0
