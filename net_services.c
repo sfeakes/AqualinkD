@@ -211,34 +211,24 @@ void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqleds
   }
 }
 
-// NSF need to change this function to the _new once finished.
-void send_mqtt_temp_msg(struct mg_connection *nc, char *dev_name, long value)
+void send_mqtt_temp_msg(struct mg_connection *nc, char *dev_name, int value)
 {
   static char mqtt_pub_topic[250];
-  static char degC[5];
-  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
-  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
+  static char degC[10]; // note TEMP_UNKNOWN = -999.00
+  snprintf(degC, sizeof(degC), "%.2f", (_aqualink_data->temp_units==FAHRENHEIT
+      && _aqualink_config->convert_mqtt_temp && value != TEMP_UNKNOWN)?degFtoC(value):(float)value );
+  snprintf(mqtt_pub_topic, sizeof(mqtt_pub_topic), "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
 }
-/*
-void send_mqtt_temp_msg_new(struct mg_connection *nc, char *dev_name, long value)
+
+void send_mqtt_setpoint_msg(struct mg_connection *nc, char *dev_name, int value)
 {
   static char mqtt_pub_topic[250];
-  static char degC[5];
-  // NSF remove false below once we have finished.
-  sprintf(degC, "%.2f", (false && _aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
-  //sprintf(degC, "%d", value );
-  sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
-  send_mqtt(nc, mqtt_pub_topic, degC);
-}
-*/
-void send_mqtt_setpoint_msg(struct mg_connection *nc, char *dev_name, long value)
-{
-  static char mqtt_pub_topic[250];
-  static char degC[5];
+  static char degC[10]; // note TEMP_UNKNOWN = -999.00
   
-  sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
-  sprintf(mqtt_pub_topic, "%s/%s/setpoint", _aqualink_config->mqtt_aq_topic, dev_name);
+  snprintf(degC,  sizeof(degC), "%.2f",(_aqualink_data->temp_units==FAHRENHEIT
+      && _aqualink_config->convert_mqtt_temp && value != TEMP_UNKNOWN)?degFtoC(value):(float)value );
+  snprintf(mqtt_pub_topic, sizeof(mqtt_pub_topic), "%s/%s/setpoint", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
 }
 void send_mqtt_numeric_msg(struct mg_connection *nc, char *dev_name, int value)
