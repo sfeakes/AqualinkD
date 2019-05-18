@@ -1076,6 +1076,7 @@ void main_loop() {
               logMessage(LOG_NOTICE, "Setting SWG %% to %d, from delayed message\n",_aqualink_data.swg_delayed_percent);
               _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
             }
+            _aqualink_data.swg_ppm = packet_buffer[4] * 100;
           }
           interestedInNextAck = false;
         } else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00 ) {
@@ -1083,6 +1084,10 @@ void main_loop() {
           interestedInNextAck = false;
         } else if (packet_buffer[PKT_DEST] == SWG_DEV_ID) {
           interestedInNextAck = true;
+          if ( packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0 ) {
+            // Only read SWG Percent if we are not programming, as we might be changing this
+            _aqualink_data.swg_percent = (int)packet_buffer[4];
+          }
         } else {
           interestedInNextAck = false;
         }

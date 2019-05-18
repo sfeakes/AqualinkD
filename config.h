@@ -19,7 +19,7 @@
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
 
-#define MQTT_ID_LEN 20
+#define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
 
 struct aqconfig
 {

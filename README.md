@@ -67,6 +67,13 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.2.6e
+* This is a quick update, please only use if you need one of the items below.
+* Solution to overcome bug in Mosquitto 1.6.
+* Fixed Salt Water Generator when % was set to 0.
+* Added support for different SWG % for pool & spa. 
+* Increased speed of SWG messages.
+* Changed version of mongoose.
 ## Update in Release 1.2.6c
 * Fix some merge issues
 * Added MQTT topic for delayed start on buttons.

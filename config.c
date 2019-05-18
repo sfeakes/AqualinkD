@@ -80,7 +80,7 @@ void init_parameters (struct aqconfig * parms)
   parms->report_zero_pool_temp = false;
   parms->report_zero_spa_temp = false;
   parms->read_all_devices = true;
-
+ 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
 
@@ -180,6 +180,7 @@ char *generate_mqtt_id(char *buf, int len) {
       sprintf(&buf[i], "%.*d", (len-i), getpid());
     }
   }
+
   buf[len] = '\0';
 
   return buf;

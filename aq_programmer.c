@@ -502,7 +502,11 @@ void *set_aqualink_SWG( void *ptr )
   setAqualinkNumericField_new(aq_data, "POOL SP", val, 5);
 
   // usually miss this message, not sure why, but wait anyway to make sure programming has ended
-  waitForMessage(threadCtrl->aq_data, "POOL SP IS SET TO", 1);
+  // NSF have see the below message RS Message :- 
+  // 'Pool set to 20%'
+  // 'POOL SP IS SET TO 20%'
+  waitForMessage(threadCtrl->aq_data, "SET TO", 1);
+  //waitForMessage(threadCtrl->aq_data, "POOL SP IS SET TO", 1);
 
   cleanAndTerminateThread(threadCtrl);
 

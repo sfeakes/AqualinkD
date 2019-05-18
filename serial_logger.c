@@ -92,13 +92,14 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     for (i=0; i < _filters; i++) {
       if ( packet_buffer[PKT_DEST] == _filter[i])
         dest_match = true;
-      if ( ID == _filter[i])
+      if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
         src_match = true;
     }
 
     if(dest_match == false && src_match == false)
       return;
   }
+  
 /*
   if (_filter != 0x00) {
     if ( packet_buffer[PKT_DEST]==0x00 && ID != _filter )
@@ -165,7 +166,7 @@ int main(int argc, char *argv[]) {
       sscanf(argv[i+1], "0x%2x", &n);
       _filter[_filters] = n;
       _filters++;
-      printf("Add filter %i 0x%02hhx\n",_filters, _filter[_filters]);
+      printf("Add filter %i 0x%02hhx\n",_filters, _filter[_filters-1]);
       logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
     }
   }
@@ -228,6 +229,19 @@ int main(int argc, char *argv[]) {
 
       lastID = packet_buffer[PKT_DEST];
       received_packets++;
+
+      // NSF TESTING
+      /*
+        if (packet_buffer[PKT_DEST] == 0x40) {
+          static int hex = 0;
+          //printf("Sent ack\n");
+          //printf("Sent ack hex 0x%02hhx\n",(unsigned char)hex);
+          //send_extended_ack (rs_fd, 0x8b, (unsigned char)hex);
+          send_extended_ack (rs_fd, 0x8b, 0x00);
+          hex++;
+         
+        }*/
+// NSF
     }
 
     if (logPackets != 0 && received_packets >= logPackets) {

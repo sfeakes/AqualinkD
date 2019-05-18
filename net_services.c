@@ -215,7 +215,7 @@ void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqleds
 void send_mqtt_temp_msg(struct mg_connection *nc, char *dev_name, long value)
 {
   static char mqtt_pub_topic[250];
-  static char degC[5];
+  static char degC[10];
   sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, degC);
@@ -235,7 +235,7 @@ void send_mqtt_temp_msg_new(struct mg_connection *nc, char *dev_name, long value
 void send_mqtt_setpoint_msg(struct mg_connection *nc, char *dev_name, long value)
 {
   static char mqtt_pub_topic[250];
-  static char degC[5];
+  static char degC[10];
   
   sprintf(degC, "%.2f", (_aqualink_data->temp_units==FAHRENHEIT && _aqualink_config->convert_mqtt_temp)?degFtoC(value):value );
   sprintf(mqtt_pub_topic, "%s/%s/setpoint", _aqualink_config->mqtt_aq_topic, dev_name);
@@ -1068,6 +1068,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     opts.will_message = MQTT_OFF;
 
     mg_set_protocol_mqtt(nc);
+    //mg_send_mqtt_handshake_opt(nc, "aqualinkd_b827eb689", opts);
     mg_send_mqtt_handshake_opt(nc, _aqualink_config->mqtt_ID, opts);
     logMessage(LOG_INFO, "MQTT: Subscribing mqtt with id of: %s\n", _aqualink_config->mqtt_ID);
     //last_control_time = mg_time();
