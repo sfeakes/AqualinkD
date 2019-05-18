@@ -46,9 +46,6 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
    </td></tr>
  </table>
 
-
-### Old web UI, (Still in release if you prefer it)
-<img src="extras/web_ui.png?raw=true" width="700"></img><br>
 ### Simulator
 Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you can use it to completley configure the master control panel<br>
 <img src="extras/simulator.png?raw=true" width="550">
@@ -67,8 +64,7 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
-## Update in Release 1.2.6e
-* This is a quick update, please only use if you need one of the items below.
+## Update in Release 1.2.6e (This is a quick update, please only use if you need one of the items below.)
 * Solution to overcome bug in Mosquitto 1.6.
 * Fixed Salt Water Generator when % was set to 0.
 * Added support for different SWG % for pool & spa. 
