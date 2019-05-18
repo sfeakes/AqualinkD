@@ -6,8 +6,8 @@ LIBS := -lpthread -lm
 #LIBS := -lpthread -lwebsockets
 
 # debug of not
-#$DBG = -g
-$DBG =
+#DBG = -g
+DBG =
 
 # USe below to remove unused functions and global variables.
 #LFLAGS = -Wl,--gc-sections,--print-gc-sections

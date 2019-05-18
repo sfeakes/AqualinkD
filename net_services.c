@@ -828,7 +828,15 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     } else if (strcmp(request.first.value, "SPA_HTR") == 0 || strcmp(request.first.value, BTN_SPA_HTR) == 0) {
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, request.second.value, _aqualink_data);
     } else if (strcmp(request.first.value, SWG_TOPIC) == 0) {
-      aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
+      //aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
+      int value = setpoint_check(SWG_SETPOINT, atoi(request.second.value), _aqualink_data);
+      if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF ) {
+         // SWG is off, can't set %, so delay the set until it's on.
+        _aqualink_data->swg_delayed_percent = value;
+      } else {
+        aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
+        _aqualink_data->swg_percent = value; // Set the value as if it's already been set, just incase it's 0 as we won't get that message, or will update next time
+      }
     } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) {
       //aq_programmer(AQ_SET_COLORMODE, request.second.value, _aqualink_data);
       set_light_mode(request.second.value);
@@ -1068,7 +1076,6 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     opts.will_message = MQTT_OFF;
 
     mg_set_protocol_mqtt(nc);
-    //mg_send_mqtt_handshake_opt(nc, "aqualinkd_b827eb689", opts);
     mg_send_mqtt_handshake_opt(nc, _aqualink_config->mqtt_ID, opts);
     logMessage(LOG_INFO, "MQTT: Subscribing mqtt with id of: %s\n", _aqualink_config->mqtt_ID);
     //last_control_time = mg_time();

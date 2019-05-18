@@ -27,6 +27,7 @@
 #include "aq_programmer.h"
 #include "aq_serial.h"
 #include "pda_menu.h"
+#include "init_buttons.h"
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
@@ -311,7 +312,12 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
       break;
   }
   
-  pthread_detach(programmingthread->thread_id);
+  if ( programmingthread->thread_id != 0 ) {
+    //logMessage (LOG_DEBUG, "********* DID pthread_detach %d\n",programmingthread->thread_id);
+    pthread_detach(programmingthread->thread_id);
+  } else {
+    //logMessage (LOG_DEBUG, "********* DID NOT pthread_detach\n");
+  }
 }
 
 
@@ -486,27 +492,48 @@ void *set_aqualink_SWG( void *ptr )
   logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
-    logMessage(LOG_WARNING, "Could not select SET TEMP menu\n");
+    logMessage(LOG_WARNING, "Could not select SET AQUAPURE menu\n");
     cancel_menu(aq_data);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
 
+  // If spa is on, set SWG for spa, if not set SWG for pool
+  if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) {
+    if (select_sub_menu_item(aq_data, "SET SPA SP") != true) {
+      logMessage(LOG_WARNING, "Could not select SWG setpoint menu for SPA\n");
+      cancel_menu(aq_data);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+    setAqualinkNumericField_new(aq_data, "SPA SP", val, 5);
+  } else {
+    if (select_sub_menu_item(aq_data, "SET POOL SP") != true) {
+      logMessage(LOG_WARNING, "Could not select SWG setpoint menu\n");
+      cancel_menu(aq_data);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+    setAqualinkNumericField_new(aq_data, "POOL SP", val, 5);
+  }
+
+/*
   if (select_sub_menu_item(aq_data, "SET POOL SP") != true) {
-    logMessage(LOG_WARNING, "Could not select SET POOL TEMP menu\n");
+    logMessage(LOG_WARNING, "Could not select SWG setpoint menu\n");
     cancel_menu(aq_data);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
 
   setAqualinkNumericField_new(aq_data, "POOL SP", val, 5);
-
+*/
   // usually miss this message, not sure why, but wait anyway to make sure programming has ended
-  // NSF have see the below message RS Message :- 
+  // NSF have see the below message RS Message :-
   // 'Pool set to 20%'
   // 'POOL SP IS SET TO 20%'
   waitForMessage(threadCtrl->aq_data, "SET TO", 1);
   //waitForMessage(threadCtrl->aq_data, "POOL SP IS SET TO", 1);
+
 
   cleanAndTerminateThread(threadCtrl);
 
