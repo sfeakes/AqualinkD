@@ -69,6 +69,7 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * Fixed Salt Water Generator when % was set to 0.
 * Added support for different SWG % for pool & spa. 
 * Increased speed of SWG messages.
+* Few other bug fixes (Thanks to ballle98)
 ## Update in Release 1.2.6e (This is a quick update, please only use if you need one of the items below.)
 * Unstable update.
 ## Update in Release 1.2.6c
