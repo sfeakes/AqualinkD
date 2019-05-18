@@ -51,6 +51,7 @@
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
 #include "debug_timer.h"
+#include "net_services_habridge.h"
 
 /*
 #if defined AQ_DEBUG || defined AQ_TM_DEBUG
@@ -1150,6 +1151,7 @@ int main(int argc, char *argv[])
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx spa thermostat  = %d\n", _aqconfig_.dzidx_spa_thermostat);
   */
 #endif // MG_DISABLE_MQTT
+  LOG(AQUA_LOG,LOG_NOTICE, "Config habridge_server   = %s\n", _aqconfig_.habridge_server);
   LOG(AQUA_LOG,LOG_NOTICE, "Config deamonize         = %s\n", bool2text(_aqconfig_.deamonize));
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_file          = %s\n", _aqconfig_.log_file);
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);
@@ -1185,7 +1187,6 @@ int main(int argc, char *argv[])
     _aqconfig_.readahead_b4_write = false;
   }
 
-  //for (i = 0; i < TOTAL_BUTONS; i++)
   for (i = 0; i < _aqualink_data.total_buttons; i++)
   {
     //char ext[] = " VSP ID None | AL ID 0 ";
@@ -1201,8 +1202,13 @@ int main(int argc, char *argv[])
         sprintf(ext,"Light Progm | CTYPE %-1d  |",_aqualink_data.lights[j].lightType);
       }
     }
-    if (_aqualink_data.aqbuttons[i].dz_idx > 0)
+    if (_aqualink_data.aqbuttons[i].dz_idx > 0) {
       sprintf(ext+strlen(ext), "dzidx %-3d", _aqualink_data.aqbuttons[i].dz_idx);
+    }
+    if (_aqualink_data.aqbuttons[i].hab_id > 0) {
+      sprintf(ext+strlen(ext), "habid %-3d", _aqualink_data.aqbuttons[i].hab_id);
+    }
+
 /*
 #ifdef AQ_PDA
     if (isPDA_PANEL) {
@@ -1456,6 +1462,11 @@ void main_loop()
   if (!start_net_services(&mgr, &_aqualink_data))
   {
     LOG(AQUA_LOG,LOG_ERR, "Can not start webserver on port %s.\n", _aqconfig_.socket_port);
+    exit(EXIT_FAILURE);
+  }
+
+  if (!start_habridge_updater(&_aqconfig_, &_aqualink_data)) {
+    LOG(AQUA_LOG,LOG_ERR, "Can not start start_habridge_updater\n");
     exit(EXIT_FAILURE);
   }
 
@@ -1829,7 +1840,7 @@ void main_loop()
 
       if (_aqualink_data.updated) {
         broadcast_aqualinkstate(mgr.active_connections);
-        //_aqualink_data.updated = false;
+        update_habridge_state(&_aqconfig_, &_aqualink_data);
       }
     }
 
