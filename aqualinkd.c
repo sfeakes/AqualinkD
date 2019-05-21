@@ -1152,6 +1152,7 @@ int main(int argc, char *argv[])
   */
 #endif // MG_DISABLE_MQTT
   LOG(AQUA_LOG,LOG_NOTICE, "Config habridge_server   = %s\n", _aqconfig_.habridge_server);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config habridge_user     = %s\n", _aqconfig_.habridge_user);
   LOG(AQUA_LOG,LOG_NOTICE, "Config deamonize         = %s\n", bool2text(_aqconfig_.deamonize));
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_file          = %s\n", _aqconfig_.log_file);
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);

@@ -30,8 +30,6 @@ struct habridge_updater_data
 //static const char *s_url =
 //    "http://127.0.0.1:8080/api/username/lights/1/bridgeupdatestate";
 
-//static struct aqualinkdata _last_habridge_aqualinkdata;
-
 void* habridge_updater_routine(void* data)
 {
   int ret = 0;
@@ -64,8 +62,9 @@ void* habridge_updater_routine(void* data)
                   on_value = "true";
                 }
               snprintf(cmd_buff, sizeof(cmd_buff),
-                       "curl -sS -X PUT -d '{\"on\": %s}' http://%s/api/username/lights/%d/bridgeupdatestate > /dev/null",
-                       on_value, aqconfig->habridge_server, aqdata->aqbuttons[i].hab_id);
+                       "curl -sS -X PUT -d '{\"on\": %s}' 'http://%s/api/%s/lights/%d/bridgeupdatestate' > /dev/null",
+                       on_value, aqconfig->habridge_server,
+                       aqconfig->habridge_user, aqdata->aqbuttons[i].hab_id);
               LOG(NET_LOG, LOG_DEBUG, "habridge_updater_routine %s\n", cmd_buff);
               if ((ret = system(cmd_buff)))
                 {
