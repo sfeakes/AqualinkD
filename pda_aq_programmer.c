@@ -161,9 +161,6 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     return true;
 
   switch (menu) {
-    //case PM_SYSTEM_SETUP:
-    //  select_pda_menu_item(aq_data, "MENU");
-    //break;
     case PM_EQUIPTMENT_CONTROL:
       select_pda_menu_item(aq_data, "EQUIPMENT ON/OFF", true);
     break;
@@ -199,17 +196,14 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     case PM_AQUAPURE:
       select_pda_menu_item(aq_data, "MENU", true);
       select_pda_menu_item(aq_data, "SET AquaPure", true);
-      //select_pda_menu_item(aq_data, "LABEL AUX");
     break;
     case PM_SET_TEMP:
       select_pda_menu_item(aq_data, "MENU", true);
       select_pda_menu_item(aq_data, "SET TEMP", true);
-      //select_pda_menu_item(aq_data, "LABEL AUX");
     break;
     case PM_SET_TIME:
       select_pda_menu_item(aq_data, "MENU", true);
       select_pda_menu_item(aq_data, "SET TIME", true);
-      //select_pda_menu_item(aq_data, "LABEL AUX");
     break;
     default:
       logMessage(LOG_ERR, "PDA Device programmer didn't understand requested menu\n");

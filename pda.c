@@ -7,6 +7,7 @@
 
 #include "aqualink.h"
 #include "init_buttons.h"
+#include "pda.h"
 #include "pda_menu.h"
 #include "utils.h"
 
@@ -41,7 +42,8 @@ bool pda_shouldSleep() {
 }
 
 void pda_wake() {
-
+  pda_reset_sleep();
+  // Add and specic code to run when wake is called. 
 }
 
 void pda_reset_sleep() {
