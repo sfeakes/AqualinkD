@@ -107,13 +107,6 @@ pda_menu_type pda_m_type()
 }
 
 
-
-
-
-
-
-
-
 /*
 --- Main Menu ---
 Line 0 = 
@@ -170,7 +163,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
 }
 
 
-#ifdef SOME_CRAP
+#ifdef DO_NOT_COMPILE
 bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
 {
   bool rtn = true;
