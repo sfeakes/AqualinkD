@@ -26,12 +26,14 @@
 #include "utils.h"
 #include "aq_programmer.h"
 #include "aq_serial.h"
+#include "pda.h"
 #include "pda_menu.h"
 #include "init_buttons.h"
+#include "pda_aq_programmer.h"
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
-void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
+//void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
 void cancel_menu(struct aqualinkdata *aq_data);
 
 
@@ -43,17 +45,18 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr );
 void *get_aqualink_programs( void *ptr );
 void *get_freeze_protect_temp( void *ptr );
 void *get_aqualink_diag_model( void *ptr );
+void *get_aqualink_aux_labels( void *ptr );
 void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
 
-void *get_aqualink_PDA_device_status( void *ptr );
-void *set_aqualink_PDA_device_on_off( void *ptr );
+//void *get_aqualink_PDA_device_status( void *ptr );
+//void *set_aqualink_PDA_device_on_off( void *ptr );
 
 bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate state, int numMessageReceived);
 
-bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived);
+//bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived);
 bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* message2, int numMessageReceived);
 
 bool push_aq_cmd(unsigned char cmd);
@@ -204,12 +207,18 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
   struct programmingThreadCtrl *programmingthread = malloc(sizeof(struct programmingThreadCtrl));
   
   if (pda_mode() == true) {
+    pda_reset_sleep();
     if (type != AQ_PDA_INIT && 
+        type != AQ_PDA_WAKE_INIT &&
         type != AQ_PDA_DEVICE_STATUS && 
-        type != AQ_PDA_DEVICE_ON_OFF) {
+        type != AQ_SET_POOL_HEATER_TEMP &&
+        type != AQ_SET_SPA_HEATER_TEMP && 
+        type != AQ_SET_SWG_PERCENT && 
+        type != AQ_PDA_DEVICE_ON_OFF &&
+        type != AQ_GET_POOL_SPA_HEATER_TEMPS ) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
-    }
+    } 
   }
 
   programmingthread->aq_data = aq_data;
@@ -289,6 +298,12 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         return;
       }
       break;
+    case AQ_PDA_WAKE_INIT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_wakeinit, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
     case AQ_SET_SWG_PERCENT:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_SWG, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
@@ -303,6 +318,12 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
       break;
     case AQ_PDA_DEVICE_ON_OFF:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_device_on_off, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break; 
+    case AQ_GET_AUX_LABELS:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_aux_labels, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
@@ -478,17 +499,13 @@ void *set_aqualink_SWG( void *ptr )
 
   int val = atoi((char*)threadCtrl->thread_args);
   val = setpoint_check(SWG_SETPOINT, val, aq_data);
-  // Just recheck it's in multiple of 5.
-  /*
-  if (0 != (val % 5) )
-    val = ((val + 5) / 10) * 10;
 
-  if (val > SWG_PERCENT_MAX) {
-    val = SWG_PERCENT_MAX;
-  } else if ( val < SWG_PERCENT_MIN) {
-    val = SWG_PERCENT_MIN;
+  if (pda_mode() == true) {
+      set_PDA_aqualink_SWG_setpoint(aq_data, val);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
   }
-  */
+
   logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
@@ -541,258 +558,37 @@ void *set_aqualink_SWG( void *ptr )
   return ptr;
 }
 
-bool select_pda_main_menu(struct aqualinkdata *aq_data)
-{
-  int i=0;
-  // Check to see if we are at the main menu
-  if (pda_m_type() == PM_MAIN) {
-    return true;
-  }
-  // First send back
-  send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) { 
-    delay(500);
-    if (i++ > 6) return false;
-  }
-  //delay(1000);
-  i=0;
-  while (pda_m_type() != PM_MAIN) { 
-    delay(500);
-    if (i++ > 6) return false;
-  }
 
-  return true;
-}
 
-bool wait_pda_selected_item()
-{
-  int i=0;
-
-  i=0;
-  while (pda_m_hlightindex() == -1){
-    if (i++ > 10)
-      break;
-    delay(100);
-  }
-
-  if (pda_m_hlightindex() == -1)
-    return false;
-  else
-   return true;
-}
-
-bool select_pda_main_menu_item(struct aqualinkdata *aq_data, pda_menu_type menu_item)
-{
-  int i=0;
-  char *menu;
-  
-  if (! select_pda_main_menu(aq_data))
-    return false;
-  
-  logMessage(LOG_DEBUG, "PDA Device programmer at main menu\n");
-  
-  if (menu_item == PM_MAIN)
-    return true;
-  else if (menu_item == PM_SETTINGS)
-    menu = "MENU";
-  else if (menu_item == PM_EQUIPTMENT_CONTROL)
-    menu = "EQUIPMENT ON/OFF";
-  else
-    return false;
-
-  if (!wait_pda_selected_item()){
-    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
-    return false;
-  }
-
-  while ( strncmp(pda_m_hlight(), menu, strlen(menu)) != 0 ) {
-    if (_pgm_command == NUL) {
-      send_cmd(KEY_PDA_DOWN, aq_data);
-      logMessage(LOG_DEBUG, "PDA Device programmer selected sub menu\n");
-      waitForMessage(aq_data, NULL, 1);
-    }
-    if (i++ > (PDA_LINES * 2))
-      return false;
-    delay(500);
-  }
-
-  send_cmd(KEY_PDA_SELECT, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
-
-  return true;
-  /*
-  send_cmd(KEY_PDA_DOWN, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
-  */
-}
-
-void *set_aqualink_PDA_device_on_off( void *ptr )
+void *get_aqualink_aux_labels( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  int i=0;
-  int found;
   
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
-  
-  char *buf = (char*)threadCtrl->thread_args;
-  int device = atoi(&buf[0]);
-  int state = atoi(&buf[5]);
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_AUX_LABELS);
 
-  if (device < 0 || device > TOTAL_BUTTONS) {
-    logMessage(LOG_ERR, "PDA Device On/Off :- bad device number '%d'\n",device);
+  if ( select_menu_item(aq_data, "REVIEW") != true ) {
+    logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
+    cancel_menu(aq_data);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }     
+           
+  if (select_sub_menu_item(aq_data, "AUX LABELS") != true) {
+    logMessage(LOG_WARNING, "Could not select AUX LABELS menu\n");
+    cancel_menu(aq_data);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
 
-  logMessage(LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].pda_label,state);
-
-  //printf("DEVICE LABEL = %s\n",aq_data->aqbuttons[device].pda_label);
-  
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
-    logMessage(LOG_ERR, "PDA Device On/Off :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
-  }
-/*  
-  i=0;
-  while (pda_m_hlightindex() == -1){
-    if (i++ > 10)
-      break;
-    delay(100);
-  }
-*/
-  delay(500);
-printf("Wait for select\n");
-  if (!wait_pda_selected_item()){
-    logMessage(LOG_ERR, "PDA Device programmer didn't find a selected item\n");
-    return false;
-  }
-printf("End wait select\n");
-  i=0;
-  char labelBuff[AQ_MSGLEN];
-  strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
-  labelBuff[AQ_MSGLEN-4] = 0;
-
-  while ( (found = strcasecmp(stripwhitespace(labelBuff), aq_data->aqbuttons[device].pda_label)) != 0 ) {
-    if (_pgm_command == NUL) {
-      send_cmd(KEY_PDA_DOWN, aq_data);
-      //printf("*** Send Down for %s ***\n",pda_m_hlight());
-      waitForMessage(aq_data, NULL, 1);
-    }
-    if (i++ > (PDA_LINES * 2)) {
-      break;
-    }
-    delay(500);
-    strncpy(labelBuff, pda_m_hlight(), AQ_MSGLEN-4);
-    labelBuff[AQ_MSGLEN-4] = 0;
-  }
-
-  if (found == 0) {
-    //printf("*** FOUND ITEM %s ***\n",pda_m_hlight());
-    if (aq_data->aqbuttons[device].led->state != state) {
-      //printf("*** Select State ***\n");
-      logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
-      send_cmd(KEY_PDA_SELECT, aq_data);
-      while (_pgm_command != NUL) { delay(500); }
-    } else {
-      logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
-    }
-  } else {
-    //printf("*** NOT FOUND ITEM ***\n");
-    logMessage(LOG_ERR, "PDA Device On/Off, device '%s' not found\n",aq_data->aqbuttons[device].pda_label);
-  }
-
-  select_pda_main_menu_item(aq_data, PM_MAIN);
-  //while (_pgm_command != NUL) { delay(500); }
+  waitForMessage(aq_data, NULL, 5); // Receive 5 messages
 
   cleanAndTerminateThread(threadCtrl);
   
   // just stop compiler error, ptr is not valid as it's just been freed
   return ptr;
 }
-void *get_aqualink_PDA_device_status( void *ptr )
-{
-  struct programmingThreadCtrl *threadCtrl;
-  threadCtrl = (struct programmingThreadCtrl *) ptr;
-  struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  int i;
-  
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
-  
-  //int val = atoi((char*)threadCtrl->thread_args);
-
-  logMessage(LOG_DEBUG, "PDA Device Status\n");
-  
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
-    logMessage(LOG_ERR, "PDA Device Status :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
-  }
-  //select_pda_main_menu_item(aq_data, "EQUIPMENT ON/OFF");
-
-  // Just loop over all the dvices 18 times should do it.
-  for (i=0; i < 18; i++) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
-    while (_pgm_command != NUL) { delay(100); } 
-  }
-
-  //printf("*** GET MAIN MENU ***\n");
-
-  select_pda_main_menu_item(aq_data, PM_MAIN);
-
-  //printf("*** FINISHED ***\n");
-  /*
-  send_cmd(KEY_PDA_BACK, aq_data);
-  while (_pgm_command != NUL) { delay(500); }
-  */
-  cleanAndTerminateThread(threadCtrl);
-  
-  // just stop compiler error, ptr is not valid as it's just been freed
-  return ptr;
-}
-
-void *set_aqualink_PDA_init( void *ptr )
-{
-  struct programmingThreadCtrl *threadCtrl;
-  threadCtrl = (struct programmingThreadCtrl *) ptr;
-  struct aqualinkdata *aq_data = threadCtrl->aq_data;
-  int i=0;
-
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_INIT);
-  
-  //int val = atoi((char*)threadCtrl->thread_args);
-
-  //logMessage(LOG_DEBUG, "PDA Init\n", val);
-
-  logMessage(LOG_DEBUG, "PDA Init\n");
-  
-  if (! select_pda_main_menu_item(aq_data, PM_EQUIPTMENT_CONTROL)) {
-    logMessage(LOG_ERR, "PDA Init :- can't find main menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
-  }
-  //select_pda_main_menu_item(aq_data, "EQUIPMENT ON/OFF");
-
-  // Just loop over all the dvices 20 times should do it.
-  for (i=0; i < 18; i++) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
-    while (_pgm_command != NUL) { delay(500); } 
-  }
-
-  select_pda_main_menu_item(aq_data, PM_MAIN);
-
-  printf("*** PDA Init :- add code to find setpoints ***\n");
-  
-  // Run through menu and find freeze setpoints / heater setpoints etc.
-
-  cleanAndTerminateThread(threadCtrl);
-  
-  // just stop compiler error, ptr is not valid as it's just been freed
-  return ptr;
-}
-
 
 void *set_aqualink_light_colormode( void *ptr )
 {
@@ -894,6 +690,13 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   }
   */
   val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+
+  if (pda_mode() == true) {
+    set_PDA_aqualink_heater_setpoint(aq_data, val, true);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
   if (aq_data->single_device == true ){
     name = "TEMP1";
@@ -960,6 +763,13 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     val = MEATER_MIN;
   }*/
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+
+  if (pda_mode() == true) {
+    set_PDA_aqualink_heater_setpoint(aq_data, val, true);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
 
   if (aq_data->single_device == true ){
@@ -1148,6 +958,14 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_POOL_SPA_HEATER_TEMPS);
   logMessage(LOG_NOTICE, "Getting pool & spa heat setpoints from aqualink\n");
 
+  if (pda_mode() == true) {
+    if (!get_PDA_aqualink_pool_spa_heater_temps(aq_data)) {
+      logMessage(LOG_ERR, "Error Getting PDA pool & spa heat protection setpoints\n");
+    }
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
     cancel_menu(aq_data);
@@ -1181,6 +999,15 @@ void *get_freeze_protect_temp( void *ptr )
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_FREEZE_PROTECT_TEMP);
   logMessage(LOG_NOTICE, "Getting freeze protection setpoints\n");
+
+
+  if (pda_mode() == true) {
+    if (! get_PDA_freeze_protect_temp(aq_data)) {
+      logMessage(LOG_ERR, "Error Getting PDA freeze protection setpoints\n");
+    }
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");

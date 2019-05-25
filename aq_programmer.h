@@ -8,7 +8,7 @@
 #define HEATER_MAX_F 104
 #define HEATER_MIN_F 36
 #define FREEZE_PT_MAX_F 42
-#define FREEZE_PT_MIN_F 36
+#define FREEZE_PT_MIN_F 34
 
 #define HEATER_MAX_C 40
 #define HEATER_MIN_C 0
@@ -36,7 +36,9 @@ typedef enum {
   AQ_PDA_INIT,
   AQ_SET_SWG_PERCENT,
   AQ_PDA_DEVICE_STATUS,
-  AQ_PDA_DEVICE_ON_OFF
+  AQ_PDA_DEVICE_ON_OFF,
+  AQ_GET_AUX_LABELS,
+  AQ_PDA_WAKE_INIT
 } program_type;
 
 struct programmingThreadCtrl {
@@ -63,5 +65,13 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
 int get_aq_cmd_length();
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
+
+
+// These shouldn't be here, but just for the PDA AQ PROGRAMMER
+void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
+bool push_aq_cmd(unsigned char cmd);
+void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
+void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
+bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived);
 
 #endif

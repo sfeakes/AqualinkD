@@ -53,8 +53,8 @@
 #define KEY_PDA_DOWN   0x05
 #define KEY_PDA_BACK   0x02
 #define KEY_PDA_SELECT 0x04
-#define KEY_PDA_PGUP   0x01
-#define KEY_PDA_PGDN   0x03
+//#define KEY_PDA_PGUP   0x01 // Think these are hot key #1
+//#define KEY_PDA_PGDN   0x03 // Think these are hot key #2
 
 /* KEY/BUTTON CODES */
 #define KEY_PUMP      0x02
@@ -178,6 +178,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80
 
 #define CMD_PDA_0x05           0x05
+#define CMD_PDA_0x1B           0x1b
 #define CMD_PDA_HIGHLIGHT      0x08
 #define CMD_PDA_CLEAR          0x09
 #define CMD_PDA_SHIFTLINES     0x0F

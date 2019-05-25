@@ -50,12 +50,16 @@ struct aqconfig
   int light_programming_button;
   bool override_freeze_protect;
   bool pda_mode;
+  bool pda_sleep_mode;
   bool convert_mqtt_temp;
   bool convert_dz_temp;
   //bool flash_mqtt_buttons;
   bool report_zero_spa_temp;
   bool report_zero_pool_temp;
   bool read_all_devices;
+  bool use_panel_aux_labels;
+  bool force_swg;
+  bool debug_RSProtocol_packets;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better
   //char mqtt_pub_topic[250];
@@ -69,5 +73,6 @@ void init_parameters (struct aqconfig * parms);
 void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqualink_data, char *cfgFile);
 bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata);
 bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value);
+char *cleanalloc(char*str);
 
 #endif

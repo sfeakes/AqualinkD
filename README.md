@@ -59,15 +59,26 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 <img src="extras/HomeAssistant.png?raw=true" width="600"></img>
 
 ## All Web interfaces.
-* http://aqualink.ip/     <- (New UI)
-* http://aqualink.ip/old   <- (If you prefer the old UI, this is not maintained)
-* http://aqualink.ip/simple.html   <- (Anothr opion if you don't like the above)
+* http://aqualink.ip/     <- (Standard WEB UI
+* http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.3.0
+* Large update for PDA only control panels (Majority of this is ballle98 work)
+* Can distinguish between AquaPalm and PDA supported control panels.
+* PDA Freeze & Heater setpoints now supported.
+* Added PDA Sleep mode so AqualinkD can work inconjunction with a real Jandy PDA.
+* Speeded up many PDA functions.
+* Fixed many PDA bugs.
+* Non PDA specific updates :-
+* Can get button labels from control panel (not in PDA mode)
+* RS485 Logging so users can submit information on Variable Speed Pumps & other devices for future support.
+* Force SWG status on startup, rather than wait for pump to turn on.
+* General bug fixes and improved code in many areas.
 ## Update in Release 1.2.6f
 * Solution to overcome bug in Mosquitto 1.6.
 * Fixed Salt Water Generator when % was set to 0.
-* Added support for different SWG % for pool & spa. 
+* Added support for different SWG % for pool & spa. (SWG reports and sets the mode that's currently active)
 * Increased speed of SWG messages.
 * Few other bug fixes (Thanks to ballle98)
 ## Update in Release 1.2.6e (This is a quick update, please only use if you need one of the items below.)

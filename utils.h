@@ -49,7 +49,9 @@ float degFtoC(float degF);
 float degCtoF(float degC);
 char* stristr(const char* haystack, const char* needle);
 int ascii(char *destination, char *source);
-
+char *prittyString(char *str);
+void writePacketLog(char *buff);
+void closePacketLog();
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

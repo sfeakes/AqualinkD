@@ -29,7 +29,7 @@ INCLUDES = -I/nas/data/Development/Raspberry/aqualink/aqualinkd
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda_menu.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c mongoose.c
 
 SL_SRC = serial_logger.c aq_serial.c utils.c
 PDA_SRC = pda_test.c pda_menu.c aq_serial.c utils.c

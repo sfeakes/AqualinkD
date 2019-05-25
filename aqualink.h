@@ -97,6 +97,7 @@ struct aqualinkdata
   bool simulate_panel;
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
+  unsigned char last_packet_type;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
 };

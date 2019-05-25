@@ -1178,7 +1178,8 @@
           } else if (data.type == 'devices') {
             check_devices(data);
             resetBackgroundSize();
-            window.setTimeout(get_devices, (300 * 1000)); // Check for new dvices ever 5 mins.
+            //window.setTimeout(get_devices, (300 * 1000)); // Check for new dvices ever 5 mins.
+            window.setTimeout(get_devices, (60 * 1000)); // Check for new dvices ever 1 mins.
           }
         }
         socket_di.onclose = function() {

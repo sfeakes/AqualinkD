@@ -75,11 +75,15 @@ void init_parameters (struct aqconfig * parms)
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
+  parms->pda_sleep_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
   parms->report_zero_pool_temp = false;
   parms->report_zero_spa_temp = false;
   parms->read_all_devices = true;
+  parms->use_panel_aux_labels = false;
+  parms->debug_RSProtocol_packets = false;
+  parms->force_swg = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -377,6 +381,10 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
     config_parameters->pda_mode = text2bool(value);
     set_pda_mode(config_parameters->pda_mode);
     rtn=true;
+  } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
+    config_parameters->pda_sleep_mode = text2bool(value);
+    //set_pda_mode(config_parameters->pda_mode);
+    rtn=true;
   } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
     config_parameters->convert_mqtt_temp = text2bool(value);
     rtn=true;
@@ -396,7 +404,17 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp (param, "read_all_devices", 16) == 0) {
     config_parameters->read_all_devices = text2bool(value);
     rtn=true;
+  } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
+    config_parameters->use_panel_aux_labels = text2bool(value);
+    rtn=true;
+    } else if (strncasecmp (param, "force_SWG", 9) == 0) {
+    config_parameters->force_swg = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
+    config_parameters->debug_RSProtocol_packets = text2bool(value);
+    rtn=true;
   }
+
   // removed until domoticz has a better virtual thermostat
   /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
               config_parameters->dzidx_pool_thermostat = strtoul(value, NULL, 10);

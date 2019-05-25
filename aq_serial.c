@@ -125,6 +125,9 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_PDA_0x05:
       return "PDA Unknown";
     break;
+    case CMD_PDA_0x1B:
+      return "PDA Init (*guess*)";
+    break;
     case CMD_PDA_HIGHLIGHT:
       return "PDA Hlight";
     break;

@@ -33,6 +33,7 @@
 #include "json_messages.h"
 #include "domoticz.h"
 #include "aq_mqtt.h"
+#include "pda.h"
 
 
 static struct aqconfig *_aqualink_config;
@@ -761,7 +762,11 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
 void action_websocket_request(struct mg_connection *nc, struct websocket_message *wm) {
   char buffer[50];
   struct JSONwebrequest request;
-
+  
+  // Any websocket request means UI is active, so don't let AqualinkD go to sleep if in PDA mode
+  if (pda_mode())
+    pda_reset_sleep();
+  
   strncpy(buffer, (char *)wm->data, wm->size);
   buffer[wm->size] = '\0';
   // logMessage (LOG_DEBUG, "buffer '%s'\n", buffer);

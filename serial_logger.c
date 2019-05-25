@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
-          //logMessage(LOG_DEBUG_SERIAL, "ID is in use 0x%02hhx %x\n", lastID, lastID);
+          //logMessage(LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == lastID) {
               slog[i].inuse = true;
@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
   if (sindex >= SLOG_MAX)
     logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
   logMessage(LOG_NOTICE, "ID's found\n");
-  for (i = 0; i <= sindex; i++) {
+  for (i = 0; i < sindex; i++) {
     //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
 

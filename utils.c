@@ -483,3 +483,49 @@ int ascii(char *destination, char *source) {
   destination[i] = '\0';
   return i;
 }
+
+char *prittyString(char *str)
+{
+  char *ptr = str;
+  char *end;
+  bool lastspace=true;
+
+  end = str + strlen(str) - 1;
+  while(end >= ptr){
+    //printf("%d %s ", *ptr, ptr);
+    if (lastspace && *ptr > 96 && *ptr < 123) {
+      *ptr = *ptr - 32;
+      lastspace=false;
+      //printf("to upper\n");
+    } else if (lastspace == false && *ptr > 54 && *ptr < 91) {
+      *ptr = *ptr + 32;
+      lastspace=false;
+      //printf("to lower\n");
+    } else if (*ptr == 32) {
+      lastspace=true;
+      //printf("space\n");
+    } else {
+      lastspace=false;
+      //printf("leave\n");
+    }
+    ptr++;
+  }
+
+  //printf("-- %s --\n", str);
+
+  return str;
+}
+
+static FILE *_packetLogFile = NULL;
+
+void writePacketLog(char *buffer) {
+  if (_packetLogFile == NULL)
+    _packetLogFile = fopen("/tmp/RS485.log", "a");
+
+  if (_packetLogFile != NULL) {
+    fputs(buffer, _packetLogFile);
+  } 
+}
+void closePacketLog() {
+  fclose(_packetLogFile);
+}
