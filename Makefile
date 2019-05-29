@@ -6,6 +6,7 @@ LIBS := -lpthread -lm
 #LIBS := -lpthread -lwebsockets
 
 # debug of not
+#DBG = -g -O0 -fsanitize=address -static-libasan
 #DBG = -g
 DBG =
 

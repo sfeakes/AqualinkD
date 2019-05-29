@@ -32,6 +32,7 @@ unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
 unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
 unsigned char _filter[10];
 int _filters=0;
+bool _rawlog=false;
 
 void intHandler(int dummy) {
   _keepRunning = false;
@@ -82,6 +83,11 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
 {
   //if (_filter != 0x00 && ID != _filter && packet_buffer[PKT_DEST] != _filter )
   //  return;
+  if (_rawlog) {
+    printHex((char *)packet_buffer, packet_length);
+    printf("\n");
+    return;
+  }
 
   if (_filters != 0)
   {
@@ -139,6 +145,7 @@ int main(int argc, char *argv[]) {
   int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
+
   //int logLevel; 
   //char buffer[256];
   //bool idMode = true;
@@ -151,7 +158,7 @@ int main(int argc, char *argv[]) {
 
   if (argc < 2 || access( argv[1], F_OK ) == -1 ) {
     fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
-    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
+    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> & -r (raw) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
     return 1;
   }
 
@@ -168,6 +175,9 @@ int main(int argc, char *argv[]) {
       _filters++;
       printf("Add filter %i 0x%02hhx\n",_filters, _filter[_filters-1]);
       logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
+    } else if (strcmp(argv[i], "-r") == 0) {
+      _rawlog = true;
+      logLevel = LOG_DEBUG;
     }
   }
 
