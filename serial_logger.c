@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
   int rs_fd;
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
-  unsigned char lastID;
+  unsigned char lastID = 0x00;
   int i = 0;
   bool found;
   serial_id_log slog[SLOG_MAX];

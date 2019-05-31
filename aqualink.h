@@ -19,6 +19,8 @@
 //#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
 
+#define MAX_PUMPS 2
+
 enum {
  FAHRENHEIT,
  CELSIUS,
@@ -63,6 +65,13 @@ struct action {
   //char value[10];
 };
 
+typedef struct pumpd
+{
+  int rpm;
+  int gph;
+  int watts; 
+} pump_detail;
+
 struct aqualinkdata
 {
   //char crap[AQ_MSGLEN];
@@ -98,6 +107,8 @@ struct aqualinkdata
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
   unsigned char last_packet_type;
+  pump_detail pumps[MAX_PUMPS];
+  int open_websockets;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
 };

@@ -1153,7 +1153,7 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS1;
   char* msgS2;
-  char* ptr;
+  char* ptr = NULL;
   
   
   if (message1 != NULL) {
@@ -1221,7 +1221,7 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS;
-  char* ptr;
+  char* ptr = NULL;
   
   if (message != NULL) {
     if (message[0] == '^')

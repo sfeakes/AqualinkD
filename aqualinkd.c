@@ -38,6 +38,7 @@
 #include "net_services.h"
 #include "pda_menu.h"
 #include "pda.h"
+#include "iAqualink_messages.h"
 #include "version.h"
 
 #define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
@@ -727,6 +728,7 @@ int main(int argc, char *argv[])
   exit(EXIT_SUCCESS);
 }
 
+/*
 void debugPacketPrint(unsigned char ID, unsigned char *packet_buffer, int packet_length)
 {
   char buff[1000];
@@ -791,6 +793,26 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
     debugPacketPrint(last_packet_buffer[PKT_DEST], packet_buffer, packet_length);
   }
 }
+*/
+
+void logPacket(unsigned char *packet_buffer, int packet_length)
+{
+  char buff[1000];
+  int i = 0;
+  int cnt = 0;
+
+  cnt = sprintf(buff, "To 0x%02hhx of type %8.8s", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
+  cnt += sprintf(buff + cnt, " | HEX: ");
+  for (i = 0; i < packet_length; i++)
+    cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
+
+  if (_config_parameters.debug_RSProtocol_packets)
+    writePacketLog(buff);
+  else
+    logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+}
+
+
 
 #define MAX_BLOCK_ACK 12
 #define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
@@ -842,7 +864,8 @@ void main_loop()
   int rs_fd;
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
-  bool interestedInNextAck;
+  bool interestedInNextAck = false;
+  int i;
   //int delayAckCnt = 0;
 
   // NSF need to find a better place to init this.
@@ -866,6 +889,13 @@ void main_loop()
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
+  _aqualink_data.open_websockets = 0;
+
+  for (i=0; i < MAX_PUMPS; i++) {
+    _aqualink_data.pumps[i].rpm = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].gph = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].watts = TEMP_UNKNOWN;
+  }
 
   if (_config_parameters.force_swg == true)
      _aqualink_data.swg_percent = 0;
@@ -926,7 +956,8 @@ void main_loop()
     {
       blank_read = 0;
 
-      if (_config_parameters.debug_RSProtocol_packets) logPacket(packet_buffer, packet_length);
+      if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
+        logPacket(packet_buffer, packet_length);
 
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id)
       {
@@ -991,12 +1022,17 @@ void main_loop()
         {
           interestedInNextAck = false;
         }
+
+        if (packet_buffer[PKT_DEST] == IAQ_DEV_ID && packet_buffer[PKT_CMD] == CMD_IAQ_MSG) {
+          if (processiAqualinkMsg(packet_buffer, packet_length, &_aqualink_data) != false)
+            broadcast_aqualinkstate(mgr.active_connections);
+        }
+        
+      //}
+      
+        //  logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
+        //                               (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
       }
-      /*
-      if (getLogLevel() >= LOG_DEBUG_SERIAL) {
-          logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
-                                       (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
-      }*/
     }
     mg_mgr_poll(&mgr, 0);
 

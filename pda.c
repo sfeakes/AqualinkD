@@ -18,17 +18,43 @@ static unsigned long _pda_loop_cnt = 0;
 static bool _initWithRS = false;
 
 // Each RS message is around 0.5 seconds apart, so 2 mins = 120 seconds = 240 polls
-#define PDA_LOOP_COUNT 240 // 2 mins in poll (sleep timer)
+//#define PDA_LOOP_COUNT 240 // 2 mins in poll (sleep timer)
+
+#define PDA_SLEEP_FOR 60 // 30 seconds
+#define PDA_WAKE_FOR 6 // 3 seconds
 
 void init_pda(struct aqualinkdata *aqdata)
 {
   _aqualink_data = aqdata;
   set_pda_mode(true);
-  //clock_gettime(CLOCK_REALTIME, &_aqualink_data->last_active_time);
-  //aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data); // NEED TO MOVE THIS. Can't run this here incase serial connection fails / needs to be cleaned up.
 }
 
+bool pda_shouldSleep() {
+  //logMessage(LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
+  if (_pda_loop_cnt++ < PDA_WAKE_FOR) {
+    return false;
+  } else if (_pda_loop_cnt > PDA_WAKE_FOR + PDA_SLEEP_FOR) {
+    _pda_loop_cnt = 0;
+    return false;
+  }
 
+  // NSF NEED TO CHECK ACTIVE THREADS.
+  if (_aqualink_data->active_thread.thread_id != 0) {
+    logMessage(LOG_DEBUG, "PDA can't sleep as thread is active");
+    _pda_loop_cnt = 0;
+    return false;
+  }
+
+  // Last see if there are any open websockets. (don't sleep if the web UI is open)
+  if ( _aqualink_data->open_websockets > 0 ) {
+    logMessage(LOG_DEBUG, "PDA can't sleep as websocket is active");
+    return false;
+  }
+  
+  return true;
+}
+
+/*
 bool pda_shouldSleep() {
   //logMessage(LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
   if (_pda_loop_cnt++ < PDA_LOOP_COUNT) {
@@ -40,6 +66,7 @@ bool pda_shouldSleep() {
 
   return true;
 }
+*/
 
 void pda_wake() {
   pda_reset_sleep();
@@ -396,12 +423,6 @@ bool process_pda_packet(unsigned char *packet, int length)
   int i;
   char *msg;
   static bool init = false;
-  static time_t _lastStatus = 0;
-
-  if (_lastStatus == 0)
-  {
-    time(&_lastStatus);
-  }
 
   process_pda_menu_packet(packet, length);
 
@@ -454,21 +475,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       {
         pass_pda_equiptment_status_item(pda_m_line(i));
       }
-      time(&_lastStatus);
-    }
-    else
-    {
-      time_t now;
-      time(&now);
-      if (init && difftime(now, _lastStatus) > 60)
-      {
-        logMessage(LOG_DEBUG, "OVER 60 SECONDS SINCE LAST STATUS UPDATE, forcing refresh\n");
-        // Reset aquapure to nothing since it must be off at this point
-        _aqualink_data->pool_temp = TEMP_UNKNOWN;
-        _aqualink_data->spa_temp = TEMP_UNKNOWN;
-        time(&_lastStatus);
-        aq_programmer(AQ_PDA_DEVICE_STATUS, NULL, _aqualink_data);
-      }
+      
     }
     if (pda_m_type() == PM_FREEZE_PROTECT_DEVICES)
     {

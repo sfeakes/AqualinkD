@@ -140,6 +140,12 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_PDA_HIGHLIGHTCHARS:
       return "PDA C_HlightChar";
     break;
+    case CMD_IAQ_MSG:
+      return "iAq Message";
+    break;
+    case CMD_IAQ_MENU_MSG:
+      return "iAq Menu";
+    break;
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;
@@ -147,6 +153,68 @@ const char* get_packet_type(unsigned char* packet , int length)
   }
 }
 
+
+
+
+// Generate and return checksum of packet.
+int generate_checksum(unsigned char* packet, int length)
+{
+  int i, sum, n;
+
+  n = length - 3;
+  sum = 0;
+  for (i = 0; i < n; i++)
+  sum += (int) packet[i];
+  return(sum & 0x0ff);
+}
+
+
+
+
+
+// Send an ack packet to the Aqualink RS8 master device.
+// fd: the file descriptor of the serial port connected to the device
+// command: the command byte to send to the master device, NUL if no command
+// 
+// NUL = '\x00'
+// DLE = '\x10'
+// STX = '\x02'
+// ETX = '\x03'
+// 
+// masterAddr = '\x00'          # address of Aqualink controller
+// 
+//msg = DLE+STX+dest+cmd+args
+//msg = msg+self.checksum(msg)+DLE+ETX
+//      DLE+STX+DEST+CMD+ARGS+CHECKSUM+DLE+ETX
+
+
+void print_hex(char *pk, int length)
+{
+  int i=0;
+  for (i=0;i<length;i++)
+  {
+    printf("0x%02hhx|",pk[i]);
+  }
+  printf("\n");
+}
+
+void test_cmd()
+{
+  const int length = 11;
+  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
+  //send_cmd(fd, CMD_ACK, command);
+  
+  print_hex((char *)ackPacket, length);
+  
+  ackPacket[7] = generate_checksum(ackPacket, length-1);
+  print_hex((char *)ackPacket, length);
+  
+  ackPacket[6] = 0x02;
+  ackPacket[7] = generate_checksum(ackPacket, length-1);
+  print_hex((char *)ackPacket, length);
+}
+
+#ifndef PLAYBACK_MODE
 
 /*
 Open and Initialize the serial communications port to the Aqualink RS8 device.
@@ -229,64 +297,6 @@ void close_serial_port(int fd)
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
   logMessage(LOG_DEBUG_SERIAL, "Closed serial port\n");
-}
-
-// Generate and return checksum of packet.
-int generate_checksum(unsigned char* packet, int length)
-{
-  int i, sum, n;
-
-  n = length - 3;
-  sum = 0;
-  for (i = 0; i < n; i++)
-  sum += (int) packet[i];
-  return(sum & 0x0ff);
-}
-
-
-
-
-
-// Send an ack packet to the Aqualink RS8 master device.
-// fd: the file descriptor of the serial port connected to the device
-// command: the command byte to send to the master device, NUL if no command
-// 
-// NUL = '\x00'
-// DLE = '\x10'
-// STX = '\x02'
-// ETX = '\x03'
-// 
-// masterAddr = '\x00'          # address of Aqualink controller
-// 
-//msg = DLE+STX+dest+cmd+args
-//msg = msg+self.checksum(msg)+DLE+ETX
-//      DLE+STX+DEST+CMD+ARGS+CHECKSUM+DLE+ETX
-
-
-void print_hex(char *pk, int length)
-{
-  int i=0;
-  for (i=0;i<length;i++)
-  {
-    printf("0x%02hhx|",pk[i]);
-  }
-  printf("\n");
-}
-
-void test_cmd()
-{
-  const int length = 11;
-  unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
-  //send_cmd(fd, CMD_ACK, command);
-  
-  print_hex((char *)ackPacket, length);
-  
-  ackPacket[7] = generate_checksum(ackPacket, length-1);
-  print_hex((char *)ackPacket, length);
-  
-  ackPacket[6] = 0x02;
-  ackPacket[7] = generate_checksum(ackPacket, length-1);
-  print_hex((char *)ackPacket, length);
 }
 
 void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
@@ -547,6 +557,72 @@ int get_packet(int fd, unsigned char* packet)
   // Return the packet length.
   return index;
 }
+
+
+
+#else // PLAYBACK_MODE
+#include <stdlib.h>
+FILE *_fp;
+
+int init_serial_port(char* file)
+{ 
+  _fp = fopen ( file, "r" );
+  if ( _fp == NULL )
+  {
+    perror ( file ); /* why didn't the file open? */
+    return -1;
+  }
+  return 0;
+}
+
+void close_serial_port(int fd)
+{
+  fclose(_fp);
+}
+
+int get_packet(int fd, unsigned char* packet_buffer)
+{
+  int packet_length = 0;
+  char line[256];
+  char hex[6];
+  int i;
+
+  if ( fgets ( line, sizeof line, _fp ) != NULL ) /* read a line */
+  {
+    packet_length=0;
+    for (i=0; i < strlen(line); i=i+5)
+    {
+      strncpy(hex, &line[i], 4);
+      hex[5] = '\0';
+      packet_buffer[packet_length] = (int)strtol(hex, NULL, 16);
+      //printf("%s = 0x%02hhx = %c\n", hex, packet_buffer[packet_length], packet_buffer[packet_length]);
+      packet_length++;
+    }
+    packet_length--;
+
+    logMessage(LOG_DEBUG_SERIAL, "PLAYBACK read %d bytes\n",packet_length);
+    //printf("To 0x%02hhx, type %15.15s, length %2.2d ", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),packet_length);
+    //fputs ( line, stdout ); 
+
+    return packet_length;
+  }
+  return 0;
+}
+
+void send_extended_ack(int fd, unsigned char ack_type, unsigned char command)
+{}
+
+void send_ack(int fd, unsigned char command)
+{}
+
+void send_messaged(int fd, unsigned char destination, char *message)
+{}
+
+void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
+{}
+#endif // PLAYBACK_MODE
+ 
+
 
 // Reads the bytes of the next incoming packet, and
 // returns when a good packet is available in packet

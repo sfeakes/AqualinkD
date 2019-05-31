@@ -16,6 +16,7 @@
 
 #define DEV_MASTER      0x00
 #define SWG_DEV_ID      0x50
+#define IAQ_DEV_ID      0x33
 
 // PACKET DEFINES
 #define NUL  0x00
@@ -183,6 +184,12 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_PDA_CLEAR          0x09
 #define CMD_PDA_SHIFTLINES     0x0F
 #define CMD_PDA_HIGHLIGHTCHARS 0x10
+
+/* iAqualink */
+#define CMD_IAQ_MSG           0x25
+#define CMD_IAQ_MENU_MSG      0x24
+
+
 
 typedef enum {
   ON,

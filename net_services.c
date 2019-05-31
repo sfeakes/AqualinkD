@@ -194,6 +194,17 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
 
+void send_mqtt_aux_msg(struct mg_connection *nc, char *root_topic, int dev_index, char *dev_topic, int value)
+{
+  static char mqtt_pub_topic[250];
+  static char msg[10];
+  
+  sprintf(msg, "%d", value);
+
+  sprintf(mqtt_pub_topic, "%s/%s%d%s",_aqualink_config->mqtt_aq_topic, root_topic, dev_index, dev_topic);
+  send_mqtt(nc, mqtt_pub_topic, msg);
+}
+
 void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
 {
 
@@ -513,6 +524,27 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
     }
   }
+
+  // Loop over Pumps
+  for (i=0; i < MAX_PUMPS; i++) {
+    //_aqualink_data->pumps[i].rpm = TEMP_UNKNOWN;
+    //_aqualink_data->pumps[i].gph = TEMP_UNKNOWN;
+    //_aqualink_data->pumps[i].watts = TEMP_UNKNOWN;
+
+    if (_aqualink_data->pumps[i].rpm != TEMP_UNKNOWN && _aqualink_data->pumps[i].rpm != _last_mqtt_aqualinkdata.pumps[i].rpm) {
+      _last_mqtt_aqualinkdata.pumps[i].rpm = _aqualink_data->pumps[i].rpm;
+      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
+    }
+    if (_aqualink_data->pumps[i].gph != TEMP_UNKNOWN && _aqualink_data->pumps[i].gph != _last_mqtt_aqualinkdata.pumps[i].gph) {
+      _last_mqtt_aqualinkdata.pumps[i].gph = _aqualink_data->pumps[i].gph;
+      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_GPH_TOPIC, _aqualink_data->pumps[i].gph);
+    }
+    if (_aqualink_data->pumps[i].watts != TEMP_UNKNOWN && _aqualink_data->pumps[i].watts != _last_mqtt_aqualinkdata.pumps[i].watts) {
+      _last_mqtt_aqualinkdata.pumps[i].watts = _aqualink_data->pumps[i].watts;
+      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
+    }
+  }
+
 /*
   // Loop over LED's and send any changes.
   for (i=0; i < TOTAL_BUTTONS; i++) {
@@ -1046,6 +1078,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   
   case MG_EV_WEBSOCKET_HANDSHAKE_DONE:
     //nc->user_data = WS;
+    _aqualink_data->open_websockets++;
     logMessage(LOG_DEBUG, "++ Websocket joined\n");
     break;
   
@@ -1056,6 +1089,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   
   case MG_EV_CLOSE: 
     if (is_websocket(nc)) {
+      _aqualink_data->open_websockets--;
       logMessage(LOG_DEBUG, "-- Websocket left\n");
     } else if (is_mqtt(nc)) {
       logMessage(LOG_WARNING, "MQTT Connection closed\n");

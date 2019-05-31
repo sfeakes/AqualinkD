@@ -1106,6 +1106,14 @@
       for (var obj in data.leds) {
         setTileOn(obj.toString(), data.leds[obj])
       }
+
+      // NSF Really quick hack to show RPM on filter pump. Need to come back and do this correctly.
+      if (typeof data.extra["Pump_1"].RPM !== 'undefined') {
+        console.log(data.extra["Pump_1"].RPM);
+        if (document.getElementById('Filter_Pump').getAttribute('status') == 'on') {
+          document.getElementById('Filter_Pump_status').innerHTML = 'RPM:'+data.extra["Pump_1"].RPM;
+        }
+      }
     }
 
     function deviceSort(a, b) {

@@ -29,6 +29,11 @@
 
 #define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
 #define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
+
+#define PUMP_TOPIC "Pump_"
+#define PUMP_RPM_TOPIC "/RPM"
+#define PUMP_GPH_TOPIC "/GPH"
+#define PUMP_WATTS_TOPIC "/Watts"
 /*
 #define AIR_TEMPERATURE   "Air"
 #define POOL_TEMPERATURE  "Pool_Water"
