@@ -41,7 +41,7 @@
 #include "iAqualink_messages.h"
 #include "version.h"
 
-#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
+//#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
 static volatile bool _keepRunning = true;
 static struct aqconfig _config_parameters;
@@ -53,6 +53,7 @@ void intHandler(int dummy)
 {
   _keepRunning = false;
   logMessage(LOG_NOTICE, "Stopping!");
+  if (dummy){}// stop compile warnings
 }
 
 void processLEDstate()
@@ -165,14 +166,18 @@ void aqualink_strcpy(char *dest, char *src)
   
   dest[i] = '\0';
   //dest[10] = '\0';
-}
+} 
 */
 void queueGetProgramData()
 {
   //aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, &_aqualink_data);
   // Init string good time to get setpoints
+  //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
+  //aq_programmer(AQ_SEND_CMD, (char *)*NUL, &_aqualink_data);
+  aq_send_cmd(NUL);
   aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, &_aqualink_data);
   aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, &_aqualink_data);
+  //aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, &_aqualink_data);
   if (_config_parameters.use_panel_aux_labels == true)
   {
     aq_programmer(AQ_GET_AUX_LABELS, NULL, &_aqualink_data);
@@ -402,7 +407,8 @@ void processMessage(char *message)
   else if (_config_parameters.override_freeze_protect == TRUE && strncasecmp(msg, "Press Enter* to override Freeze Protection with", 47) == 0)
   {
     //send_cmd(KEY_ENTER, aq_data);
-    aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
+    //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
+    aq_send_cmd(KEY_ENTER);
   }
   else if ((msg[4] == ':') && (strncasecmp(msg, "AUX", 3) == 0))
   { // AUX label "AUX1:"
@@ -440,6 +446,55 @@ void processMessage(char *message)
   kick_aq_program_thread(&_aqualink_data);
 }
 
+bool process_pda_monitor_packet(unsigned char *packet, int length)
+{
+  bool rtn = false;
+  static bool checkedMenu = false;
+
+  process_pda_menu_packet(packet, length);
+
+  //printf("*** PDA Received 0x%02hhx %s ***\n", packet[PKT_CMD], get_packet_type(packet, length));
+
+  if (packet[PKT_CMD] == CMD_STATUS && pda_m_type() == PM_EQUIPTMENT_STATUS && checkedMenu == false) {
+    // Can't use any of the build in pda_menu find functions.
+    //printf("*** PDA Checking equiptment status ***\n");
+    logMessage(LOG_INFO, "Checking PDA equiptment status\n");
+    int i;
+    char *index;
+    int pi = 0;
+    for (i = 0; i < PDA_LINES; i++) {
+      if (strcasestr(pda_m_line(i), "epump") != NULL || strcasestr(pda_m_line(i), "Intelliflo") != NULL )
+      { // Pump labels arew ePUMP & Intelliflo with number at end "Jandy ePUMP   1" "Intelliflo VS 1"
+         pi = atoi(pda_m_line(i)+14)-1;
+         if (pi < 0 || pi >= MAX_PUMPS-1)
+           pi = 0;
+      }
+      else if ((index = strcasestr(pda_m_line(i), MSG_PMP_RPM)) != NULL)
+      { 
+        _aqualink_data.pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
+        rtn = true;
+        logMessage(LOG_DEBUG, "Pump %d RPM = %d\n", pi+1, _aqualink_data.pumps[0].rpm);
+      } 
+      else if ((index = strcasestr(pda_m_line(i), MSG_PMP_WAT)) != NULL)
+      { // Default to pump 0, should check for correct pump
+        _aqualink_data.pumps[pi].watts = atoi(index + strlen(MSG_PMP_WAT));
+        rtn = true;
+        logMessage(LOG_DEBUG, "Pump %d Watts = %d\n", pi+1, _aqualink_data.pumps[pi].watts);
+      } 
+      else if ((index = strcasestr(pda_m_line(i), MSG_PMP_GPH)) != NULL)
+      { // Default to pump 0, should check for correct pump
+        _aqualink_data.pumps[pi].gph = atoi(index + strlen(MSG_PMP_GPH));
+        rtn = true;
+        logMessage(LOG_DEBUG, "Pump %d GPH = %d\n", pi+1, _aqualink_data.pumps[pi].watts);
+      }
+    }
+    checkedMenu = true;    
+  } else if (packet[PKT_CMD] != CMD_STATUS) { // a lot of STATUS messages after menu has been created, so ignore them reset on different message
+    checkedMenu = false;    
+  }
+
+  return rtn;
+}
 
 bool process_packet(unsigned char *packet, int length)
 {
@@ -619,7 +674,9 @@ int main(int argc, char *argv[])
   // main_loop ();
 
   int i;
-  char *cfgFile = DEFAULT_CONFIG_FILE;
+  //char *cfgFile = DEFAULT_CONFIG_FILE;
+  char defaultCfg[] = "./aqualinkd.conf";
+  char *cfgFile;
   int cmdln_loglevel = -1;
   bool cmdln_debugRS485 = false;
 
@@ -637,6 +694,8 @@ int main(int argc, char *argv[])
 
   // Initialize the daemon's parameters.
   init_parameters(&_config_parameters);
+  cfgFile = defaultCfg;
+  //sprintf(cfgFile, "%s", DEFAULT_CONFIG_FILE);
 
   for (i = 1; i < argc; i++)
   {
@@ -705,6 +764,7 @@ int main(int argc, char *argv[])
   logMessage(LOG_NOTICE, "Config log_file          = %s\n", _config_parameters.log_file);
   logMessage(LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _config_parameters.light_programming_mode);
   logMessage(LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_config_parameters.debug_RSProtocol_packets));
+  logMessage(LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_config_parameters.use_PDA_auxiliary));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
 
   for (i = 0; i < TOTAL_BUTONS; i++)
@@ -982,6 +1042,14 @@ void main_loop()
         else
           caculate_ack_packet(rs_fd, packet_buffer);
       }
+      else if (_config_parameters.use_PDA_auxiliary && packet_length > 0 && packet_buffer[PKT_DEST] == 0x60 && _aqualink_data.aqbuttons[PUMP_INDEX].led->state != OFF)
+      {
+        if (process_pda_monitor_packet(packet_buffer, packet_length))
+          broadcast_aqualinkstate(mgr.active_connections);
+
+        //send_ack(rs_fd, NUL);
+        send_extended_ack(rs_fd, ACK_PDA, NUL);
+      }
       else if (packet_length > 0 && _config_parameters.read_all_devices == true)
       {
 
@@ -1022,12 +1090,12 @@ void main_loop()
         {
           interestedInNextAck = false;
         }
-
+        /*  Removed, iAqualink has sleep mode, so no use
         if (packet_buffer[PKT_DEST] == IAQ_DEV_ID && packet_buffer[PKT_CMD] == CMD_IAQ_MSG) {
           if (processiAqualinkMsg(packet_buffer, packet_length, &_aqualink_data) != false)
             broadcast_aqualinkstate(mgr.active_connections);
         }
-        
+        */
       //}
       
         //  logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),

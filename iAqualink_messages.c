@@ -1,4 +1,10 @@
 
+/*
+
+Removed as iAqualink has a sleep mode, Keeping code to use as stub for other devices.
+
+
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +22,13 @@ bool processiAqualinkMsg(unsigned char *packet_buffer, int packet_length, struct
   //static char message[AQ_MSGLONGLEN + 1];
   static int pumpIndex = 1;
 
-  /* 
+  /*
+
+   Jandy ePumpTM DC, 
+   Jandy ePumpTM AC,
+   IntelliFlo 1 VF, 
+   IntelliFlo VS
+
   Pump type are like // Not sure how to read this accuratly.
   "Jandy ePUMP   1"
   "Intelliflo VS 1"

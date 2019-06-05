@@ -515,7 +515,7 @@ bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request)
 }
 
 bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, char *svalue) {
-  int i = 0;
+  unsigned int i = 0;
   int found = 0;
   
   svalue[0] = '\0';

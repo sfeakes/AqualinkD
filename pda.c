@@ -130,6 +130,16 @@ void pass_pda_equiptment_status_item(char *msg)
   //   FILTER PUMP
   //     CLEANER
   //
+  // Equipment Status
+  // 
+  // Intelliflo VS 1 
+  //      RPM: 1700  
+  //     Watts: 367  
+  // 
+  // 
+  // 
+  // 
+  // 
 
   // Check message for status of device
   // Loop through all buttons and match the PDA text.
@@ -150,6 +160,16 @@ void pass_pda_equiptment_status_item(char *msg)
   {
     _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
     logMessage(LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
+  }
+  else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    _aqualink_data->pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
+    logMessage(LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
+  }
+  else if ((index = strcasestr(msg, MSG_PMP_WAT)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    _aqualink_data->pumps[0].watts = atoi(index + strlen(MSG_PMP_WAT));
+    logMessage(LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
   }
   else
   {
@@ -313,11 +333,11 @@ void process_pda_packet_msg_long_set_temp(const char *msg)
 
 void process_pda_packet_msg_long_spa_heat(const char *msg)
 {
-  if (strncmp(msg, "    ENABLED     ", 16) == 0)
+  if (strncasecmp(msg, "    ENABLED     ", 16) == 0)
   {
     _aqualink_data->aqbuttons[SPA_HEAT_INDEX].led->state = ENABLE;
   }
-  else if (strncmp(msg, "  SET TO", 8) == 0)
+  else if (strncasecmp(msg, "  SET TO", 8) == 0)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 8);
     logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
@@ -326,11 +346,11 @@ void process_pda_packet_msg_long_spa_heat(const char *msg)
 
 void process_pda_packet_msg_long_pool_heat(const char *msg)
 {
-  if (strncmp(msg, "    ENABLED     ", 16) == 0)
+  if (strncasecmp(msg, "    ENABLED     ", 16) == 0)
   {
     _aqualink_data->aqbuttons[POOL_HEAT_INDEX].led->state = ENABLE;
   }
-  else if (strncmp(msg, "  SET TO", 8) == 0)
+  else if (strncasecmp(msg, "  SET TO", 8) == 0)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 8);
     logMessage(LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
@@ -339,7 +359,7 @@ void process_pda_packet_msg_long_pool_heat(const char *msg)
 
 void process_pda_packet_msg_long_freeze_protect(const char *msg)
 {
-  if (strncmp(msg, "TEMP      ", 10) == 0)
+  if (strncasecmp(msg, "TEMP      ", 10) == 0)
   {
     _aqualink_data->frz_protect_set_point = atoi(msg + 10);
     logMessage(LOG_DEBUG, "frz_protect_set_point = %d\n", _aqualink_data->frz_protect_set_point);
@@ -356,13 +376,13 @@ void process_pda_packet_msg_long_SWG(const char *msg)
 
   // If spa is on, read SWG for spa, if not set SWG for pool
   if (_aqualink_data->aqbuttons[SPA_INDEX].led->state != OFF) {
-    if (strncmp(msg, "SET SPA TO:", 11) == 0)
+    if (strncasecmp(msg, "SET SPA TO:", 11) == 0)
     {
       _aqualink_data->swg_percent = atoi(msg + 13);
       logMessage(LOG_DEBUG, "SPA swg_percent = %d\n", _aqualink_data->swg_percent);
     }
   } else {
-    if (strncmp(msg, "SET POOL TO:", 12) == 0)
+    if (strncasecmp(msg, "SET POOL TO:", 12) == 0)
     {
       _aqualink_data->swg_percent = atoi(msg + 13);
       logMessage(LOG_DEBUG, "POOL swg_percent = %d\n", _aqualink_data->swg_percent);

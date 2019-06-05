@@ -7,6 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <fcntl.h>
+
+
 #include "aq_serial.h"
 #include "utils.h"
 
@@ -33,10 +36,13 @@ unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
 unsigned char _filter[10];
 int _filters=0;
 bool _rawlog=false;
+bool _playback_file = false;
 
 void intHandler(int dummy) {
   _keepRunning = false;
   logMessage(LOG_NOTICE, "Stopping!");
+  if (_playback_file)  // If we are reading file, loop is irevelent
+    exit(0);
 }
 
 void advance_cursor() {
@@ -145,6 +151,7 @@ int main(int argc, char *argv[]) {
   int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
+  //bool playback_file = false;
 
   //int logLevel; 
   //char buffer[256];
@@ -178,12 +185,23 @@ int main(int argc, char *argv[]) {
     } else if (strcmp(argv[i], "-r") == 0) {
       _rawlog = true;
       logLevel = LOG_DEBUG;
+    } else if (strcmp(argv[i], "-f") == 0) {
+      _playback_file = true;
     }
   }
 
   setLoggingPrms(logLevel, false, false);
 
-  rs_fd = init_serial_port(argv[1]);
+  if (_playback_file) {
+    rs_fd = open(argv[1], O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NDELAY);
+    if (rs_fd < 0)  {
+      logMessage(LOG_ERR, "Unable to open file: %s\n", argv[1]);
+      displayLastSystemError(argv[1]);
+      return -1;
+    }
+  } else {
+    rs_fd = init_serial_port(argv[1]);
+  }
 
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);

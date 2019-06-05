@@ -13,11 +13,15 @@ char _menu[PDA_LINES][AQ_MSGLEN+1];
 void print_menu()
 {
   int i;
-  for (i=0; i < PDA_LINES; i++)
-    printf("PDA Line %d = %s\n",i,_menu[i]);
+  for (i=0; i < PDA_LINES; i++) {
+    //printf("PDA Line %d = %s\n",i,_menu[i]);
+    logMessage(LOG_DEBUG, "PDA Menu Line %d = %s\n",i,_menu[i]);
+  }
   
-  if (_hlightindex > -1)
-    printf("PDA highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]); 
+  if (_hlightindex > -1) {
+    //printf("PDA highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
+    logMessage(LOG_DEBUG, "PDA Menu highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
+  } 
 }
 
 int pda_m_hlightindex()
@@ -63,44 +67,60 @@ int pda_find_m_index_case(char *text, int limit)
 
   return -1;
 }
+/*
+// Same as above but strip whitespace from menu item (NOT text parameter)
+int pda_find_m_index_swcase(char *text, int limit)
+{
+  int i;
+  char *mi;
 
+  for (i = 0; i < PDA_LINES; i++) {
+    //printf ("+++ Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
+    mi = trimwhitespace(pda_m_line(i));
+    if (strncasecmp(mi, text, limit) == 0)
+      return i;
+  }
+
+  return -1;
+}
+*/
 pda_menu_type pda_m_type()
 {
   
-  if (strncmp(_menu[1],"AIR  ", 5) == 0)
+  if (strncasecmp(_menu[1],"AIR  ", 5) == 0)
     return PM_HOME;
-  else if (strncmp(_menu[0],"EQUIPMENT STATUS", 16) == 0)
+  else if (strncasecmp(_menu[0],"EQUIPMENT STATUS", 16) == 0)
     return PM_EQUIPTMENT_STATUS;
-  else if (strncmp(_menu[0],"   EQUIPMENT    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"   EQUIPMENT    ", 16) == 0)
     return PM_EQUIPTMENT_CONTROL;
-  else if (strncmp(_menu[0],"    MAIN MENU    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"    MAIN MENU    ", 16) == 0)
     return PM_MAIN;
   //else if ((_menu[0] == '\0' && _hlightindex == -1) || strncmp(_menu[4], "POOL MODE", 9) == 0 )// IF we are building the main menu this may be valid
-  else if (strncmp(_menu[4], "POOL MODE", 9) == 0 ) {
+  else if (strncasecmp(_menu[4], "POOL MODE", 9) == 0 ) {
     if (pda_m_hlightindex() == -1)
       return PM_BUILDING_HOME;
     else
       return PM_HOME;
   }
-  else if (strncmp(_menu[0],"    SET TEMP    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"    SET TEMP    ", 16) == 0)
     return PM_SET_TEMP;
-  else if (strncmp(_menu[0],"    SET TIME    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"    SET TIME    ", 16) == 0)
     return PM_SET_TIME;
-  else if (strncmp(_menu[0],"  SET AquaPure  ", 16) == 0)
+  else if (strncasecmp(_menu[0],"  SET AquaPure  ", 16) == 0)
     return PM_AQUAPURE;
-  else if (strncmp(_menu[0],"    SPA HEAT    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"    SPA HEAT    ", 16) == 0)
     return PM_SPA_HEAT;
-  else if (strncmp(_menu[0],"   POOL HEAT    ", 16) == 0)
+  else if (strncasecmp(_menu[0],"   POOL HEAT    ", 16) == 0)
     return PM_POOL_HEAT;
-  else if (strncmp(_menu[6],"Use ARROW KEYS  ", 16) == 0 && 
-           strncmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
+  else if (strncasecmp(_menu[6],"Use ARROW KEYS  ", 16) == 0 && 
+           strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
     return PM_FREEZE_PROTECT;
-  else if (strncmp(_menu[1],"    DEVICES     ", 16) == 0 && 
-           strncmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
+  else if (strncasecmp(_menu[1],"    DEVICES     ", 16) == 0 && 
+           strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
     return PM_FREEZE_PROTECT_DEVICES;
-  else if (strncmp(_menu[3],"Firmware Version", 16) == 0 ||
-           strncmp(_menu[1],"    AquaPalm", 12) == 0 ||
-           strncmp(_menu[1]," PDA-PS4 Combo", 14) == 0)
+  else if (strncasecmp(_menu[3],"Firmware Version", 16) == 0 ||
+           strncasecmp(_menu[1],"    AquaPalm", 12) == 0 ||
+           strncasecmp(_menu[1]," PDA-PS4 Combo", 14) == 0)
     return PM_FW_VERSION;
       
   return PM_UNKNOWN;

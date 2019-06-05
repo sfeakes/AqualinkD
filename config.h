@@ -59,6 +59,7 @@ struct aqconfig
   bool read_all_devices;
   bool use_panel_aux_labels;
   bool force_swg;
+  bool use_PDA_auxiliary;
   bool debug_RSProtocol_packets;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better

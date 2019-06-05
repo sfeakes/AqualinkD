@@ -365,8 +365,8 @@ void send_command(int fd, unsigned char destination, unsigned char b1, unsigned 
 
 void send_messaged(int fd, unsigned char destination, char *message)
 {
-  const int length = 24;
-  int i;
+  const unsigned int length = 24;
+  unsigned int i;
   //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL };
   unsigned char msgPacket[] = { DLE,STX,DEV_MASTER,CMD_MSG,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,NUL,DLE,ETX };
   //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, NUL, NUL, NUL, 0x13, DLE, ETX, NUL };
@@ -454,6 +454,7 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
   //tcdrain(fd);
 #endif  
   
+  //logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller\n", command);
   log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
 }
 

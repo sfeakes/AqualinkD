@@ -63,9 +63,12 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.3.2
+* Miscellaneous bug fixes and buffer overrun (could cause core dump).
+* VSP update. 
 ## Update in Release 1.3.1
 * Changed the way PDA mode will sleep.
-* Added preliminary support for Variable Speed Pumps. (Limited to only reading status and post to MQTT/WebSocket/API if iAqualink is active on the RS485 bus)
+* Added preliminary support for Variable Speed Pumps. (many limitations on support)
 * Added int status to Web API
 ## Update in Release 1.3.0
 * Large update for PDA only control panels (Majority of this is ballle98 work)

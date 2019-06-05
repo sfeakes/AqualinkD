@@ -30,7 +30,7 @@ typedef enum {
   AQ_SET_SPA_HEATER_TEMP,
   AQ_SET_FRZ_PROTECTION_TEMP,
   AQ_GET_DIAGNOSTICS_MODEL,
-  AQ_SEND_CMD,
+  //AQ_SEND_CMD,
   AQ_GET_PROGRAMS,
   AQ_SET_COLORMODE,
   AQ_PDA_INIT,
@@ -54,6 +54,8 @@ struct programmingThreadCtrl {
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);
 void kick_aq_program_thread(struct aqualinkdata *aq_data);
 
+void aq_send_cmd(unsigned char cmd);
+
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 //bool push_aq_cmd(unsigned char cmd);
 
@@ -68,7 +70,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
 
 
 // These shouldn't be here, but just for the PDA AQ PROGRAMMER
-void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
+void send_cmd(unsigned char cmd);
 bool push_aq_cmd(unsigned char cmd);
 void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);

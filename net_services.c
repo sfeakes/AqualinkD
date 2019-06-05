@@ -266,7 +266,7 @@ void send_mqtt_float_msg(struct mg_connection *nc, char *dev_name, float value) 
   static char mqtt_pub_topic[250];
   static char msg[10];
 
-  sprintf(msg, "%f", value);
+  sprintf(msg, "%.2f", value);
   sprintf(mqtt_pub_topic, "%s/%s", _aqualink_config->mqtt_aq_topic, dev_name);
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
@@ -744,7 +744,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           }
           else if (strcmp(value, "on") == 0) {
             if (_aqualink_data->aqbuttons[i].led->state == OFF || _aqualink_data->aqbuttons[i].led->state == FLASH) {
-              aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
               rtn = GET_RTN_OK;
               logMessage(LOG_INFO, "WEB: turn ON '%s' changed state to '%s'\n", command, value);
             } else {
@@ -755,7 +756,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
             if (_aqualink_data->aqbuttons[i].led->state == ON || 
                 _aqualink_data->aqbuttons[i].led->state == ENABLE ||
                 _aqualink_data->aqbuttons[i].led->state == FLASH) {
-              aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
               rtn = GET_RTN_OK;
               logMessage(LOG_INFO, "WEB: turn Off '%s' changed state to '%s'\n", command, value);
             } else {
@@ -763,7 +765,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
               logMessage(LOG_INFO, "WEB: '%s' is already off '%s', current state %d\n", command, value, _aqualink_data->aqbuttons[i].led->state);
             }
           } else { // Blind switch
-            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
             rtn = GET_RTN_OK;
             logMessage(LOG_INFO, "WEB: '%s' blindly changed state\n", command, value);
           }
@@ -818,7 +821,8 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     logMessage (LOG_WARNING, "WS: Send raw command to controller %s\n",request.first.value);
     unsigned int n;
     sscanf(request.first.value, "0x%2x", &n);
-    aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
+    //aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
+    aq_send_cmd((unsigned char)n);
     //char message[JSON_LABEL_SIZE*10];
     //build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10);
     //ws_send(nc, message);
@@ -845,7 +849,8 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
           logMessage (LOG_INFO, "WS: button '%s' pressed\n",_aqualink_data->aqbuttons[i].name);
           // send_command( (unsigned char)_aqualink_data->aqbuttons[i].code);
           if (_aqualink_config->pda_mode == false) {
-            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
           } else {
             char msg[PTHREAD_ARG];
             sprintf(msg, "%-5d%-5d",i, (_aqualink_data->aqbuttons[i].led->state!=OFF)?OFF:ON);
@@ -884,7 +889,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
 }
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
-  int i;
+  unsigned int i;
   //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   // If message doesn't end in set we don't care about it.
   if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0) {
@@ -979,7 +984,8 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
           logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
           //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
           if (_aqualink_config->pda_mode == false) {
-            aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
           } else {
             char msg[PTHREAD_ARG];
             sprintf(msg, "%-5d%-5d",i, (value==0?OFF:ON) );
@@ -1023,7 +1029,8 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
             logMessage(LOG_INFO, "MQTT: DZ: received '%s' for '%s', turning '%s'\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(nvalue==DZ_OFF?"OFF":"ON"));
             //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
             if (_aqualink_config->pda_mode == false) {
-              aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
             } else {
               char msg[PTHREAD_ARG];
               sprintf(msg, "%-5d%-5d",i, (nvalue == DZ_OFF?OFF:ON) );

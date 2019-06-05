@@ -152,15 +152,6 @@ void timestamp(char* time_string)
     strftime(time_string, TIMESTAMP_LENGTH, "%b-%d-%y %H:%M:%S %p ", tmptr);
 }
 
-void trimwhitespace(char *str)
-{
-  char *end;
-  end = str + strlen(str) - 1;
-  while(end > str && isspace(*end)) end--;
-  
-  *(end+1) = 0;
-}
-
 //Move existing pointer
 char *cleanwhitespace(char *str)
 {
@@ -185,6 +176,7 @@ char *cleanwhitespace(char *str)
 // Return new pointer
 char *stripwhitespace(char *str)
 {
+  // Should probably just call Trim and Chop functions.
   char *end;
   char *start = str;
 
@@ -202,6 +194,33 @@ char *stripwhitespace(char *str)
   *(end+1) = 0;
 
   return start;
+}
+
+// Trim whispace (return new pointer) leave trailing whitespace
+char *trimwhitespace(char *str)
+{
+  char *start = str;
+
+  // Trim leading space
+  while(isspace(*start)) start++;
+
+  if(*start == 0)  // All spaces?
+    return start;
+
+  return start;
+}
+
+
+char *chopwhitespace(char *str)
+{
+  char *end;
+  end = str + strlen(str) - 1;
+  while(end > str && isspace(*end)) end--;
+  
+  // Write new null terminator
+  *(end+1) = 0;
+
+  return str;
 }
 
 
@@ -345,8 +364,8 @@ void daemonise (char *pidFile, void (*main_function) (void))
   int rc = flock (pid_file, LOCK_EX | LOCK_NB);
   if (rc)
   {
-    if (EWOULDBLOCK == errno)
-    ; // another instance is running
+    //if (EWOULDBLOCK == errno)
+    //; // another instance is running
     //fputs ("\nAnother instance is already running\n", stderr);
     logMessage(LOG_ERR,"\nAnother instance is already running\n");
     exit (EXIT_FAILURE);
@@ -467,7 +486,7 @@ char* stristr(const char* haystack, const char* needle) {
 }
 
 int ascii(char *destination, char *source) {
-  int i;
+  unsigned int i;
   for(i = 0; i < strlen(source); i++) {
     if ( source[i] >= 0 && source[i] < 128 )
       destination[i] = source[i];

@@ -55,7 +55,7 @@ bool loopover_devices(struct aqualinkdata *aq_data) {
   
   // Should look for message "ALL OFF", that's end of device list.
   for (i=0; i < 18 && pda_find_m_index("ALL OFF") == -1 ; i++) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
+    send_cmd(KEY_PDA_DOWN);
     //while (get_aq_cmd_length() > 0) { delay(200); }
     //waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,3);
     waitForMessage(aq_data, NULL, 1);
@@ -74,10 +74,10 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
   logMessage(LOG_DEBUG, "PDA Device programmer menu text '%s'\n",menuText);
 
   if (index < 0) { // No menu, is there a page down.  "PDA Line 9 =    ^^ MORE __"
-    if (strncmp(pda_m_line(9),"   ^^ MORE", 10) == 0) {
+    if (strncasecmp(pda_m_line(9),"   ^^ MORE", 10) == 0) {
       int j;
       for(j=0; j < 20; j++) {
-        send_cmd(KEY_PDA_DOWN, aq_data);
+        send_cmd(KEY_PDA_DOWN);
         //delay(500);
         //wait_for_empty_cmd_buffer();
         waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
@@ -104,12 +104,12 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
   if (i < index) {
     for (i=pda_m_hlightindex(); i < index; i++) {
       //logMessage(LOG_DEBUG, "******************PDA queue down index %d\n",i);
-      send_cmd(KEY_PDA_DOWN, aq_data);
+      send_cmd(KEY_PDA_DOWN);
     }
   } else if (i > index) {
     for (i=pda_m_hlightindex(); i > index; i--) {
       //logMessage(LOG_DEBUG, "******************PDA queue down index %d\n",i);
-      send_cmd(KEY_PDA_UP, aq_data);
+      send_cmd(KEY_PDA_UP);
     }
   }
 
@@ -119,7 +119,7 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
 bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu) {
 
   if ( find_pda_menu_item(aq_data, menuText, 0) ) {
-    send_cmd(KEY_PDA_SELECT, aq_data);
+    send_cmd(KEY_PDA_SELECT);
 
     logMessage(LOG_DEBUG, "PDA Device programmer selected menu item '%s'\n",menuText);
     if (waitForNextMenu)
@@ -146,7 +146,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
 
   while ( pda_m_type() != menu && pda_m_type() != PM_HOME ) {
     if (pda_m_type() != PM_BUILDING_HOME) {
-      send_cmd(KEY_PDA_BACK, aq_data);
+      send_cmd(KEY_PDA_BACK);
       //logMessage(LOG_DEBUG, "******************PDA Device programmer selected back button\n",menu);
       waitForPDAnextMenu(aq_data);
     } else {
@@ -235,10 +235,10 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
   
   char *buf = (char*)threadCtrl->thread_args;
-  int device = atoi(&buf[0]);
-  int state = atoi(&buf[5]);
+  unsigned int device = atoi(&buf[0]);
+  unsigned int state = atoi(&buf[5]);
 
-  if (device < 0 || device > TOTAL_BUTTONS) {
+  if (device > TOTAL_BUTTONS) {
     logMessage(LOG_ERR, "PDA Device On/Off :- bad device number '%d'\n",device);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -258,7 +258,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
     if (aq_data->aqbuttons[device].led->state != state) {
       //printf("*** Select State ***\n");
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
-      send_cmd(KEY_PDA_SELECT, aq_data);
+      send_cmd(KEY_PDA_SELECT);
       while (get_aq_cmd_length() > 0) { delay(500); }
     } else {
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
@@ -471,31 +471,31 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur
 
   // Should probably change below to call find_pda_menu_item(), rather than doing it here
   // If we lease this, need to limit on the number of loops
-  while ( strncmp(pda_m_hlight(), select_label, 8) != 0 ) {
-    send_cmd(KEY_PDA_DOWN, aq_data);
+  while ( strncasecmp(pda_m_hlight(), select_label, 8) != 0 ) {
+    send_cmd(KEY_PDA_DOWN);
     delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
     waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
   }
 
-  send_cmd(KEY_PDA_SELECT, aq_data);
+  send_cmd(KEY_PDA_SELECT);
 
   if (val < *cur_val) {
     logMessage(LOG_DEBUG, "PDA %s value : lower from %d to %d\n", select_label, *cur_val, val);
     for (i = *cur_val; i > val; i=i-step) {
-      send_cmd(KEY_PDA_DOWN, aq_data);
+      send_cmd(KEY_PDA_DOWN);
     }
   } else if (val > *cur_val) {
     logMessage(LOG_DEBUG, "PDA %s value : raise from %d to %d\n", select_label, *cur_val, val);
     for (i = *cur_val; i < val; i=i+step) {
-      send_cmd(KEY_PDA_UP, aq_data);
+      send_cmd(KEY_PDA_UP);
     }
   } else {
     logMessage(LOG_INFO, "PDA %s value : already at %d\n", select_label, val);
-    send_cmd(KEY_PDA_BACK, aq_data);
+    send_cmd(KEY_PDA_BACK);
     return true;
   }
 
-  send_cmd(KEY_PDA_SELECT, aq_data);
+  send_cmd(KEY_PDA_SELECT);
   logMessage(LOG_DEBUG, "PDA %s value : set to %d\n", select_label, *cur_val);
   
   return true;
@@ -529,7 +529,7 @@ bool set_PDA_aqualink_heater_setpoint(struct aqualinkdata *aq_data, int val, boo
 
   if (val == *cur_val) {
     logMessage(LOG_INFO, "PDA %s setpoint : temp already %d\n", label, val);
-    send_cmd(KEY_PDA_BACK, aq_data);
+    send_cmd(KEY_PDA_BACK);
     return true;
   } 
 
@@ -629,6 +629,17 @@ PDA Line 6 =
 PDA Line 7 =
 PDA Line 8 =
 PDA Line 9 =
+
+PDA Line 0 = 
+PDA Line 1 =     AquaPalm    
+PDA Line 2 = 
+PDA Line 3 = Firmware Version
+PDA Line 4 = 
+PDA Line 5 =      REV T      
+PDA Line 6 = 
+PDA Line 7 = 
+PDA Line 8 = 
+PDA Line 9 = 
 
 ***************** Think this is startup different rev *************
 Line 0 =
@@ -761,4 +772,26 @@ PDA Line 7 = CLEAN MODE   OFF
 PDA Line 8 = ALL OFF
 PDA Line 9 =
 
+
+PDA Line 0 = Equipment Status
+PDA Line 1 = 
+PDA Line 2 = Intelliflo VS 1 
+PDA Line 3 =      RPM: 1700  
+PDA Line 4 =     Watts: 367  
+PDA Line 5 = 
+PDA Line 6 = 
+PDA Line 7 = 
+PDA Line 8 = 
+PDA Line 9 = 
+
+PDA Line 0 = Equipment Status
+PDA Line 1 = 
+PDA Line 2 =   AquaPure 20%  
+PDA Line 3 =  Salt 4000 PPM  
+PDA Line 4 = 
+PDA Line 5 = 
+PDA Line 6 = 
+PDA Line 7 = 
+PDA Line 8 = 
+PDA Line 9 = 
 */

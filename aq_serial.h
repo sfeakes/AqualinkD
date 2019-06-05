@@ -155,9 +155,13 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 */
 
 #define MSG_SWG_PCT   "AQUAPURE"  // AquaPure 55%
-#define MSG_SWG_PPM   "SALT"  // Salt 3000 PPM
+#define MSG_SWG_PPM   "SALT"  // Salt 3000 PPM 
 #define MSG_SWG_PCT_LEN  8
 #define MSG_SWG_PPM_LEN  4
+
+#define MSG_PMP_RPM   "RPM:" 
+#define MSG_PMP_WAT   "Watts:"  
+#define MSG_PMP_GPH   "GPH:" 
 
 
 /* AQUAPURE SWG */

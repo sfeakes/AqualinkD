@@ -761,7 +761,7 @@
               ext = '%';
           }
         } catch (e) {
-          console.log('ERROR id=' + id + ' Line 764 | element = '+document.getElementById(id));
+          //console.log('ERROR id=' + id + ' Line 764 | element = '+document.getElementById(id));
         }
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
@@ -974,7 +974,7 @@
           slider.step = 5;
         } else if (type == 'setpoint_freeze') {
           if (_temperature_units != 'c') { // Change to DegF
-            slider.min = 36;
+            slider.min = 34;
             slider.max = 42;
             slider.step = 1;
           } else { // Change to DegF
@@ -1108,7 +1108,7 @@
       }
 
       // NSF Really quick hack to show RPM on filter pump. Need to come back and do this correctly.
-      if (typeof data.extra["Pump_1"].RPM !== 'undefined') {
+      if ((typeof data.extra["Pump_1"] !== 'undefined') && (typeof data.extra["Pump_1"].RPM !== 'undefined')) {
         console.log(data.extra["Pump_1"].RPM);
         if (document.getElementById('Filter_Pump').getAttribute('status') == 'on') {
           document.getElementById('Filter_Pump_status').innerHTML = 'RPM:'+data.extra["Pump_1"].RPM;

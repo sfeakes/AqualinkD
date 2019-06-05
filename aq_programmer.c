@@ -34,7 +34,7 @@
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
 //void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
-void cancel_menu(struct aqualinkdata *aq_data);
+void cancel_menu();
 
 
 void *set_aqualink_pool_heater_temps( void *ptr );
@@ -46,7 +46,7 @@ void *get_aqualink_programs( void *ptr );
 void *get_freeze_protect_temp( void *ptr );
 void *get_aqualink_diag_model( void *ptr );
 void *get_aqualink_aux_labels( void *ptr );
-void *threadded_send_cmd( void *ptr );
+//void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
@@ -69,8 +69,15 @@ unsigned char _pgm_command = NUL;
 
 bool _last_sent_was_cmd = false;
 
+// External view of adding to queue
+void aq_send_cmd(unsigned char cmd) {
+  push_aq_cmd(cmd);
+}
+
 bool push_aq_cmd(unsigned char cmd) {
-  //logMessage(LOG_DEBUG, "push_aq_cmd\n");
+  
+  //logMessage(LOG_DEBUG, "push_aq_cmd '0x%02hhx'\n", cmd);
+
   if (_stack_place < MAX_STACK) {
     _commands[_stack_place] = cmd;
     _stack_place++;
@@ -92,17 +99,21 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
   unsigned char cmd = NUL;
   //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
   // can only send a command every other ack.
+  
   if (_last_sent_was_cmd == true) {
     _last_sent_was_cmd= false;
-  }
+  } 
   else if (aq_data->active_thread.thread_id != 0) {
     cmd = _pgm_command;
     _pgm_command = NUL;
+    //logMessage(LOG_DEBUG, "pop_aq_cmd '0x%02hhx' (programming)\n", cmd);
   }
   else if (_stack_place > 0) {
     cmd = _commands[0];
     _stack_place--;
-    memcpy(&_commands[0], &_commands[1], sizeof(unsigned char) * MAX_STACK);
+    //logMessage(LOG_DEBUG, "pop_aq_cmd '0x%02hhx'\n", cmd);
+    //memcpy(&_commands[0], &_commands[1], (sizeof(unsigned char) * MAX_STACK) - 1);
+    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
   }
 
   if (cmd == NUL)
@@ -112,6 +123,8 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 
   return cmd;
 }
+
+
 
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 {
@@ -222,13 +235,25 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
   }
 
   programmingthread->aq_data = aq_data;
+  programmingthread->thread_id = 0;
   //programmingthread->thread_args = args;
-  if (args != NULL && type != AQ_SEND_CMD)
+  if (args != NULL /*&& type != AQ_SEND_CMD*/)
     strncpy(programmingthread->thread_args, args, sizeof(programmingthread->thread_args)-1);
+
   switch(type) {
+    /*
     case AQ_SEND_CMD:
-      push_aq_cmd((unsigned char)*args);
-      logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", (unsigned char)*args);
+      logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", &args[0]);
+     
+      unsigned char cmd = (unsigned char) &args[0];
+      if (cmd == NUL) {
+        logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller (NEW)\n", cmd);
+        push_aq_cmd( cmd );
+      } else {
+        logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller (OLD)\n", cmd);
+        push_aq_cmd((unsigned char)*args);
+      }*/
+      //logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", (unsigned char)*args);
       /*
       if(aq_data->active_thread.thread_id == 0) { // No need to thread a plane send if no active threads
         send_cmd( (unsigned char)*args, aq_data);
@@ -237,7 +262,7 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         return;
       }
       */
-      break;
+      //break;
     case AQ_GET_POOL_SPA_HEATER_TEMPS:
       if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_pool_spa_heater_temps, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
@@ -349,6 +374,17 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   static int waitTime = 1;
   int i=0;
   
+  i = 0;
+  while (get_aq_cmd_length() > 0 && ( i++ <= tries) ) {
+    logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for queue to empty\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
+    sleep(waitTime);
+  }
+  if (i >= tries) {
+    logMessage (LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
+    free(threadCtrl);
+    pthread_exit(0);
+  }
+
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
     logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
     sleep(waitTime);
@@ -359,7 +395,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
     free(threadCtrl);
     pthread_exit(0);
   }
-  
+ 
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
   logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
@@ -397,7 +433,7 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
   {
     if (waitForMessage(aq_data, searchBuf, 3) != true) {
       logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', not found\n",value_label);
-      cancel_menu(aq_data);
+      cancel_menu();
       return false;
     }
 //logMessage(LOG_DEBUG,"WAITING for kick value=%d\n",current_val);     
@@ -409,17 +445,17 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
     if(value > current_val) {
       // Increment the field.
       sprintf(searchBuf, "%s %d", value_label, current_val+increment);
-      send_cmd(KEY_RIGHT, aq_data);
+      send_cmd(KEY_RIGHT);
     }
     else if(value < current_val) {
       // Decrement the field.
       sprintf(searchBuf, "%s %d", value_label, current_val-increment);
-      send_cmd(KEY_LEFT, aq_data);
+      send_cmd(KEY_LEFT);
     }
     else {
       // Just send ENTER. We are at the right value.
       sprintf(searchBuf, "%s %d", value_label, current_val);
-      send_cmd(KEY_ENTER, aq_data);
+      send_cmd(KEY_ENTER);
     }
 
     if (i++ >= 100) {
@@ -445,7 +481,7 @@ bool OLD_setAqualinkNumericField_OLD(struct aqualinkdata *aq_data, char *value_l
   {
     if (waitForMessage(aq_data, searchBuf, 3) != true) {
       logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', not found\n",value_label);
-      cancel_menu(aq_data);
+      cancel_menu();
       return false;
     }
 //logMessage(LOG_DEBUG,"WAITING for kick value=%d\n",current_val);     
@@ -455,17 +491,17 @@ bool OLD_setAqualinkNumericField_OLD(struct aqualinkdata *aq_data, char *value_l
     if(value > current_val) {
       // Increment the field.
       sprintf(searchBuf, "%s %d", value_label, current_val+1);
-      send_cmd(KEY_RIGHT, aq_data);
+      send_cmd(KEY_RIGHT);
     }
     else if(value < current_val) {
       // Decrement the field.
       sprintf(searchBuf, "%s %d", value_label, current_val-1);
-      send_cmd(KEY_LEFT, aq_data);
+      send_cmd(KEY_LEFT);
     }
     else {
       // Just send ENTER. We are at the right value.
       sprintf(searchBuf, "%s %d", value_label, current_val);
-      send_cmd(KEY_ENTER, aq_data);
+      send_cmd(KEY_ENTER);
     }
   } while(value != current_val); 
   
@@ -510,7 +546,7 @@ void *set_aqualink_SWG( void *ptr )
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
     logMessage(LOG_WARNING, "Could not select SET AQUAPURE menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -519,7 +555,7 @@ void *set_aqualink_SWG( void *ptr )
   if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) {
     if (select_sub_menu_item(aq_data, "SET SPA SP") != true) {
       logMessage(LOG_WARNING, "Could not select SWG setpoint menu for SPA\n");
-      cancel_menu(aq_data);
+      cancel_menu();
       cleanAndTerminateThread(threadCtrl);
       return ptr;
     }
@@ -527,7 +563,7 @@ void *set_aqualink_SWG( void *ptr )
   } else {
     if (select_sub_menu_item(aq_data, "SET POOL SP") != true) {
       logMessage(LOG_WARNING, "Could not select SWG setpoint menu\n");
-      cancel_menu(aq_data);
+      cancel_menu();
       cleanAndTerminateThread(threadCtrl);
       return ptr;
     }
@@ -570,14 +606,14 @@ void *get_aqualink_aux_labels( void *ptr )
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "AUX LABELS") != true) {
     logMessage(LOG_WARNING, "Could not select AUX LABELS menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -620,7 +656,7 @@ void *set_aqualink_light_colormode( void *ptr )
   // Simply turn the light off if value is 0
   if (val <= 0) {
     if ( button->led->state == ON ) {
-      send_cmd(code, aq_data);
+      send_cmd(code);
     }
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -631,14 +667,14 @@ void *set_aqualink_light_colormode( void *ptr )
   // before we can send the next off.
   if ( button->led->state != ON ) {
     logMessage(LOG_INFO, "Pool Light Initial state off, turning on for 15 seconds\n");
-    send_cmd(code, aq_data);
+    send_cmd(code);
     //delay(15 * seconds);
     delay(iOn * seconds);
   }
 
   logMessage(LOG_INFO, "Pool Light turn off for 12 seconds\n");
   // Now need to turn off for between 11 and 14 seconds to reset light.
-  send_cmd(code, aq_data);
+  send_cmd(code);
   //delay(12 * seconds);
   delay(iOff * seconds);
 
@@ -649,21 +685,21 @@ void *set_aqualink_light_colormode( void *ptr )
   if (pmode > 0) {
     for (i = 1; i < (val * 2); i++) {
       logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, i % 2 == 0 ? "Off" : "On", val);
-      send_cmd(code, aq_data);
+      send_cmd(code);
       delay(pmode * seconds); // 0.3 works, but using 0.4 to be safe
     }
   } else {
     for (i = 1; i < val; i++) {
       logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, "ON", val);
-      send_cmd(code, aq_data);
+      send_cmd(code);
       waitForButtonState(aq_data, button, ON, 2);
       logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, "OFF", val);
-      send_cmd(code, aq_data);
+      send_cmd(code);
       waitForButtonState(aq_data, button, OFF, 2);
     }
 
     logMessage(LOG_INFO, "Finished - Pool Light button press number %d - %s of %d\n", i, "ON", val);
-    send_cmd(code, aq_data);
+    send_cmd(code);
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);
 
@@ -711,7 +747,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   
   if ( select_menu_item(aq_data, "SET TEMP") != true ) {
     logMessage(LOG_WARNING, "Could not select SET TEMP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
@@ -719,7 +755,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   //if (select_sub_menu_item(aq_data, "SET POOL TEMP") != true) {
   if (select_sub_menu_item(aq_data, menu_name) != true) {
     logMessage(LOG_WARNING, "Could not select SET POOL TEMP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -729,7 +765,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     // and get this message 'TEMP1 20�C ~*'
     // Before going to numeric field.
     waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
-    send_cmd(KEY_LEFT, aq_data);
+    send_cmd(KEY_LEFT);
     while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
       delay(500);
     }
@@ -785,7 +821,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   //setAqualinkTemp(aq_data, "SET TEMP", "SET SPA TEMP", NULL, "SPA", val);
   if ( select_menu_item(aq_data, "SET TEMP") != true ) {
     logMessage(LOG_WARNING, "Could not select SET TEMP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
@@ -793,7 +829,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   //if (select_sub_menu_item(aq_data, "SET SPA TEMP") != true) {
   if (select_sub_menu_item(aq_data, menu_name) != true) {
     logMessage(LOG_WARNING, "Could not select SET SPA TEMP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -803,7 +839,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     // and get this message 'TEMP2 20�C ~*'
     // Before going to numeric field.
     waitForMessage(threadCtrl->aq_data, "MUST BE SET", 5);
-    send_cmd(KEY_LEFT, aq_data);
+    send_cmd(KEY_LEFT);
     while (stristr(aq_data->last_message, "MUST BE SET") != NULL) { 
       delay(500);
     }
@@ -843,21 +879,21 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
   //setAqualinkTemp(aq_data, "SYSTEM SETUP", "FRZ PROTECT", "TEMP SETTING", "FRZ", val);
   if ( select_menu_item(aq_data, "SYSTEM SETUP") != true ) {
     logMessage(LOG_WARNING, "Could not select SYSTEM SETUP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "FRZ PROTECT") != true) {
     logMessage(LOG_WARNING, "Could not select FRZ PROTECT menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
   
   if (select_sub_menu_item(aq_data, "TEMP SETTING") != true) {
     logMessage(LOG_WARNING, "Could not select TEMP SETTING menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -898,7 +934,7 @@ void *set_aqualink_time( void *ptr )
 
   if ( select_menu_item(aq_data, "SET TIME") != true ) {
     logMessage(LOG_WARNING, "Could not select SET TIME menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -910,7 +946,7 @@ void *set_aqualink_time( void *ptr )
   select_sub_menu_item(aq_data, hour);
   setAqualinkNumericField(aq_data, "MINUTE", result->tm_min);
   
-  send_cmd(KEY_ENTER, aq_data);
+  send_cmd(KEY_ENTER);
 
   cleanAndTerminateThread(threadCtrl);
   
@@ -928,14 +964,14 @@ void *get_aqualink_diag_model( void *ptr )
   
   if ( select_menu_item(aq_data, "SYSTEM SETUP") != true ) {
     logMessage(LOG_WARNING, "Could not select HELP menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "DIAGNOSTICS") != true) {
     logMessage(LOG_WARNING, "Could not select DIAGNOSTICS menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -968,14 +1004,14 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr )
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "TEMP SET") != true) {
     logMessage(LOG_WARNING, "Could not select TEMP SET menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -1011,14 +1047,14 @@ void *get_freeze_protect_temp( void *ptr )
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "FRZ PROTECT") != true) {
     logMessage(LOG_WARNING, "Could not select FRZ PROTECT menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
@@ -1039,7 +1075,7 @@ bool get_aqualink_program_for_button(struct aqualinkdata *aq_data, unsigned char
     return false;
   
   logMessage(LOG_DEBUG, "Send key '%d'\n",cmd);
-  send_cmd(cmd, aq_data);
+  send_cmd(cmd);
   return waitForEitherMessage(aq_data, "NOT SET", "TURNS ON", rtnStringsWait);
 }
 
@@ -1054,19 +1090,19 @@ void *get_aqualink_programs( void *ptr )
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     //logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }     
            
   if (select_sub_menu_item(aq_data, "PROGRAMS") != true) {
     //logMessage(LOG_WARNING, "Could not select PROGRAMS menu\n");
-    cancel_menu(aq_data);
+    cancel_menu();
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
   
-  int i;
+  unsigned int i;
   
   for (i=0; i < strlen(keys); i++) {
     //logMessage(LOG_DEBUG, "**** START program for key in loop %d\n",i);
@@ -1082,10 +1118,10 @@ void *get_aqualink_programs( void *ptr )
   
   if (waitForMessage(aq_data, "SELECT DEVICE TO REVIEW or PRESS ENTER TO END", 6)) {
     //logMessage(LOG_DEBUG, "Send key ENTER\n");
-    send_cmd(KEY_ENTER, aq_data);
+    send_cmd(KEY_ENTER);
   } else {
     //logMessage(LOG_DEBUG, "Send CANCEL\n");
-    cancel_menu(aq_data);
+    cancel_menu();
   }
   
   //cancel_menu(aq_data); 
@@ -1103,7 +1139,7 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 }
 */
 
-void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
+void send_cmd(unsigned char cmd)
 {
   int i=0;
   // If there is an unsent command, wait.
@@ -1116,7 +1152,7 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
   _pgm_command = cmd;
   //delay(200);
 
-  logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller\n", _pgm_command);
+  logMessage(LOG_INFO, "Queue send '0x%02hhx' to controller (programming)\n", _pgm_command);
 }
 
 /*
@@ -1136,9 +1172,9 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 }
 */
 
-void cancel_menu(struct aqualinkdata *aq_data)
+void cancel_menu()
 {
-  send_cmd(KEY_CANCEL, aq_data);
+  send_cmd(KEY_CANCEL);
 }
 
 /*
@@ -1269,13 +1305,13 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
 {
   char* expectedMsg = "PRESS ENTER* TO SELECT";
-  int wait_messages = 3;
+  int wait_messages = 5;
   bool found = false;
   int tries = 0;
   // Select the MENU and wait to get the RS8 respond.
   
   while (found == false && tries <= 3) {
-    send_cmd(KEY_MENU, aq_data);
+    send_cmd(KEY_MENU);
     found = waitForMessage(aq_data, expectedMsg, wait_messages);
     tries++;
   }
@@ -1322,7 +1358,7 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
  
   while( (stristr(aq_data->last_message, item_string) == NULL) && ( i++ < wait_messages) )
   {
-    send_cmd(KEY_RIGHT, aq_data);
+    send_cmd(KEY_RIGHT);
     waitForMessage(aq_data, NULL, 1);
     logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
   }
@@ -1336,7 +1372,7 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
   // Enter the mode specified by the argument.
   
   
-  send_cmd(KEY_ENTER, aq_data);
+  send_cmd(KEY_ENTER);
   waitForMessage(aq_data, NULL, 1);
    //sendCmdWaitForReturn(aq_data, KEY_ENTER);
   
