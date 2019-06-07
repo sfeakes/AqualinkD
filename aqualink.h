@@ -69,7 +69,9 @@ typedef struct pumpd
 {
   int rpm;
   int gph;
-  int watts; 
+  int watts;
+  unsigned char pumpID;
+  int buttonID;
 } pump_detail;
 
 struct aqualinkdata

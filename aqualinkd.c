@@ -946,7 +946,7 @@ void main_loop()
   struct mg_mgr mgr;
   int rs_fd;
   int packet_length;
-  unsigned char packet_buffer[AQ_MAXPKTLEN];
+  unsigned char packet_buffer[AQ_MAXPKTLEN+1];
   bool interestedInNextAck = false;
   int i;
   //int delayAckCnt = 0;

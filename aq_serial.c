@@ -547,6 +547,7 @@ int get_packet(int fd, unsigned char* packet)
     if (index >= AQ_MAXPKTLEN) {
       logMessage(LOG_WARNING, "Serial packet too large\n");
       log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      return 0;
       break;
     }
   }
@@ -730,6 +731,7 @@ int get_packet_new(int fd, unsigned char* packet)
     if (index >= AQ_MAXPKTLEN) {
       logMessage(LOG_WARNING, "Serial packet too large\n");
       log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      return 0;
       break;
     }
   }

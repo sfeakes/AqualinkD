@@ -446,6 +446,10 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
     } else if (strncasecmp(param + 9, "_PDA_label", 10) == 0) {
       aqdata->aqbuttons[num].pda_label = cleanalloc(value);
       rtn=true;
+    } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
+      //aqdata->aqbuttons[num].pda_label = cleanalloc(value);
+      //69 to 111 = Pentair, 120 to 123 = Jandy
+      rtn=true;
     }
   }
 
