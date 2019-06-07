@@ -18,11 +18,29 @@
 #define SWG_DEV_ID      0x50
 #define IAQ_DEV_ID      0x33
 
-// PACKET DEFINES
+// PACKET DEFINES Jandy
 #define NUL  0x00
 #define DLE  0x10
 #define STX  0x02
 #define ETX  0x03
+
+// Pentair packet headder (first 4 bytes)
+#define PP1 0xFF
+#define PP2 0x00
+#define PP3 0xFF
+#define PP4 0xA5
+
+#define PEN_CMD_STATUS 0x07
+
+#define PEN_PKT_FROM 6
+#define PEN_PKT_DEST 5
+#define PEN_PKT_CMD 7
+
+#define PEN_HI_B_RPM 14
+#define PEN_LO_B_RPM 15
+#define PEN_HI_B_WAT 12
+#define PEN_LO_B_WAT 13
+// END Pentair
 
 #define AQ_MINPKTLEN    5
 #define AQ_MAXPKTLEN   64
@@ -215,16 +233,26 @@ enum {
 	LOW
 };
 
+typedef enum {
+  JANDY,
+  PENTAIR,
+  P_UNKNOWN
+} protocolType;
+
 
 int init_serial_port(char* tty);
 void close_serial_port(int file_descriptor);
 void set_pda_mode(bool mode);
 bool pda_mode();
 int generate_checksum(unsigned char* packet, int length);
+protocolType getProtocolType(unsigned char* packet);
+bool check_jandy_checksum(unsigned char* packet, int length);
+bool check_pentair_checksum(unsigned char* packet, int length);
 void send_ack(int file_descriptor, unsigned char command);
 void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
+int get_packet_new(int fd, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);

@@ -84,7 +84,7 @@ void init_parameters (struct aqconfig * parms)
   parms->use_panel_aux_labels = false;
   parms->debug_RSProtocol_packets = false;
   parms->force_swg = false;
-  parms->use_PDA_auxiliary = false;
+  parms->read_pentair_packets = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -381,7 +381,7 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp(param, "pda_mode", 8) == 0) {
     config_parameters->pda_mode = text2bool(value);
     set_pda_mode(config_parameters->pda_mode);
-    config_parameters->use_PDA_auxiliary = false;
+    //config_parameters->use_PDA_auxiliary = false;
     rtn=true;
   } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
     config_parameters->pda_sleep_mode = text2bool(value);
@@ -415,14 +415,18 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
     config_parameters->debug_RSProtocol_packets = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
+  } else if (strncasecmp (param, "read_pentair_packets", 17) == 0) {
+    config_parameters->read_pentair_packets = text2bool(value);
+    config_parameters->read_all_devices = true;
+  } /* 
+  else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
     config_parameters->use_PDA_auxiliary = text2bool(value);
     if ( pda_mode() ) {
       logMessage(LOG_ERR, "ERROR Can't use `use_PDA_auxiliary` in PDA mode, ignoring'\n");
       config_parameters->use_PDA_auxiliary = false;
     }
     rtn=true;
-  }
+  } */
   // removed until domoticz has a better virtual thermostat
   /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
               config_parameters->dzidx_pool_thermostat = strtoul(value, NULL, 10);

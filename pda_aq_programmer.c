@@ -794,4 +794,17 @@ PDA Line 6 =
 PDA Line 7 = 
 PDA Line 8 = 
 PDA Line 9 = 
+
+VSP Motes.
+
+four types of variable speed pumps, 
+Jandy ePumpTM DC, 
+Jandy ePumpTM AC,
+IntelliFlo® 1 VF,
+IntelliFlo® VS.
+
+The SCALE setting is fixed to RPM for the Jandy ePumpTM DC, Jandy ePumpTM AC, and IntelliFlo® VS. 
+The SCALE setting is fixed to GPM for the IntelliFlo® VF
+
+There are eight (8) default speed presets for each variable speed pump. 
 */

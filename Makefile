@@ -27,11 +27,12 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c pentair_messages.c mongoose.c
 
 SL_SRC = serial_logger.c aq_serial.c utils.c
 LR_SRC = log_reader.c aq_serial.c utils.c
 PL_EXSRC = aq_serial.c
+PL_EXOBJ = aq_serial_player.o
 PL_SRC := $(filter-out aq_serial.c, $(SRCS))
 
 OBJS = $(SRCS:.c=.o)
@@ -67,11 +68,11 @@ $(LOGR): $(LR_OBJS)
 player:	$(PLAY)
   @echo: $(PLAY) have been compiled
 
-aq_serial_player.o: aq_serial.c
-	$(CC) $(CFLAGS) -D PLAYBACK_MODE $(INCLUDES) -c aq_serial.c -o aq_serial_player.o
+$(PL_EXOBJ): $(PL_EXSRC)
+	$(CC) $(CFLAGS) -D PLAYBACK_MODE $(INCLUDES) -c $(PL_EXSRC) -o $(PL_EXOBJ)
 
-$(PLAY): $(PL_OBJS) aq_serial_player.o
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(PLAY) $(PL_OBJS) aq_serial_player.o
+$(PLAY): $(PL_OBJS) $(PL_EXOBJ)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(PLAY) $(PL_OBJS) $(PL_EXOBJ)
 
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
@@ -81,7 +82,7 @@ $(PLAY): $(PL_OBJS) aq_serial_player.o
 	$(CC) $(CFLAGS) $(INCLUDES) -c $<  -o $@
 
 clean:
-	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY)
+	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

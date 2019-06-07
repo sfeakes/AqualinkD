@@ -120,10 +120,13 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
       return;
   }
 */
-  if (packet_buffer[PKT_DEST] != 0x00)
-    printf("\n");
-
-  printf("%4.4s 0x%02hhx of type %8.8s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
+  if (getProtocolType(packet_buffer)==JANDY) {
+    if (packet_buffer[PKT_DEST] != 0x00)
+      printf("\n");
+    printf("Jandy   %4.4s 0x%02hhx of type %8.8s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
+  } else {
+    printf("Pentair From 0x%02hhx To 0x%02hhx       ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
+  }
   printf(" | HEX: ");
   printHex((char *)packet_buffer, packet_length);
   
@@ -215,7 +218,8 @@ int main(int argc, char *argv[]) {
       logMessage(LOG_ERR, "ERROR, serial port disconnect\n");
     }
 
-    packet_length = get_packet(rs_fd, packet_buffer);
+    //packet_length = get_packet(rs_fd, packet_buffer);
+    packet_length = get_packet_new(rs_fd, packet_buffer);
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.

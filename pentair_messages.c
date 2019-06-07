@@ -1,18 +1,46 @@
 
-/*
-
-Removed as iAqualink has a sleep mode, Keeping code to use as stub for other devices.
-
-
-*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "aqualink.h"
-#include "iAqualink_messages.h"
+#include "aq_serial.h"
+#include "pentair_messages.h"
 #include "utils.h"
+
+bool processPentairPacket(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) 
+{
+  bool changedAnything = false;
+  
+  // Need to find a better way to support pump index
+
+  static int pumpIndex = 1;
+  
+  if ( packet[PEN_PKT_FROM] == 0x60 && packet[PEN_PKT_CMD] == PEN_CMD_STATUS ){
+    //printf("PUMP\n");
+    logMessage(LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
+          (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
+          (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
+
+    aqdata->pumps[pumpIndex-1].rpm = (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM];
+    aqdata->pumps[pumpIndex-1].watts = (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT];
+
+    changedAnything = true;
+  }
+  
+  return changedAnything;
+}
+
+
+
+
+/*
+
+Removed as iAqualink has a sleep mode, Keeping code to use as stub for other devices.
+
+*/
+#ifdef DO_NOT_COMPILE
 
 bool processiAqualinkMsg(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata) 
 {
@@ -75,3 +103,5 @@ bool processiAqualinkMsg(unsigned char *packet_buffer, int packet_length, struct
 
   return changedAnything;
 }
+
+#endif

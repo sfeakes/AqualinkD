@@ -64,6 +64,7 @@ void log_packet(int level, char *init_str, unsigned char* packet, int length)
   char buff[MAXLEN];
 
   cnt = sprintf(buff, "%s", init_str);
+  cnt += sprintf(" | %8.8s",getProtocolType(packet)==JANDY?"Jandy":"Pentair");
   cnt += sprintf(buff+cnt, " | HEX: ");
   //printHex(packet_buffer, packet_length);
   for (i=0;i<length;i++)
@@ -212,6 +213,15 @@ void test_cmd()
   ackPacket[6] = 0x02;
   ackPacket[7] = generate_checksum(ackPacket, length-1);
   print_hex((char *)ackPacket, length);
+}
+
+protocolType getProtocolType(unsigned char* packet) {
+  if (packet[0] == DLE)
+    return JANDY;
+  else if (packet[0] == PP1)
+    return PENTAIR;
+
+  return P_UNKNOWN; 
 }
 
 #ifndef PLAYBACK_MODE
@@ -561,6 +571,200 @@ int get_packet(int fd, unsigned char* packet)
 
 
 
+
+
+bool check_jandy_checksum(unsigned char* packet, int length)
+{
+  if (generate_checksum(packet, length) == packet[length-3])
+    return true;
+
+  return false;
+}
+
+bool check_pentair_checksum(unsigned char* packet, int length)
+{
+  int i, sum, n;
+  n = packet[8] + 9;
+  sum = 0;
+  for (i = 3; i < n; i++) {
+    sum += (int) packet[i];
+  }
+
+  if (sum == (packet[length-1] * 256 + packet[length]))
+    return true;
+
+  return false;
+}
+
+int get_packet_new(int fd, unsigned char* packet)
+{
+  unsigned char byte;
+  int bytesRead;
+  int index = 0;
+  bool endOfPacket = false;
+  //bool packetStarted = FALSE;
+  bool lastByteDLE = false;
+  int retry = 0;
+  bool jandyPacketStarted = false;
+  bool pentairPacketStarted = false;
+  //bool lastByteDLE = false;
+  int PentairPreCnt = 0;
+  int PentairDataCnt = -1;
+
+  // Read packet in byte order below
+  // DLE STX ........ ETX DLE
+  // sometimes we get ETX DLE and no start, so for now just ignoring that.  Seem to be more applicable when busy RS485 traffic
+
+  while (!endOfPacket) {
+    bytesRead = read(fd, &byte, 1);
+    //if (bytesRead < 0 && errno == EAGAIN && packetStarted == FALSE && lastByteDLE == FALSE) {
+    if (bytesRead < 0 && errno == EAGAIN && 
+        jandyPacketStarted == false && 
+        pentairPacketStarted == false && 
+        lastByteDLE == false) {
+      // We just have nothing to read
+      return 0;
+    } else if (bytesRead < 0 && errno == EAGAIN) {
+      // If we are in the middle of reading a packet, keep going
+      if (retry > 20) {
+        logMessage(LOG_WARNING, "Serial read timeout\n");
+        log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+        return 0;
+      }
+      retry++;
+      delay(10);
+    } else if (bytesRead == 1) {
+
+      if (lastByteDLE == true && byte == NUL)
+      {
+        // Check for DLE | NULL (that's escape DLE so delete the NULL)
+        //printf("IGNORE THIS PACKET\n");
+        lastByteDLE = false;
+      }
+      else if (lastByteDLE == true)
+      {
+        if (index == 0)
+          index++;
+
+        packet[index] = byte;
+        index++;
+        if (byte == STX && jandyPacketStarted == false)
+        {
+          jandyPacketStarted = true;
+          pentairPacketStarted = false;
+        }
+        else if (byte == ETX && jandyPacketStarted == true)
+        {
+          endOfPacket = true;
+        }
+      }
+      else if (jandyPacketStarted || pentairPacketStarted)
+      {
+        packet[index] = byte;
+        index++;
+        if (pentairPacketStarted == true && index == 9)
+        {
+          //printf("Read 0x%02hhx %d pentair\n", byte, byte);
+          PentairDataCnt = byte;
+        }
+        if (PentairDataCnt >= 0 && index - 11 >= PentairDataCnt && pentairPacketStarted == true)
+        {
+          endOfPacket = true;
+          PentairPreCnt = -1;
+          index--;
+        }
+      }
+      else if (byte == DLE && jandyPacketStarted == false)
+      {
+        packet[index] = byte;
+      }
+
+      // // reset index incase we have EOP before start
+      if (jandyPacketStarted == false && pentairPacketStarted == false)
+      {
+        index = 0;
+      }
+
+      if (byte == DLE && pentairPacketStarted == false)
+      {
+        lastByteDLE = true;
+        PentairPreCnt = -1;
+      }
+      else
+      {
+        lastByteDLE = false;
+        if (byte == PP1 && PentairPreCnt == 0)
+          PentairPreCnt = 1;
+        else if (byte == PP2 && PentairPreCnt == 1)
+          PentairPreCnt = 2;
+        else if (byte == PP3 && PentairPreCnt == 2)
+          PentairPreCnt = 3;
+        else if (byte == PP4 && PentairPreCnt == 3)
+        {
+          pentairPacketStarted = true;
+          jandyPacketStarted = false;
+          PentairDataCnt = -1;
+          packet[0] = PP1;
+          packet[1] = PP2;
+          packet[2] = PP3;
+          packet[3] = byte;
+          index = 4;
+        }
+        else if (byte != PP1) // Don't reset counter if multiple PP1's
+          PentairPreCnt = 0;
+      }
+    } else if(bytesRead < 0) {
+      // Got a read error. Wait one millisecond for the next byte to
+      // arrive.
+      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      if(errno == 9) {
+        // Bad file descriptor. Port has been disconnected for some reason.
+        // Return a -1.
+        return -1;
+      }
+      delay(100);
+    }
+
+    // Break out of the loop if we exceed maximum packet
+    // length.
+    if (index >= AQ_MAXPKTLEN) {
+      logMessage(LOG_WARNING, "Serial packet too large\n");
+      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      break;
+    }
+  }
+
+  //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
+  if (jandyPacketStarted) {
+    if (generate_checksum(packet, index) != packet[index-3]){
+      logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
+      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      return 0;
+    }
+  } else if (pentairPacketStarted) {
+    if (check_pentair_checksum(packet, index) != true){
+      logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
+      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      return 0;
+    }
+  }
+/* 
+  if (generate_checksum(packet, index) != packet[index-3]){
+    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+    return 0;
+  } else*/ if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
+    logMessage(LOG_WARNING, "Serial read too small\n");
+    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+    return 0;
+  }
+
+  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  // Return the packet length.
+  return index;
+}
+
+
 #else // PLAYBACK_MODE
 #include <stdlib.h>
 FILE *_fp;
@@ -581,6 +785,10 @@ void close_serial_port(int fd)
   fclose(_fp);
 }
 
+int get_packet_new(int fd, unsigned char* packet_buffer)
+{
+  return get_packet(fd, packet_buffer);
+}
 int get_packet(int fd, unsigned char* packet_buffer)
 {
   int packet_length = 0;

@@ -38,7 +38,7 @@
 #include "net_services.h"
 #include "pda_menu.h"
 #include "pda.h"
-#include "iAqualink_messages.h"
+#include "pentair_messages.h"
 #include "version.h"
 
 //#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
@@ -445,7 +445,7 @@ void processMessage(char *message)
   // We processed the next message, kick any threads waiting on the message.
   kick_aq_program_thread(&_aqualink_data);
 }
-
+/* 
 bool process_pda_monitor_packet(unsigned char *packet, int length)
 {
   bool rtn = false;
@@ -495,7 +495,7 @@ bool process_pda_monitor_packet(unsigned char *packet, int length)
 
   return rtn;
 }
-
+*/
 bool process_packet(unsigned char *packet, int length)
 {
   bool rtn = false;
@@ -764,7 +764,8 @@ int main(int argc, char *argv[])
   logMessage(LOG_NOTICE, "Config log_file          = %s\n", _config_parameters.log_file);
   logMessage(LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _config_parameters.light_programming_mode);
   logMessage(LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_config_parameters.debug_RSProtocol_packets));
-  logMessage(LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_config_parameters.use_PDA_auxiliary));
+  //logMessage(LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_config_parameters.use_PDA_auxiliary));
+  logMessage(LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_config_parameters.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
 
   for (i = 0; i < TOTAL_BUTONS; i++)
@@ -855,8 +856,30 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
 }
 */
 
+void logPacket_new(unsigned char* packet_buffer, int packet_length)
+{
+  char buff[1000];
+  int i = 0;
+  int cnt = 0;
+
+  cnt = sprintf(buff, "%8.8s Packet | HEX: ",getProtocolType(packet_buffer)==JANDY?"Jandy":"Pentair");
+  
+  for (i=0;i<packet_length;i++)
+    cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
+
+  if (_config_parameters.debug_RSProtocol_packets)
+    writePacketLog(buff);
+  else
+    logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+}
+
 void logPacket(unsigned char *packet_buffer, int packet_length)
 {
+  if (_config_parameters.read_pentair_packets) {
+    logPacket_new(packet_buffer, packet_length);
+    return;
+  }
+
   char buff[1000];
   int i = 0;
   int cnt = 0;
@@ -1000,7 +1023,11 @@ void main_loop()
       blank_read = 0;
     }
 
-    packet_length = get_packet(rs_fd, packet_buffer);
+    if (_config_parameters.read_pentair_packets)
+      packet_length = get_packet_new(rs_fd, packet_buffer);
+    else
+      packet_length = get_packet(rs_fd, packet_buffer);
+
     if (packet_length == -1)
     {
       // Unrecoverable read error. Force an attempt to reconnect.
@@ -1041,7 +1068,7 @@ void main_loop()
           send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         else
           caculate_ack_packet(rs_fd, packet_buffer);
-      }
+      }/* 
       else if (_config_parameters.use_PDA_auxiliary && packet_length > 0 && packet_buffer[PKT_DEST] == 0x60 && _aqualink_data.aqbuttons[PUMP_INDEX].led->state != OFF)
       {
         if (process_pda_monitor_packet(packet_buffer, packet_length))
@@ -1049,7 +1076,7 @@ void main_loop()
 
         //send_ack(rs_fd, NUL);
         send_extended_ack(rs_fd, ACK_PDA, NUL);
-      }
+      }*/
       else if (packet_length > 0 && _config_parameters.read_all_devices == true)
       {
 
@@ -1089,6 +1116,11 @@ void main_loop()
         else
         {
           interestedInNextAck = false;
+        }
+
+        if (_config_parameters.read_pentair_packets && getProtocolType(packet_buffer) == PENTAIR) {
+          if (processPentairPacket(packet_buffer, packet_length, &_aqualink_data))
+             broadcast_aqualinkstate(mgr.active_connections);
         }
         /*  Removed, iAqualink has sleep mode, so no use
         if (packet_buffer[PKT_DEST] == IAQ_DEV_ID && packet_buffer[PKT_CMD] == CMD_IAQ_MSG) {
