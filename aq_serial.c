@@ -61,10 +61,10 @@ void log_packet(int level, char *init_str, unsigned char* packet, int length)
   
   int cnt;
   int i;
-  char buff[MAXLEN];
+  char buff[MAXLEN * 2];
 
   cnt = sprintf(buff, "%s", init_str);
-  cnt += sprintf(" | %8.8s",getProtocolType(packet)==JANDY?"Jandy":"Pentair");
+  cnt += sprintf(buff+cnt, " | %8.8s",getProtocolType(packet)==JANDY?"Jandy":"Pentair");
   cnt += sprintf(buff+cnt, " | HEX: ");
   //printHex(packet_buffer, packet_length);
   for (i=0;i<length;i++)

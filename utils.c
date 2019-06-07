@@ -278,7 +278,7 @@ void test(int msg_level, char *msg)
 
 void logMessage(int msg_level, char *format, ...)
 {
-  char buffer[512];
+  char buffer[1024];
   va_list args;
   va_start(args, format);
   strncpy(buffer, "         ", 8);
