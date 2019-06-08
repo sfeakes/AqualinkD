@@ -12,21 +12,37 @@
 bool processPentairPacket(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) 
 {
   bool changedAnything = false;
-  
+  int i;
+  //ID's 96 to 111 = Pentair (or 0x60 to 0x6F)
+
   // Need to find a better way to support pump index
 
-  static int pumpIndex = 1;
+  //static int pumpIndex = 1;
   
-  if ( packet[PEN_PKT_FROM] == 0x60 && packet[PEN_PKT_CMD] == PEN_CMD_STATUS ){
+  if ( packet[PEN_PKT_CMD] == PEN_CMD_STATUS && packet[PEN_PKT_FROM] >= 96 &&  packet[PEN_PKT_FROM] <= 111 ){
+    // We have Pentair Pump packet, let's see if it's configured.
     //printf("PUMP\n");
-    logMessage(LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
+
+    for (i = 0; i < MAX_PUMPS; i++) {
+      if ( aqdata->pumps[i].ptype == PENTAIR && aqdata->pumps[i].pumpID == packet[PEN_PKT_FROM] ) {
+        // We found the pump.
+        logMessage(LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
           (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
           (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
 
-    aqdata->pumps[pumpIndex-1].rpm = (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM];
-    aqdata->pumps[pumpIndex-1].watts = (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT];
+        aqdata->pumps[i].rpm = (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM];
+        aqdata->pumps[i].watts = (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT];
 
-    changedAnything = true;
+        changedAnything = true;
+        break;
+      }
+      if (changedAnything != true)
+        logMessage(LOG_NOTICE, "Pentair Pump found at ID 0x%02hhx with RPM %d | WATTS %d, but not configured, information ignored!\n",
+                               packet[PEN_PKT_FROM],
+                               (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
+                               (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
+    }
+    // 
   }
   
   return changedAnything;

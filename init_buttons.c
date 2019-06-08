@@ -24,6 +24,10 @@
 */
 void initButtons(struct aqualinkdata *aqdata)
 {
+  //int i;
+  //for (i = 0; i < MAX_PUMPS; i++)
+  //    aqdata->pumps[i].buttonID = -1;
+
   aqdata->aqbuttons[0].led = &aqdata->aqualinkleds[7-1];
   aqdata->aqbuttons[0].led->state = LED_S_UNKNOWN;
   aqdata->aqbuttons[0].label = BTN_PUMP;

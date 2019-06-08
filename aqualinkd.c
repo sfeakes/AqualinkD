@@ -673,7 +673,7 @@ int main(int argc, char *argv[])
 {
   // main_loop ();
 
-  int i;
+  int i, j;
   //char *cfgFile = DEFAULT_CONFIG_FILE;
   char defaultCfg[] = "./aqualinkd.conf";
   char *cfgFile;
@@ -770,7 +770,15 @@ int main(int argc, char *argv[])
 
   for (i = 0; i < TOTAL_BUTONS; i++)
   {
-    logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | PDAlabel %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx);
+    char vsp[] = "None";
+    for (j = 0; j < MAX_PUMPS; j++) {
+      //if (_aqualink_data.pumps[j].buttonID == i) {
+      if (_aqualink_data.pumps[j].button == &_aqualink_data.aqbuttons[i]) {
+        sprintf(vsp,"0x%02hhx",_aqualink_data.pumps[j].pumpID);
+        //printf("Pump %d %d %d\n",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].buttonID, _aqualink_data.pumps[j].ptype);
+      }
+    }
+    logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s  | PDAlabel %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp, _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx);
     //logMessage(LOG_NOTICE, "Button %d\n", i+1, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
   }
 
@@ -941,6 +949,29 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
   }
 }
 
+unsigned char find_unused_address(unsigned char* packet) {
+  static int ID[4] = {0,0,0,0};  // 0=0x08, 1=0x09, 2=0x0A, 3=0x0B
+  static unsigned char lastID = 0x00;
+
+  if (packet[PKT_DEST] >= 0x08 && packet[PKT_DEST] <= 0x0B && packet[PKT_CMD] == CMD_PROBE) {
+    //printf("Probe packet to keypad ID 0x%02hhx\n",packet[PKT_DEST]);
+    lastID = packet[PKT_DEST];
+  } else if (packet[PKT_DEST] == DEV_MASTER && lastID != 0x00) {
+    lastID = 0x00;
+  } else if (lastID != 0x00) {
+    ID[lastID-8]++;
+    if (ID[lastID-8] >= 3) {
+      logMessage(LOG_NOTICE, "Found valid unused ID 0x%02hhx\n",lastID);
+      return lastID;
+    }
+    lastID = 0x00;
+  } else {
+    lastID = 0x00;
+  }
+
+  return 0x00;
+}
+
 void main_loop()
 {
   struct mg_mgr mgr;
@@ -1001,6 +1032,10 @@ void main_loop()
     init_pda(&_aqualink_data);
   }
 
+  if (_config_parameters.device_id == 0x00) {
+    logMessage(LOG_NOTICE, "Searching for valid ID, please configure one for faster startup\n");
+  }
+
   while (_keepRunning == true)
   {
     while ((rs_fd < 0 || blank_read >= MAX_ZERO_READ_BEFORE_RECONNECT) && _keepRunning == true)
@@ -1038,6 +1073,11 @@ void main_loop()
     {
       //logMessage(LOG_DEBUG_SERIAL, "Nothing read on serial\n");
       blank_read++;
+    }
+    else if (_config_parameters.device_id == 0x00) {
+      blank_read = 0;
+      _config_parameters.device_id = find_unused_address(packet_buffer);
+      continue;
     }
     else if (packet_length > 0)
     {

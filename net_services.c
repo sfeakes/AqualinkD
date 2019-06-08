@@ -194,14 +194,16 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
 
-void send_mqtt_aux_msg(struct mg_connection *nc, char *root_topic, int dev_index, char *dev_topic, int value)
+//void send_mqtt_aux_msg(struct mg_connection *nc, char *root_topic, int dev_index, char *dev_topic, int value)
+void send_mqtt_aux_msg(struct mg_connection *nc, char *dev_name, char *dev_topic, int value)
 {
   static char mqtt_pub_topic[250];
   static char msg[10];
   
   sprintf(msg, "%d", value);
 
-  sprintf(mqtt_pub_topic, "%s/%s%d%s",_aqualink_config->mqtt_aq_topic, root_topic, dev_index, dev_topic);
+  //sprintf(mqtt_pub_topic, "%s/%s%d%s",_aqualink_config->mqtt_aq_topic, root_topic, dev_index, dev_topic);
+  sprintf(mqtt_pub_topic, "%s/%s%s",_aqualink_config->mqtt_aq_topic, dev_name, dev_topic);
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
 
@@ -533,15 +535,18 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
     if (_aqualink_data->pumps[i].rpm != TEMP_UNKNOWN && _aqualink_data->pumps[i].rpm != _last_mqtt_aqualinkdata.pumps[i].rpm) {
       _last_mqtt_aqualinkdata.pumps[i].rpm = _aqualink_data->pumps[i].rpm;
-      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
+      //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
     }
     if (_aqualink_data->pumps[i].gph != TEMP_UNKNOWN && _aqualink_data->pumps[i].gph != _last_mqtt_aqualinkdata.pumps[i].gph) {
       _last_mqtt_aqualinkdata.pumps[i].gph = _aqualink_data->pumps[i].gph;
-      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_GPH_TOPIC, _aqualink_data->pumps[i].gph);
+      //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_GPH_TOPIC, _aqualink_data->pumps[i].gph);
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_GPH_TOPIC, _aqualink_data->pumps[i].gph);
     }
     if (_aqualink_data->pumps[i].watts != TEMP_UNKNOWN && _aqualink_data->pumps[i].watts != _last_mqtt_aqualinkdata.pumps[i].watts) {
       _last_mqtt_aqualinkdata.pumps[i].watts = _aqualink_data->pumps[i].watts;
-      send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
+      //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
     }
   }
 

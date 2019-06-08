@@ -45,6 +45,76 @@ void intHandler(int dummy) {
     exit(0);
 }
 
+#define MASTER " <-- Master control panel"
+#define SWG " <-- Salt Water Generator (Aquarite mode)"
+#define KEYPAD " <-- RS Keypad"
+#define SPA_R " <-- Spa remote"
+#define AQUA " <-- Aqualink (iAqualink?)"
+#define HEATER " <-- LX Heater"
+#define ONE_T " <-- Onetouch device"
+#define PC_DOCK " <-- PC Interface (RS485 to RS232)"
+#define PDA " <-- PDA Remote"
+#define EPUMP " <-- Jandy VSP ePump"
+#define CHEM " <-- Chemlink"
+
+#define UNKNOWN " <-- Unknown Device"
+
+#define P_VSP " <-- Pentair VSP"
+#define P_MASTER " <-- Pentair Master (Probably Jandy RS Control Panel)"
+#define P_SWG " <-- Salt Water Generator (Jandy mode)"
+#define P_BCAST " <-- Broadcast address"
+#define P_RCTL " <-- Remote wired controller"
+#define P_RWCTL " <-- Remote wireless controller (Screen Logic)"
+#define P_CTL " <-- Pool controller (EasyTouch)"
+
+const char *getDevice(unsigned char ID) {
+  if (ID >= 0x00 && ID <= 0x03)
+    return MASTER;
+  if (ID >= 0x08 && ID <= 0x0B)
+    return KEYPAD;
+  if (ID >= 0x50 && ID <= 0x53)
+    return SWG;
+  if (ID >= 0x20 && ID <= 0x23)
+    return SPA_R;
+  if (ID >= 0x30 && ID <= 0x33)
+    return AQUA;
+  if (ID >= 0x38 && ID <= 0x3b)
+    return HEATER;
+  if (ID >= 0x40 && ID <= 0x43)
+    return ONE_T;
+  if (ID >= 0x58 && ID <= 0x5B)
+    return PC_DOCK;
+  if (ID >= 0x60 && ID <= 0x63)
+    return PDA;
+  if (ID >= 0x70 && ID <= 0x73)
+    return EPUMP;
+  if (ID >= 0x80 && ID <= 0x83)
+    return CHEM;
+  //if (ID == 0x08)
+  //  return KEYPAD;
+
+  return UNKNOWN;
+}
+
+const char *getPentairDevice(unsigned char ID) {
+  if (ID >= 0x60 && ID <= 0x6F)
+    return P_VSP;
+  if (ID == 0x02)
+    return P_SWG;
+  if (ID == 0x10)  
+    return P_MASTER;
+  if (ID == 0x0F)
+    return P_BCAST;
+  if (ID == 0x10)
+    return P_CTL;
+  if (ID == 0x20)
+    return P_RCTL;
+  if (ID == 0x22)
+    return P_RWCTL;
+
+  return UNKNOWN;
+}
+
 void advance_cursor() {
   static int pos=0;
   char cursor[4]={'/','-','\\','|'};
@@ -57,6 +127,10 @@ bool canUse(unsigned char ID) {
   int i;
   for (i = 0; i < 4; i++) {
     if (ID == _goodID[i])
+      return true;
+  }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodPDAID[i])
       return true;
   }
   return false;
@@ -150,7 +224,9 @@ int main(int argc, char *argv[]) {
   int i = 0;
   bool found;
   serial_id_log slog[SLOG_MAX];
+  serial_id_log pent_slog[SLOG_MAX];
   int sindex = 0;
+  int pent_sindex = 0;
   int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
@@ -233,22 +309,36 @@ int main(int argc, char *argv[]) {
         if (logLevel > LOG_NOTICE)
           printPacket(lastID, packet_buffer, packet_length);
 
-        if (packet_buffer[PKT_DEST] != DEV_MASTER) {
+        if (getProtocolType(packet_buffer) == PENTAIR) {
+          found = false;
+          for (i = 0; i <= pent_sindex; i++) {
+            if (pent_slog[i].ID == packet_buffer[PEN_PKT_FROM]) {
+              found = true;
+              break;
+            }
+          }
+          if (found == false) {
+            pent_slog[pent_sindex].ID = packet_buffer[PEN_PKT_FROM];
+            pent_slog[pent_sindex].inuse = true;
+            pent_sindex++;
+          }
+        } else {
+         if (packet_buffer[PKT_DEST] != DEV_MASTER) {
           found = false;
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == packet_buffer[PKT_DEST]) {
               found = true;
               break;
             }
-          }
-          if (found != true && sindex < SLOG_MAX) {
+           }
+           if (found != true && sindex < SLOG_MAX) {
             slog[sindex].ID = packet_buffer[PKT_DEST];
             slog[sindex].inuse = false;
             sindex++;
           }
-        }
+         }
 
-        if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
+         if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
           //logMessage(LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == lastID) {
@@ -256,10 +346,10 @@ int main(int argc, char *argv[]) {
               break;
             }
           }
-        }
-      
-
-      lastID = packet_buffer[PKT_DEST];
+         }
+  
+        lastID = packet_buffer[PKT_DEST];
+      }
       received_packets++;
 
       // NSF TESTING
@@ -285,17 +375,32 @@ int main(int argc, char *argv[]) {
     //sleep(1);
   }
 
-  logMessage(LOG_DEBUG, "\n");
+  logMessage(LOG_DEBUG, "\n\n");
+  if (logLevel < LOG_DEBUG)
+    printf("\n\n");
+
   if (sindex >= SLOG_MAX)
     logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
-  logMessage(LOG_NOTICE, "ID's found\n");
+  logMessage(LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
     //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
-
-    logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
-               (slog[i].inuse == false)?canUseExtended(slog[i].ID):"");
+    if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
+      logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+               (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
+    }
   }
+
+  if (pent_sindex > 0) {
+    logMessage(LOG_NOTICE, "\n\n");
+    logMessage(LOG_NOTICE, "Pentair ID's found\n");
+  }
+  for (i=0; i < pent_sindex; i++) {
+    logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use" : "not used",
+               (pent_slog[i].inuse == false)?canUseExtended(pent_slog[i].ID):getPentairDevice(pent_slog[i].ID));
+  }
+
+  logMessage(LOG_NOTICE, "\n\n");
 
   return 0;
 }

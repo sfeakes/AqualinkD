@@ -19,7 +19,7 @@
 //#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
 
-#define MAX_PUMPS 2
+#define MAX_PUMPS 4
 
 enum {
  FAHRENHEIT,
@@ -71,7 +71,9 @@ typedef struct pumpd
   int gph;
   int watts;
   unsigned char pumpID;
-  int buttonID;
+  //int buttonID;
+  protocolType ptype;
+  aqkey *button;
 } pump_detail;
 
 struct aqualinkdata

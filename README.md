@@ -63,6 +63,12 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+## Update in Release 1.3.3
+* AqualinkD will now automaticaly find a usable ID if not specifically configured.
+* Support for reading multiple Variable Speed Pump info & assigning per device. (Please see wiki for new config options).
+  * <span style="color:red">*At present only Pentair VSP supported, if you have Jandy VSP (ePump) and are willing to do some testing, please post on forum as I'd like to get this supported as well.*</span>
+  * Need to check config for `read_all_devices = yes` & `read_pentair_packets = yes` and assign RS485 Pump ID to Device ID in configuration.  serial_logger should find ID's for you.
+  * WebUI will display Pump RPM, RPM,Watts,GPH information is also available from MQTT & API.
 ## Update in Release 1.3.2c
 * Miscellaneous bug fixes and buffer overrun (could cause core dump).
 * VSP update & Pantair device support.

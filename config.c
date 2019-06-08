@@ -308,6 +308,7 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
 
 bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
+  static int pi=0;
 
   if (strncasecmp(param, "socket_port", 11) == 0) {
     config_parameters->socket_port = cleanalloc(value);
@@ -418,6 +419,7 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp (param, "read_pentair_packets", 17) == 0) {
     config_parameters->read_pentair_packets = text2bool(value);
     config_parameters->read_all_devices = true;
+    rtn=true;
   } /* 
   else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
     config_parameters->use_PDA_auxiliary = text2bool(value);
@@ -448,7 +450,19 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
       //aqdata->aqbuttons[num].pda_label = cleanalloc(value);
-      //69 to 111 = Pentair, 120 to 123 = Jandy
+      //96 to 111 = Pentair, 120 to 123 = Jandy
+      if (pi < MAX_PUMPS) {
+        aqdata->pumps[pi].button = &aqdata->aqbuttons[num];
+        aqdata->pumps[pi].pumpID = strtoul(cleanalloc(value), NULL, 16);
+        //aqdata->pumps[pi].buttonID = num;
+        if (aqdata->pumps[pi].pumpID < 119)
+          aqdata->pumps[pi].ptype = PENTAIR;
+        else
+          aqdata->pumps[pi].ptype = JANDY;
+        pi++;
+      } else {
+        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+      }
       rtn=true;
     }
   }

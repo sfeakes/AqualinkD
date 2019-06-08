@@ -139,8 +139,29 @@ int LED2int(aqledstate state)
   }
 }
 
+#define AUX_BUFFER_SIZE 100
+
+char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buffer)
+{
+  int i;
+  int length = 0;
+  buffer[0] = '\0';
+
+  for (i=0; i < MAX_PUMPS; i++) {
+    if (button == aqdata->pumps[i].button) {
+      if (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gph != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN) {
+        length += sprintf(buffer, ",\"Pump_RPM\":\"%d\",\"Pump_GPH\":\"%d\",\"Pump_Watts\":\"%d\"", aqdata->pumps[i].rpm,aqdata->pumps[i].gph,aqdata->pumps[i].watts);
+        break;
+      }
+    }
+  }
+
+  return buffer;
+}
+
 int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit)
 {
+  char aux_info[AUX_BUFFER_SIZE];
   memset(&buffer[0], 0, size);
   int length = 0;
   int i;
@@ -182,19 +203,21 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char*
                                      ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->spa_temp):aqdata->spa_temp),
                                      LED2int(aqdata->aqbuttons[i].led->state));
     } else if (programable_switch > 0 && programable_switch == i) {
-      length += sprintf(buffer+length, "{\"type\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" },", 
+      length += sprintf(buffer+length, "{\"type\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
-                                     LED2int(aqdata->aqbuttons[i].led->state));
+                                     LED2int(aqdata->aqbuttons[i].led->state),
+                                     get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));
     } else {
-      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" },", 
+      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
-                                     LED2int(aqdata->aqbuttons[i].led->state));
+                                     LED2int(aqdata->aqbuttons[i].led->state),
+                                     get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));
     }
   }
 
@@ -373,18 +396,20 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, aqdata->frz_protect_state==ON?JSON_ON:JSON_ENABLED);
   }
 
+  //length += sprintf(buffer+length, "}, \"extra\":{" );
+  length += sprintf(buffer+length, "},");
 
-  length += sprintf(buffer+length, "}, \"extra\":{" );
   for (i=0; i < MAX_PUMPS; i++) {
     if (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gph != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "\"Pump_%d\":{\"RPM\":\"%d\",\"GPH\":\"%d\",\"WATTS\":\"%d\"},",i+1,aqdata->pumps[i].rpm,aqdata->pumps[i].gph,aqdata->pumps[i].watts);
+      length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPH\":\"%d\",\"Watts\":\"%d\"},",
+                        i+1,aqdata->pumps[i].button->label,aqdata->pumps[i].button->name,aqdata->pumps[i].rpm,aqdata->pumps[i].gph,aqdata->pumps[i].watts);
     }
   }
 
   if (buffer[length-1] == ',')
     length--;
 
-  length += sprintf(buffer+length, "}}" );
+  length += sprintf(buffer+length, "}" );
   
   buffer[length] = '\0';
  
