@@ -769,6 +769,16 @@
         tile.innerHTML = value + ext;
     }
 
+    function setTileOnText(id, text) {
+      try {
+        if (document.getElementById(id).getAttribute('status') == 'on') {
+          document.getElementById(id + '_status').innerHTML = text;
+        } else {
+          console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
+        }
+      } catch(exception) {}
+    }
+
     function setThermostatTile(id, value, sp_value) {
       setTileValue(id, value);
       if ((tile = document.getElementById(id)) != null) {
@@ -878,6 +888,9 @@
       if (object.type == 'switch' || object.type == 'switch_program') {
         add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + object.id + '-off.png', 'hk/' + object.id + '-on.png');
         setTileOn(object.id, object.status, null);
+        if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {
+          setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
+        }
       } else if (object.type == 'value' || object.type == 'temperature') {
         add_tile(object.id, object.name, object.state, 'value', object.type);
         setTileValue(object.id, object.value);
@@ -1121,10 +1134,12 @@
       while (i < 5) {
         //console.log(data["Pump_"+i].RPM);
         if ((typeof data["Pump_"+i] !== 'undefined') && (typeof data["Pump_"+i].RPM !== 'undefined')) {
+          setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
+          /*
           if (document.getElementById(data["Pump_"+i].id).getAttribute('status') == 'on')
             document.getElementById(data["Pump_"+i].id + '_status').innerHTML = 'RPM:'+data["Pump_"+i].RPM;
           else
-            console.log(data["Pump_"+i].id + ' is off, not displaying ' + data["Pump_"+i].RPM);
+            console.log(data["Pump_"+i].id + ' is off, not displaying RPM ' + data["Pump_"+i].RPM);*/
         }
         i++;
       }
