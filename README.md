@@ -23,7 +23,7 @@ https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-pan
 Started to document what I know about the Jandy RS485 protocol.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
 
-## Builtin WEB Interface(s).
+## AqualinkD builtin WEB Interface(s).
 
 <table width="100%" border="0" cellpadding="20px">
  <tr><th width="50%">Default web interface</th><th wifth="50%">Simple web interface</img></th><tr>
@@ -65,9 +65,9 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 #<a name="release"></a>
 ## Update in Release 1.3.3
 * AqualinkD will now automaticaly find a usable ID if not specifically configured.
-* Support for reading multiple Variable Speed Pump info & assigning per device. (Please see wiki for new config options).
+* Support for reading (up to 4) Variable Speed Pump info & assigning per device. (Please see wiki for new config options).
   * <span style="color:red">*At present only Pentair VSP supported, if you have Jandy VSP (ePump) and are willing to do some testing, please post on forum as I'd like to get this supported as well.*</span>
-  * Need to check config for `read_all_devices = yes` & `read_pentair_packets = yes` and assign RS485 Pump ID to Device ID in configuration.  serial_logger should find ID's for you.
+  * For VSP you need to check config for `read_all_devices = yes` & `read_pentair_packets = yes` and assign RS485 Pump ID to Device ID in configuration.  serial_logger should find ID's for you.
   * WebUI will display Pump RPM only. RPM,Watts,GPH information is also available from MQTT & API.
 ## Update in Release 1.3.2c
 * Miscellaneous bug fixes and buffer overrun (could cause core dump).
