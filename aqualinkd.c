@@ -1104,10 +1104,11 @@ void main_loop()
         }
 
         // If we are not in PDA or Simulator mode, just sent ACK & any CMD, else caculate the ACK.
-        if (!_aqualink_data.simulate_panel && !_config_parameters.pda_mode)
+        if (!_aqualink_data.simulate_panel && !_config_parameters.pda_mode) {
           send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-        else
+        } else {
           caculate_ack_packet(rs_fd, packet_buffer);
+        }
       }/* 
       else if (_config_parameters.use_PDA_auxiliary && packet_length > 0 && packet_buffer[PKT_DEST] == 0x60 && _aqualink_data.aqbuttons[PUMP_INDEX].led->state != OFF)
       {

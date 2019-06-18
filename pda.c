@@ -577,7 +577,8 @@ bool process_pda_packet(unsigned char *packet, int length)
   }
 
   if (packet[PKT_CMD] == CMD_MSG_LONG || packet[PKT_CMD] == CMD_PDA_HIGHLIGHT || 
-      packet[PKT_CMD] == CMD_PDA_SHIFTLINES || packet[PKT_CMD] == CMD_PDA_CLEAR)
+      packet[PKT_CMD] == CMD_PDA_SHIFTLINES || packet[PKT_CMD] == CMD_PDA_CLEAR ||
+      packet[PKT_CMD] == CMD_PDA_HIGHLIGHTCHARS)
   {
     // We processed the next message, kick any threads waiting on the message.
     kick_aq_program_thread(_aqualink_data);

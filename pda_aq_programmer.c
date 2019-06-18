@@ -19,6 +19,8 @@
 bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex, int numMessageReceived);
 static bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype,
                            unsigned long sec, unsigned long msec);
+static bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, const unsigned char *mtypes_list,
+                           unsigned long sec, unsigned long msec);
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu);
 bool wait_pda_selected_item(struct aqualinkdata *aq_data);
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data);
@@ -41,8 +43,15 @@ bool wait_pda_selected_item(struct aqualinkdata *aq_data)
 }
 
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data) {
-  waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,2,0);
-  return waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,3,0);
+  logMessage(LOG_DEBUG, "waitForPDAnextMenu\n");
+  unsigned char hlmtypes[3] = {CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,0xFF};
+
+  if (! (waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,2,0) &&
+      waitForPDAMessageTypes(aq_data,hlmtypes,3,0))) {
+      logMessage(LOG_ERR, "waitForPDAnextMenu failed\n");
+      return false;
+  }
+  return true;
 }
 
 bool loopover_devices(struct aqualinkdata *aq_data) {
@@ -123,9 +132,11 @@ bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wai
     send_cmd(KEY_PDA_SELECT);
 
     logMessage(LOG_DEBUG, "PDA Device programmer selected menu item '%s'\n",menuText);
-    if (waitForNextMenu)
-      waitForPDAnextMenu(aq_data);
-
+    if (waitForNextMenu) {
+      if (! waitForPDAnextMenu(aq_data)) {
+          logMessage(LOG_ERR, "PDA Device programmer selected menu item %s wait for next menu failed", menuText);
+      }
+    }
     return true;
   }
 
@@ -137,7 +148,8 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
   //int i = 0;
   //char *menuText;
 
-  logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d\n",menu);
+  logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d, current %d\n",
+             menu, pda_m_type());
 
   // Keep going back, checking each time to get to home.
   while (pda_m_type() == PM_FW_VERSION || pda_m_type() == PM_BUILDING_HOME) {
@@ -149,7 +161,9 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     if (pda_m_type() != PM_BUILDING_HOME) {
       send_cmd(KEY_PDA_BACK);
       //logMessage(LOG_DEBUG, "******************PDA Device programmer selected back button\n",menu);
-      waitForPDAnextMenu(aq_data);
+      if (! waitForPDAnextMenu(aq_data)) {
+          logMessage(LOG_ERR, "PDA Device programmer wait for next menu failed");
+      }
     } else {
       waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,3,0);
     }
@@ -386,6 +400,9 @@ bool get_PDA_freeze_protect_temp(struct aqualinkdata *aq_data) {
     if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT)) {   
       return false;
     }
+    /* select the freeze protect temp to see which devices are enabled by freeze
+       protect */
+    send_cmd(KEY_PDA_SELECT);
   } else {
     logMessage(LOG_INFO, "In PDA AquaPalm mode, freezepoints not supported\n");
     return false;
@@ -437,8 +454,16 @@ bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex,
 }
 
 
-bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype,
+static bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype,
                            unsigned long sec, unsigned long msec)
+{
+  unsigned char mtypes_list[2] = {mtype, 0xFF};
+  return waitForPDAMessageTypes(aq_data, mtypes_list, sec, msec);
+}
+
+static bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, const unsigned char *mtypes_list,
+                           unsigned long sec, unsigned long msec)
+
 {
   int i=0;
 
@@ -446,12 +471,21 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype,
 
   struct timespec max_wait;
   int ret = 0;
+  int offset =0;
+  int j = 1;
+  char mtypes_str[80];
+  bool received = false;
 
-  logMessage(LOG_DEBUG, "waitForPDAMessageType 0x%02hhx, %lu.%03lu sec\n",
-             mtype, sec, msec);
+  offset = snprintf(mtypes_str, sizeof(mtypes_str), "0x%02hhx", mtypes_list[0]);
+  do {
+      offset += snprintf(mtypes_str+offset, sizeof(mtypes_str)-offset, ",0x%02hhx", mtypes_list[j]);
+  } while (mtypes_list[j++] != 0xFF);
+
+  logMessage(LOG_DEBUG, "waitForPDAMessageTypes {%s}, %lu.%03lu sec\n",
+             mtypes_str, sec, msec);
   if (msec > 999)
     {
-      logMessage(LOG_ERR, "waitForPDAMessageType INVALID msec value %lu\n", msec);
+      logMessage(LOG_ERR, "waitForPDAMessageTypes INVALID msec value %lu\n", msec);
     }
   clock_gettime(CLOCK_REALTIME, &max_wait);
   max_wait.tv_sec += sec;
@@ -468,24 +502,30 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype,
 
   do {
     i++;
-    logMessage(LOG_DEBUG, "waitForPDAMessageType 0x%02hhx, last message type was 0x%02hhx (%d)\n",
-               mtype,aq_data->last_packet_type,i);
+    logMessage(LOG_DEBUG, "waitForPDAMessageTypes {%s}, last message type was 0x%02hhx (%d)\n",
+               mtypes_str,aq_data->last_packet_type,i);
 
     if ((ret = pthread_cond_timedwait(&aq_data->active_thread.thread_cond,
                                       &aq_data->active_thread.thread_mutex, &max_wait)))
         {
-           logMessage(LOG_ERR, "waitForPDAMessageType: did not receive 0x%02hhx %s\n",
-                      mtype, strerror(ret));
+           logMessage(LOG_ERR, "waitForPDAMessageTypes: did not receive {%s} %s\n",
+                      mtypes_str, strerror(ret));
            break;
         }
-  } while(aq_data->last_packet_type != mtype);
+    for (j = 0; mtypes_list[j] != 0xFF; j++) {
+      if (aq_data->last_packet_type == mtypes_list[j]) {
+        received = true;
+        break;
+      }
+    }
+  } while (!received);
 
   pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
   if (ret)
     {
       return false;
     }
-  logMessage(LOG_DEBUG, "waitForPDAMessageType: received 0x%02hhx\n",mtype);
+  logMessage(LOG_DEBUG, "waitForPDAMessageTypes: received 0x%02hhx\n",aq_data->last_packet_type);
   
   return true;
 }
