@@ -105,48 +105,50 @@ int pda_find_m_index_swcase(char *text, int limit)
 pda_menu_type pda_m_type()
 {
   
-  if (strncasecmp(_menu[1],"AIR  ", 5) == 0)
+  if (strncasecmp(_menu[1],"AIR  ", 5) == 0) {
     return PM_HOME;
-  else if (strncasecmp(_menu[0],"EQUIPMENT STATUS", 16) == 0)
+  } else if (strncasecmp(_menu[0],"EQUIPMENT STATUS", 16) == 0) {
     return PM_EQUIPTMENT_STATUS;
-  else if (strncasecmp(_menu[0],"   EQUIPMENT    ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"   EQUIPMENT    ", 16) == 0) {
     return PM_EQUIPTMENT_CONTROL;
-  else if (strncasecmp(_menu[0],"    MAIN MENU    ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"   MAIN MENU    ", 16) == 0) {
     return PM_MAIN;
   //else if ((_menu[0] == '\0' && _hlightindex == -1) || strncmp(_menu[4], "POOL MODE", 9) == 0 )// IF we are building the main menu this may be valid
-  else if (strncasecmp(_menu[4], "POOL MODE", 9) == 0 ||  // Will not see POOL MODE if single device config (pool vs pool&spa)
-           strncasecmp(_menu[9], "EQUIPMENT ON/OFF", 16) == 0) {
-    if (pda_m_hlightindex() == -1)
+  } else if (strncasecmp(_menu[4], "POOL MODE", 9) == 0 ||  // Will not see POOL MODE if single device config (pool vs pool&spa)
+             strncasecmp(_menu[9], "EQUIPMENT ON/OFF", 16) == 0) {
+    if (pda_m_hlightindex() == -1) {
       return PM_BUILDING_HOME;
-    else
+    } else {
       return PM_HOME;
-  }
-  else if (strncasecmp(_menu[0],"    SET TEMP    ", 16) == 0)
+    }
+  } else if (strncasecmp(_menu[0],"    SET TEMP    ", 16) == 0) {
     return PM_SET_TEMP;
-  else if (strncasecmp(_menu[0],"    SET TIME    ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"    SET TIME    ", 16) == 0) {
     return PM_SET_TIME;
-  else if (strncasecmp(_menu[0],"  SET AquaPure  ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"  SET AquaPure  ", 16) == 0) {
     return PM_AQUAPURE;
-  else if (strncasecmp(_menu[0],"    SPA HEAT    ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"    SPA HEAT    ", 16) == 0) {
     return PM_SPA_HEAT;
-  else if (strncasecmp(_menu[0],"   POOL HEAT    ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"   POOL HEAT    ", 16) == 0) {
     return PM_POOL_HEAT;
-  else if (strncasecmp(_menu[6],"Use ARROW KEYS  ", 16) == 0 && 
-           strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"  SYSTEM SETUP  ", 16) == 0) {
+    return PM_SYSTEM_SETUP;
+  } else if (strncasecmp(_menu[6],"Use ARROW KEYS  ", 16) == 0 &&
+             strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0) {
     return PM_FREEZE_PROTECT;
-  else if (strncasecmp(_menu[1],"    DEVICES     ", 16) == 0 && 
-           strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0)
+  } else if (strncasecmp(_menu[1],"    DEVICES     ", 16) == 0 &&
+             strncasecmp(_menu[0]," FREEZE PROTECT ", 16) == 0) {
     return PM_FREEZE_PROTECT_DEVICES;
-  else if (strncasecmp(_menu[3],"Firmware Version", 16) == 0 ||
-           strncasecmp(_menu[1],"    AquaPalm", 12) == 0 ||
-           strncasecmp(_menu[1]," PDA-P", 6) == 0)   // PDA-P4 Only -or- PDA-PS4 Combo
+  } else if (strncasecmp(_menu[3],"Firmware Version", 16) == 0 ||
+             strncasecmp(_menu[1],"    AquaPalm", 12) == 0 ||
+             strncasecmp(_menu[1]," PDA-P", 6) == 0) {  // PDA-P4 Only -or- PDA-PS4 Combo
     return PM_FW_VERSION;
-  else if (strncasecmp(_menu[0],"   LABEL AUX    ", 16) == 0) // Catch AUX and not AUX4
+  } else if (strncasecmp(_menu[0],"   LABEL AUX    ", 16) == 0) {// Catch AUX and not AUX4
     return PM_AUX_LABEL;
-  else if (strncasecmp(_menu[0],"   LABEL AUX", 12) == 0 &&  // Will have number ie AUX4
-           strncasecmp(_menu[2],"  CURRENT LABEL ", 16) == 0)
+  } else if (strncasecmp(_menu[0],"   LABEL AUX", 12) == 0 &&  // Will have number ie AUX4
+             strncasecmp(_menu[2],"  CURRENT LABEL ", 16) == 0) {
     return PM_AUX_LABEL_DEVICE;
-      
+  }     
   return PM_UNKNOWN;
 }
 
