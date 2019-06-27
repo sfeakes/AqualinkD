@@ -67,7 +67,7 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
 int get_aq_cmd_length();
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
-
+const char *ptypeName(program_type type);
 
 // These shouldn't be here, but just for the PDA AQ PROGRAMMER
 void send_cmd(unsigned char cmd);

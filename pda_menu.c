@@ -96,7 +96,8 @@ pda_menu_type pda_m_type()
   else if (strncasecmp(_menu[0],"    MAIN MENU    ", 16) == 0)
     return PM_MAIN;
   //else if ((_menu[0] == '\0' && _hlightindex == -1) || strncmp(_menu[4], "POOL MODE", 9) == 0 )// IF we are building the main menu this may be valid
-  else if (strncasecmp(_menu[4], "POOL MODE", 9) == 0 ) {
+  else if (strncasecmp(_menu[4], "POOL MODE", 9) == 0 ||  // Will not see POOL MODE if single device config (pool vs pool&spa)
+           strncasecmp(_menu[9], "EQUIPMENT ON/OFF", 16) == 0) {
     if (pda_m_hlightindex() == -1)
       return PM_BUILDING_HOME;
     else
@@ -120,7 +121,7 @@ pda_menu_type pda_m_type()
     return PM_FREEZE_PROTECT_DEVICES;
   else if (strncasecmp(_menu[3],"Firmware Version", 16) == 0 ||
            strncasecmp(_menu[1],"    AquaPalm", 12) == 0 ||
-           strncasecmp(_menu[1]," PDA-PS4 Combo", 14) == 0)
+           strncasecmp(_menu[1]," PDA-P", 6) == 0)   // PDA-P4 Only -or- PDA-PS4 Combo
     return PM_FW_VERSION;
       
   return PM_UNKNOWN;

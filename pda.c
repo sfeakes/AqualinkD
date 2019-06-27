@@ -17,11 +17,10 @@ static unsigned char _last_packet_type;
 static unsigned long _pda_loop_cnt = 0;
 static bool _initWithRS = false;
 
-// Each RS message is around 0.5 seconds apart, so 2 mins = 120 seconds = 240 polls
-//#define PDA_LOOP_COUNT 240 // 2 mins in poll (sleep timer)
+// Each RS message is around 0.25 seconds apart
 
-#define PDA_SLEEP_FOR 60 // 30 seconds
-#define PDA_WAKE_FOR 6 // 3 seconds
+#define PDA_SLEEP_FOR 120 // 30 seconds
+#define PDA_WAKE_FOR 6 // ~1 seconds
 
 void init_pda(struct aqualinkdata *aqdata)
 {
@@ -215,6 +214,7 @@ void process_pda_packet_msg_long_temp(const char *msg)
   //           ' 86` 86`        '
   //           'AIR             '
   //           ' 86`            '
+  //           'AIR        WATER'  // In case of single device.
   _aqualink_data->temp_units = FAHRENHEIT; // Force FAHRENHEIT
   if (stristr(pda_m_line(1), "AIR") != NULL)
     _aqualink_data->air_temp = atoi(msg);
@@ -225,6 +225,11 @@ void process_pda_packet_msg_long_temp(const char *msg)
     _aqualink_data->pool_temp = TEMP_UNKNOWN;
   }
   else if (stristr(pda_m_line(1), "POOL") != NULL)
+  {
+    _aqualink_data->pool_temp = atoi(msg + 7);
+    _aqualink_data->spa_temp = TEMP_UNKNOWN;
+  }
+  else if (stristr(pda_m_line(1), "WATER") != NULL)
   {
     _aqualink_data->pool_temp = atoi(msg + 7);
     _aqualink_data->spa_temp = TEMP_UNKNOWN;
@@ -318,6 +323,15 @@ void process_pda_packet_msg_long_home(const char *msg)
   }
 }
 
+void setSingleDeviceMode()
+{
+  if (_aqualink_data->single_device != true)
+  {
+    _aqualink_data->single_device = true;
+    logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n");
+  }
+}
+
 void process_pda_packet_msg_long_set_temp(const char *msg)
 {
   logMessage(LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
@@ -332,6 +346,20 @@ void process_pda_packet_msg_long_set_temp(const char *msg)
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
   }
+  else if (stristr(msg, "TEMP1") != NULL)
+  {
+    setSingleDeviceMode();
+    _aqualink_data->pool_htr_set_point = atoi(msg + 10);
+    logMessage(LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+  }
+  else if (stristr(msg, "TEMP2") != NULL)
+  {
+    setSingleDeviceMode();
+    _aqualink_data->spa_htr_set_point = atoi(msg + 10);
+    logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+  }
+
+ 
 }
 
 void process_pda_packet_msg_long_spa_heat(const char *msg)
@@ -546,9 +574,12 @@ bool process_pda_packet(unsigned char *packet, int length)
         case PM_FREEZE_PROTECT:
           process_pda_packet_msg_long_freeze_protect(msg);
         break;
-         case PM_AQUAPURE:
+        case PM_AQUAPURE:
           process_pda_packet_msg_long_SWG(msg);
         break;
+        //case PM_FW_VERSION:
+        //  process_pda_packet_msg_long_FW_version(msg);
+        //break;
         case PM_UNKNOWN:
         default:
           process_pda_packet_msg_long_unknown(msg);
@@ -580,7 +611,8 @@ bool process_pda_packet(unsigned char *packet, int length)
   }
 
   if (packet[PKT_CMD] == CMD_MSG_LONG || packet[PKT_CMD] == CMD_PDA_HIGHLIGHT || 
-      packet[PKT_CMD] == CMD_PDA_SHIFTLINES || packet[PKT_CMD] == CMD_PDA_CLEAR)
+      packet[PKT_CMD] == CMD_PDA_SHIFTLINES || packet[PKT_CMD] == CMD_PDA_CLEAR ||
+      packet[PKT_CMD] == CMD_PDA_HIGHLIGHTCHARS)
   {
     // We processed the next message, kick any threads waiting on the message.
     kick_aq_program_thread(_aqualink_data);

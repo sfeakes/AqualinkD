@@ -16,8 +16,15 @@
 
 #include "init_buttons.h"
 
+
+#ifdef AQ_DEBUG
+  #include <time.h>
+  #include "timespec_subtract.h"
+#endif
+
 bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex, int numMessageReceived);
 bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, int numMessageReceived);
+bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived);
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu);
 bool wait_pda_selected_item(struct aqualinkdata *aq_data);
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data);
@@ -26,6 +33,64 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
 bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu);
 
 static pda_type _PDA_Type;
+
+/* 
+// Each RS message / call to this function is around 0.2 seconds apart
+//#define MAX_ACK_FOR_THREAD 200 // ~40 seconds (Init takes 30)
+#define MAX_ACK_FOR_THREAD 60 // ~12 seconds (testing, will stop every thread)
+
+// *** DELETE THIS WHEN PDA IS OUT OF BETA ****
+void pda_programming_thread_check(struct aqualinkdata *aq_data)
+{
+  static pthread_t thread_id = 0;
+  static int ack_count = 0;
+  #ifdef AQ_DEBUG
+    static struct timespec start;
+    static struct timespec now;
+    struct timespec elapsed;
+  #endif
+
+  // Check for long lasting threads
+  if (aq_data->active_thread.thread_id != 0) {
+    if (thread_id != *aq_data->active_thread.thread_id) {
+       printf ("**************** LAST POINTER SET %ld , %p ****************************\n",thread_id,&thread_id);
+     
+      thread_id = *aq_data->active_thread.thread_id;
+      #ifdef AQ_DEBUG
+         clock_gettime(CLOCK_REALTIME, &start);
+      #endif
+      printf ("**************** NEW POINTER SET %d, %ld %ld , %p %p ****************************\n",aq_data->active_thread.ptype,thread_id,*aq_data->active_thread.thread_id,&thread_id,aq_data->active_thread.thread_id);
+      ack_count = 0;
+    } else if (ack_count > MAX_ACK_FOR_THREAD) {
+      #ifdef AQ_DEBUG
+       clock_gettime(CLOCK_REALTIME, &now);
+       timespec_subtract(&elapsed, &now, &start);
+       logMessage(LOG_ERR, "Thread %d,%p FAILED to finished in reasonable time, %d.%03ld sec, killing it.\n",
+             aq_data->active_thread.ptype,
+             aq_data->active_thread.thread_id,
+             elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
+      #else
+        logMessage(LOG_ERR, "Thread %d,%p FAILED to finished in reasonable time, killing it!\n", aq_data->active_thread.ptype, aq_data->active_thread.thread_id)
+      #endif
+
+      if (pthread_cancel(*aq_data->active_thread.thread_id) != 0)
+          logMessage(LOG_ERR, "Thread kill failed\n");
+      else {
+       
+      }
+      aq_data->active_thread.thread_id = 0;
+      aq_data->active_thread.ptype = AQP_NULL;
+      ack_count = 0;
+      thread_id = 0;
+    } else {
+      ack_count++;
+    }
+  } else {
+    ack_count = 0;
+    thread_id = 0;
+  }
+}
+*/
 
 bool wait_pda_selected_item(struct aqualinkdata *aq_data)
 {
@@ -41,7 +106,7 @@ bool wait_pda_selected_item(struct aqualinkdata *aq_data)
 
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data) {
   waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
-  return waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,15);
+  return waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,15);
 }
 
 bool loopover_devices(struct aqualinkdata *aq_data) {
@@ -133,7 +198,7 @@ bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wai
 }
 
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
-  //int i = 0;
+  int i = 0;
   //char *menuText;
 
   logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d\n",menu);
@@ -144,7 +209,8 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     delay(500);
   }
 
-  while ( pda_m_type() != menu && pda_m_type() != PM_HOME ) {
+  // This needs a timeout.
+  while ( pda_m_type() != menu && pda_m_type() != PM_HOME) {
     if (pda_m_type() != PM_BUILDING_HOME) {
       send_cmd(KEY_PDA_BACK);
       //logMessage(LOG_DEBUG, "******************PDA Device programmer selected back button\n",menu);
@@ -152,10 +218,17 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     } else {
       waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,15);
     }
+
+    if (i > 4 ) {
+      logMessage(LOG_ERR, "PDA Device programmer request for menu %d failed! Couldn't get to HOME menu\n",menu);
+      return false;
+    }
+    i++;
     //logMessage(LOG_DEBUG, "******************PDA Device programmer menu type %d\n",pda_m_type());
     //if (!wait_for_empty_cmd_buffer() || i++ > 6)
     //  return false;
   }
+  
 
   if (pda_m_type() == menu)
     return true;
@@ -253,7 +326,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   }
 
   //Pad name with spaces so something like "SPA" doesn't match "SPA BLOWER"
-  sprintf(device_name,"%-14s\n",aq_data->aqbuttons[device].pda_label);
+  sprintf(device_name,"%-13s\n",aq_data->aqbuttons[device].pda_label);
   if ( find_pda_menu_item(aq_data, device_name, 13) ) {
     if (aq_data->aqbuttons[device].led->state != state) {
       //printf("*** Select State ***\n");
@@ -322,9 +395,14 @@ void *set_aqualink_PDA_init( void *ptr )
     } else {
       _PDA_Type = PDA;
     }
-    char *ptr = pda_m_line(5);
-    ptr[AQ_MSGLEN+1] = '\0';
-    strcpy(aq_data->version, stripwhitespace(ptr));
+    char *ptr1 = pda_m_line(1);
+    char *ptr2 = pda_m_line(5);
+    ptr1[AQ_MSGLEN+1] = '\0';
+    ptr2[AQ_MSGLEN+1] = '\0';
+    //strcpy(aq_data->version, stripwhitespace(ptr));
+    snprintf(aq_data->version, (AQ_MSGLEN*2)-1, "%s %s",stripwhitespace(ptr1),stripwhitespace(ptr2));
+
+    printf("****** Version '%s' ********\n",aq_data->version);
   }
 
   // Get status of all devices
@@ -466,6 +544,36 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, in
   return true;
 }
 
+bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived)
+{
+  logMessage(LOG_DEBUG, "waitForPDAMessageTypes  0x%02hhx or 0x%02hhx\n",mtype1,mtype2);
+
+  int i=0;
+  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
+  pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
+
+  while( ++i <= numMessageReceived)
+  {
+    logMessage(LOG_DEBUG, "waitForPDAMessageTypes 0x%02hhx | 0x%02hhx, last message type was 0x%02hhx (%d of %d)\n",mtype1,mtype2,aq_data->last_packet_type,i,numMessageReceived);
+
+    if (aq_data->last_packet_type == mtype1 || aq_data->last_packet_type == mtype2) break;
+
+    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
+    pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
+  }
+
+  pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
+  
+  if (aq_data->last_packet_type != mtype1 && aq_data->last_packet_type != mtype2) {
+    //logMessage(LOG_ERR, "Could not select MENU of Aqualink control panel\n");
+    logMessage(LOG_DEBUG, "waitForPDAMessageTypes: did not receive 0x%02hhx or 0x%02hhx\n",mtype1,mtype2);
+    return false;
+  } else 
+    logMessage(LOG_DEBUG, "waitForPDAMessageTypes: received 0x%02hhx\n",aq_data->last_packet_type);
+  
+  return true;
+}
+
 bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur_val, char *select_label, int step) {
   int i;
 
@@ -519,12 +627,22 @@ bool set_PDA_aqualink_heater_setpoint(struct aqualinkdata *aq_data, int val, boo
   char label[10];
   int *cur_val;
 
-  if (isPool) {
-    sprintf(label, "POOL HEAT");
-    cur_val = &aq_data->pool_htr_set_point;
+  if ( aq_data->single_device != true ) {
+    if (isPool) {
+      sprintf(label, "POOL HEAT");
+      cur_val = &aq_data->pool_htr_set_point;
+    } else {
+      sprintf(label, "SPA HEAT");
+      cur_val = &aq_data->spa_htr_set_point;
+    }
   } else {
-    sprintf(label, "SPA HEAT");
-    cur_val = &aq_data->spa_htr_set_point;
+    if (isPool) {
+      sprintf(label, "TEMP1");
+      cur_val = &aq_data->pool_htr_set_point;
+    } else {
+      sprintf(label, "TEMP2");
+      cur_val = &aq_data->spa_htr_set_point;
+    }
   }
 
   if (val == *cur_val) {
@@ -641,13 +759,25 @@ PDA Line 7 =
 PDA Line 8 = 
 PDA Line 9 = 
 
+PDA Menu Line 0 = 
+PDA Menu Line 1 =   PDA-P4 Only   
+PDA Menu Line 2 = 
+PDA Menu Line 3 = Firmware Version
+PDA Menu Line 4 = 
+PDA Menu Line 5 =      PDA: 7.1.0 
+PDA Menu Line 6 = 
+PDA Menu Line 7 = 
+PDA Menu Line 8 = 
+PDA Menu Line 9 = 
+
+************** The above have different menu to below rev/version *********
 ***************** Think this is startup different rev *************
-Line 0 =
-Line 1 =  PDA-PS4 Combo
-Line 2 =
-Line 3 = Firmware Version
-Line 4 =
-Line 5 =   PPD: PDA 1.2
+PDA Menu Line 0 =
+PDA Menu Line 1 =  PDA-PS4 Combo
+PDA Menu Line 2 =
+PDA Menu Line 3 = Firmware Version
+PDA Menu Line 4 =
+PDA Menu Line 5 =   PPD: PDA 1.2
 
 PDA Line 0 =
 PDA Line 1 = AIR         POOL
@@ -739,6 +869,21 @@ PDA Line 0 =     SET TEMP
 PDA Line 1 =
 PDA Line 2 = POOL HEAT   70`F
 PDA Line 3 = SPA HEAT    98`F
+PDA Line 4 =
+PDA Line 5 =
+PDA Line 6 =
+PDA Line 7 = Highlight an
+PDA Line 8 = item and press
+PDA Line 9 = SELECT
+
+
+******* GUSSING AT BELOW *******
+when single mode (pool OR spa) not (pool AND spa) temps are different.
+
+PDA Line 0 =     SET TEMP
+PDA Line 1 =
+PDA Line 2 = TEMP1       70`F
+PDA Line 3 = TEMP2       98`F
 PDA Line 4 =
 PDA Line 5 =
 PDA Line 6 =

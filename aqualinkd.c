@@ -39,7 +39,9 @@
 #include "pda_menu.h"
 #include "pda.h"
 #include "pentair_messages.h"
+#include "pda_aq_programmer.h"
 #include "version.h"
+
 
 //#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
@@ -904,16 +906,16 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
 }
 
 
-
 #define MAX_BLOCK_ACK 12
 #define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
 
 void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
   static int delayAckCnt = 0;
-
+ 
   if (!_aqualink_data.simulate_panel || _aqualink_data.active_thread.thread_id != 0) {
     // if PDA mode, should we sleep? if not Can only send command to status message on PDA.
     if (_config_parameters.pda_mode == true) {
+      //pda_programming_thread_check(&_aqualink_data);
       if (_config_parameters.pda_sleep_mode && pda_shouldSleep()) {
         logMessage(LOG_DEBUG, "PDA Aqualink daemon in sleep mode\n");
         return;
@@ -1108,6 +1110,7 @@ void main_loop()
           send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         else
           caculate_ack_packet(rs_fd, packet_buffer);
+
       }/* 
       else if (_config_parameters.use_PDA_auxiliary && packet_length > 0 && packet_buffer[PKT_DEST] == 0x60 && _aqualink_data.aqbuttons[PUMP_INDEX].led->state != OFF)
       {

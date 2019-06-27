@@ -79,7 +79,7 @@ typedef struct pumpd
 struct aqualinkdata
 {
   //char crap[AQ_MSGLEN];
-  char version[AQ_MSGLEN];
+  char version[AQ_MSGLEN*2];
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
   //char datestr[DATE_STRING_LEN];
@@ -115,8 +115,10 @@ struct aqualinkdata
   int open_websockets;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
+  #ifdef AQ_DEBUG
   struct timespec last_active_time;
   struct timespec start_active_time;
+  #endif
 };
 
 

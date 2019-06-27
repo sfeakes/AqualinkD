@@ -20,7 +20,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <string.h>
-#include <time.h>
 
 
 #include "aqualink.h"
@@ -31,7 +30,11 @@
 #include "pda_menu.h"
 #include "init_buttons.h"
 #include "pda_aq_programmer.h"
-#include "timespec_subtract.h"
+
+#ifdef AQ_DEBUG
+  #include <time.h>
+  #include "timespec_subtract.h"
+#endif
 
 bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string);
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string);
@@ -388,6 +391,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   }
 
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
+    //logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
     logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
                 type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
                 threadCtrl->aq_data->active_thread.thread_id);
@@ -395,6 +399,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   }
   
   if (i >= tries) {
+    //logMessage (LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
     logMessage (LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
                 type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
                 threadCtrl->aq_data->active_thread.thread_id);
@@ -404,7 +409,12 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
  
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
-  clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
+
+  #ifdef AQ_DEBUG
+    clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
+  #endif
+
+  //logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
   logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
               threadCtrl->aq_data->active_thread.ptype,
               threadCtrl->aq_data->active_thread.thread_id);
@@ -412,16 +422,18 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
+  #ifndef AQ_DEBUG
+  logMessage(LOG_DEBUG, "Thread %d,%p finished\n",threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id);
+  #else
   struct timespec elapsed;
-
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
   timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
-
   logMessage(LOG_DEBUG, "Thread %d,%p finished in %d.%03ld sec\n",
              threadCtrl->aq_data->active_thread.ptype,
              threadCtrl->aq_data->active_thread.thread_id,
              elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
-  // :TODO: This delay should not be needed
+  #endif
+
   // Quick delay to allow for last message to be sent.
   delay(500);
   threadCtrl->aq_data->active_thread.thread_id = 0;
@@ -1434,3 +1446,57 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
   return true;
 }
 
+const char *ptypeName(program_type type)
+{
+  switch (type) {
+    case AQ_GET_POOL_SPA_HEATER_TEMPS:
+      return "Get Heater setpoints";
+    break;
+    case AQ_GET_FREEZE_PROTECT_TEMP:
+      return "Get Freeze proctect";
+    break;
+    case AQ_SET_TIME:
+      return "Set time";
+    break;
+    case AQ_SET_POOL_HEATER_TEMP:
+      return "Set Pool heater setpoint";
+    break;
+    case AQ_SET_SPA_HEATER_TEMP:
+      return "Set Spa heater setpoint";
+    break;
+    case AQ_SET_FRZ_PROTECTION_TEMP:
+      return "Set Freeze protect setpoint";
+    break;
+    case AQ_GET_DIAGNOSTICS_MODEL:
+      return "Get diagnostics";
+    break;
+    case AQ_GET_PROGRAMS:
+      return "Get programs";
+    break;
+    case AQ_SET_COLORMODE:
+      return "Set light color";
+    break;
+    case AQ_PDA_INIT:
+      return "Init PDA";
+    break;
+    case AQ_SET_SWG_PERCENT:
+      return "Set SWG percent";
+    break;
+    case AQ_PDA_DEVICE_STATUS:
+      return "Get PDA Device status";
+    break;
+    case AQ_PDA_DEVICE_ON_OFF:
+      return "Switch PDA device on/off";
+    break;
+    case AQ_GET_AUX_LABELS:
+      return "Get labels";
+    break;
+    case AQ_PDA_WAKE_INIT:
+      return "PDA init after wake";
+    break;
+    case AQP_NULL:
+    default:
+      return "Unknown";
+    break;
+  }
+}
