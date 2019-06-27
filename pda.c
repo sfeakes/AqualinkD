@@ -279,6 +279,14 @@ void process_pda_packet_msg_long_equipment_control(const char *msg)
       set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN - 1]);
     }
   }
+
+  // NSF I think we need to check TEMP1 and TEMP2 and set Pool HEater and Spa heater directly, to support single device.
+  if (_aqualink_data->single_device){
+    if (strcasecmp(stripwhitespace(labelBuff), "TEMP1") == 0)
+      set_pda_led(_aqualink_data->aqbuttons[POOL_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+    if (strcasecmp(stripwhitespace(labelBuff), "TEMP2") == 0)
+      set_pda_led(_aqualink_data->aqbuttons[SPA_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+  }
 }
 
 void process_pda_packet_msg_long_home(const char *msg)

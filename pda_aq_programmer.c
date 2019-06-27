@@ -585,7 +585,7 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur
     send_cmd(KEY_PDA_DOWN);
     delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
     waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
-    if (i > 30) {
+    if (i > 10) {
       logMessage(LOG_ERR, "PDA numeric selector could not find string '%s'\n", select_label);
       return false;
     }
@@ -924,6 +924,17 @@ PDA Line 7 = CLEAN MODE   OFF
 PDA Line 8 = ALL OFF
 PDA Line 9 =
 
+// This is from a single device setup (pool OR spa not pool AND spa)
+PDA Menu Line 0 =    EQUIPMENT    
+PDA Menu Line 1 = 
+PDA Menu Line 2 = FILTER PUMP   ON
+PDA Menu Line 3 = TEMP1        OFF
+PDA Menu Line 4 = TEMP2        OFF
+PDA Menu Line 5 = AUX1         OFF
+PDA Menu Line 6 = Pool Light    ON
+PDA Menu Line 7 = AUX3         OFF
+PDA Menu Line 8 = EXTRA AUX    OFF
+PDA Menu Line 9 = ALL OFF       
 
 PDA Line 0 = Equipment Status
 PDA Line 1 = 
