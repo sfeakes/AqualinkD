@@ -801,7 +801,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
 
   if (pda_mode() == true) {
-    set_PDA_aqualink_heater_setpoint(aq_data, val, true);
+    set_PDA_aqualink_heater_setpoint(aq_data, val, false);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
