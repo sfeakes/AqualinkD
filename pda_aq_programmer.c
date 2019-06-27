@@ -94,8 +94,11 @@ void pda_programming_thread_check(struct aqualinkdata *aq_data)
 
 bool wait_pda_selected_item(struct aqualinkdata *aq_data)
 {
-  while (pda_m_hlightindex() == -1){
+  int i=0;
+
+  while (pda_m_hlightindex() == -1 && i < 5){
     waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,10);
+    i++;
   }
 
   if (pda_m_hlightindex() == -1)
@@ -209,7 +212,6 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
     delay(500);
   }
 
-  // This needs a timeout.
   while ( pda_m_type() != menu && pda_m_type() != PM_HOME) {
     if (pda_m_type() != PM_BUILDING_HOME) {
       send_cmd(KEY_PDA_BACK);
@@ -575,7 +577,7 @@ bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, 
 }
 
 bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur_val, char *select_label, int step) {
-  int i;
+  int i=0;
 
   // Should probably change below to call find_pda_menu_item(), rather than doing it here
   // If we lease this, need to limit on the number of loops
@@ -583,6 +585,11 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur
     send_cmd(KEY_PDA_DOWN);
     delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
     waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
+    if (i > 30) {
+      logMessage(LOG_ERR, "PDA numeric selector could not find string '%s'\n", select_label);
+      return false;
+    }
+    i++;
   }
 
   send_cmd(KEY_PDA_SELECT);
