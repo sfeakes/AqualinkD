@@ -206,12 +206,13 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
 
   logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d\n",menu);
 
-  // Keep going back, checking each time to get to home.
+  
   while (pda_m_type() == PM_FW_VERSION || pda_m_type() == PM_BUILDING_HOME) {
     //logMessage(LOG_DEBUG, "******************PDA Device programmer delay on firmware or building home menu\n");
     delay(500);
   }
 
+  // Keep going back, checking each time to get to home.
   while ( pda_m_type() != menu && pda_m_type() != PM_HOME) {
     if (pda_m_type() != PM_BUILDING_HOME) {
       send_cmd(KEY_PDA_BACK);
@@ -404,7 +405,7 @@ void *set_aqualink_PDA_init( void *ptr )
     //strcpy(aq_data->version, stripwhitespace(ptr));
     snprintf(aq_data->version, (AQ_MSGLEN*2)-1, "%s %s",stripwhitespace(ptr1),stripwhitespace(ptr2));
 
-    printf("****** Version '%s' ********\n",aq_data->version);
+    //printf("****** Version '%s' ********\n",aq_data->version);
   }
 
   // Get status of all devices
