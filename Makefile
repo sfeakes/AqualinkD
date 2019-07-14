@@ -1,4 +1,8 @@
-
+#
+# Options
+# make DEBUG=true                             // Turn on timing statments
+# make EXFLAGS="-D BETA_PDA_AUTOLABEL"        // Add compile flags
+#
 # define the C compiler to use
 CC = gcc
 
@@ -16,7 +20,7 @@ DBG =
 
 # define any compile-time flags
 #GCCFLAGS = -Wall -O3 -Wextra
-GCCFLAGS = -Wall -O3
+GCCFLAGS = -Wall -O3 $(EXFLAGS)
 #GCCFLAGS = -Wall
 
 #CFLAGS = -Wall -g $(LIBS)

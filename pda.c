@@ -6,10 +6,13 @@
 #include <time.h>
 
 #include "aqualink.h"
+
 #include "init_buttons.h"
 #include "pda.h"
 #include "pda_menu.h"
 #include "utils.h"
+
+
 
 // static struct aqualinkdata _aqualink_data;
 static struct aqualinkdata *_aqualink_data;
@@ -22,11 +25,23 @@ static bool _initWithRS = false;
 #define PDA_SLEEP_FOR 120 // 30 seconds
 #define PDA_WAKE_FOR 6 // ~1 seconds
 
+
+#ifdef BETA_PDA_AUTOLABEL
+static struct aqconfig *_aqualink_config;
+void init_pda(struct aqualinkdata *aqdata, struct aqconfig *aqconfig)
+{
+  _aqualink_data = aqdata;
+  _aqualink_config = aqconfig;
+  set_pda_mode(true);
+}
+#else
 void init_pda(struct aqualinkdata *aqdata)
 {
   _aqualink_data = aqdata;
   set_pda_mode(true);
 }
+#endif
+
 
 bool pda_shouldSleep() {
   //logMessage(LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
@@ -448,6 +463,40 @@ void process_pda_packet_msg_long_unknown(const char *msg)
   }
 }
 
+void process_pda_packet_msg_long_level_aux_device(const char *msg)
+{
+#ifdef BETA_PDA_AUTOLABEL
+  int li=-1;
+  char *str, *label;
+
+  if (! _aqualink_config->use_panel_aux_labels)
+    return;
+  // NSF  Need to check config for use_panel_aux_labels value and ignore if not set
+
+  // Only care once we have the full menu, so check line 
+  //  PDA Line 0 =    LABEL AUX1   
+  //  PDA Line 1 =     
+  //  PDA Line 2 =   CURRENT LABEL 
+  //  PDA Line 3 =       AUX1          
+
+
+  if ( (strlen(pda_m_line(3)) > 0 ) &&  
+     (strncasecmp(pda_m_line(2),"  CURRENT LABEL ", 16) == 0) && 
+     (strncasecmp(pda_m_line(0),"   LABEL AUX", 12) == 0)                           ) {
+    str = pda_m_line(0);
+    li = atoi(&str[12] );  // 12 is a guess, need to check on real system
+    if (li > 0) {
+      str = cleanwhitespace(pda_m_line(3));
+      label = (char*)malloc(strlen(str)+1);
+      strcpy ( label, str );
+      _aqualink_data->aqbuttons[li-1].pda_label = label;
+    } else {
+      logMessage(LOG_ERR, "PDA couldn't get AUX? number\n", pda_m_line(0));
+    }
+  }
+#endif
+}
+
 void process_pda_freeze_protect_devices()
 {
   //  PDA Line 0 =  FREEZE PROTECT
@@ -481,7 +530,7 @@ bool process_pda_packet(unsigned char *packet, int length)
   bool rtn = true;
   int i;
   char *msg;
-  static bool init = false;
+  //static bool init = false;
 
   process_pda_menu_packet(packet, length);
 
@@ -496,10 +545,12 @@ bool process_pda_packet(unsigned char *packet, int length)
 
   case CMD_ACK:
     logMessage(LOG_DEBUG, "RS Received ACK length %d.\n", length);
-    if (init == false)
+    //if (init == false)
+    if (_initWithRS == false)
     {
+      logMessage(LOG_DEBUG, "Running PDA_INIT\n");
       aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
-      init = true;
+      //init = true;
     }
     break;
 
@@ -585,6 +636,9 @@ bool process_pda_packet(unsigned char *packet, int length)
         case PM_AQUAPURE:
           process_pda_packet_msg_long_SWG(msg);
         break;
+        case PM_AUX_LABEL_DEVICE:
+          process_pda_packet_msg_long_level_aux_device(msg);
+        break;
         //case PM_FW_VERSION:
         //  process_pda_packet_msg_long_FW_version(msg);
         //break;
@@ -609,6 +663,12 @@ bool process_pda_packet(unsigned char *packet, int length)
         _initWithRS = true;
         logMessage(LOG_DEBUG, "**** PDA INIT ****");
         aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
+        delay(50);  // Make sure this one runs first.
+#ifdef BETA_PDA_AUTOLABEL
+        if (_aqualink_config->use_panel_aux_labels)
+           aq_programmer(AQ_GET_AUX_LABELS, NULL, _aqualink_data);
+#endif
+        aq_programmer(AQ_PDA_WAKE_INIT, NULL, _aqualink_data);
       } else {
         logMessage(LOG_DEBUG, "**** PDA WAKE INIT ****");
         aq_programmer(AQ_PDA_WAKE_INIT, NULL, _aqualink_data);

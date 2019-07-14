@@ -123,6 +123,11 @@ pda_menu_type pda_m_type()
            strncasecmp(_menu[1],"    AquaPalm", 12) == 0 ||
            strncasecmp(_menu[1]," PDA-P", 6) == 0)   // PDA-P4 Only -or- PDA-PS4 Combo
     return PM_FW_VERSION;
+  else if (strncasecmp(_menu[0],"   LABEL AUX    ", 16) == 0) // Catch AUX and not AUX4
+    return PM_AUX_LABEL;
+  else if (strncasecmp(_menu[0],"   LABEL AUX", 12) == 0 &&  // Will have number ie AUX4
+           strncasecmp(_menu[2],"  CURRENT LABEL ", 16) == 0)
+    return PM_AUX_LABEL_DEVICE;
       
   return PM_UNKNOWN;
 }

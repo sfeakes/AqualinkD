@@ -208,6 +208,7 @@ void processMessage(char *message)
   static bool _gotREV = false;
   static int freeze_msg_count = 0;
   static int service_msg_count = 0;
+  static int swg_msg_count = 0;
   // NSF replace message with msg
   msg = stripwhitespace(message);
   strcpy(_aqualink_data.last_message, msg);
@@ -234,13 +235,13 @@ void processMessage(char *message)
     _aqualink_data.service_mode_state = OFF;
     service_msg_count = 0;
   }
-  /*
+  
   // If we have more than 10 messages without "Service Mode is active" assume it's off.
-  if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
-    _aqualink_data.service_mode_state = OFF;
-    service_msg_count = 0;
+  if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 20) {
+    _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+    swg_msg_count = 0;
   }
-*/
+
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
   if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10)
   {
@@ -362,11 +363,13 @@ void processMessage(char *message)
   else if (strncasecmp(msg, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0)
   {
     _aqualink_data.swg_percent = atoi(msg + MSG_SWG_PCT_LEN);
-    //logMessage(LOG_DEBUG, "Stored SWG Percent as %d\n", _aqualink_data.swg_percent);
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON; swg_msg_count = 0;}
+    //logMessage(LOG_DEBUG, "*** '%s' ***\n", msg);
   }
   else if (strncasecmp(msg, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0)
   {
     _aqualink_data.swg_ppm = atoi(msg + MSG_SWG_PPM_LEN);
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON; swg_msg_count = 0;}
     //logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
   }
   else if ((msg[1] == ':' || msg[2] == ':') && msg[strlen(msg) - 1] == 'M')
@@ -1031,7 +1034,11 @@ void main_loop()
 
   if (_config_parameters.pda_mode == true)
   {
-    init_pda(&_aqualink_data);
+    #ifdef BETA_PDA_AUTOLABEL
+      init_pda(&_aqualink_data, &_config_parameters);
+    #else
+      init_pda(&_aqualink_data);
+    #endif
   }
 
   if (_config_parameters.device_id == 0x00) {
@@ -1139,6 +1146,7 @@ void main_loop()
               _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
             }
             _aqualink_data.swg_ppm = packet_buffer[4] * 100;
+            //logMessage(LOG_DEBUG, "Read SWG PPM %d from ID 0x%02hhx\n", _aqualink_data.swg_ppm, SWG_DEV_ID);
           }
           interestedInNextAck = false;
         }
@@ -1154,6 +1162,7 @@ void main_loop()
           {
             // Only read SWG Percent if we are not programming, as we might be changing this
             _aqualink_data.swg_percent = (int)packet_buffer[4];
+            //logMessage(LOG_DEBUG, "Read SWG Percent %d from ID 0x%02hhx\n", _aqualink_data.swg_percent, SWG_DEV_ID);
           }
         }
         else

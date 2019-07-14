@@ -233,6 +233,9 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         type != AQ_SET_SPA_HEATER_TEMP && 
         type != AQ_SET_SWG_PERCENT && 
         type != AQ_PDA_DEVICE_ON_OFF &&
+#ifdef BETA_PDA_AUTOLABEL
+        type != AQ_GET_AUX_LABELS &&
+#endif
         type != AQ_GET_POOL_SPA_HEATER_TEMPS ) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
@@ -351,7 +354,7 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
-      break; 
+      break;
     case AQ_GET_AUX_LABELS:
       if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_aux_labels, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
@@ -392,9 +395,9 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
 
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
     //logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
-    logMessage (LOG_DEBUG, "Thread %d,%p sleeping, waiting for thread %d,%p to finish\n",
-                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
-                threadCtrl->aq_data->active_thread.thread_id);
+    logMessage (LOG_DEBUG, "Thread %d,%p (%s) sleeping, waiting for thread %d,%p (%s) to finish\n",
+                type, &threadCtrl->thread_id, ptypeName(type),
+                threadCtrl->aq_data->active_thread.ptype, threadCtrl->aq_data->active_thread.thread_id, ptypeName(threadCtrl->aq_data->active_thread.ptype));
     sleep(waitTime);
   }
   
@@ -415,22 +418,24 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   #endif
 
   //logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
-  logMessage (LOG_DEBUG, "Thread %d,%p is active\n",
+  logMessage (LOG_DEBUG, "Thread %d,%p is active (%s)\n",
               threadCtrl->aq_data->active_thread.ptype,
-              threadCtrl->aq_data->active_thread.thread_id);
+              threadCtrl->aq_data->active_thread.thread_id,
+              ptypeName(threadCtrl->aq_data->active_thread.ptype));
 }
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
   #ifndef AQ_DEBUG
-  logMessage(LOG_DEBUG, "Thread %d,%p finished\n",threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id);
+  logMessage(LOG_DEBUG, "Thread %d,%p (%s) finished\n",threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id,ptypeName(threadCtrl->aq_data->active_thread.ptype));
   #else
   struct timespec elapsed;
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
   timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
-  logMessage(LOG_DEBUG, "Thread %d,%p finished in %d.%03ld sec\n",
+  logMessage(LOG_DEBUG, "Thread %d,%p (%s) finished in %d.%03ld sec\n",
              threadCtrl->aq_data->active_thread.ptype,
              threadCtrl->aq_data->active_thread.thread_id,
+             ptypeName(threadCtrl->aq_data->active_thread.ptype)
              elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
   #endif
 
@@ -633,6 +638,12 @@ void *get_aqualink_aux_labels( void *ptr )
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_AUX_LABELS);
+
+  if (pda_mode() == true) {
+      get_PDA_aqualink_aux_labels(aq_data);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+  }
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
@@ -1489,7 +1500,7 @@ const char *ptypeName(program_type type)
       return "Switch PDA device on/off";
     break;
     case AQ_GET_AUX_LABELS:
-      return "Get labels";
+      return "Get AUX labels";
     break;
     case AQ_PDA_WAKE_INIT:
       return "PDA init after wake";

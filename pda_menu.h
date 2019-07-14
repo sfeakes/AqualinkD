@@ -20,6 +20,7 @@ typedef enum pda_menu_type {
   PM_AQUAPURE,
   PM_SYSTEM_SETUP,
   PM_AUX_LABEL,
+  PM_AUX_LABEL_DEVICE,  // label a specific device
   PM_FREEZE_PROTECT,
   PM_FREEZE_PROTECT_DEVICES,
   PM_VSP,

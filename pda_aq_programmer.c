@@ -421,12 +421,12 @@ void *set_aqualink_PDA_init( void *ptr )
 
     //printf("****** Version '%s' ********\n",aq_data->version);
   }
-
+/* 
   // Get status of all devices
   if (! loopover_devices(aq_data)) {
     logMessage(LOG_ERR, "PDA Init :- can't find menu\n");
   }
-
+*/
   // Get heater setpoints
   if (! get_PDA_aqualink_pool_spa_heater_temps(aq_data)) {
     logMessage(LOG_ERR, "PDA Init :- Error getting heater setpoints\n");
@@ -436,7 +436,6 @@ void *set_aqualink_PDA_init( void *ptr )
   if (_PDA_Type != AQUAPALM && ! get_PDA_freeze_protect_temp(aq_data)) {
     logMessage(LOG_ERR, "PDA Init :- Error getting freeze setpoints\n");
   }
-
 
   goto_pda_menu(aq_data, PM_HOME);
 
@@ -709,6 +708,30 @@ bool set_PDA_aqualink_freezeprotect_setpoint(struct aqualinkdata *aq_data, int v
   //return true;
 }
 
+// Test ine this.
+bool get_PDA_aqualink_aux_labels(struct aqualinkdata *aq_data) {
+#ifdef BETA_PDA_AUTOLABEL
+  int i=0;
+  char label[10];
+
+  logMessage(LOG_INFO, "Finding PDA labels, (BETA ONLY)\n");
+
+  if (! goto_pda_menu(aq_data, PM_AUX_LABEL)) {
+    logMessage(LOG_ERR, "Error finding aux label menu\n");
+    return false;
+  }
+
+  for (i=1;i<8;i++) {
+    sprintf(label, "AUX%d",i);
+    select_pda_menu_item(aq_data, label, true);
+    send_cmd(KEY_PDA_BACK);
+    waitForPDAnextMenu(aq_data);
+  }
+
+  // Read first page of devices and make some assumptions.
+#endif
+  return true;
+}
 
 /*
 bool waitForPDAMessage(struct aqualinkdata *aq_data, int numMessageReceived, unsigned char packettype)
