@@ -229,6 +229,7 @@ void processMessage(char *message)
     //_aqualink_data.display_message = NULL;
     _aqualink_data.last_display_message[0] = '\0';
   }
+
   // If we have more than 10 messages without "Service Mode is active" assume it's off.
   if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10)
   {
@@ -236,12 +237,12 @@ void processMessage(char *message)
     service_msg_count = 0;
   }
   
-  // If we have more than 10 messages without "Service Mode is active" assume it's off.
+  // If we have more than 20 messages without "SALT or AQUAPURE" assume SWG is off.
   if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 20) {
     _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
     swg_msg_count = 0;
   }
-
+  
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
   if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10)
   {
@@ -880,6 +881,8 @@ void logPacket_new(unsigned char* packet_buffer, int packet_length)
   for (i=0;i<packet_length;i++)
     cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
 
+  cnt += sprintf(buff + cnt, "\n");
+
   if (_config_parameters.debug_RSProtocol_packets)
     writePacketLog(buff);
   else
@@ -902,6 +905,8 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
   for (i = 0; i < packet_length; i++)
     cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
 
+  cnt += sprintf(buff + cnt, "\n");
+
   if (_config_parameters.debug_RSProtocol_packets)
     writePacketLog(buff);
   else
@@ -912,12 +917,13 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
 #define MAX_BLOCK_ACK 12
 #define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
 
+
 void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
   static int delayAckCnt = 0;
  
-  if (!_aqualink_data.simulate_panel || _aqualink_data.active_thread.thread_id != 0) {
+  //if (!_aqualink_data.simulate_panel || _aqualink_data.active_thread.thread_id != 0) {
     // if PDA mode, should we sleep? if not Can only send command to status message on PDA.
-    if (_config_parameters.pda_mode == true) {
+  if (_config_parameters.pda_mode == true) {
       //pda_programming_thread_check(&_aqualink_data);
       if (_config_parameters.pda_sleep_mode && pda_shouldSleep()) {
         logMessage(LOG_DEBUG, "PDA Aqualink daemon in sleep mode\n");
@@ -926,8 +932,9 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
         send_ack(rs_fd, NUL);
       else
         send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-    }
-  } else { // We are in simlator mode, ack get's complicated now.
+    
+  } else if (_aqualink_data.simulate_panel && _aqualink_data.active_thread.thread_id == 0) { 
+    // We are in simlator mode, ack get's complicated now.
     // If have a command to send, send a normal ack.
     // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
     // pause ack strarts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
@@ -951,6 +958,9 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
 
       delayAckCnt++;
     }
+  } else {
+    // We are in simulate panel mode, but a thread is active, so ignore simulate panel
+    send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
   }
 }
 
@@ -1104,19 +1114,27 @@ void main_loop()
         //logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
         //debugPacketPrint(0x00, packet_buffer, packet_length);
         //unsigned char ID, unsigned char *packet_buffer, int packet_length)
-
+/* 
         // Process the packet. This includes deriving general status, and identifying
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false)
         {
           broadcast_aqualinkstate(mgr.active_connections);
         }
-
+*/
         // If we are not in PDA or Simulator mode, just sent ACK & any CMD, else caculate the ACK.
         if (!_aqualink_data.simulate_panel && !_config_parameters.pda_mode)
           send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
         else
           caculate_ack_packet(rs_fd, packet_buffer);
+
+/* MOVE PROCESSING TO AFTER ACK, long programming will fail otherwise (like set time) */
+        // Process the packet. This includes deriving general status, and identifying
+        // warnings and errors.  If something changed, notify any listeners
+        if (process_packet(packet_buffer, packet_length) != false)
+        {
+          broadcast_aqualinkstate(mgr.active_connections);
+        }
 
       }/* 
       else if (_config_parameters.use_PDA_auxiliary && packet_length > 0 && packet_buffer[PKT_DEST] == 0x60 && _aqualink_data.aqbuttons[PUMP_INDEX].led->state != OFF)

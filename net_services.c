@@ -843,7 +843,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, message);
     } else if ( strcmp(request.first.value, "simulator") == 0) {
       _aqualink_data->simulate_panel = true;
-      logMessage(LOG_INFO, "WS: Set Simpulator mode");
+      logMessage(LOG_INFO, "WS: Set Simulator mode");
       char labels[JSON_LABEL_SIZE];
       build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
       ws_send(nc, labels);

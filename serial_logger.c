@@ -16,6 +16,8 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
+#define VERSION "serial_logger V1.1"
+
 /*
 typedef enum used {
   yes,
@@ -78,7 +80,7 @@ const char *getDevice(unsigned char ID) {
     return SPA_R;
   if (ID >= 0x30 && ID <= 0x33)
     return AQUA;
-  if (ID >= 0x38 && ID <= 0x3b)
+  if (ID >= 0x38 && ID <= 0x3B)
     return HEATER;
   if (ID >= 0x40 && ID <= 0x43)
     return ONE_T;
@@ -86,7 +88,8 @@ const char *getDevice(unsigned char ID) {
     return PC_DOCK;
   if (ID >= 0x60 && ID <= 0x63)
     return PDA;
-  if (ID >= 0x70 && ID <= 0x73)
+  //if (ID >= 0x70 && ID <= 0x73)
+  if (ID >= 0x78 && ID <= 0x7B)
     return EPUMP;
   if (ID >= 0x80 && ID <= 0x83)
     return CHEM;
@@ -236,6 +239,7 @@ int main(int argc, char *argv[]) {
   //char buffer[256];
   //bool idMode = true;
 
+  printf("AqualinkD %s\n",VERSION);
 
   if (getuid() != 0) {
     fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);

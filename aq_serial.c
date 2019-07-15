@@ -466,6 +466,8 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
   
   //logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller\n", command);
   log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
+
+  //logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller \n", command);
 }
 
 
