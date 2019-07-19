@@ -224,30 +224,31 @@ void processMessage(char *message)
   // ie "POOL TEMP" and "POOL TEMP IS SET TO"  so want correct match first.
   //
 
-  if (stristr(msg, "JANDY AquaLinkRS") != NULL)
-  {
+  if (stristr(msg, "JANDY AquaLinkRS") != NULL) {
     //_aqualink_data.display_message = NULL;
     _aqualink_data.last_display_message[0] = '\0';
   }
 
+  // Don't do any message counts if we are programming
+  if (_aqualink_data.active_thread.thread_id == 0) {
   // If we have more than 10 messages without "Service Mode is active" assume it's off.
-  if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10)
-  {
-    _aqualink_data.service_mode_state = OFF;
-    service_msg_count = 0;
-  }
+    if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
+      _aqualink_data.service_mode_state = OFF;
+      service_msg_count = 0;
+    }
   
   // If we have more than 20 messages without "SALT or AQUAPURE" assume SWG is off.
-  if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 20) {
-    _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
-    swg_msg_count = 0;
-  }
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 40) {
+      printf("***************** Manually turned SWG off ************************\n");
+      _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+      swg_msg_count = 0;
+    }
   
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
-  if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10)
-  {
-    _aqualink_data.frz_protect_state = ENABLE;
-    freeze_msg_count = 0;
+    if (_aqualink_data.frz_protect_state == ON && freeze_msg_count++ > 10) {
+      _aqualink_data.frz_protect_state = ENABLE;
+      freeze_msg_count = 0;
+    }
   }
 
   //else
@@ -364,13 +365,15 @@ void processMessage(char *message)
   else if (strncasecmp(msg, MSG_SWG_PCT, MSG_SWG_PCT_LEN) == 0)
   {
     _aqualink_data.swg_percent = atoi(msg + MSG_SWG_PCT_LEN);
-    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON; swg_msg_count = 0;}
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON;}
+    swg_msg_count = 0;
     //logMessage(LOG_DEBUG, "*** '%s' ***\n", msg);
   }
   else if (strncasecmp(msg, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0)
   {
     _aqualink_data.swg_ppm = atoi(msg + MSG_SWG_PPM_LEN);
-    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON; swg_msg_count = 0;}
+    if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON;}
+    swg_msg_count = 0;
     //logMessage(LOG_DEBUG, "Stored SWG PPM as %d\n", _aqualink_data.swg_ppm);
   }
   else if ((msg[1] == ':' || msg[2] == ':') && msg[strlen(msg) - 1] == 'M')
@@ -994,6 +997,7 @@ void main_loop()
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
   bool interestedInNextAck = false;
+  bool changed = false;
   int i;
   //int delayAckCnt = 0;
 
@@ -1101,6 +1105,7 @@ void main_loop()
     else if (packet_length > 0)
     {
       blank_read = 0;
+      changed = false;
 
       if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
         logPacket(packet_buffer, packet_length);
@@ -1133,7 +1138,8 @@ void main_loop()
         // warnings and errors.  If something changed, notify any listeners
         if (process_packet(packet_buffer, packet_length) != false)
         {
-          broadcast_aqualinkstate(mgr.active_connections);
+          //broadcast_aqualinkstate(mgr.active_connections);
+          changed = true;
         }
 
       }/* 
@@ -1155,7 +1161,7 @@ void main_loop()
           if (packet_buffer[PKT_CMD] == CMD_PPM)
           {
             _aqualink_data.ar_swg_status = packet_buffer[5];
-            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == 0x00)
+            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == SWG_STATUS_ON)
             { // We have a delayed % to set.
               char sval[10];
               snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
@@ -1164,6 +1170,7 @@ void main_loop()
               _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
             }
             _aqualink_data.swg_ppm = packet_buffer[4] * 100;
+            changed = true;
             //logMessage(LOG_DEBUG, "Read SWG PPM %d from ID 0x%02hhx\n", _aqualink_data.swg_ppm, SWG_DEV_ID);
           }
           interestedInNextAck = false;
@@ -1171,6 +1178,7 @@ void main_loop()
         else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00)
         {
           _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+          changed = true;
           interestedInNextAck = false;
         }
         else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
@@ -1178,8 +1186,9 @@ void main_loop()
           interestedInNextAck = true;
           if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0)
           {
-            // Only read SWG Percent if we are not programming, as we might be changing this
+            // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
             _aqualink_data.swg_percent = (int)packet_buffer[4];
+            changed = true;
             //logMessage(LOG_DEBUG, "Read SWG Percent %d from ID 0x%02hhx\n", _aqualink_data.swg_percent, SWG_DEV_ID);
           }
         }
@@ -1189,8 +1198,10 @@ void main_loop()
         }
 
         if (_config_parameters.read_pentair_packets && getProtocolType(packet_buffer) == PENTAIR) {
-          if (processPentairPacket(packet_buffer, packet_length, &_aqualink_data))
-             broadcast_aqualinkstate(mgr.active_connections);
+          if (processPentairPacket(packet_buffer, packet_length, &_aqualink_data)) {
+             //broadcast_aqualinkstate(mgr.active_connections);
+             changed = true;
+          }
         }
         /*  Removed, iAqualink has sleep mode, so no use
         if (packet_buffer[PKT_DEST] == IAQ_DEV_ID && packet_buffer[PKT_CMD] == CMD_IAQ_MSG) {
@@ -1203,6 +1214,9 @@ void main_loop()
         //  logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s %s\n",packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),
         //                               (packet_buffer[PKT_DEST] == _config_parameters.device_id)?" <-- Aqualinkd ID":"");
       }
+
+      if (changed)
+        broadcast_aqualinkstate(mgr.active_connections);
     }
     mg_mgr_poll(&mgr, 0);
 
