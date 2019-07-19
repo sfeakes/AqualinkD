@@ -1,4 +1,20 @@
 
+/*
+ * Copyright (c) 2017 Shaun Feakes - All rights reserved
+ *
+ * You may use redistribute and/or modify this code under the terms of
+ * the GNU General Public License version 2 as published by the 
+ * Free Software Foundation. For the terms of this license, 
+ * see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ *  https://github.com/sfeakes/aqualinkd
+ */
+
 #define _GNU_SOURCE 1 // for strcasestr & strptime
 #include <stdio.h>
 #include <stdlib.h>
@@ -171,11 +187,13 @@ void pass_pda_equiptment_status_item(char *msg)
   else if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
   {
     _aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
+    if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
     logMessage(LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
   }
   else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
   {
     _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
+    if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
     logMessage(LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
   }
   else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
@@ -294,6 +312,10 @@ void process_pda_packet_msg_long_equipment_control(const char *msg)
       set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN - 1]);
     }
   }
+
+  // Force SWG off if pump is off.
+  if (_aqualink_data->aqbuttons[0].led->state == OFF )
+    _aqualink_data->ar_swg_status = SWG_STATUS_OFF;
 
   // NSF I think we need to check TEMP1 and TEMP2 and set Pool HEater and Spa heater directly, to support single device.
   if (_aqualink_data->single_device){
@@ -564,9 +586,11 @@ bool process_pda_packet(unsigned char *packet, int length)
     if (pda_m_type() == PM_EQUIPTMENT_STATUS)
     {
       if (_aqualink_data->frz_protect_state == ON)
-      {
         _aqualink_data->frz_protect_state = ENABLE;
-      }
+      
+      if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) 
+        _aqualink_data->ar_swg_status = SWG_STATUS_OFF;
+      
       if (pda_m_line(PDA_LINES - 1)[0] == '\0')
       {
         for (i = 0; i < TOTAL_BUTTONS; i++)

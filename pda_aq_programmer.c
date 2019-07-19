@@ -1,3 +1,20 @@
+
+/*
+ * Copyright (c) 2017 Shaun Feakes - All rights reserved
+ *
+ * You may use redistribute and/or modify this code under the terms of
+ * the GNU General Public License version 2 as published by the 
+ * Free Software Foundation. For the terms of this license, 
+ * see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ *  https://github.com/sfeakes/aqualinkd
+ */
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -280,7 +297,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
       // Depending on control panel config, may get an extra menu asking to press any key.
       select_pda_menu_item(aq_data, "SET TEMP", false);
       waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
-      waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,15,"press ANY key",8);
+      waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,20,"press ANY key",8);
     break;
     case PM_SET_TIME:
       select_pda_menu_item(aq_data, "MENU", true);

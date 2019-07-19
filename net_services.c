@@ -1014,7 +1014,7 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
   int idx = -1;
   int nvalue = -1;
   int i;
-  char svalue[DZ_SVALUE_LEN];
+  char svalue[DZ_SVALUE_LEN+1];
 
   if (parseJSONmqttrequest(msg->payload.p, msg->payload.len, &idx, &nvalue, svalue)) {
     logMessage(LOG_DEBUG, "MQTT: DZ: Received message IDX=%d nValue=%d sValue=%s\n", idx, nvalue, svalue);
