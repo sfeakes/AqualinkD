@@ -521,7 +521,6 @@ bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex,
   if(pda_m_hlightindex() == highlighIndex) return true;
 
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
@@ -530,7 +529,6 @@ bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex,
 
     if (aq_data->last_packet_type == CMD_PDA_HIGHLIGHT && pda_m_hlightindex() == highlighIndex) break;
 
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
   }
 
@@ -552,7 +550,6 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, in
   logMessage(LOG_DEBUG, "waitForPDAMessageType  0x%02hhx\n",mtype);
 
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
@@ -561,7 +558,6 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, in
 
     if (aq_data->last_packet_type == mtype) break;
 
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
   }
 
@@ -584,7 +580,6 @@ bool waitForPDAMessageTypesOrMenu(struct aqualinkdata *aq_data, unsigned char mt
 
   int i=0;
   bool gotmenu = false;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
@@ -600,7 +595,6 @@ bool waitForPDAMessageTypesOrMenu(struct aqualinkdata *aq_data, unsigned char mt
 
     if (aq_data->last_packet_type == mtype1 || aq_data->last_packet_type == mtype2) break;
 
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
   }
 

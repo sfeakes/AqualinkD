@@ -1226,7 +1226,6 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 {
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS1;
   char* msgS2;
@@ -1272,7 +1271,6 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
     }
     
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message1 '%s'\n",message1,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message1 '%s'\n",i,numMessageReceived,message1,aq_data->last_message);
   }
@@ -1295,7 +1293,6 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
 {
   logMessage(LOG_DEBUG, "waitForMessage %s %d\n",message,numMessageReceived);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS;
   char* ptr = NULL;
@@ -1326,7 +1323,6 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     }
     
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message '%s'\n",message,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
   }
@@ -1427,7 +1423,6 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
 {
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
   int i=0;
-  pthread_mutex_init(&aq_data->active_thread.thread_mutex, NULL);
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
@@ -1440,7 +1435,6 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
     }
 
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message '%s'\n",message,aq_data->last_message);
-    pthread_cond_init(&aq_data->active_thread.thread_cond, NULL);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
   }
