@@ -7,7 +7,7 @@
 #  curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'
 #
 #  list latest dev version
-#   curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2 | tr '\n'
+#   curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2
 #
 
 
@@ -30,6 +30,7 @@ function print_usage {
   echoerr "$0 force_latest <- Force latest option (don't run any version checks)"
   echoerr "$0 install      <- Install to local filesystem, (config files will no be overwritten)"
   echoerr "$0 clean        <- Remove everything, including configuration files"
+  echoerr "$0 <option> downloadonly  <- Download using one of above options, but don't unstall"
   echoerr ""
 }
 
@@ -65,6 +66,10 @@ function git_release_version {
   echo `curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'`
 }
 
+function get_development_version {
+  echo `curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2`
+}
+
 function remove {
   #cd ~
 
@@ -84,6 +89,7 @@ function isvalid_gitinstall {
 }
 
 function development_version_download {
+  echo "Upgrading $NAME from $(local_version) to $(get_development_version)"
   if isvalid_gitinstall; then
     update 
   else
@@ -148,15 +154,19 @@ function release_version_download {
     # Use this tar instead, it's correct dir structure
     curl --silent -L "https://github.com/sfeakes/AqualinkD/archive/$git_version.tar.gz" | tar xz -C "$BASE"
 
-    ver=$(echo $git_version  | sed 's/^.//' )
+    ver=$(echo $git_version  | sed 's/^[^0-9]*//' )
     
     if [ -d "$AQUA" ]; then
-      if [ -L "$AQUA" ]; then
-        unlink "$AQUA"
-      else
+      if [ -d "$AQUA-$version" ]; then
         mv "$AQUA" "$AQUA-$RANDOM"
+      else
+        mv "$AQUA" "$AQUA-$version"
       fi
     fi
+    if [ -L "$AQUA" ]; then
+      unlink "$AQUA"
+    fi
+
     ln -s "$BASE/AqualinkD-$ver" "$AQUA"
   else
     echo "Local $NAME version $version is latest, not downloading"
@@ -201,7 +211,11 @@ else
   exit;
 fi
 
-install
+if [ "$2" == "downloadonly" ]; then
+  echo "No install, download only"
+else
+  install
+fi
 
 echo "Installed "`cat $AQUA/version.h | cut -d '"' -f 2 | tr '\n' ' '`
 
