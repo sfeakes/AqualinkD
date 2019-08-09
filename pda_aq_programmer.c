@@ -155,6 +155,9 @@ bool loopover_devices(struct aqualinkdata *aq_data) {
 */
 bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charlimit) {
   int i=pda_m_hlightindex();
+  int min_index = -1;
+  int max_index = -1;
+  int cnt = 0;
 
   logMessage(LOG_DEBUG, "PDA Device programmer looking for menu text '%s'\n",menuText);
 
@@ -185,18 +188,74 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
     }
   }
 
-  // Found the text we want in the menu, now move to that position and select it.
-  //logMessage(LOG_DEBUG, "******************PDA Device programmer menu text '%s' is at index %d\n",menuText, index);
+  if (strncasecmp(pda_m_line(9),"   ^^ MORE", 10) != 0) {
+      if (pda_m_type() == PM_HOME) {
+          min_index = 4;
+          max_index = 9;
+      } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
+          min_index = 1;
+          max_index = 9;
+      } else if (pda_m_type() == PM_MAIN) {
+        // Line 0 =    MAIN MENU
+        // Line 1 =
+        // Line 2 = HELP           >
+        // Line 3 = PROGRAM        >
+        // Line 4 = SET TEMP       >
+        // Line 5 = SET TIME       >
+        // Line 6 = PDA OPTIONS    >
+        // Line 7 = SYSTEM SETUP   >
+        // Line 8 =
+        // Line 9 =
+
+        // Line 0 =    MAIN MENU
+        // Line 1 = HELP           >
+        // Line 2 = PROGRAM        >
+        // Line 3 = SET TEMP       >
+        // Line 4 = SET TIME       >
+        // Line 5 = SET AquaPure   >
+        // Line 6 = PDA OPTIONS    >
+        // Line 7 = SYSTEM SETUP   >
+        // Line 8 =
+        // Line 9 =      BOOST
+
+        // "SET AquaPure" and "BOOST" are only present when filter pump is running
+        if (strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) {
+          min_index = 1;
+          max_index = 8; // to account for 8 missing
+          if (index == 9) { // looking for boost
+              index = 8;
+          }
+        } else {
+            min_index = 2;
+            max_index = 7;
+        }
+      }
+  }
+
+  logMessage(LOG_DEBUG, "find_pda_menu_item i=%d idx=%d min=%d max=%d\n",
+             i, index, min_index, max_index);
 
   if (i < index) {
-    for (i=pda_m_hlightindex(); i < index; i++) {
-      //logMessage(LOG_DEBUG, "******************PDA queue down index %d\n",i);
-      send_cmd(KEY_PDA_DOWN);
+    if ((min_index != -1) && ((index - i) > (i - min_index + max_index - index + 1))) {
+        cnt = i - min_index + max_index - index + 1;
+        for (i=0; i < cnt; i++) {
+          send_cmd(KEY_PDA_UP);
+        }
+    } else {
+        for (i=pda_m_hlightindex(); i < index; i++) {
+            send_cmd(KEY_PDA_DOWN);
+        }
     }
   } else if (i > index) {
-    for (i=pda_m_hlightindex(); i > index; i--) {
-      //logMessage(LOG_DEBUG, "******************PDA queue down index %d\n",i);
-      send_cmd(KEY_PDA_UP);
+    if ((min_index != -1) && ((i - index) > (index - min_index + max_index - i + 1))) {
+        cnt = i - min_index + max_index - index + 1;
+        for (i=0; i < cnt; i++) {
+          send_cmd(KEY_PDA_UP);
+        }
+    } else {
+      for (i=pda_m_hlightindex(); i > index; i--) {
+        send_cmd(KEY_PDA_UP);
+      }
     }
   }
 
@@ -219,108 +278,144 @@ bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wai
   return false;
 }
 
+// for reference see H0572300 - AquaLink PDA I/O Manual
+// https://www.jandy.com/-/media/zodiac/global/downloads/h/h0572300.pdf
+// and H0574200 - AquaPalm Wireless Handheld Remote Installation and Operation Manual
+// https://www.jandy.com/-/media/zodiac/global/downloads/h/h0574200.pdf
+// and 6594 - AquaLink RS Control Panel Installation Manual
+// https://www.jandy.com/-/media/zodiac/global/downloads/0748-91071/6594.pdf
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
-  int i = 0;
-  //char *menuText;
+  bool ret = true;
 
   logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d\n",menu);
 
-  
-  while (pda_m_type() == PM_FW_VERSION || pda_m_type() == PM_BUILDING_HOME) {
-    //logMessage(LOG_DEBUG, "******************PDA Device programmer delay on firmware or building home menu\n");
-    delay(500);
-  }
-
-  // Keep going back, checking each time to get to home.
-  while ( pda_m_type() != menu && pda_m_type() != PM_HOME) {
-    if (pda_m_type() != PM_BUILDING_HOME) {
+  if (pda_m_type() == PM_FW_VERSION) {
+      logMessage(LOG_DEBUG, "goto_pda_menu at FW version menu\n");
       send_cmd(KEY_PDA_BACK);
-      //logMessage(LOG_DEBUG, "******************PDA Device programmer selected back button\n",menu);
-      waitForPDAnextMenu(aq_data);
-    } else {
+      if (! waitForPDAnextMenu(aq_data)) {
+          logMessage(LOG_ERR, "PDA Device programmer wait for next menu failed");
+      }
+  } else if (pda_m_type() == PM_BUILDING_HOME) {
+      logMessage(LOG_DEBUG, "goto_pda_menu building home menu\n");
       waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,15);
-    }
-
-    if (i > 4 ) {
-      logMessage(LOG_ERR, "PDA Device programmer request for menu %d failed! Couldn't get to HOME menu\n",menu);
-      return false;
-    }
-    i++;
-    //logMessage(LOG_DEBUG, "******************PDA Device programmer menu type %d\n",pda_m_type());
-    //if (!wait_for_empty_cmd_buffer() || i++ > 6)
-    //  return false;
   }
   
 
-  if (pda_m_type() == menu)
-    return true;
+  while (ret && (pda_m_type() != menu)) {
+    switch (menu) {
+      case PM_EQUIPTMENT_CONTROL:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "EQUIPMENT ON/OFF", true);
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        break;
+      case PM_PALM_OPTIONS:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "MENU", true);
+        } else if (pda_m_type() == PM_MAIN) {
+            ret = select_pda_menu_item(aq_data, "PALM OPTIONS", true);
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        break;
+      case PM_AUX_LABEL:
+        if ( _PDA_Type == PDA) {
+            if (pda_m_type() == PM_HOME) {
+                ret = select_pda_menu_item(aq_data, "MENU", true);
+            } else if (pda_m_type() == PM_MAIN) {
+                ret = select_pda_menu_item(aq_data, "SYSTEM SETUP", true);
+            } else if (pda_m_type() == PM_SYSTEM_SETUP) {
+                ret = select_pda_menu_item(aq_data, "LABEL AUX", true);
+            } else {
+                send_cmd(KEY_PDA_BACK);
+                ret = waitForPDAnextMenu(aq_data);
+            }
+        } else {
+          logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP / LABEL AUX menu\n");
+        }
+        break;
+      case PM_SYSTEM_SETUP:
+        if ( _PDA_Type == PDA) {
+            if (pda_m_type() == PM_HOME) {
+                ret = select_pda_menu_item(aq_data, "MENU", true);
+            } else if (pda_m_type() == PM_MAIN) {
+                ret = select_pda_menu_item(aq_data, "SYSTEM SETUP", true);
+            } else {
+                send_cmd(KEY_PDA_BACK);
+                ret = waitForPDAnextMenu(aq_data);
+            }
+        } else {
+          logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP menu\n");
+        }
+        break;
+      case PM_FREEZE_PROTECT:
+        if ( _PDA_Type == PDA) {
+            if (pda_m_type() == PM_HOME) {
+                ret = select_pda_menu_item(aq_data, "MENU", true);
+            } else if (pda_m_type() == PM_MAIN) {
+                ret = select_pda_menu_item(aq_data, "SYSTEM SETUP", true);
+            } else if (pda_m_type() == PM_SYSTEM_SETUP) {
+                ret = select_pda_menu_item(aq_data, "FREEZE PROTECT", true);
+            } else {
+                send_cmd(KEY_PDA_BACK);
+                ret = waitForPDAnextMenu(aq_data);
+            }
+        } else {
+          logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP / FREEZE PROTECT menu\n");
+        }
+        break;
+      case PM_AQUAPURE:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "MENU", true);
+        } else if (pda_m_type() == PM_MAIN) {
+            ret = select_pda_menu_item(aq_data, "SET AquaPure", true);
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        break;
+      case PM_SET_TEMP:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "MENU", true);
+        } else if (pda_m_type() == PM_MAIN) {
+            ret = select_pda_menu_item(aq_data, "SET TEMP", true);
+            // Depending on control panel config, may get an extra menu asking to press any key
+            // waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
+            // waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,20,"press ANY key",8);
 
-  switch (menu) {
-    case PM_EQUIPTMENT_CONTROL:
-      select_pda_menu_item(aq_data, "EQUIPMENT ON/OFF", true);
-    break;
-    case PM_PALM_OPTIONS:
-      select_pda_menu_item(aq_data, "MENU", true);
-      select_pda_menu_item(aq_data, "PALM OPTIONS", true);
-    case PM_AUX_LABEL:
-      if ( _PDA_Type == PDA) {
-        select_pda_menu_item(aq_data, "MENU", true);
-        select_pda_menu_item(aq_data, "SYSTEM SETUP", true); // This is a guess, (I have rev#)
-        select_pda_menu_item(aq_data, "LABEL AUX", true);
-      } else {
-        logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP / LABEL AUX menu\n");
-      }
-    break;
-    case PM_SYSTEM_SETUP:
-      if ( _PDA_Type == PDA) {
-        select_pda_menu_item(aq_data, "MENU", true);
-        select_pda_menu_item(aq_data, "SYSTEM SETUP", true); // This is a guess, (I have rev#)
-      } else {
-        logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP menu\n");
-      }
-    break;
-    case PM_FREEZE_PROTECT:
-      if ( _PDA_Type == PDA) {
-        select_pda_menu_item(aq_data, "MENU", true);
-        select_pda_menu_item(aq_data, "SYSTEM SETUP", true); // This is a guess, (I have rev#)
-        select_pda_menu_item(aq_data, "FREEZE PROTECT", true); // This is a guess, (I have rev#)
-      } else {
-        logMessage(LOG_ERR, "PDA in AquaPlalm mode, there is no SYSTEM SETUP / FREEZE PROTECT menu\n");
-      }
-    break;
-    case PM_AQUAPURE:
-      select_pda_menu_item(aq_data, "MENU", true);
-      select_pda_menu_item(aq_data, "SET AquaPure", true);
-    break;
-    case PM_SET_TEMP:
-      select_pda_menu_item(aq_data, "MENU", true);
-      // Depending on control panel config, may get an extra menu asking to press any key.
-      select_pda_menu_item(aq_data, "SET TEMP", false);
-      waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
-      waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,20,"press ANY key",8);
-    break;
-    case PM_SET_TIME:
-      select_pda_menu_item(aq_data, "MENU", true);
-      select_pda_menu_item(aq_data, "SET TIME", true);
-    break;
-    default:
-      logMessage(LOG_ERR, "PDA Device programmer didn't understand requested menu\n");
-      return false;
-    break;
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        break;
+      case PM_SET_TIME:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "MENU", true);
+        } else if (pda_m_type() == PM_MAIN) {
+            ret = select_pda_menu_item(aq_data, "SET TIME", true);
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        break;
+      default:
+        logMessage(LOG_ERR, "PDA Device programmer didn't understand requested menu\n");
+        return false;
+        break;
+    }
+    logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d, current %d\n",
+               menu, pda_m_type());
   }
-
   if (pda_m_type() != menu) {
     logMessage(LOG_ERR, "PDA Device programmer didn't find a requested menu\n");
-    //return true;
     return false;
   }
 
-  logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d found\n",menu);
-  
   return true;
 }
-
-
 
 void *set_aqualink_PDA_device_on_off( void *ptr )
 {
@@ -367,15 +462,33 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].pda_label,state);
       send_cmd(KEY_PDA_SELECT);
       while (get_aq_cmd_length() > 0) { delay(500); }
+      // If you are turning on a heater there will be a sub menu to set temp
+      if ((state == ON) && ((device == POOL_HEAT_INDEX) || (device == SPA_HEAT_INDEX))) {
+          if (! waitForPDAnextMenu(aq_data)) {
+            logMessage(LOG_ERR, "PDA Device On/Off: %s on - waitForPDAnextMenu\n",
+                       aq_data->aqbuttons[device].pda_label);
+          } else {
+              send_cmd(KEY_PDA_SELECT);
+	      while (get_aq_cmd_length() > 0) { delay(500); }
+              if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
+                  logMessage(LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
+                             aq_data->aqbuttons[device].pda_label);
+              }
+          }
+      } else { // not turning on heater wait for line update
+          // worst case spa when pool is running
+          if (!waitForPDAMessageType(aq_data,CMD_MSG_LONG,2)) {
+              logMessage(LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_MSG_LONG\n",
+                         aq_data->aqbuttons[device].pda_label);
+          }
+      }
+      
     } else {
       logMessage(LOG_INFO, "PDA Device On/Off, found device '%s', not changing state, is same\n",aq_data->aqbuttons[device].pda_label,state);
     }
   } else {
     logMessage(LOG_ERR, "PDA Device On/Off, device '%s' not found\n",aq_data->aqbuttons[device].pda_label);
   }
-
-  goto_pda_menu(aq_data, PM_HOME);
-  //while (_pgm_command != NUL) { delay(500); }
 
   cleanAndTerminateThread(threadCtrl);
   
@@ -395,12 +508,12 @@ void *get_aqualink_PDA_device_status( void *ptr )
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
   
+  goto_pda_menu(aq_data, PM_HOME);
+
   if (! loopover_devices(aq_data)) {
     logMessage(LOG_ERR, "PDA Device Status :- failed\n");
   }
  
-  goto_pda_menu(aq_data, PM_HOME);
-
   cleanAndTerminateThread(threadCtrl);
   
   // just stop compiler error, ptr is not valid as it's just been freed
@@ -437,6 +550,15 @@ void *set_aqualink_PDA_init( void *ptr )
     snprintf(aq_data->version, (AQ_MSGLEN*2)-1, "%s %s",stripwhitespace(ptr1),stripwhitespace(ptr2));
 
     //printf("****** Version '%s' ********\n",aq_data->version);
+    logMessage(LOG_DEBUG, "PDA type=%d, version=%s\n", _PDA_Type, aq_data->version);
+    // don't wait for version menu to time out press back to get to home menu faster
+    send_cmd(KEY_PDA_BACK);
+    if (! waitForPDAnextMenu(aq_data)) {
+        logMessage(LOG_ERR, "PDA Init :- wait for next menu failed");
+    }
+  }
+  else {
+    logMessage(LOG_ERR, "PDA Init :- should be called when on FW VERSION menu.\n");
   }
 /* 
   // Get status of all devices
@@ -453,8 +575,6 @@ void *set_aqualink_PDA_init( void *ptr )
   if (_PDA_Type != AQUAPALM && ! get_PDA_freeze_protect_temp(aq_data)) {
     logMessage(LOG_ERR, "PDA Init :- Error getting freeze setpoints\n");
   }
-
-  goto_pda_menu(aq_data, PM_HOME);
 
   pda_reset_sleep();
 
