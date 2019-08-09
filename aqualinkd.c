@@ -1024,6 +1024,9 @@ void main_loop()
   _aqualink_data.battery = OK;
   _aqualink_data.open_websockets = 0;
 
+  pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
+  pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
+
   for (i=0; i < MAX_PUMPS; i++) {
     _aqualink_data.pumps[i].rpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].gph = TEMP_UNKNOWN;
