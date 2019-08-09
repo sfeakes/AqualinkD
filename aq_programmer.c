@@ -435,7 +435,7 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
   logMessage(LOG_DEBUG, "Thread %d,%p (%s) finished in %d.%03ld sec\n",
              threadCtrl->aq_data->active_thread.ptype,
              threadCtrl->aq_data->active_thread.thread_id,
-             ptypeName(threadCtrl->aq_data->active_thread.ptype)
+             ptypeName(threadCtrl->aq_data->active_thread.ptype),
              elapsed.tv_sec, elapsed.tv_nsec / 1000000L);
   #endif
 
