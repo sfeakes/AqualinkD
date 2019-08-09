@@ -496,12 +496,14 @@ bool get_PDA_freeze_protect_temp(struct aqualinkdata *aq_data) {
     if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT)) {   
       return false;
     }
+    /* select the freeze protect temp to see which devices are enabled by freeze
+       protect */
+    send_cmd(KEY_PDA_SELECT);
+    return waitForPDAnextMenu(aq_data);
   } else {
     logMessage(LOG_INFO, "In PDA AquaPalm mode, freezepoints not supported\n");
     return false;
   }
-  
-  return true;
 }
 
 bool get_PDA_aqualink_pool_spa_heater_temps(struct aqualinkdata *aq_data) {
@@ -624,20 +626,25 @@ bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, 
 bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int *cur_val, char *select_label, int step) {
   int i=0;
 
-  // Should probably change below to call find_pda_menu_item(), rather than doing it here
-  // If we lease this, need to limit on the number of loops
-  while ( strncasecmp(pda_m_hlight(), select_label, 8) != 0 ) {
-    send_cmd(KEY_PDA_DOWN);
-    delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
-    waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
-    if (i > 10) {
-      logMessage(LOG_ERR, "PDA numeric selector could not find string '%s'\n", select_label);
-      return false;
-    }
-    i++;
+  if (val == *cur_val) {
+    logMessage(LOG_INFO, "PDA %s value : already at %d\n", select_label, val);
+    return true;
   }
-
-  send_cmd(KEY_PDA_SELECT);
+  if (select_label != NULL) {
+    // :TODO: Should probably change below to call find_pda_menu_item(), rather than doing it here
+    // If we lease this, need to limit on the number of loops
+    while ( strncasecmp(pda_m_hlight(), select_label, 8) != 0 ) {
+      send_cmd(KEY_PDA_DOWN);
+      delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
+      waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
+      if (i > 10) {
+        logMessage(LOG_ERR, "PDA numeric selector could not find string '%s'\n", select_label);
+        return false;
+      }
+      i++;
+    }
+    send_cmd(KEY_PDA_SELECT);
+  }
 
   if (val < *cur_val) {
     logMessage(LOG_DEBUG, "PDA %s value : lower from %d to %d\n", select_label, *cur_val, val);
@@ -715,14 +722,18 @@ bool set_PDA_aqualink_heater_setpoint(struct aqualinkdata *aq_data, int val, boo
 
 bool set_PDA_aqualink_freezeprotect_setpoint(struct aqualinkdata *aq_data, int val) {
   
-  if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT)) {
+  if (_PDA_Type != PDA) {
+    logMessage(LOG_INFO, "In PDA AquaPalm mode, freezepoints not supported\n");
+    return false;
+  } else if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT)) {
     logMessage(LOG_ERR, "Error finding freeze protect setpoints menu\n");
     return false;
+  } else if (! set_PDA_numeric_field_value(aq_data, val, &aq_data->frz_protect_set_point, NULL, 1)) {
+    logMessage(LOG_ERR, "Error failed to set freeze protect temp value\n");
+    return false;
+  } else {
+      return waitForPDAnextMenu(aq_data);
   }
-
-  return set_PDA_numeric_field_value(aq_data, val, &aq_data->frz_protect_set_point, "TEMP", 1);
-
-  //return true;
 }
 
 // Test ine this.
