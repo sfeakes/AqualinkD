@@ -56,7 +56,7 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
 
 ### In Home Assistant 
-<img src="extras/HomeAssistant.png?raw=true" width="600"></img>
+<img src="extras/HomeAssistant2.png?raw=true" width="800"></img>
 
 ## All Web interfaces.
 * http://aqualink.ip/     <- (Standard WEB UI
