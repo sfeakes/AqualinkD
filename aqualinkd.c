@@ -237,11 +237,13 @@ void processMessage(char *message)
       service_msg_count = 0;
     }
   
-  // If we have more than 20 messages without "SALT or AQUAPURE" assume SWG is off.
-    if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 40) {
-      printf("***************** Manually turned SWG off ************************\n");
-      _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
-      swg_msg_count = 0;
+  // If we have more than 40 messages without "SALT or AQUAPURE" assume SWG is off.
+    if ( _config_parameters.read_all_devices == false ) {
+      if (_aqualink_data.ar_swg_status == SWG_STATUS_ON && swg_msg_count++ > 40) {
+      //printf("***************** Manually turned SWG off ************************\n");
+        _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+        swg_msg_count = 0;
+      }
     }
   
   // If we have more than 10 messages without "FREE PROTECT ACTIVATED" assume it's off.
@@ -368,6 +370,7 @@ void processMessage(char *message)
     if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {_aqualink_data.ar_swg_status = SWG_STATUS_ON;}
     swg_msg_count = 0;
     //logMessage(LOG_DEBUG, "*** '%s' ***\n", msg);
+    //logMessage(LOG_DEBUG, "SWG set to %d due to message from control panel\n", _aqualink_data.swg_percent);
   }
   else if (strncasecmp(msg, MSG_SWG_PPM, MSG_SWG_PPM_LEN) == 0)
   {
@@ -1192,6 +1195,7 @@ void main_loop()
             // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
             _aqualink_data.swg_percent = (int)packet_buffer[4];
             changed = true;
+            //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG\n", _aqualink_data.swg_percent);
             //logMessage(LOG_DEBUG, "Read SWG Percent %d from ID 0x%02hhx\n", _aqualink_data.swg_percent, SWG_DEV_ID);
           }
         }
