@@ -1001,6 +1001,7 @@ void main_loop()
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
   bool interestedInNextAck = false;
   bool changed = false;
+  int swg_zero_cnt = 0;
   int i;
   //int delayAckCnt = 0;
 
@@ -1190,13 +1191,24 @@ void main_loop()
         else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
         {
           interestedInNextAck = true;
+          
+          // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
           if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0)
-          {
-            // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
-            _aqualink_data.swg_percent = (int)packet_buffer[4];
-            changed = true;
-            //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG\n", _aqualink_data.swg_percent);
-            //logMessage(LOG_DEBUG, "Read SWG Percent %d from ID 0x%02hhx\n", _aqualink_data.swg_percent, SWG_DEV_ID);
+          {     
+            // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
+            if (swg_zero_cnt <= SWG_ZERO_IGNORE_COUNT && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
+              logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet_buffer[4],packet_buffer[5]);
+              swg_zero_cnt++;
+            } else if (swg_zero_cnt > SWG_ZERO_IGNORE_COUNT && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
+              _aqualink_data.swg_percent = (int)packet_buffer[4];
+              changed = true;
+              //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n", _aqualink_data.swg_percent,packet_buffer[4],packet_buffer[5]);
+            } else {
+              swg_zero_cnt = 0;   
+              _aqualink_data.swg_percent = (int)packet_buffer[4];
+              changed = true;
+              //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n", _aqualink_data.swg_percent,packet_buffer[4],packet_buffer[5]);
+            }
           }
         }
         else

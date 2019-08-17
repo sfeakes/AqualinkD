@@ -183,6 +183,10 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 
 
 /* AQUAPURE SWG */
+
+// Number of set SWG % to 0 messages to ignore.
+#define SWG_ZERO_IGNORE_COUNT   10
+
 // These are madeup.
 #define SWG_STATUS_OFF     0xFF
 #define SWG_STATUS_UNKNOWN -128
@@ -199,6 +203,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define SWG_STATUS_LOW_VOLTS    0x20 // low voltage 0x20
 #define SWG_STATUS_LOW_TEMP     0x40 // low watertemp 0x40
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80
+
 
 #define CMD_PDA_0x05           0x05
 #define CMD_PDA_0x1B           0x1b

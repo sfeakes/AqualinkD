@@ -84,6 +84,7 @@ void init_parameters (struct aqconfig * parms)
   parms->use_panel_aux_labels = false;
   parms->debug_RSProtocol_packets = false;
   parms->force_swg = false;
+  //parms->swg_pool_and_spa = false;
   parms->read_pentair_packets = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);

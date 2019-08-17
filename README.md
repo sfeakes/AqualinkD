@@ -63,6 +63,8 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+# Update in Release 1.3.5a
+* Logic for SWG RS486 checksum_errors
 # Update in Release 1.3.5
 * Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3)
 * PDA updates for freeze protect / SWG & general speed increase.

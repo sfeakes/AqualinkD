@@ -59,6 +59,7 @@ struct aqconfig
   bool read_all_devices;
   bool use_panel_aux_labels;
   bool force_swg;
+  //bool swg_pool_and_spa;
   //bool use_PDA_auxiliary;
   bool read_pentair_packets;
   bool debug_RSProtocol_packets;
