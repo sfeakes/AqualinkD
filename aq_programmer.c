@@ -693,7 +693,7 @@ void *set_aqualink_light_colormode( void *ptr )
   aqkey *button = &aq_data->aqbuttons[btn];
   unsigned char code = button->code;
 
-  logMessage(LOG_NOTICE, "Pool Light Programming #: %d, on button: %s, with pause mode: %f (initial on=%d, initial off=%d)\n", val, button->label, pmode, iOn, iOff);
+  logMessage(LOG_NOTICE, "Light Programming #: %d, on button: %s, with pause mode: %f (initial on=%d, initial off=%d)\n", val, button->label, pmode, iOn, iOff);
 
   // Simply turn the light off if value is 0
   if (val <= 0) {

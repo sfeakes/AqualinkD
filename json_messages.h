@@ -40,7 +40,8 @@ int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float se
 bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, char *svalue);
 int build_aqualink_error_status_JSON(char* buffer, int size, char *msg);
 int build_mqtt_status_message_JSON(char* buffer, int size, int idx, int nvalue, char *svalue);
-int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit);
+//int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit);
+int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit);
 
 
 #endif /* JSON_MESSAGES_H_ */

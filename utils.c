@@ -46,12 +46,15 @@ static bool _daemonise = false;
 static bool _log2file = false;
 static int _log_level = -1;
 static char *_log_filename = NULL;
+
+static char *_loq_display_message = NULL;
 //static char _log_filename[256];
 
-void setLoggingPrms(int level , bool deamonized, char* log_file)
+void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages)
 {
 	_log_level = level;
   _daemonise = deamonized;
+  _loq_display_message = error_messages;
   
   if (log_file == NULL || strlen(log_file) <= 0) {
     _log2file = false;
@@ -322,7 +325,12 @@ void logMessage(int msg_level, char *format, ...)
     
     if ( buffer[len-1] != '\n') {
       strcat(buffer, "\n");
-    } 
+    }
+
+  if (msg_level <= LOG_WARNING && _loq_display_message != NULL) {
+    snprintf(_loq_display_message, 127, buffer);
+  } 
+
 
  if (_log2file == TRUE && _log_filename != NULL) {   
     char time[TIMESTAMP_LENGTH];
@@ -548,6 +556,7 @@ char *prittyString(char *str)
   return str;
 }
 
+/*
 static FILE *_packetLogFile = NULL;
 
 void writePacketLog(char *buffer) {
@@ -561,3 +570,4 @@ void writePacketLog(char *buffer) {
 void closePacketLog() {
   fclose(_packetLogFile);
 }
+*/

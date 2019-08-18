@@ -40,6 +40,7 @@
 #include "pda.h"
 #include "pentair_messages.h"
 #include "pda_aq_programmer.h"
+#include "packetLogger.h"
 #include "version.h"
 
 
@@ -739,7 +740,10 @@ int main(int argc, char *argv[])
   if (cmdln_debugRS485)
     _config_parameters.debug_RSProtocol_packets = true;
 
-  setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file);
+  if (_config_parameters.display_warnings_web == true)
+    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, _aqualink_data.last_display_message);
+  else
+    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, NULL);
 
   logMessage(LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 
@@ -779,6 +783,11 @@ int main(int argc, char *argv[])
   //logMessage(LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_config_parameters.use_PDA_auxiliary));
   logMessage(LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_config_parameters.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
+  logMessage(LOG_NOTICE, "Display warnings in web  = %s\n", bool2text(_config_parameters.display_warnings_web));
+  
+  if (_config_parameters.swg_zero_ignore > 0)
+    logMessage(LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _config_parameters.swg_zero_ignore);
+
 
   for (i = 0; i < TOTAL_BUTONS; i++)
   {
@@ -790,7 +799,15 @@ int main(int argc, char *argv[])
         //printf("Pump %d %d %d\n",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].buttonID, _aqualink_data.pumps[j].ptype);
       }
     }
-    logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s  | PDAlabel %-15s | dzidx %d\n", _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp, _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx);
+    if (!_config_parameters.pda_mode) {
+      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s  | dzidx %d | %s\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp, _aqualink_data.aqbuttons[i].dz_idx,
+                          (i>0 && (i==_config_parameters.light_programming_button_pool || i==_config_parameters.light_programming_button_spa)?"Programable":"")  );
+    } else {
+      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s  | PDAlabel %-15s | dzidx %d\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp,
+                          _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx  );
+    }
     //logMessage(LOG_NOTICE, "Button %d\n", i+1, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
   }
 
@@ -875,7 +892,7 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
   }
 }
 */
-
+/*
 void logPacket_new(unsigned char* packet_buffer, int packet_length)
 {
   char buff[1000];
@@ -918,7 +935,7 @@ void logPacket(unsigned char *packet_buffer, int packet_length)
   else
     logMessage(LOG_DEBUG_SERIAL, "%s", buff);
 }
-
+*/
 
 #define MAX_BLOCK_ACK 12
 #define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
@@ -1046,6 +1063,8 @@ void main_loop()
     exit(EXIT_FAILURE);
   }
 
+  startPacketLogger(_config_parameters.debug_RSProtocol_packets, _config_parameters.read_pentair_packets);
+
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);
 
@@ -1113,10 +1132,10 @@ void main_loop()
     {
       blank_read = 0;
       changed = false;
-
+/*
       if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
         logPacket(packet_buffer, packet_length);
-
+*/
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id)
       {
 
@@ -1196,13 +1215,14 @@ void main_loop()
           if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0)
           {     
             // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
-            if (swg_zero_cnt <= SWG_ZERO_IGNORE_COUNT && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
-              logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet_buffer[4],packet_buffer[5]);
+            if (swg_zero_cnt < _config_parameters.swg_zero_ignore && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
+              logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,_config_parameters.swg_zero_ignore,packet_buffer[4],packet_buffer[5]);
               swg_zero_cnt++;
-            } else if (swg_zero_cnt > SWG_ZERO_IGNORE_COUNT && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
+            } else if (swg_zero_cnt > _config_parameters.swg_zero_ignore && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
               _aqualink_data.swg_percent = (int)packet_buffer[4];
               changed = true;
-              //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n", _aqualink_data.swg_percent,packet_buffer[4],packet_buffer[5]);
+              //logMessage(LOG_DEBUG, "SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet_buffer[4],packet_buffer[5]);
+              //swg_zero_cnt++;
             } else {
               swg_zero_cnt = 0;   
               _aqualink_data.swg_percent = (int)packet_buffer[4];
@@ -1259,7 +1279,8 @@ void main_loop()
     //}
   }
   
-  if (_config_parameters.debug_RSProtocol_packets) closePacketLog();
+  //if (_config_parameters.debug_RSProtocol_packets) stopPacketLogger();
+  stopPacketLogger();
   // Reset and close the port.
   close_serial_port(rs_fd);
   // Clear webbrowser

@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  setLoggingPrms(logLevel, false, false);
+  setLoggingPrms(logLevel, false, false, NULL);
 
   if (_playback_file) {
     rs_fd = open(argv[1], O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NDELAY);

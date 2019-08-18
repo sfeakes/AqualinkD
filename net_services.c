@@ -604,17 +604,22 @@ int getTempforMeteohub(char *buffer)
   return strlen(buffer);
 }
 
-void set_light_mode(char *value) 
+void set_light_mode(char *value, int button) 
 {
   if (_aqualink_config->pda_mode == true) {
     logMessage(LOG_ERR, "Light mode control not supported in PDA mode\n");
+    return;
+  }
+  if (_aqualink_config->light_programming_button_pool != button && 
+      _aqualink_config->light_programming_button_spa != button) {
+    logMessage(LOG_ERR, "Light mode control not configured for button %d\n",button);
     return;
   }
 
   char buf[LIGHT_MODE_BUFER];
   // 5 below is light index, need to look this up so it's not hard coded.
   sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
-                                      _aqualink_config->light_programming_button, 
+                                      button, 
                                       _aqualink_config->light_programming_initial_on,
                                       _aqualink_config->light_programming_initial_off,
                                       _aqualink_config->light_programming_mode );
@@ -659,7 +664,14 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
-      set_light_mode(value);
+      set_light_mode(value, _aqualink_config->light_programming_button_pool);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "spalightmode") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
+      set_light_mode(value, _aqualink_config->light_programming_button_spa);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "diag") == 0) {
@@ -696,12 +708,12 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
     } else if (strcmp(command, "devices") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, false);
+      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button_pool, _aqualink_config->light_programming_button_spa, message, JSON_LABEL_SIZE*10, false);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else if (strcmp(command, "homebridge") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, true);
+      int size = build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button_pool, _aqualink_config->light_programming_button_spa, message, JSON_LABEL_SIZE*10, true);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else if (strcmp(command, "setconfigprm") == 0) {
@@ -839,7 +851,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, labels);
     } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
       char message[JSON_LABEL_SIZE*10];
-      build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button, message, JSON_LABEL_SIZE*10, false);
+      build_device_JSON(_aqualink_data, _aqualink_config->light_programming_button_pool, _aqualink_config->light_programming_button_spa, message, JSON_LABEL_SIZE*10, false);
       ws_send(nc, message);
     } else if ( strcmp(request.first.value, "simulator") == 0) {
       _aqualink_data->simulate_panel = true;
@@ -884,9 +896,17 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
         aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
         _aqualink_data->swg_percent = value; // Set the value as if it's already been set, just incase it's 0 as we won't get that message, or will update next time
       }
-    } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) {
-      //aq_programmer(AQ_SET_COLORMODE, request.second.value, _aqualink_data);
-      set_light_mode(request.second.value);
+    } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) { 
+      set_light_mode(request.second.value, _aqualink_config->light_programming_button_pool);
+    } else if (strcmp(request.first.value, "LIGHT_MODE") == 0) {
+      int i;
+      for (i = 0; i < TOTAL_BUTTONS; i++) {
+        if (strcmp(request.third.value, _aqualink_data->aqbuttons[i].name) == 0) {
+          set_light_mode(request.second.value, i);
+          break;
+        }
+      }
+      //set_light_mode(request.second.value, 0);
     } else {
       logMessage(LOG_DEBUG, "WS: Unknown parameter %s\n", request.first.value);
     }

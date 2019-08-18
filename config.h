@@ -47,7 +47,8 @@ struct aqconfig
   float light_programming_mode;
   int light_programming_initial_on;
   int light_programming_initial_off;
-  int light_programming_button;
+  int light_programming_button_pool;
+  int light_programming_button_spa;
   bool override_freeze_protect;
   bool pda_mode;
   bool pda_sleep_mode;
@@ -59,6 +60,8 @@ struct aqconfig
   bool read_all_devices;
   bool use_panel_aux_labels;
   bool force_swg;
+  int swg_zero_ignore;
+  bool display_warnings_web;
   //bool swg_pool_and_spa;
   //bool use_PDA_auxiliary;
   bool read_pentair_packets;

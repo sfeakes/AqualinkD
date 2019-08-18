@@ -50,8 +50,28 @@ const char* getStatus(struct aqualinkdata *aqdata)
     return JSON_SERVICE;
   }
 
-  if (aqdata->last_display_message[0] != '\0')
+  if (aqdata->last_display_message[0] != '\0') {
+    int i;
+    for(i=0; i < strlen(aqdata->last_display_message); i++ ) {
+      if (aqdata->last_display_message[i] <= 31 || aqdata->last_display_message[i] >= 127) {
+        aqdata->last_display_message[i] = ' ';
+      } else {
+        switch (aqdata->last_display_message[i]) {
+          case '"':
+          case '/':
+          case '\n':
+          case '\t':
+          case '\f':
+          case '\r':
+          case '\b':
+            aqdata->last_display_message[i] = ' ';
+          break;
+        }
+      }
+    }
+    //printf("JSON Sending '%s'\n",aqdata->last_display_message);
     return aqdata->last_display_message;
+  }
 /*
   if (aqdata->display_last_message == true) {
     return aqdata->last_message;
@@ -159,7 +179,7 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
   return buffer;
 }
 
-int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit)
+int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit)
 {
   char aux_info[AUX_BUFFER_SIZE];
   memset(&buffer[0], 0, size);
@@ -202,7 +222,8 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char*
                                      ((homekit)?2:0),
                                      ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->spa_temp):aqdata->spa_temp),
                                      LED2int(aqdata->aqbuttons[i].led->state));
-    } else if (programable_switch > 0 && programable_switch == i) {
+    } else if ( (programable_switch1 > 0 && programable_switch1 == i) || 
+                (programable_switch2 > 0 && programable_switch2 == i)) {
       length += sprintf(buffer+length, "{\"type\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
@@ -486,6 +507,8 @@ bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request)
   request->first.value  = NULL;
   request->second.key   = NULL;
   request->second.value = NULL;
+  request->third.key   = NULL;
+  request->third.value = NULL;
 
   int length = strlen(buffer);
 
@@ -525,12 +548,19 @@ bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request)
         case 3:
           request->second.value = &buffer[i];
           break;
+        case 4:
+          request->third.key = &buffer[i];
+          break;
+        case 5:
+          request->third.value = &buffer[i];
+          break;
         }
       }
       break;
     }
 //printf ("\n");
-    if (found >= 4)
+//    if (found >= 4)
+    if (found >= 6)
     break;
     
     i++;

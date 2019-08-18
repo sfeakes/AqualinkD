@@ -1051,14 +1051,14 @@
             var mode=false;
             if (_lightProgramDropdown) {
               if (pswitch.selectedIndex > 0) {
-                send_light_mode(pswitch.selectedIndex);
+                send_light_mode(pswitch.selectedIndex, id);
                 mode=true;
               }
             } else {
               var radio = document.getElementsByName("light_program");
               for (x = 0; x < radio.length; x++) {
                  if (radio[x].checked == true) {
-                   send_light_mode(radio[x].value);
+                   send_light_mode(radio[x].value, id);
                    mode=true;
                    break;
                  }
@@ -1256,12 +1256,14 @@
       socket_di.send(JSON.stringify(temperature));
     }
 
-    function send_light_mode(value) {
-      console.log("Set light mode "+value);
+    function send_light_mode(value, id) {
+      console.log("Set light mode to "+value+" id="+id);
       var mode = {};
-      mode.parameter = 'POOL_LIGHT_MODE';
+      //mode.parameter = 'POOL_LIGHT_MODE';
+      mode.parameter = 'LIGHT_MODE';
       mode.value = value;
-      socket_di.send(JSON.stringify(mode));
+      mode.button = id;
+      socket_di.send(JSON.stringify(mode));  
     }
 
     function reset() {

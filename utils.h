@@ -27,7 +27,8 @@ typedef enum
   false = FALSE, true = TRUE
 } bool;
 */
-void setLoggingPrms(int level , bool deamonized, char* log_file);
+//void setLoggingPrms(int level , bool deamonized, char* log_file);
+void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages);
 int getLogLevel();
 void daemonise ( char *pidFile, void (*main_function)(void) );
 //void debugPrint (char *format, ...);
@@ -51,8 +52,8 @@ float degCtoF(float degC);
 char* stristr(const char* haystack, const char* needle);
 int ascii(char *destination, char *source);
 char *prittyString(char *str);
-void writePacketLog(char *buff);
-void closePacketLog();
+//void writePacketLog(char *buff);
+//void closePacketLog();
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

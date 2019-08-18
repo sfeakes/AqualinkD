@@ -1,7 +1,7 @@
 # Aqualinkd  
-linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. So you can control your pool equiptment from any phone/tablet or computer, and should work with just about Home control systems, including Apple HomeKit, Samsung, Alexa, Google, etc home hubs.
+Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equiptment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Samsung, Alexa, Google, etc.
 
-### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world, only indirectly through the use of Home Automation hub's or other securty measures, e.g. VPNs.
+### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world; only indirectly through the use of Home Automation hub's or other security measures. e.g. VPNs.
 
 
 ## Donation
@@ -11,19 +11,20 @@ If you like this project, you can buy me a cup of coffee :)
 
 ## AqualinkD forum now open
 http://aqualinkd.freeforums.net
-(Please use this for questions / issues / problems)
-For Bugs use issues link on top of page
+(Please use this for questions / issues / problems).
 
-## Please see Wiki for install instructions
+For Bugs, please use issues link on top of page.
+
+## Please see Wiki for installation instructions
 https://github.com/sfeakes/AqualinkD/wiki
 
-Information on Control panel versions and upgrading the chips.<br>
+For information on Control panel versions and upgrading the chips.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
 
-Started to document what I know about the Jandy RS485 protocol.<br>
+Here's where I started to document what I know about the Jandy RS485 protocol.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
 
-## AqualinkD builtin WEB Interface(s).
+## AqualinkD built in WEB Interface(s).
 
 <table width="100%" border="0" cellpadding="20px">
  <tr><th width="50%">Default web interface</th><th wifth="50%">Simple web interface</img></th><tr>
@@ -31,29 +32,29 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
   <tr><td colspan="2">
      Both Interfaces
      <ul>
-        <li>If you load the web page in a mobile device browser, then save to desktop an app will be created for you.</li>
-        <li>Order and options shown are configurable</li>
+        <li>If loading the web page in a mobile device browser, you will need to save to desktop where an app will be created for you.</li>
+        <li>The order and options shown are configurable for your individual needs and/or preferences.</li>
    </ul>
    </td></tr>
    <tr><td colspan="2">
      Default Interfaces
    <ul>
-     <li>The layout & functionality are a from Appple HomeKit interface, only this works in any browser or mobile device.</li>
-      <li>Customizable tile icons & background image. (can hide any tile)</li>
-      <li>Thermostst, SWG & Light tiles have more options (like setting heater setpoint, light mode etc) that can be accessed with a long press</li>
-      <li>Support live background imags (ie poll camera for still image every X seconds)</li>
+     <li>The layout and functionality are from the Apple HomeKit interface.  This works in any browser or on any mobile device.</li>
+      <li>Customizable tile icons & background images. (Tiles not used can be hidden).</li>
+      <li>Thermostat, SWG & Light tiles have more options (ie: setting heater temperature, salt generating percentage and light mode etc). These options are accessible by pressing and holding the tile icon.</li>
+      <li>Supports live background images (ie: poll camera for still image every X seconds).</li>
       </ul>
    </td></tr>
  </table>
 
 ### Simulator
-Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you can use it to completley configure the master control panel<br>
+Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to fully configure the master control panel<br>
 <img src="extras/simulator.png?raw=true" width="550">
 
 ### In Apple Home app.
 <img src="extras/HomeKit2.png?raw=true" width="800"></img>
-* (Salt Water Generator is configured as Thermostat as it's the closest homekit accessory type, so &deg;=% and Cooling=Generating)
-* Full support for homekit scenes, so can make a "Spa scene" to turn spa on, set spa heater particular temperature, turn spa blower on, etc etc) 
+* (NOTE: Salt Water Generator is configured as a Thermostat.  It is the closest homekit accessory type; so &deg;=% and Cooling=Generating).
+* Full support for homekit scenes: ie: Create a "Spa scene" to: "turn spa on, set spa heater to X temperature and turn spa blower on", etc etc).
 
 ### In Home Assistant 
 <img src="extras/HomeAssistant2.png?raw=true" width="800"></img>
@@ -63,11 +64,14 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
-# Update in Release 1.3.5a
-* Logic for SWG RS486 checksum_errors
+# Update in Release 1.3.5a,b
+* Logic for SWG RS486 checksum_errors.
+* Fixed pentair packet logging, missing last byte.
+* Support for two programmable lights. (Note must update your aqualinkd.conf).
+* Can now display warnings and errors in the web UI (as well as log).
 # Update in Release 1.3.5
-* Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3)
-* PDA updates for freeze protect / SWG & general speed increase.
+* Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3).
+* PDA updates for freeze protect/SWG and general speed increase.
 ## Update in Release 1.3.4 (a)
 * Logging changes.
 * Fix issues in programming mode.
@@ -75,98 +79,98 @@ Designed to mimic AqualinkRS6 All Button keypad, and just like the keypad you ca
 * Changed to serial logger.
 * PDA changes for SWG and Setpoints.
 ## Update in Release 1.3.3 (a,b,c,e,f)
-* Incremental PDA fixes / enhancements.
-* SWG bug fix
+* Incremental PDA fixes/enhancements.
+* SWG bug fix.
 ## Update in Release 1.3.3
 * AqualinkD will now automaticaly find a usable ID if not specifically configured.
-* Support for reading (up to 4) Variable Speed Pump info & assigning per device. (Please see wiki for new config options).
-  * <span style="color:red">*At present only Pentair VSP supported, if you have Jandy VSP (ePump) and are willing to do some testing, please post on forum as I'd like to get this supported as well.*</span>
-  * For VSP you need to check config for `read_all_devices = yes` & `read_pentair_packets = yes` and assign RS485 Pump ID to Device ID in configuration.  serial_logger should find ID's for you.
-  * WebUI will display Pump RPM only. RPM,Watts,GPH information is also available from MQTT & API.
+* Support for reading (up to 4) Variable Speed Pump info and assigning per device. (Please see wiki for new config options).
+  * <span style="color:red">*At present only Pentair VSP is supported, if you have Jandy VSP (ePump) and are willing to do some testing, please post on forum as I'd like to get this supported as well.*</span>
+  * For VSP you will need to check configuration for `read_all_devices = yes` & `read_pentair_packets = yes` and assign RS485 Pump ID to Device ID in configuration.  serial_logger should find ID's for you.
+  * WebUI will display Pump RPM only. RPM, Watts and GPH information is also available from MQTT & API.
 ## Update in Release 1.3.2c
 * Miscellaneous bug fixes and buffer overrun (could cause core dump).
 * VSP update & Pantair device support.
 ## Update in Release 1.3.1
 * Changed the way PDA mode will sleep.
-* Added preliminary support for Variable Speed Pumps. (many limitations on support)
-* Added int status to Web API
+* Added preliminary support for Variable Speed Pumps. (Many limitations on support).
+* Added int status to Web API.
 ## Update in Release 1.3.0
 * Large update for PDA only control panels (Majority of this is ballle98 work)
 * Can distinguish between AquaPalm and PDA supported control panels.
-* PDA Freeze & Heater setpoints now supported.
-* Added PDA Sleep mode so AqualinkD can work inconjunction with a real Jandy PDA.
+* PDA Freeze & Heater setpoints are now supported.
+* Added PDA Sleep mode so AqualinkD can work in conjunction with a real Jandy PDA.
 * Speeded up many PDA functions.
 * Fixed many PDA bugs.
 * Non PDA specific updates :-
-* Can get button labels from control panel (not in PDA mode)
+* Can get button labels from control panel (not in PDA mode).
 * RS485 Logging so users can submit information on Variable Speed Pumps & other devices for future support.
 * Force SWG status on startup, rather than wait for pump to turn on.
 * General bug fixes and improved code in many areas.
 ## Update in Release 1.2.6f
 * Solution to overcome bug in Mosquitto 1.6.
 * Fixed Salt Water Generator when % was set to 0.
-* Added support for different SWG % for pool & spa. (SWG reports and sets the mode that's currently active)
+* Added support for different SWG % for pool & spa. (SWG reports and sets the mode that is currently active).
 * Increased speed of SWG messages.
-* Few other bug fixes (Thanks to ballle98)
+* Few other bug fixes (Thanks to ballle98).
 ## Update in Release 1.2.6e (This is a quick update, please only use if you need one of the items below.)
 * Unstable update.
 ## Update in Release 1.2.6c
-* Fix some merge issues
+* Fixed some merge issues.
 * Added MQTT topic for delayed start on buttons.
-* Removed MQTT flash option for delayed start (never worked well anyway)
+* Removed MQTT flash option for delayed start (never worked well anyway).
 ## Update in Release 1.2.6b
-* Added MQTT topic for full SWG status (MQTT section in see wiki)
-* Config option to turn on/of listening to extended device information.
-* Added service mode topic to MQTT   (Thanks to tcm0116)
-* Added report zero pool temp  (Thanks to tcm0116)
+* Added MQTT topic for full SWG status (MQTT section in see wiki).
+* Configured option to turn on/off listening to extended device information.
+* Added service mode topic to MQTT   (Thanks to tcm0116).
+* Added report zero pool temp  (Thanks to tcm0116).
 ## Update in Release 1.2.6a
-* more PDA fixes (Thanks to ballle98)
-* Fix in MQTT requests to change temp when  temp units are unkown. 
+* More PDA fixes (Thanks to ballle98).
+* Fix in MQTT requests to change temperature when temperature units are unkown. 
 ## Update in Release 1.2.6
-* fix for PDA with SPA messages.  (Thanks to ballle98)
-* Added report 0 for pool temp when not available.  (Thanks to tcm0116)
+* Fix for PDA with SPA messages.  (Thanks to ballle98).
+* Added report 0 for pool temperature when not available.  (Thanks to tcm0116).
 ## Update in Release 1.2.5a
-* fix bug for MQTT freeze protect. 
+* Fix bug for MQTT freeze protect. 
 ## Update in Release 1.2.4
 * Small fix for Freeze Protect.
 ## Update in Release 1.2.3
 * Fix for setpoints on "Pool Only" configurations.
 ## Update in Release 1.2.2
-* Support for Spa OR Pool OLNY mode with setpoints, (previous setpoints expected Spa & Pool mode)
-* Added support for MQTT Last Will Message
-* Fix spelling errors will effect your conficuration, and the install.sh script will not overwrite.
-    * Please compare /var/www/aqualinkd/config.js to the new one, you will need to manualy edit or overide
-    * MQTT spelling for enabled is now accurate, so anything using the /enabled message will nee to be changed
-    * homekit will need to be changed. Please see the new homekit2mqtt.json or modify your existing one. 
+* Support for Spa OR Pool ONLY mode with setpoints; (previous setpoints expected Spa & Pool mode)
+* Added support for MQTT Last Will Message.
+* NOTE: Fixed spelling errors will effect your configuration and the install.sh script will not overwrite.
+    * Please compare /var/www/aqualinkd/config.js to the new one, you will need to manually edit or overide.
+    * MQTT spelling for "enabled" is now accurate, so anything using the /enabled message will need to be changed.
+    * Homekit will also need to be changed. Please see the new homekit2mqtt.json or modify your existing one. 
 ## Updates in Release 1.2
-* PDA support in BETA. (Please see WiKi for details)
-* Fixed bug in posting Heater Emables topics to MQTT. (order was reversed)
-* Serial read change. (detect escaped DTX in packet, 1 in 10000 chance or happening) 
+* PDA support in BETA. (Please see WiKi for details).
+* Fixed bug in posting Heater enables topics to MQTT. (order was reversed).
+* Serial read change. (Detect escaped DTX in packet, 1 in 10000 chance of happening).
 ## Updates in Release 1.1
 * Changed the way AqualinkD reads USB, fixes the checksum & serial read too small errors that happened on some RS485 networks. 
-* Figex bug in SWG would read "high voltage" and not "check cell"
+* Figex bug in SWG would read "high voltage" and not "check cell".
 ## Updates in release 1.0e
-* Web UI out of Beta
-* MQTT fix setpoints
+* Web UI out of Beta.
+* MQTT fix setpoints.
 * Simulator is now more stable.
-* updates to serial logger
-* UI updates
-* bug fix in MQTT_flash (still not prefect fix)
+* Updates to serial logger.
+* UI updates.
+* Bug fix in MQTT_flash (still not perfect).
 ## Updates in Release 1.0c
-* New Simple interface.
+* New Simpler interface.
 * Start of a RS8 Simulator :-
-    * So you can program the AqualinkRS form a web interface and not control panel.
-    * Please make sure all other browsers & tabs are not using AqualinkD. it doesn't support multiple devices when in simulator mode.
+    * You can now program the AqualinkRS from a web interface and not just the control panel.
+    * Please make sure all other browsers and tabs are not using AqualinkD as it does not support multiple devices when in simulator mode.
 * Fixed a few bugs.
 * -- Release 1.0b --
-* NEW WEB UI !!!!!!!!!!!!!  (in beta)
-* Flash buttons on/off in homekit for enabeling / disabeling / cooldown period as they do on control panel
-* Full SWG support (setting %, not just reporting current state). Also reports Salt Cell status such as (no flow, low salt, high curent, clean cell, low voltage, water temp low, check PCB)
-* Update to thermostats, colors are now correct in homekit, green=enabeled, orange=heating, blue=cooling (SWG only)
+* NEW WEB UI !!!!!!!!!!!!!  (in beta).
+* Flash buttons on/off in homekit for enabeling/disabling/cooldown period as they do on the control panel.
+* Full SWG support (setting %, not just reporting current state). Also reports Salt Cell status such as (no flow, low salt, high curent, clean cell, low voltage, water temp low, check PCB).
+* Update to thermostats, colors are now correct in homekit, green=enabeled, orange=heating, blue=cooling (SWG only).
 * Light show program mode should now support most vendors lights.
-* config changes for (spa temp as pool temp / light program mode options / enable homekit button flash)
-* updated to serial_logger.
-* freeze protect, heater temperature & SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support)
+* Configuration changes for: Spa temp as pool temp/light program mode options/enable homekit button flash.
+* Updated to serial_logger.
+* Freeze protect, heater temperature and SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support).
 
 # Please see Wiki for install instructions
 https://github.com/sfeakes/AqualinkD/wiki
@@ -174,8 +178,8 @@ https://github.com/sfeakes/AqualinkD/wiki
 #
 
 # Aqualink Versions tested
-This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo controll panels. It will work with Aqualink PDA / AquaPalm and NON Combo iAqualink, but there are limitations.
-Below are varified versions (But should work with any AqualinkRS) :-
+This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo control panels. It will work with Aqualink PDA/AquaPalm and NON Combo iAqualink; but with limitations.
+Below are verified versions, but should work with any AqualinkRS :-
 
 
 | Version | Notes | 
@@ -190,7 +194,7 @@ Below are varified versions (But should work with any AqualinkRS) :-
 | Jandy iAqualink E0260801 REV R     | Everything working  |
 | AquaLink PDA / AquaPalm            | Works, please see WiKi for limitations|
 
-If you have tested a version not listed here, please let me know by opening an issue
+If you have tested a version not listed here, please let me know by opening an issue.
 #
 <!--
 
@@ -480,7 +484,7 @@ See License.md for more details.
 
 
 # Donation
-If you like this project, you can buy me a cup of coffee :)
+If you still like this project, please consider buying me a cup of coffee :)
 <br>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 

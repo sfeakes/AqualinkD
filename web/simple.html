@@ -424,12 +424,14 @@
         break;
         default:  // type is null because it's a selector
           //name = source.id.substr(9); //remove 'selector_''
-          cmd.parameter = 'POOL_LIGHT_MODE';
+          cmd.parameter = 'LIGHT_MODE';
           cmd.value = source.value;
+          cmd.button = source.id.substr(9); // remove 'selector_'
         break;
       }
-
-      console.log(cmd);
+      //console.log(source);
+      //console.log(cmd);
+      //console.log("*** NOT SENDING COMMAND ***");
       send_command(cmd);    
     }
     

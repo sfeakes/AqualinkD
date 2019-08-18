@@ -71,7 +71,8 @@ void init_parameters (struct aqconfig * parms)
   parms->light_programming_mode = 0;
   parms->light_programming_initial_on = 15;
   parms->light_programming_initial_off = 12;
-  parms->light_programming_button = 0;
+  parms->light_programming_button_pool = TEMP_UNKNOWN;
+  parms->light_programming_button_spa = TEMP_UNKNOWN;
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
@@ -86,6 +87,8 @@ void init_parameters (struct aqconfig * parms)
   parms->force_swg = false;
   //parms->swg_pool_and_spa = false;
   parms->read_pentair_packets = false;
+  parms->swg_zero_ignore = 0;
+  parms->display_warnings_web = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -365,8 +368,12 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
   } else if (strncasecmp(param, "light_programming_initial_off", 29) == 0) {
     config_parameters->light_programming_initial_off = strtoul(value, NULL, 10);
     rtn=true;
-  } else if (strncasecmp(param, "light_programming_button", 21) == 0) {
-    config_parameters->light_programming_button = strtoul(value, NULL, 10) - 1;
+  } else if (strncasecmp(param, "light_programming_button_spa", 28) == 0) {
+    config_parameters->light_programming_button_spa = strtoul(value, NULL, 10) - 1;
+    rtn=true;
+  } else if (strncasecmp(param, "light_programming_button", 24) == 0 ||
+             strncasecmp(param, "light_programming_button_pool", 29) == 0) {
+    config_parameters->light_programming_button_pool = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
     config_parameters->dzidx_swg_percent = strtoul(value, NULL, 10);
@@ -421,7 +428,14 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
     config_parameters->read_pentair_packets = text2bool(value);
     config_parameters->read_all_devices = true;
     rtn=true;
-  } /* 
+  } else if (strncasecmp (param, "swg_zero_ignore_count", 21) == 0) {
+    config_parameters->swg_zero_ignore = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
+    config_parameters->display_warnings_web = text2bool(value);
+    rtn=true;
+  }
+  /* 
   else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
     config_parameters->use_PDA_auxiliary = text2bool(value);
     if ( pda_mode() ) {
@@ -622,17 +636,18 @@ bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
   fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
 
   fprintf(fp, "\n#** Programmable light **\n");
-  if (config_parameters->light_programming_button <= 0) {
-    fprintf(fp, "#light_programming_button = %d\n", config_parameters->light_programming_button); 
-    fprintf(fp, "#light_programming_mode = %f\n", config_parameters->light_programming_mode);  
-    fprintf(fp, "#light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
-    fprintf(fp, "#light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
-  } else {
-    fprintf(fp, "light_programming_button = %d\n", config_parameters->light_programming_button); 
+  //if (config_parameters->light_programming_button_pool <= 0) {
+  //  fprintf(fp, "#light_programming_button_pool = %d\n", config_parameters->light_programming_button_pool); 
+  //  fprintf(fp, "#light_programming_mode = %f\n", config_parameters->light_programming_mode);  
+   // fprintf(fp, "#light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
+  //  fprintf(fp, "#light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
+  //} else {
+    fprintf(fp, "light_programming_button_pool = %d\n", config_parameters->light_programming_button_pool); 
+    fprintf(fp, "light_programming_button_spa = %d\n", config_parameters->light_programming_button_spa); 
     fprintf(fp, "light_programming_mode = %f\n", config_parameters->light_programming_mode);  
     fprintf(fp, "light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
     fprintf(fp, "light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
-  }
+  //}
 
   fprintf(fp, "\n#** Domoticz **\n");
   fprintf(fp, "convert_dz_temp_to_c = %s\n", bool2text(config_parameters->convert_dz_temp));

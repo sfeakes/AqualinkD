@@ -29,8 +29,10 @@
 #include "aq_serial.h"
 #include "utils.h"
 #include "config.h"
+#include "packetLogger.h"
 
 //#define BLOCKING_MODE
+#define PENTAIR_LENGTH_FIX
 
 static struct termios _oldtio;
 
@@ -73,23 +75,22 @@ void log_packet(int level, char *init_str, unsigned char* packet, int length)
   cnt += sprintf(buff+cnt, "\n");
   logMessage(level, buff);
   //logMessage(LOG_DEBUG_SERIAL, buff);
-/*
-  int i;
-  char temp_string[64];
-  char message_buffer[MAXLEN];
-
-  sprintf(temp_string, "Send 0x%02hhx|", packet[0]);
-  strcpy(message_buffer, temp_string);
-
-  for (i = 1; i < length; i++) {
-    sprintf(temp_string, "0x%02hhx|", packet[i]);
-    strcat(message_buffer, temp_string);
-  }
-
-  strcat(message_buffer, "\n");
-  logMessage(LOG_DEBUG, message_buffer);
-  */
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const char* get_packet_type(unsigned char* packet , int length)
 {
@@ -593,8 +594,13 @@ bool check_pentair_checksum(unsigned char* packet, int length)
     sum += (int) packet[i];
   }
 
+#ifndef PENTAIR_LENGTH_FIX
   if (sum == (packet[length-1] * 256 + packet[length]))
     return true;
+#else
+  if (sum == (packet[length-2] * 256 + packet[length-1]))
+    return true;
+#endif
 
   return false;
 }
@@ -674,7 +680,9 @@ int get_packet_new(int fd, unsigned char* packet)
         {
           endOfPacket = true;
           PentairPreCnt = -1;
+#ifndef PENTAIR_LENGTH_FIX
           index--;
+#endif
         }
       }
       else if (byte == DLE && jandyPacketStarted == false)
@@ -731,8 +739,9 @@ int get_packet_new(int fd, unsigned char* packet)
     // Break out of the loop if we exceed maximum packet
     // length.
     if (index >= AQ_MAXPKTLEN) {
+      logPacketError(packet, index);
       logMessage(LOG_WARNING, "Serial packet too large\n");
-      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
       break;
     }
@@ -740,15 +749,17 @@ int get_packet_new(int fd, unsigned char* packet)
 
   //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
-    if (generate_checksum(packet, index) != packet[index-3]){
+    if (check_jandy_checksum(packet, index) != true){
+      logPacketError(packet, index);
       logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
-      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   } else if (pentairPacketStarted) {
     if (check_pentair_checksum(packet, index) != true){
+      logPacketError(packet, index);
       logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
-      log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+      //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   }
@@ -758,12 +769,14 @@ int get_packet_new(int fd, unsigned char* packet)
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else*/ if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
+    logPacketError(packet, index);
     logMessage(LOG_WARNING, "Serial read too small\n");
-    log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
+    //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
   logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  logPacket(packet, index);
   // Return the packet length.
   return index;
 }
@@ -772,6 +785,27 @@ int get_packet_new(int fd, unsigned char* packet)
 #else // PLAYBACK_MODE
 #include <stdlib.h>
 FILE *_fp;
+
+
+bool check_pentair_checksum(unsigned char* packet, int length)
+{
+  int i, sum, n;
+  n = packet[8] + 9;
+  sum = 0;
+  //printf("Pentair ");
+  for (i = 3; i < n; i++) {
+    sum += (int) packet[i];
+    //printf("+ (0x%02hhx) %d = %d ",packet[i],(int)packet[i],sum);
+  }
+
+  //printf("\nPentair checksum %d = %d (0x%02hhx) (0x%02hhx)\n",sum, (packet[length-1] * 256 + packet[length]),packet[length-1],packet[length]);
+
+  if (sum == (packet[length-1] * 256 + packet[length]))
+    return true;
+
+  return false;
+}
+
 
 int init_serial_port(char* file)
 { 
@@ -816,6 +850,23 @@ int get_packet(int fd, unsigned char* packet_buffer)
     logMessage(LOG_DEBUG_SERIAL, "PLAYBACK read %d bytes\n",packet_length);
     //printf("To 0x%02hhx, type %15.15s, length %2.2d ", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),packet_length);
     //fputs ( line, stdout ); 
+
+    if (getProtocolType(packet_buffer)==JANDY) {
+      if (generate_checksum(packet_buffer, packet_length) != packet_buffer[packet_length-3]) {
+        logPacketError(packet_buffer, packet_length);
+        logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
+      } else
+        logPacket(packet_buffer, packet_length);
+    } else {
+      //check_pentair_checksum(packet_buffer, packet_length);
+      //check_pentair_checksum(packet_buffer, packet_length-1);
+      //check_pentair_checksum(packet_buffer, packet_length+1);
+      if (check_pentair_checksum(packet_buffer, packet_length-1) != true) {
+        logPacketError(packet_buffer, packet_length);
+        logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
+      } else
+        logPacket(packet_buffer, packet_length);
+    }
 
     return packet_length;
   }
@@ -948,7 +999,10 @@ int get_packet_old(int fd, unsigned char* packet)
     return 0;
   }
 
+  //if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
+  //      logPacket(packet_buffer, packet_length);
   logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+
   // Return the packet length.
   return index;
 }
