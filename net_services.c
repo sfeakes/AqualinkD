@@ -641,7 +641,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     free(uri);
   }
   // If we have a get request, pass it
-  if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
+  if ((mg_vcasecmp(&http_msg->method, "GET")==0) && http_msg->query_string.len > 0) {
     char command[20];
 
     mg_get_http_var(&http_msg->query_string, "command", command, sizeof(command));
