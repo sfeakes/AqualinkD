@@ -205,25 +205,25 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       if (getLogLevel() >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
-      // press up from top - shift menu down by 1
-      //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0x01|0x8d|0x10|0x03|
-      // press down from bottom - shift menu up by 1
-      //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0xff|0x8b|0x10|0x03|
-      first_line = (signed char)(packet[4]);
-      last_line = (signed char)(packet[5]);
-      line_shift = (signed char)(packet[6]);
-      logMessage(LOG_DEBUG, "\n");
-      if (line_shift < 0) {
-          for (i = first_line-line_shift; i <= last_line; i++) {
-              memcpy(_menu[i+line_shift], _menu[i], AQ_MSGLEN+1);
-          }
-      } else {
-          for (i = last_line; i >= first_line+line_shift; i--) {
-              memcpy(_menu[i], _menu[i-line_shift], AQ_MSGLEN+1);
-          }
-      }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
-    break;
+      /// press up from top - shift menu down by 1
+       //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0x01|0x8d|0x10|0x03|
+       // press down from bottom - shift menu up by 1
+       //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0xff|0x8b|0x10|0x03|
+       first_line = (signed char)(packet[4]);
+       last_line = (signed char)(packet[5]);
+       line_shift = (signed char)(packet[6]);
+       logMessage(LOG_DEBUG, "\n");
+       if (line_shift < 0) {
+           for (i = first_line-line_shift; i <= last_line; i++) {
+               memcpy(_menu[i+line_shift], _menu[i], AQ_MSGLEN+1);
+           }
+       } else {
+           for (i = last_line; i >= first_line+line_shift; i--) {
+               memcpy(_menu[i], _menu[i-line_shift], AQ_MSGLEN+1);
+           }
+       }
+       if (getLogLevel() >= LOG_DEBUG){print_menu();}
+    break;   
   }
 
   return rtn;

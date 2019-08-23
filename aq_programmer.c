@@ -708,39 +708,37 @@ void *set_aqualink_light_colormode( void *ptr )
   // Needs to start programming sequence with light on, if off we need to turn on for 15 seconds
   // before we can send the next off.
   if ( button->led->state != ON ) {
-    logMessage(LOG_INFO, "Pool Light Initial state off, turning on for 15 seconds\n");
+    logMessage(LOG_INFO, "Light Programming Initial state off, turning on for %d seconds\n",iOn);
     send_cmd(code);
-    //delay(15 * seconds);
     delay(iOn * seconds);
   }
 
-  logMessage(LOG_INFO, "Pool Light turn off for 12 seconds\n");
+  logMessage(LOG_INFO, "Light Programming turn off for %d seconds\n",iOff);
   // Now need to turn off for between 11 and 14 seconds to reset light.
   send_cmd(code);
-  //delay(12 * seconds);
   delay(iOff * seconds);
 
   // Now light is reset, pulse the appropiate number of times to advance program.
-  logMessage(LOG_INFO, "Pool Light button pulsing on/off %d times\n", val);
+  logMessage(LOG_INFO, "Light Programming button pulsing on/off %d times\n", val);
  
   // Program light in safe mode (slowley), or quick mode
   if (pmode > 0) {
     for (i = 1; i < (val * 2); i++) {
-      logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, i % 2 == 0 ? "Off" : "On", val);
+      logMessage(LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, i % 2 == 0 ? "Off" : "On", val);
       send_cmd(code);
       delay(pmode * seconds); // 0.3 works, but using 0.4 to be safe
     }
   } else {
     for (i = 1; i < val; i++) {
-      logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, "ON", val);
+      logMessage(LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "ON", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, ON, 2);
-      logMessage(LOG_INFO, "Pool Light button press number %d - %s of %d\n", i, "OFF", val);
+      logMessage(LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "OFF", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, OFF, 2);
     }
 
-    logMessage(LOG_INFO, "Finished - Pool Light button press number %d - %s of %d\n", i, "ON", val);
+    logMessage(LOG_INFO, "Finished - Light Programming button press number %d - %s of %d\n", i, "ON", val);
     send_cmd(code);
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);

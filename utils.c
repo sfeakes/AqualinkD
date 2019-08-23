@@ -44,7 +44,7 @@
 
 static bool _daemonise = false;
 static bool _log2file = false;
-static int _log_level = -1;
+static int _log_level = LOG_ERR;
 static char *_log_filename = NULL;
 
 static char *_loq_display_message = NULL;
@@ -283,8 +283,14 @@ void test(int msg_level, char *msg)
   }
 }
 
+
 void logMessage(int msg_level, char *format, ...)
 {
+  // Simply return ASAP.
+  if (msg_level > _log_level) {
+    return;
+  }
+
   char buffer[1024];
   va_list args;
   va_start(args, format);
@@ -295,12 +301,11 @@ void logMessage(int msg_level, char *format, ...)
   //test(msg_level, buffer);
   //fprintf (stderr, buffer);
 
+  // Logging has not been setup yet, so STD error & syslog
   if (_log_level == -1) {
     fprintf (stderr, buffer);
     syslog (msg_level, "%s", &buffer[8]);
     closelog ();
-  } else if (msg_level > _log_level) {
-    return;
   }
   
   if (_daemonise == TRUE)
@@ -313,26 +318,20 @@ void logMessage(int msg_level, char *format, ...)
     //return;
   }
   
-  //if (_log2file == TRUE && _log_filename != NULL) {
-    int len;
-    char *strLevel = elevel2text(msg_level);
+  int len;
+  char *strLevel = elevel2text(msg_level);
+  strncpy(buffer, strLevel, strlen(strLevel));
+  len = strlen(buffer); 
+  if ( buffer[len-1] != '\n') {
+    strcat(buffer, "\n");
+  }
 
-    strncpy(buffer, strLevel, strlen(strLevel));
-    
-    len = strlen(buffer);
-    
-    //printf( " '%s' last chrs '%d''%d'\n", buffer, buffer[len-1],buffer[len]);
-    
-    if ( buffer[len-1] != '\n') {
-      strcat(buffer, "\n");
-    }
-
+  // Sent the log to the UI if configured.
   if (msg_level <= LOG_WARNING && _loq_display_message != NULL) {
     snprintf(_loq_display_message, 127, buffer);
   } 
 
-
- if (_log2file == TRUE && _log_filename != NULL) {   
+  if (_log2file == TRUE && _log_filename != NULL) {   
     char time[TIMESTAMP_LENGTH];
     int fp = open(_log_filename, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if (fp != -1) {

@@ -410,7 +410,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     if (_aqualink_data->swg_ppm != TEMP_UNKNOWN && ( force_update || _aqualink_data->swg_ppm != _last_mqtt_aqualinkdata.swg_ppm)) {
       _last_mqtt_aqualinkdata.swg_ppm = _aqualink_data->swg_ppm;
       send_mqtt_numeric_msg(nc, SWG_PPM_TOPIC, _aqualink_data->swg_ppm);
-      send_mqtt_numeric_msg(nc, SWG_PPM_F_TOPIC, roundf(degFtoC(_aqualink_data->swg_ppm)));
+      send_mqtt_float_msg(nc, SWG_PPM_F_TOPIC, roundf(degFtoC(_aqualink_data->swg_ppm)));
       send_domoticz_mqtt_numeric_msg(nc, _aqualink_config->dzidx_swg_ppm, _aqualink_data->swg_ppm);
     }
   }

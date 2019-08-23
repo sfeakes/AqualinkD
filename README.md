@@ -64,11 +64,13 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
-# Update in Release 1.3.5a,b
+# Update in Release 1.3.5a,b,c
+* Note to Homekit users. Upgrading to 1.3.5c (and above) will add an aditional SWG PPM tile, (look in default room). You'll need to update homebridge-aqualinkd to 0.0.8 (or later) to remove the old tile (or delete you homebridge cache). This is due to a bug in homebridge-aqualinkd < 0.0.7 that didn't delete unused tiles.
 * Logic for SWG RS486 checksum_errors.
 * Fixed pentair packet logging, missing last byte.
 * Support for two programmable lights. (Note must update your aqualinkd.conf).
 * Can now display warnings and errors in the web UI (as well as log).
+* Memory issue with PDA.
 # Update in Release 1.3.5
 * Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3).
 * PDA updates for freeze protect/SWG and general speed increase.

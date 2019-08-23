@@ -566,6 +566,12 @@ bool process_packet(unsigned char *packet, int length)
     {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
     }
+
+    // COLOR MODE programming relies on state changes, so let any threads know
+    if (_aqualink_data.active_thread.ptype == AQ_SET_COLORMODE) {
+      //printf ("Light thread kicking\n");
+      kick_aq_program_thread(&_aqualink_data);
+    }
     break;
   case CMD_MSG:
     memset(message, 0, AQ_MSGLONGLEN + 1);

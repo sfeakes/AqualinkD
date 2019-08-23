@@ -186,6 +186,9 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
   int length = 0;
   int i;
 
+  // IF temp units are F assume homekit is using F
+  bool homekit_f = (homekit && aqdata->temp_units==FAHRENHEIT);
+
   length += sprintf(buffer+length, "{\"type\": \"devices\"");
   length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"time\":\"%s\"",aqdata->time );//"1:16 PM",
@@ -207,9 +210,9 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
                                      ((homekit)?2:0),
-                                     ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->pool_htr_set_point):aqdata->pool_htr_set_point),
+                                     ((homekit_f)?degFtoC(aqdata->pool_htr_set_point):aqdata->pool_htr_set_point),
                                      ((homekit)?2:0),
-                                     ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->pool_temp):aqdata->pool_temp),
+                                     ((homekit_f)?degFtoC(aqdata->pool_temp):aqdata->pool_temp),
                                      LED2int(aqdata->aqbuttons[i].led->state));
     } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && aqdata->spa_htr_set_point != TEMP_UNKNOWN) {
       length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
@@ -218,9 +221,9 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
                                      ((homekit)?2:0),
-                                     ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->spa_htr_set_point):aqdata->spa_htr_set_point),
+                                     ((homekit_f)?degFtoC(aqdata->spa_htr_set_point):aqdata->spa_htr_set_point),
                                      ((homekit)?2:0),
-                                     ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->spa_temp):aqdata->spa_temp),
+                                     ((homekit_f)?degFtoC(aqdata->spa_temp):aqdata->spa_temp),
                                      LED2int(aqdata->aqbuttons[i].led->state));
     } else if ( (programable_switch1 > 0 && programable_switch1 == i) || 
                 (programable_switch2 > 0 && programable_switch2 == i)) {
@@ -251,9 +254,9 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                     //JSON_ENABLED,
                                     aqdata->frz_protect_state==ON?LED2text(ON):LED2text(ENABLE),
                                     ((homekit)?2:0),
-                                    ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->frz_protect_set_point):aqdata->frz_protect_set_point),
+                                    ((homekit_f)?degFtoC(aqdata->frz_protect_set_point):aqdata->frz_protect_set_point),
                                     ((homekit)?2:0),
-                                    ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->air_temp):aqdata->air_temp),
+                                    ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->air_temp),
                                     aqdata->frz_protect_state==ON?1:0);
   }
 
@@ -264,26 +267,36 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                     aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
                                     aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
                                     ((homekit)?2:0),
-                                    ((homekit)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
+                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
                                     ((homekit)?2:0),
-                                    ((homekit)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
+                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
                                     aqdata->ar_swg_status == 0x00?1:0);
 
     //length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
     length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
-                                   ((homekit)?SWG_PERCENT_F_TOPIC:SWG_PERCENT_TOPIC),
+                                   ((homekit_f)?SWG_PERCENT_F_TOPIC:SWG_PERCENT_TOPIC),
                                    "Salt Water Generator Percent",
                                    "on",
-                                   ((homekit)?2:0),
-                                   ((homekit)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
+                                   ((homekit_f)?2:0),
+                                   ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
   }
 
   if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
+
+    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
+                                   ((homekit_f)?SWG_PPM_F_TOPIC:SWG_PPM_TOPIC),
+                                   "Salt Level PPM",
+                                   "on",
+                                   ((homekit)?2:0),
+                                   ((homekit_f)?roundf(degFtoC(aqdata->swg_ppm)):aqdata->swg_ppm)); 
+                                   
+                                  /*
+   length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    SWG_PPM_TOPIC,
                                    "Salt Level PPM",
                                    "on",
                                    aqdata->swg_ppm);
+                                   */
   }
 
   length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
@@ -292,21 +305,21 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                    "Pool Air Temperature",
                                    "on",
                                    ((homekit)?2:0),
-                                   ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->air_temp):aqdata->air_temp));
+                                   ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->air_temp));
   length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
                                    POOL_TEMP_TOPIC,
                                    /*POOL_TEMPERATURE,*/
                                    "Pool Water Temperature",
                                    "on",
                                    ((homekit)?2:0),
-                                   ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->air_temp):aqdata->pool_temp));
+                                   ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->pool_temp));
   length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" }",
                                    SPA_TEMP_TOPIC,
                                    /*SPA_TEMPERATURE,*/
                                    "Spa Water Temperature",
                                    "on",
                                    ((homekit)?2:0),
-                                   ((homekit && aqdata->temp_units==FAHRENHEIT)?degFtoC(aqdata->air_temp):aqdata->spa_temp));
+                                   ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->spa_temp));
 
 /*
   length += sprintf(buffer+length,  "], \"aux_device_detail\": [");
