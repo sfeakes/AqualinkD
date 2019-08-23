@@ -27,6 +27,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #ifdef AD_DEBUG
 #include <sys/time.h>
