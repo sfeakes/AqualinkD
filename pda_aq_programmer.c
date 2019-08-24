@@ -390,11 +390,17 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
         if (pda_m_type() == PM_HOME) {
             ret = select_pda_menu_item(aq_data, "MENU", true);
         } else if (pda_m_type() == PM_MAIN) {
+          if (aq_data->single_device != true) {
             ret = select_pda_menu_item(aq_data, "SET TEMP", true);
-            // Depending on control panel config, may get an extra menu asking to press any key
-            // waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
-            // waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,20,"press ANY key",8);
-
+          } else {
+              // Depending on control panel config, may get an extra menu asking to press any key
+              logMessage(LOG_DEBUG, "PDA in single device mode, \n");
+              ret = select_pda_menu_item(aq_data, "SET TEMP", false);
+              // We could press enter here, but I can't test it, so just wait for message to dissapear.
+              ret = waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,25);    
+              //waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
+              //waitForPDAMessageTypesOrMenu(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,20,"press ANY key",8);
+            }
         } else {
             send_cmd(KEY_PDA_BACK);
             ret = waitForPDAnextMenu(aq_data);
