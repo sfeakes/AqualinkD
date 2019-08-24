@@ -71,6 +71,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Support for two programmable lights. (Note must update your aqualinkd.conf).
 * Can now display warnings and errors in the web UI (as well as log).
 * Memory issue with PDA.
+* Better support for "single device mode" on PDA.
 # Update in Release 1.3.5
 * Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3).
 * PDA updates for freeze protect/SWG and general speed increase.
