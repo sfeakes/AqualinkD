@@ -1232,8 +1232,8 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
-  char* msgS1;
-  char* msgS2;
+  char* msgS1 = "";
+  char* msgS2 = "";
   char* ptr = NULL;
   
   
