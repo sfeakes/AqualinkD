@@ -68,14 +68,14 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 #<a name="release"></a>
 # Update in Release 1.3.6
 * Can now debug inline from a web ui. (http://aqualinkd.ip.address/debug.html)
-* Note to Homekit users. Upgrading to 1.3.5c (and above) will add an aditional SWG PPM tile, (look in default room). You'll need to update homebridge-aqualinkd to 0.0.8 (or later) to remove the old PPM tile (or delete you homebridge cache). This is due to a bug in homebridge-aqualinkd < 0.0.7 that didn't delete unused tiles.
+* Fix SWG in homekit sometimes displaying wrong value. Note to Homekit users, Upgrading to 1.3.5c (and above) will add an aditional SWG PPM tile, (look in default room). You'll need to update homebridge-aqualinkd to 0.0.8 (or later) to remove the old PPM tile (or delete you homebridge cache). This is due to a bug in homebridge-aqualinkd < 0.0.7 that didn't delete unused tiles.
 * Logic for SWG RS486 checksum_errors.
 * Fixed pentair packet logging, missing last byte.
 * Support for two programmable lights. (Note must update your aqualinkd.conf).
 * Can now display warnings and errors in the web UI (as well as log).
-* Memory issue with PDA.
+* Fix memory issue with PDA.
 * Better support for "single device mode" on PDA.
-* Memory leak in web UI with some browsers.
+* Fix memory leak in web UI with some browsers.
 * Changes for better portability when compiling on other systems.
 # Update in Release 1.3.5
 * Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3).
