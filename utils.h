@@ -54,6 +54,11 @@ int ascii(char *destination, char *source);
 char *prittyString(char *str);
 //void writePacketLog(char *buff);
 //void closePacketLog();
+void startInlineDebug();
+void stopInlineDebug();
+void cleanInlineDebug();
+char *getInlineLogFName();
+bool islogFileReady();
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

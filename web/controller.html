@@ -461,6 +461,7 @@
   </style>
 
   <script type='text/javascript'>
+    //'use strict';
     var _lightProgramDropdown = false;
     var _pressEvent;
     var _ignoreMouseEvent = false;
@@ -498,13 +499,15 @@
         var tbody = document.getElementById('pswitch_table').getElementsByTagName('tbody')[0];
         var html1 = '';
         var html2 = '';
-        fLen = light_program.length;
+        var fLen = light_program.length;
+        var i;
         for (i = 0; i < fLen; i++) {
           if (light_program[i].endsWith(" - Show"))
             html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
           else
             html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
         }
+        var row;
         row = tbody.deleteRow(2);
         row = tbody.insertRow(2);
         row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
@@ -658,17 +661,17 @@
     }
 
     function add_tile(id, name, status, type, subtype, off_imgurl, on_imgurl) {
-      height = getComputedStyle(document.documentElement).getPropertyValue('--tile_icon-height');
-      div = document.createElement('div');
+      var height = getComputedStyle(document.documentElement).getPropertyValue('--tile_icon-height');
+      var div = document.createElement('div');
       div.setAttribute('class', 'tile');
       div.setAttribute('id', id);
       div.setAttribute('type', subtype);
       //div.setAttribute('onclick', "switchTileState('" + id + "')");
-      subdiv = document.createElement('div');
+      var subdiv = document.createElement('div');
       subdiv.setAttribute('class', 'tile_icon');
       subdiv.setAttribute('id', id + '_icon');
       if (off_imgurl != null) {
-        imgdiv = document.createElement('img');
+        var imgdiv = document.createElement('img');
         imgdiv.setAttribute('height', height + 'px');
         imgdiv.setAttribute('src', off_imgurl);
         subdiv.appendChild(imgdiv);
@@ -685,7 +688,7 @@
           div.appendChild(subdiv);
         }
       } else if (type == "value" || type == "thermostat") {
-        valdiv = document.createElement('div');
+        var valdiv = document.createElement('div');
         valdiv.setAttribute('class', 'tile_icon_value disabled');
         valdiv.setAttribute('id', id + '_tile_icon_value');
         valdiv.textContent = '--';
@@ -741,6 +744,7 @@
     }
 
     function setThermostatSetpoint(id, sp_value) {
+      var tile;
       if ((tile = document.getElementById(id)) == null) {
         return;
       }
@@ -765,6 +769,7 @@
         }
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
+      var tile;
       if ((tile = document.getElementById(id + '_tile_icon_value')) != null)
         tile.innerHTML = value + ext;
     }
@@ -781,12 +786,14 @@
 
     function setThermostatTile(id, value, sp_value) {
       setTileValue(id, value);
+      var tile;
       if ((tile = document.getElementById(id)) != null) {
         tile.setAttribute('setpoint', sp_value);
       }
     }
 
     function formatSatus(status) {
+      var index;
       if ((index = status.indexOf("AUX")) >= 0) {
         aux = status.substr(index, 4);
         status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();
@@ -824,11 +831,14 @@
           tile.classList.remove("flash");
           text = "On";
         }
+        var offimg;
+        var onimg;
         if ((offimg = document.getElementById(id + '_icon')) != null &&
           (onimg = document.getElementById(id + '_icon_on')) != null) {
           offimg.style.display = 'none';
           onimg.style.display = 'table';
         }
+        var type;
         if ((type = tile.getAttribute('type')) != null) {
           if (type == 'setpoint_swg')
             text = 'Generating';
@@ -851,7 +861,7 @@
         text = "Off";
       }
       document.getElementById(id + '_status').innerHTML = text;
-      tile_icon = document.getElementById(id + '_tile_icon_value');
+      var tile_icon = document.getElementById(id + '_tile_icon_value');
       type = tile.getAttribute('type');
       if (status != null && tile_icon != null) {
         if (status == 'enabled' || status == 'flash') {
@@ -922,7 +932,7 @@
           document.getElementById('pswitch_options').style.display = 'none';
         }
         active_option.style.display = 'flex';
-        optionH = window.getComputedStyle(active_option, null).getPropertyValue("height");
+        var optionH = window.getComputedStyle(active_option, null).getPropertyValue("height");
         if (optionH <= wrapH)
           active_option.style.height = wrapH;
         
@@ -946,9 +956,9 @@
       }
       if (show == true) {
         var tile = document.getElementById(id);
-        sp_value = tile.getAttribute('setpoint');
+        var sp_value = tile.getAttribute('setpoint');
         //tile_state = tile.classList.contains("on");
-        tile_state = !(tile.getAttribute('status') == 'off');
+        var tile_state = !(tile.getAttribute('status') == 'off');
         var type = tile.getAttribute('type');
         var slider;
         var slider_output;
@@ -1046,7 +1056,7 @@
         document.getElementById("body_wrap").addEventListener("click", clickHandler);
         close_button.onclick = function() {
           document.getElementById("body_wrap").removeEventListener("click", clickHandler);
-          state = oswitch.checked;
+          var state = oswitch.checked;
           if (type == 'switch_program') {
             var mode=false;
             if (_lightProgramDropdown) {
@@ -1056,6 +1066,7 @@
               }
             } else {
               var radio = document.getElementsByName("light_program");
+              var x;
               for (x = 0; x < radio.length; x++) {
                  if (radio[x].checked == true) {
                    send_light_mode(radio[x].value, id);
@@ -1069,7 +1080,7 @@
                 setTileState(id, state);
             }
           } else {
-            value = slider.value;
+            var value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
               setTileState(id, state);
             if (sp_value != slider.value)
@@ -1248,6 +1259,7 @@
 
     function send_setpoint(id) {
       var temperature = {};
+      var tile;
       if ((tile = document.getElementById(id)) == null) {
         return;
       }

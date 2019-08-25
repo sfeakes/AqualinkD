@@ -6,7 +6,8 @@
 # define the C compiler to use
 CC = gcc
 
-LIBS := -lpthread -lm
+#LIBS := -lpthread -lm
+LIBS := -l pthread -l m
 #LIBS := -lpthread -lwebsockets
 
 # debug of not

@@ -39,6 +39,8 @@
 
 #include "utils.h"
 
+
+#define DEFAULT_LOG_FILE "/tmp/aqualinkd-inline.log"
 //#define MAXCFGLINE 265
 #define TIMESTAMP_LENGTH 30
 
@@ -47,6 +49,8 @@ static bool _daemonise = false;
 static bool _log2file = false;
 static int _log_level = LOG_ERR;
 static char *_log_filename = NULL;
+static bool _cfg_log2file;
+static int _cfg_log_level;
 
 static char *_loq_display_message = NULL;
 //static char _log_filename[256];
@@ -56,6 +60,9 @@ void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_mes
 	_log_level = level;
   _daemonise = deamonized;
   _loq_display_message = error_messages;
+
+  _cfg_log_level = _log_level;
+  _cfg_log2file = _log2file;
   
   if (log_file == NULL || strlen(log_file) <= 0) {
     _log2file = false;
@@ -71,6 +78,44 @@ int getLogLevel()
   return _log_level;
 }
 
+
+void startInlineDebug()
+{
+  _log_level = LOG_DEBUG;
+  _log2file = true;
+  if (_log_filename == NULL)
+    _log_filename = DEFAULT_LOG_FILE;
+}
+
+void stopInlineDebug()
+{
+  _log_level = _cfg_log_level;
+  _log2file = _cfg_log2file;
+}
+
+char *getInlineLogFName()
+{
+  return _log_filename;
+}
+
+
+
+bool islogFileReady()
+{
+  if (_log_filename != NULL) {   
+    struct stat st;
+    stat(_log_filename, &st);
+    if ( st.st_size > 0)
+      return true;
+  } 
+  return false;
+}
+
+void cleanInlineDebug() {
+  if (_log_filename != NULL) {
+    fclose(fopen(_log_filename, "w"));
+  }
+}
 
 /*
 * This function reports the error and

@@ -1,5 +1,6 @@
 # Aqualinkd  
 Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equiptment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Samsung, Alexa, Google, etc.
+Binaries are supplied for Raspberry Pi, Has bean, and can be compiled for many different SBC's. 
 
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world; only indirectly through the use of Home Automation hub's or other security measures. e.g. VPNs.
 
@@ -64,7 +65,8 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
-# Update in Release 1.3.5a,b,c,d
+# Update in Release 1.3.5a,b,c,d,e
+* Can now debug inline from a web ui. (http://aqualinkd.ip.address/debug.html)
 * Note to Homekit users. Upgrading to 1.3.5c (and above) will add an aditional SWG PPM tile, (look in default room). You'll need to update homebridge-aqualinkd to 0.0.8 (or later) to remove the old PPM tile (or delete you homebridge cache). This is due to a bug in homebridge-aqualinkd < 0.0.7 that didn't delete unused tiles.
 * Logic for SWG RS486 checksum_errors.
 * Fixed pentair packet logging, missing last byte.
@@ -72,6 +74,8 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Can now display warnings and errors in the web UI (as well as log).
 * Memory issue with PDA.
 * Better support for "single device mode" on PDA.
+* Memory leak in web UI with some browsers.
+* Changes for better portability when compiling on other systems.
 # Update in Release 1.3.5
 * Fixed SWG bug showing off/0% every ~15 seconds (introduced in 1.3.3).
 * PDA updates for freeze protect/SWG and general speed increase.

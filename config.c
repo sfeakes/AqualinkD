@@ -93,7 +93,6 @@ void init_parameters (struct aqconfig * parms)
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
 
-
 char *cleanalloc(char*str)
 {
   char *result;

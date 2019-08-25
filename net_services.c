@@ -740,6 +740,39 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
         mg_send_head(nc, 200, strlen(GET_RTN_ERROR), "Content-Type: text/plain");
         mg_send(nc, GET_RTN_ERROR, strlen(GET_RTN_ERROR));
       }
+    } else if (strcmp(command, "debug") == 0) {
+      char value[80];
+      char *rtn;
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      if (strcmp(value, "start") == 0) {
+        startInlineDebug();
+        rtn = GET_RTN_OK;
+        logMessage(LOG_DEBUG, "WEB: Started inline debug mode\n");
+      } else if (strcmp(value, "stop") == 0) {
+        logMessage(LOG_DEBUG, "WEB: Stoped inline debug mode\n");
+        stopInlineDebug();
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "serialstart") == 0) {
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "serialstop") == 0) {
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "status") == 0) {
+        snprintf(value,80,"{\"sLevel\":\"%s\", \"iLevel\":%d, \"logReady\":\"%s\"}\n",elevel2text(getLogLevel()),getLogLevel(),islogFileReady()?"true":"false" );
+        mg_send_head(nc, 200, strlen(value), "Content-Type: text/json");
+        mg_send(nc, value, strlen(value));
+        return;
+        //rtn = value;
+      } else if (strcmp(value, "clean") == 0) {
+        cleanInlineDebug();
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "download") == 0) {
+        mg_http_serve_file(nc, http_msg, getInlineLogFName(), mg_mk_str("text/plain"), mg_mk_str(""));
+        return;
+      } else {
+        rtn = GET_RTN_UNKNOWN;
+      }
+      mg_send_head(nc, 200, strlen(rtn), "Content-Type: text/plain");
+      mg_send(nc, rtn, strlen(rtn));
     } else {
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -798,8 +831,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       }
     }
     // If we get here, got a bad query
-    mg_send_head(nc, 200, sizeof(GET_RTN_UNKNOWN), "Content-Type: text/plain");
-    mg_send(nc, GET_RTN_UNKNOWN, sizeof(GET_RTN_UNKNOWN));
+    mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), "Content-Type: text/plain");
+    mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
 
   } else {
     struct mg_serve_http_opts opts;
