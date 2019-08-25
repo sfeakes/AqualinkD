@@ -95,7 +95,7 @@ Taken from https://github.com/ubuwaits/css3-buttons */
             } else if ( data.iLevel < 7 ) {
               document.getElementById('start').disabled = false;
               document.getElementById('stop').disabled = true;
-              document.getElementById('messages').innerHTML = "&nbsp"
+              document.getElementById('messages').innerHTML = "Not debugging, Log level = "+data.sLevel;
             }
             if (data.logReady == "true") {
               document.getElementById('download').disabled = false;
