@@ -250,12 +250,12 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x02|0x02|0x09|0x00|0x91|0x10|0x03|
       //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x03|0x02|0x09|0x00|0x92|0x10|0x03|
       //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x02|0x02|0x03|0x01|0x8c|0x10|0x03|
+      // https://github.com/ballle98/AqualinkD/issues/46
+      // Character highlight should not update highlight index 
       if (packet[4] <= PDA_LINES) {
-        _hlightindex = packet[4];
         _hlightcharindexstart = packet[5];
         _hlightcharindexstop = packet[6];
       } else {
-        _hlightindex = -1;
         _hlightcharindexstart = -1;
         _hlightcharindexstop = -1;
       }
