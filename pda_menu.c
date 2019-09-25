@@ -242,6 +242,14 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
+      // pkt[4] = line, pkt[5] = startchar, pkt[6] = endchar, pkt[7] = clr/inv
+      // highlight characters 10 to 15 on line 3 (from FREEZE PROTECT menu)
+      //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x03|0x0a|0x0f|0x01|0xa1|0x10|0x03|
+      // clear hlight chars 2 to 9 on line 2 and line 3 then hlight char 2 to 3 on line 3
+      // (from SET TIME menu)
+      //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x02|0x02|0x09|0x00|0x91|0x10|0x03|
+      //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x03|0x02|0x09|0x00|0x92|0x10|0x03|
+      //   PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x02|0x02|0x03|0x01|0x8c|0x10|0x03|
       if (packet[4] <= PDA_LINES) {
         _hlightindex = packet[4];
         _hlightcharindexstart = packet[5];
@@ -254,7 +262,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
-      /// press up from top - shift menu down by 1
+       // press up from top - shift menu down by 1
        //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0x01|0x8d|0x10|0x03|
        // press down from bottom - shift menu up by 1
        //   PDA Shif | HEX: 0x10|0x02|0x62|0x0f|0x01|0x08|0xff|0x8b|0x10|0x03|
