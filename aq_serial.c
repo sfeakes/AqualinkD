@@ -605,7 +605,17 @@ bool check_pentair_checksum(unsigned char* packet, int length)
   return false;
 }
 
+int _get_packet(int fd, unsigned char* packet, bool rawlog);
+
+int get_packet_new_lograw(int fd, unsigned char* packet)
+{
+  return _get_packet(fd, packet, true);
+}
 int get_packet_new(int fd, unsigned char* packet)
+{
+  return _get_packet(fd, packet, false);
+}
+int _get_packet(int fd, unsigned char* packet, bool rawlog)
 {
   unsigned char byte;
   int bytesRead;
@@ -643,6 +653,9 @@ int get_packet_new(int fd, unsigned char* packet)
       retry++;
       delay(10);
     } else if (bytesRead == 1) {
+
+      if (rawlog)
+        logPacketByte(&byte);
 
       if (lastByteDLE == true && byte == NUL)
       {

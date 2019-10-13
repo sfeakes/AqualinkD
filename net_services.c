@@ -399,7 +399,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     send_mqtt_string_msg(nc, BATTERY_STATE, _aqualink_data->battery==OK?MQTT_ON:MQTT_OFF); 
   }
 
-  if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) { // If the SWG is actually on
+  //if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) { // If the SWG is actually on
+  if (_aqualink_data->ar_swg_status != SWG_STATUS_OFF) { // If the SWG is actually on
     if (_aqualink_data->swg_percent != TEMP_UNKNOWN && (force_update || _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent)) {
       _last_mqtt_aqualinkdata.swg_percent = _aqualink_data->swg_percent;
       send_mqtt_numeric_msg(nc, SWG_PERCENT_TOPIC, _aqualink_data->swg_percent);
@@ -448,7 +449,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         if (!_aqualink_data->simulate_panel)
           sprintf(_aqualink_data->last_display_message, "AquaPure High Salt");
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 3, "HIGH SALT");
-        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_OFF);
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       case SWG_STATUS_HIGH_CURRENT:
         if (!_aqualink_data->simulate_panel)
@@ -494,9 +495,15 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         break;
       default:
         send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, 4, "Unknown");
+        send_mqtt_int_msg(nc, SWG_TOPIC, SWG_ON);
         break;
       }
       _last_mqtt_aqualinkdata.ar_swg_status = _aqualink_data->ar_swg_status;
+  }
+
+  if (_aqualink_data->boost != _last_mqtt_aqualinkdata.boost) {
+    send_mqtt_int_msg(nc, SWG_BOOST_TOPIC, _aqualink_data->boost);
+    _last_mqtt_aqualinkdata.boost = _aqualink_data->boost;
   }
 
 //logMessage(LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -868,7 +875,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
 
   if (strcmp(request.first.key, "raw") == 0) {
     _aqualink_data->simulate_panel = true;
-    logMessage (LOG_WARNING, "WS: Send raw command to controller %s\n",request.first.value);
+    logMessage (LOG_NOTICE, "WS: Send raw command to controller %s\n",request.first.value);
     unsigned int n;
     sscanf(request.first.value, "0x%2x", &n);
     //aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
@@ -892,6 +899,14 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       char labels[JSON_LABEL_SIZE];
       build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
       ws_send(nc, labels);
+    } else if ( strcmp(request.first.value, SWG_BOOST_TOPIC) == 0) {
+      //logMessage(LOG_INFO, "Boost ");
+      if (request.second.value != NULL)
+        _aqualink_data->unactioned.value = request2bool(request.second.value);
+      else
+        _aqualink_data->unactioned.value = !_aqualink_data->boost;
+        
+      _aqualink_data->unactioned.type = SWG_BOOST;
     } else { // Search for value in command list
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
@@ -1022,6 +1037,9 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
       }
       _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
       _aqualink_data->unactioned.type = SWG_SETPOINT;
+  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Boost", 5) == 0) && (strncmp(pt3, "set", 3) == 0))) {
+    _aqualink_data->unactioned.value = round(value);
+    _aqualink_data->unactioned.type = SWG_BOOST;
   } else if (pt2 != NULL && (strncmp(pt2, "set", 3) == 0) && (strncmp(pt2, "setpoint", 8) != 0)) {
     // Must be a switch on / off
     for (i=0; i < TOTAL_BUTTONS; i++) {
@@ -1277,6 +1295,7 @@ void start_mqtt(struct mg_mgr *mgr) {
     _last_mqtt_aqualinkdata.ar_swg_status = SWG_STATUS_UNKNOWN;
     _last_mqtt_aqualinkdata.battery = -1;
     _last_mqtt_aqualinkdata.frz_protect_state = -1;
+    _last_mqtt_aqualinkdata.boost = -1;
     _mqtt_exit_flag = false; // set here to stop multiple connects, if it fails truley fails it will get set to false.
   }
 }

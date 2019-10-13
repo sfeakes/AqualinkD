@@ -45,6 +45,7 @@ char *trimwhitespace(char *str);
 char *stripwhitespace(char *str);
 int cleanint(char*str);
 bool text2bool(char *str);
+bool request2bool(char *str);
 char *bool2text(bool val);
 void delay (unsigned int howLong);
 float degFtoC(float degF);

@@ -7,6 +7,7 @@
 #include "utils.h"
 
 static FILE *_packetLogFile = NULL;
+static FILE *_byteLogFile = NULL;
 static bool _log2file = false;
 static bool _includePentair = false;
 
@@ -20,12 +21,15 @@ void startPacketLogger(bool debug_RSProtocol_packets, bool read_pentair_packets)
 void stopPacketLogger() {
   if (_packetLogFile != NULL)
     fclose(_packetLogFile);
+
+  if (_byteLogFile != NULL)
+    fclose(_byteLogFile);
 }
 
 
 void writePacketLog(char *buffer) {
   if (_packetLogFile == NULL)
-    _packetLogFile = fopen(RS485LOGFILE, "a");
+    _packetLogFile = fopen(RS485LOGFILE, "w");
 
   if (_packetLogFile != NULL) {
     fputs(buffer, _packetLogFile);
@@ -68,4 +72,25 @@ void _logPacket(unsigned char *packet_buffer, int packet_length, bool error)
     logMessage(LOG_WARNING, "%s", buff);
   else
     logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+}
+
+//#define RAW_BUFFER_SIZE 100
+// Log Raw Bytes
+void logPacketByte(unsigned char *byte)
+{
+  char buff[10];
+  //static int _length = 0;
+  //static unsigned char _bytes[RAW_BUFFER_SIZE];
+
+  //_bytes[_length++] = byte;
+
+  //if (_length >= RAW_BUFFER_SIZE) {
+    if (_byteLogFile == NULL)
+      _byteLogFile = fopen(RS485BYTELOGFILE, "w");
+
+    if (_byteLogFile != NULL) {
+      sprintf(buff, "0x%02hhx|",*byte);
+      fputs( buff, _byteLogFile);
+    } 
+  //}
 }

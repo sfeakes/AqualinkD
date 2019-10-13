@@ -38,7 +38,8 @@ typedef enum {
   AQ_PDA_DEVICE_STATUS,
   AQ_PDA_DEVICE_ON_OFF,
   AQ_GET_AUX_LABELS,
-  AQ_PDA_WAKE_INIT
+  AQ_PDA_WAKE_INIT,
+  AQ_SET_BOOST
 } program_type;
 
 struct programmingThreadCtrl {

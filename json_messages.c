@@ -264,13 +264,13 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
     length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
                                      SWG_TOPIC,
                                     "Salt Water Generator",
-                                    aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
-                                    aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF,
+                                    aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON,
+                                    aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON,
                                     ((homekit)?2:0),
                                     ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
                                     ((homekit)?2:0),
                                     ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
-                                    aqdata->ar_swg_status == 0x00?1:0);
+                                    aqdata->ar_swg_status == SWG_STATUS_OFF?LED2int(OFF):LED2int(ON));
 
     //length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
     length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
@@ -279,6 +279,14 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                    "on",
                                    ((homekit_f)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
+    if (!homekit) { // For the moment keep boost off homekit   
+      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
+                                     SWG_BOOST_TOPIC, 
+                                     "SWG Boost",
+                                     aqdata->boost?JSON_ON:JSON_OFF,
+                                     aqdata->boost?JSON_ON:JSON_OFF,
+                                     aqdata->boost?LED2int(ON):LED2int(OFF));
+    }
   }
 
   if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
@@ -290,13 +298,14 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                    ((homekit)?2:0),
                                    ((homekit_f)?roundf(degFtoC(aqdata->swg_ppm)):aqdata->swg_ppm)); 
                                    
-                                  /*
+     /*         
    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
                                    SWG_PPM_TOPIC,
                                    "Salt Level PPM",
                                    "on",
                                    aqdata->swg_ppm);
-                                   */
+   */
+                                   
   }
 
   length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
@@ -395,6 +404,9 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     length += sprintf(buffer+length, ",\"battery\":\"%s\"",JSON_OK );//"ok",
   else
     length += sprintf(buffer+length, ",\"battery\":\"%s\"",JSON_LOW );//"ok",
+
+  if ( aqdata->swg_percent == 101 )
+    length += sprintf(buffer+length, ",\"swg_boost_msg\":\"%s\"",aqdata->boost_msg );
   
   length += sprintf(buffer+length, ",\"leds\":{" );
   for (i=0; i < TOTAL_BUTTONS; i++) 
@@ -423,7 +435,8 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   }
 
   if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, aqdata->ar_swg_status == 0x00?JSON_ON:JSON_OFF);
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON);
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_BOOST_TOPIC, aqdata->boost?JSON_ON:JSON_OFF);
   }
   //NSF Need to come back and read what the display states when Freeze protection is on
   if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN ) {

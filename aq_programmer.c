@@ -55,6 +55,7 @@ void *get_aqualink_aux_labels( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
+void *set_aqualink_boost( void *ptr );
 
 //void *get_aqualink_PDA_device_status( void *ptr );
 //void *set_aqualink_PDA_device_on_off( void *ptr );
@@ -65,6 +66,7 @@ bool waitForButtonState(struct aqualinkdata *aq_data, aqkey* button, aqledstate 
 bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* message2, int numMessageReceived);
 
 bool push_aq_cmd(unsigned char cmd);
+void waitfor_queue2empty();
 
 #define MAX_STACK 20
 int _stack_place = 0;
@@ -99,7 +101,56 @@ int get_aq_cmd_length()
   return _stack_place;
 }
 
+unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data);
+
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
+{
+  unsigned char cmd = NUL;
+  static bool last_sent_was_cmd = false;
+
+  // USE BELOW IF PDA HAS ISSUES WITH NEW COMMAND LOGIC
+  
+  //if ( pda_mode() == true ) {
+  //  return pop_aq_cmd_old(aq_data);
+  //}
+
+  // Only press menu to a status command
+  // Only send commands on status messages when programming date
+  // Otherwise send every other command.
+
+  // Are we in programming mode
+  if (aq_data->active_thread.thread_id != 0) {
+    if ( ((_pgm_command == KEY_MENU || aq_data->active_thread.ptype == AQ_SET_TIME) && aq_data->last_packet_type == CMD_STATUS) ||
+         (aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) ||
+         (pda_mode() == true && aq_data->last_packet_type == CMD_STATUS)
+         //(pda_mode() == true && last_sent_was_cmd == false)
+      ) {
+      cmd = _pgm_command;
+      _pgm_command = NUL;
+      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
+    /*} else if (aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) {
+      cmd = _pgm_command;
+      _pgm_command = NUL;
+      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);*/
+    } else {
+      logMessage(LOG_DEBUG, "RS Waiting to send cmd '0x%02hhx'\n", _pgm_command);
+    }
+  } else if (_stack_place > 0 && aq_data->last_packet_type == CMD_STATUS ) {
+    cmd = _commands[0];
+    _stack_place--;
+    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
+    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
+  }
+
+  if (cmd == NUL)
+    last_sent_was_cmd= false;
+  else
+    last_sent_was_cmd= true;
+
+  return cmd;
+}
+
+unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
   //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
@@ -128,8 +179,6 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 
   return cmd;
 }
-
-
 
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 {
@@ -215,7 +264,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
   if (aq_data->active_thread.thread_id != 0) {
-    logMessage(LOG_DEBUG, "Kicking thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+    logMessage(LOG_DEBUG, "Kicking thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
     pthread_cond_broadcast(&aq_data->active_thread.thread_cond);
   }
 }
@@ -362,6 +411,12 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         return;
       }
       break;
+    case AQ_SET_BOOST:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_boost, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
     default:
         logMessage (LOG_ERR, "Don't understand thread type\n");
       break;
@@ -385,20 +440,20 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   
   i = 0;
   while (get_aq_cmd_length() > 0 && ( i++ <= tries) ) {
-    logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for queue to empty\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
+    logMessage (LOG_DEBUG, "Thread %p (%s) sleeping, waiting command queue to empty\n", &threadCtrl->thread_id, ptypeName(type));
     sleep(waitTime);
   }
   if (i >= tries) {
-    logMessage (LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
+    logMessage (LOG_ERR, "Thread %p (%s) timeout waiting, ending\n",&threadCtrl->thread_id,ptypeName(type));
     free(threadCtrl);
     pthread_exit(0);
   }
 
   while ( (threadCtrl->aq_data->active_thread.thread_id != 0) && ( i++ <= tries) ) {
     //logMessage (LOG_DEBUG, "Thread %d sleeping, waiting for thread %d to finish\n", threadCtrl->thread_id, threadCtrl->aq_data->active_thread.thread_id);
-    logMessage (LOG_DEBUG, "Thread %d,%p (%s) sleeping, waiting for thread %d,%p (%s) to finish\n",
-                type, &threadCtrl->thread_id, ptypeName(type),
-                threadCtrl->aq_data->active_thread.ptype, threadCtrl->aq_data->active_thread.thread_id, ptypeName(threadCtrl->aq_data->active_thread.ptype));
+    logMessage (LOG_DEBUG, "Thread %p (%s) sleeping, waiting for thread %p (%s) to finish\n",
+                &threadCtrl->thread_id, ptypeName(type),
+                threadCtrl->aq_data->active_thread.thread_id, ptypeName(threadCtrl->aq_data->active_thread.ptype));
     sleep(waitTime);
   }
   
@@ -411,6 +466,8 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
     pthread_exit(0);
   }
  
+  // Clear out any messages to the UI.
+  threadCtrl->aq_data->last_display_message[0] = '\0';
   threadCtrl->aq_data->active_thread.thread_id = &threadCtrl->thread_id;
   threadCtrl->aq_data->active_thread.ptype = type;
 
@@ -467,7 +524,7 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
   int i=0;
   do 
   {
-    if (waitForMessage(aq_data, searchBuf, 3) != true) {
+    if (waitForMessage(aq_data, searchBuf, 4) != true) {
       logMessage(LOG_WARNING, "AQ_Programmer Could not set numeric input '%s', not found\n",value_label);
       cancel_menu();
       return false;
@@ -559,6 +616,67 @@ void *threadded_send_cmd( void *ptr )
   return ptr;
 }
 */
+
+void *set_aqualink_boost( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_BOOST);
+  /*
+  menu
+<find menu>
+BOOST POOL
+<wait 2 messages>
+PRESS ENTER* TO START BOOST POOL
+<press enter>
+
+
+<Menu when in boost>
+BOOST POOL 23:59 REMAINING
+
+
+menu
+<find menu>
+BOOST POOL
+<find menu>
+STOP BOOST POOL
+<press enter>
+ */
+  int val = atoi((char*)threadCtrl->thread_args);
+
+  logMessage(LOG_DEBUG, "programming BOOST to %s\n", val==true?"On":"Off");
+
+  if ( select_menu_item(aq_data, "BOOST POOL") != true ) {
+    logMessage(LOG_WARNING, "Could not select BOOST POOL menu\n");
+    cancel_menu();
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  if (val==true) {
+    waitForMessage(threadCtrl->aq_data, "TO START BOOST POOL", 5);
+    send_cmd(KEY_ENTER);
+    waitfor_queue2empty();
+  } else {
+    // Extra message overcome.
+    send_cmd(KEY_RIGHT);
+    waitfor_queue2empty();
+    if ( select_sub_menu_item(aq_data, "STOP BOOST POOL") != true ) {
+      logMessage(LOG_WARNING, "Could not select STOP BOOST POOL menu\n");
+      cancel_menu();
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+    //send_cmd(KEY_ENTER);
+  }
+
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
 
 
 void *set_aqualink_SWG( void *ptr )
@@ -1185,15 +1303,24 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 }
 */
 
-void send_cmd(unsigned char cmd)
+void waitfor_queue2empty()
 {
   int i=0;
-  // If there is an unsent command, wait.
-  while ( (_pgm_command != NUL) && ( i++ < 10) ) {
+
+  while ( (_pgm_command != NUL) && ( i++ < 20) ) {
     //sleep(1); // NSF Change to smaller time.
-    //logMessage(LOG_ERR, "********  QUEUE IS FULL ********  delay\n", pgm_command);
-    delay(500);
+    //logMessage(LOG_DEBUG, "********  QUEUE IS FULL ********  delay\n");
+    delay(50);
   }
+
+  if (_pgm_command != NUL)
+    logMessage(LOG_WARNING, "Send command Queue did not empty, timeout\n");
+
+}
+
+void send_cmd(unsigned char cmd)
+{
+  waitfor_queue2empty();
   
   _pgm_command = cmd;
   //delay(200);
@@ -1230,6 +1357,7 @@ void cancel_menu()
 bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* message2, int numMessageReceived)
 {
   //logMessage(LOG_DEBUG, "waitForMessage %s %d %d\n",message,numMessageReceived,cmd);
+  waitfor_queue2empty();  // MAke sure the last command was sent
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS1 = "";
@@ -1297,6 +1425,8 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived)
 {
   logMessage(LOG_DEBUG, "waitForMessage %s %d\n",message,numMessageReceived);
+  waitfor_queue2empty();  // MAke sure the last command was sent
+
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
   char* msgS;
@@ -1312,9 +1442,9 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
   while( ++i <= numMessageReceived)
   {
     if (message != NULL)
-      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
+      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s', last message received '%s'\n",i,numMessageReceived,message,aq_data->last_message);
     else
-      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d waiting for next message, received '%s'\n",i,numMessageReceived,aq_data->last_message);
+      logMessage(LOG_DEBUG, "Programming mode: loop %d of %d waiting for next message, last message received '%s'\n",i,numMessageReceived,aq_data->last_message);
 
     if (message != NULL) {
       ptr = stristr(aq_data->last_message, msgS);
@@ -1328,7 +1458,9 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     }
     
     //logMessage(LOG_DEBUG, "Programming mode: looking for '%s' received message '%s'\n",message,aq_data->last_message);
+    //logMessage(LOG_DEBUG, "*** pthread_cond_wait() sleep\n");
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
+    //logMessage(LOG_DEBUG, "*** pthread_cond_wait() wake\n");
     //logMessage(LOG_DEBUG, "Programming mode: loop %d of %d looking for '%s' received message '%s'\n",i,numMessageReceived,message,aq_data->last_message);
   }
   
@@ -1340,6 +1472,8 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
     return false;
   } else if (message != NULL)
     logMessage(LOG_DEBUG, "Programming mode: found message '%s' in '%s'\n",message,aq_data->last_message);
+  else
+    logMessage(LOG_DEBUG, "Programming mode: waited for %d message(s)\n",numMessageReceived);
   
   return true;
 }
@@ -1347,6 +1481,7 @@ bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageR
 bool select_menu_item(struct aqualinkdata *aq_data, char* item_string)
 {
   char* expectedMsg = "PRESS ENTER* TO SELECT";
+  //char* expectedMsg = "PROGRAM";
   int wait_messages = 5;
   bool found = false;
   int tries = 0;
@@ -1400,9 +1535,9 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
  
   while( (stristr(aq_data->last_message, item_string) == NULL) && ( i++ < wait_messages) )
   {
+    logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
     send_cmd(KEY_RIGHT);
     waitForMessage(aq_data, NULL, 1);
-    logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
   }
 
   if (stristr(aq_data->last_message, item_string) == NULL) {
@@ -1410,12 +1545,16 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
     return false;
   }
   
-  logMessage(LOG_DEBUG, "Programming mode: found menu item '%s'\n", item_string);
+  logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d FOUND menu item '%s', sending ENTER command\n",i,wait_messages, item_string);
   // Enter the mode specified by the argument.
   
   
   send_cmd(KEY_ENTER);
+  
+ 
   waitForMessage(aq_data, NULL, 1);
+  
+  
    //sendCmdWaitForReturn(aq_data, KEY_ENTER);
   
   return true;
@@ -1503,6 +1642,9 @@ const char *ptypeName(program_type type)
     break;
     case AQ_PDA_WAKE_INIT:
       return "PDA init after wake";
+    break;
+     case AQ_SET_BOOST:
+      return "SWG Boost";
     break;
     case AQP_NULL:
     default:

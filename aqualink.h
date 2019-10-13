@@ -8,8 +8,11 @@
 #include "aq_programmer.h"
 
 #define TIME_CHECK_INTERVAL  3600
-//#define TIME_CHECK_INTERVAL  600
 #define ACCEPTABLE_TIME_DIFF 120
+
+// Use these settings to test time
+//#define TIME_CHECK_INTERVAL  100
+//#define ACCEPTABLE_TIME_DIFF 10
 
 #define MAX_ZERO_READ_BEFORE_RECONNECT 500
 
@@ -55,7 +58,8 @@ typedef enum action_type {
   POOL_HTR_SETOINT,
   SPA_HTR_SETOINT,
   FREEZE_SETPOINT,
-  SWG_SETPOINT
+  SWG_SETPOINT,
+  SWG_BOOST
 } action_type;
 
 struct action {
@@ -113,6 +117,8 @@ struct aqualinkdata
   unsigned char last_packet_type;
   pump_detail pumps[MAX_PUMPS];
   int open_websockets;
+  bool boost;
+  char boost_msg[10];
   //bool last_msg_was_status;
   //bool ar_swg_connected;
   #ifdef AQ_DEBUG

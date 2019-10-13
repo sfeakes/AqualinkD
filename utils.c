@@ -505,6 +505,15 @@ bool text2bool(char *str)
     return FALSE;
 }
 
+bool request2bool(char *str)
+{
+  str = cleanwhitespace(str);
+  if (strcasecmp (str, "YES") == 0 || strcasecmp (str, "ON") == 0 || atoi(str) == 1)
+    return TRUE;
+  else
+    return FALSE;
+}
+
 char *bool2text(bool val)
 {
   if(val == TRUE)
@@ -616,3 +625,5 @@ void closePacketLog() {
   fclose(_packetLogFile);
 }
 */
+
+

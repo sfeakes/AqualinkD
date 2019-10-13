@@ -792,6 +792,23 @@
       }
     }
 
+    function setTileAttribute(id, attribute, value) {
+      var tile;
+      if ((tile = document.getElementById(id)) != null) {
+    //console.log("Set Attribute "+attribute+ " to "+value+" for "+id);
+        tile.setAttribute(attribute, value);
+      }
+    }
+
+    function getTileAttribute(id, attribute) {
+      var tile;
+      if ((tile = document.getElementById(id)) != null) {
+  //console.log("get Attribute "+attribute+ " to "+tile.getAttribute(attribute)+" for "+id);
+        return tile.getAttribute(attribute);
+      }
+      return null;
+    }
+
     function formatSatus(status) {
       var index;
       if ((index = status.indexOf("AUX")) >= 0) {
@@ -840,8 +857,12 @@
         }
         var type;
         if ((type = tile.getAttribute('type')) != null) {
-          if (type == 'setpoint_swg')
-            text = 'Generating';
+          if (type == 'setpoint_swg') {
+            if (tile.getAttribute('Boost') == 'on')
+              text = "Boost";
+            else
+              text = 'Generating';
+          }
           else if (type == 'setpoint_thermo')
             text = 'Heating to ' + tile.getAttribute('setpoint');
           else if (type == 'setpoint_freeze')
@@ -896,7 +917,8 @@
         return;
       }
       if (object.type == 'switch' || object.type == 'switch_program') {
-        add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + object.id + '-off.png', 'hk/' + object.id + '-on.png');
+        var img = object.id.replace('/', '_');
+        add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + img + '-off.png', 'hk/' + img + '-on.png');
         setTileOn(object.id, object.status, null);
         if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {
           setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
@@ -936,7 +958,7 @@
         if (optionH <= wrapH)
           active_option.style.height = wrapH;
         
-        console.log("Option:"+optionH+" wrapH:"+wrapH);
+        //console.log("Option:"+optionH+" wrapH:"+wrapH);
         document.getElementById('wrapper').classList.add("opaque");
       } else {
         // Fake onclick to close and save any values if open
@@ -993,7 +1015,7 @@
         }
         if (type == 'setpoint_swg') {
           slider.min = 0;
-          slider.max = 100;
+          slider.max = 101;
           slider.step = 5;
         } else if (type == 'setpoint_freeze') {
           if (_temperature_units != 'c') { // Change to DegF
@@ -1025,6 +1047,23 @@
           oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
           oswitch.onclick = function() {
             oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          }
+        } else if (type == 'setpoint_swg') {
+          slider.value = sp_value;
+          oswitch = document.getElementById("swg_option_switch");
+          //oswitch.checked = tile_state;
+//console.log("Boost attribute " + getTileAttribute(id, "boost") + " for "+id);
+          oswitch.checked = getTileAttribute(id, "Boost")=='on'?true:false ;
+          var oswitch_output = document.getElementById("swg_option_switch_text_value");
+          slider_output.innerHTML = slider.value + ext;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "Boost On" : "Boost Off");
+          slider.oninput = function() {
+            slider_output.innerHTML = this.value + ext;
+            //sp_value = this.value
+          }
+          oswitch.onclick = function() {
+            oswitch_output.innerHTML = ((oswitch.checked) ? "Boost On" : "Boost Off");
+            //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
           }
         } else {
           slider.value = sp_value;
@@ -1079,6 +1118,16 @@
              // if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
                 setTileState(id, state);
             }
+          } else if (type == 'setpoint_swg') {
+            //console.log ("Boost attribute = "+tile.getAttribute('boost'));
+            //console.log ("state = "+state);
+            if (state == (tile.getAttribute('Boost') == 'off')) {
+              //console.log ("change boost");
+              send_command( 'SWG/Boost', (state==true?"on":"off") );
+            } else {
+              if (sp_value != slider.value && slider.value != 101) // Don't change setpoint if slider is on boost
+                setThermostatSetpoint(id, slider.value);
+            }
           } else {
             var value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
@@ -1128,8 +1177,24 @@
       setTileValue("Pool_Water", data.pool_temp);
       setTileValue("Spa_Water", data.spa_temp);*/
       for (var obj in data.leds) {
-        setTileOn(obj.toString(), data.leds[obj])
+        setTileOn(obj.toString(), data.leds[obj]);
+
+        if (obj.toString() == 'SWG/Boost') {
+          //console.log("BOOST IS "+data.leds[obj]);
+          setTileAttribute('SWG', "Boost", data.leds[obj]);
+        }
       }
+
+      if (data.swg_boost_msg != null ) {
+        var tile = document.getElementById('SWG');
+        if (tile != null) {
+          var sp_value = tile.getAttribute('setpoint');
+          if (sp_value == 101)
+            document.getElementById('SWG' + '_status').innerHTML = 'Boost '+data.swg_boost_msg;
+        }
+      }
+
+      //obj.leds.'SWG/Boost' 
 
       // NSF Really quick hack to show RPM on filter pump. Need to come back and do this correctly.
       /*
@@ -1251,9 +1316,11 @@
       socket_di.send(JSON.stringify(msg));
     }
 
-    function send_command(cmd) {
+    function send_command(cmd, value=null) {
       var _cmd = {};
       _cmd.command = cmd;
+      if (value != null)
+      _cmd.value = value;
       socket_di.send(JSON.stringify(_cmd));
     }
 
@@ -1380,6 +1447,16 @@
           <tr class='options_title'>
             <th colspan='2'><span id="swg_option_title"></span>
             </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='swg_option_switch_text_value'></span>
+            </td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='swg_option_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
           </tr>
           <tr>
             <td colspan='2' align='center'><span class="option_text" id="swg_option_slider_text_value"></span>

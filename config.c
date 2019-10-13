@@ -89,6 +89,7 @@ void init_parameters (struct aqconfig * parms)
   parms->read_pentair_packets = false;
   parms->swg_zero_ignore = 0;
   parms->display_warnings_web = false;
+  parms->log_raw_RS_bytes = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }

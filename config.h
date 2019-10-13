@@ -66,6 +66,7 @@ struct aqconfig
   //bool use_PDA_auxiliary;
   bool read_pentair_packets;
   bool debug_RSProtocol_packets;
+  bool log_raw_RS_bytes;
   //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
   //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better
   //char mqtt_pub_topic[250];

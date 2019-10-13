@@ -185,6 +185,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 /* AQUAPURE SWG */
 
 // These are madeup.
+//#define SWG_STATUS_OFF     0xFF
+//#define SWG_STATUS_OFFLINE 0xFE
+
 #define SWG_STATUS_OFF     0xFF
 #define SWG_STATUS_UNKNOWN -128
 // These are actual from RS485
@@ -255,11 +258,12 @@ void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
 int get_packet_new(int fd, unsigned char* packet);
+int get_packet_new_lograw(int fd, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet , int length);
-void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
-void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
-void send_messaged(int fd, unsigned char destination, char *message);
+//void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
+//void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
+//void send_messaged(int fd, unsigned char destination, char *message);
 #endif // AQ_SERIAL_H_
