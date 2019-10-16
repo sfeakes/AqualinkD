@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
     }
 
     //packet_length = get_packet(rs_fd, packet_buffer);
-    packet_length = get_packet_new(rs_fd, packet_buffer);
+    packet_length = get_packet(rs_fd, packet_buffer);
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.

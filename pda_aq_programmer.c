@@ -156,16 +156,25 @@ bool loopover_devices(struct aqualinkdata *aq_data) {
 
 /*
   if charlimit is set, use case insensitive match and limit chars.
+  if charlimit is -1, use VERY loose matching.
 */
 bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charlimit) {
   int i=pda_m_hlightindex();
   int min_index = -1;
   int max_index = -1;
+  int index = -1;
   int cnt = 0;
 
   logMessage(LOG_DEBUG, "PDA Device programmer looking for menu text '%s'\n",menuText);
 
-  int index = (charlimit == 0)?pda_find_m_index(menuText):pda_find_m_index_case(menuText, charlimit);
+  if (charlimit == 0)
+    index = pda_find_m_index(menuText);
+  else if (charlimit > 0)
+    index = pda_find_m_index_case(menuText, charlimit);
+  else if (charlimit == -1)
+    index = pda_find_m_index_loose(menuText);
+
+  //int index = (charlimit == 0)?pda_find_m_index(menuText):pda_find_m_index_case(menuText, charlimit);
 
   if (index < 0) { // No menu, is there a page down.  "PDA Line 9 =    ^^ MORE __"
     if (strncasecmp(pda_m_line(9),"   ^^ MORE", 10) == 0) {
@@ -267,9 +276,18 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
   return waitForPDAMessageHighlight(aq_data, index, 10);
 }
 
-bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu) {
+bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu, bool loose);
 
-  if ( find_pda_menu_item(aq_data, menuText, 0) ) {
+bool select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu){
+  return _select_pda_menu_item(aq_data, menuText, waitForNextMenu, false);
+}
+bool select_pda_menu_item_loose(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu){
+  return _select_pda_menu_item(aq_data, menuText, waitForNextMenu, true);
+}
+bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu, bool loose) {
+
+  int matchType = loose?-1:0;
+  if ( find_pda_menu_item(aq_data, menuText, matchType) ) {
     send_cmd(KEY_PDA_SELECT);
 
     logMessage(LOG_DEBUG, "PDA Device programmer selected menu item '%s'\n",menuText);
@@ -386,6 +404,17 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
             ret = waitForPDAnextMenu(aq_data);
         }
         break;
+      case PM_BOOST:
+        if (pda_m_type() == PM_HOME) {
+            ret = select_pda_menu_item(aq_data, "MENU", true);
+        } else if (pda_m_type() == PM_MAIN) {
+            ret = select_pda_menu_item_loose(aq_data, "BOOST", true);
+        } else {
+            send_cmd(KEY_PDA_BACK);
+            ret = waitForPDAnextMenu(aq_data);
+        }
+        //printf("****MENU SELECT RETURN %d*****\n",ret);
+        break;
       case PM_SET_TEMP:
         if (pda_m_type() == PM_HOME) {
             ret = select_pda_menu_item(aq_data, "MENU", true);
@@ -421,8 +450,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
         return false;
         break;
     }
-    logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d, current %d\n",
-               menu, pda_m_type());
+    logMessage(LOG_DEBUG, "PDA Device programmer request for menu %d, current %d\n", menu, pda_m_type());
   }
   if (pda_m_type() != menu) {
     logMessage(LOG_ERR, "PDA Device programmer didn't find a requested menu %d, current %d\n", menu, pda_m_type());
@@ -810,6 +838,49 @@ bool set_PDA_aqualink_SWG_setpoint(struct aqualinkdata *aq_data, int val) {
     return set_PDA_numeric_field_value(aq_data, val, &aq_data->swg_percent, "SET POOL", 5);
   
   //return true;
+}
+
+bool set_PDA_aqualink_boost(struct aqualinkdata *aq_data, bool val)
+{
+  if (! goto_pda_menu(aq_data, PM_BOOST)) {
+    logMessage(LOG_ERR, "Error finding BOOST menu\n");
+    return false;
+  }
+
+  
+
+  // Should be on the START menu item
+  if (val == true) { // Turn on should just be enter
+    if (strstr(pda_m_hlight(), "START") != NULL)
+      send_cmd(KEY_PDA_SELECT);
+    else {
+      logMessage(LOG_ERR, "Error finding BOOST START menu\n");
+      return false;
+    }
+  } else {
+    /*
+    // Should be select options PAUSE | RESTART | STOP
+    int i=0;
+    for (i=0; i < 6; i++) {
+      send_cmd(KEY_PDA_DOWN);
+      waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,10);
+      if (strstr(pda_m_hlight(), "STOP") != NULL) {
+        send_cmd(KEY_PDA_SELECT);
+        break;
+      }
+    }
+    if (i >= 6)
+      logMessage(LOG_ERR, "Error finding BOOST STOP menu\n");
+    // Should be select options PAUSE | RESTART | STOP
+    // so press down twice then select
+    */
+     // NSF This is really crap, but can't get above to work, need to come back and check menu items against selections.
+    send_cmd(KEY_PDA_DOWN);
+    send_cmd(KEY_PDA_DOWN);
+    send_cmd(KEY_PDA_SELECT);
+  }
+
+  return true;
 }
 
 bool set_PDA_aqualink_heater_setpoint(struct aqualinkdata *aq_data, int val, bool isPool) {

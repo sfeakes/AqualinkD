@@ -27,7 +27,8 @@ typedef enum pda_menu_type {
   PM_SETTINGS,
   PM_EQUIPTMENT_CONTROL,
   PM_EQUIPTMENT_STATUS,
-  PM_PALM_OPTIONS // This seems to be only older revisions
+  PM_PALM_OPTIONS, // This seems to be only older revisions
+  PM_BOOST
 } pda_menu_type;
 
 /*
@@ -74,6 +75,7 @@ char *pda_m_line(int index);
 pda_menu_type pda_m_type();
 int pda_find_m_index(char *text);
 int pda_find_m_index_case(char *text, int limit);
+int pda_find_m_index_loose(char *text);
 //int pda_find_m_index_swcase(char *text, int limit);
 
 #endif

@@ -66,6 +66,10 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
+# Update in Release 1.3.8
+* Fixed PDA mode from 1.3.7
+* Added SWG Boost to PDA
+* More updates to protocol code for Jandy and Pentair.  
 # Update in Release 1.3.7
 * PDA SUPPORT IS BROKEN IN 1.3.7 DON'T UPGRADE IF YOU'RE USING PDA Mode
 * PDA Note:- Due to changes to speed up programming the control panel, PDA mode does not function correctly, I will come back and fix this, but I don't have the time for this release. 

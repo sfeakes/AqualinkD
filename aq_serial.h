@@ -6,6 +6,13 @@
 
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
 
+
+// Protocol types
+#define PCOL_JANDY     0xFF
+#define PCOL_PENTAIR   0xFE
+#define PCOL_UNKNOWN   0xFD
+
+
 // packet offsets
 #define PKT_DEST        2
 #define PKT_CMD         3
@@ -205,7 +212,8 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80
 
 
-#define CMD_PDA_0x05           0x05
+#define CMD_PDA_0x04           0x04 // No idea, might be building menu
+#define CMD_PDA_0x05           0x05 // No idea
 #define CMD_PDA_0x1B           0x1b
 #define CMD_PDA_HIGHLIGHT      0x08
 #define CMD_PDA_CLEAR          0x09
@@ -245,7 +253,7 @@ typedef enum {
 } protocolType;
 
 
-int init_serial_port(char* tty);
+int init_serial_port(const char* tty);
 void close_serial_port(int file_descriptor);
 void set_pda_mode(bool mode);
 bool pda_mode();
@@ -257,6 +265,8 @@ void send_ack(int file_descriptor, unsigned char command);
 void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
+int get_packet_lograw(int fd, unsigned char* packet);
+
 int get_packet_new(int fd, unsigned char* packet);
 int get_packet_new_lograw(int fd, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);

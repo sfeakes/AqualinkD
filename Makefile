@@ -42,7 +42,7 @@ ifeq ($(DEBUG), true)
 endif
 
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c
-LR_SRC = log_reader.c aq_serial.c utils.c
+LR_SRC = log_reader.c aq_serial.c utils.c packetLogger.c
 PL_EXSRC = aq_serial.c
 PL_EXOBJ = aq_serial_player.o
 PL_SRC := $(filter-out aq_serial.c, $(SRCS))

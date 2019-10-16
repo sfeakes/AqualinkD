@@ -121,7 +121,7 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
   // Are we in programming mode
   if (aq_data->active_thread.thread_id != 0) {
     if ( ((_pgm_command == KEY_MENU || aq_data->active_thread.ptype == AQ_SET_TIME) && aq_data->last_packet_type == CMD_STATUS) ||
-         (aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) ||
+         (pda_mode() == false && aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) ||
          (pda_mode() == true && aq_data->last_packet_type == CMD_STATUS)
          //(pda_mode() == true && last_sent_was_cmd == false)
       ) {
@@ -132,8 +132,10 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
       cmd = _pgm_command;
       _pgm_command = NUL;
       logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);*/
+    } else if (_pgm_command != NUL) {
+      logMessage(LOG_DEBUG, "RS Waiting to send cmd '0x%02hhx' (programming)\n", _pgm_command);
     } else {
-      logMessage(LOG_DEBUG, "RS Waiting to send cmd '0x%02hhx'\n", _pgm_command);
+      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' empty queue (programming)\n", cmd);
     }
   } else if (_stack_place > 0 && aq_data->last_packet_type == CMD_STATUS ) {
     cmd = _commands[0];
@@ -286,7 +288,8 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         type != AQ_GET_AUX_LABELS &&
 #endif
         type != AQ_GET_POOL_SPA_HEATER_TEMPS &&
-        type != AQ_SET_FRZ_PROTECTION_TEMP) {
+        type != AQ_SET_FRZ_PROTECTION_TEMP &&
+        type != AQ_SET_BOOST) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
     } 
@@ -645,6 +648,12 @@ STOP BOOST POOL
 <press enter>
  */
   int val = atoi((char*)threadCtrl->thread_args);
+
+  if (pda_mode() == true) {
+      set_PDA_aqualink_boost(aq_data, val);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+  }
 
   logMessage(LOG_DEBUG, "programming BOOST to %s\n", val==true?"On":"Off");
 
@@ -1313,8 +1322,15 @@ void waitfor_queue2empty()
     delay(50);
   }
 
-  if (_pgm_command != NUL)
+  if (_pgm_command != NUL) {
+    if (pda_mode()) {
+      // Wait for longer in PDA mode since it's slower.
+      while ( (_pgm_command != NUL) && ( i++ < 100) ) {
+        delay(100);
+      }
+    }
     logMessage(LOG_WARNING, "Send command Queue did not empty, timeout\n");
+  }
 
 }
 

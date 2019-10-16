@@ -22,6 +22,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "aq_serial.h"
 #include "utils.h"
@@ -49,6 +52,41 @@ void logiAqualinkMsg(unsigned char *packet_buffer, int packet_length) {
 }
 
 
+void read_bin_file(char *filename)
+{
+  unsigned char packet_buffer[AQ_MAXPKTLEN];
+  int packet_length;
+  int i=0;
+  
+  setLoggingPrms(LOG_DEBUG_SERIAL , false, NULL, NULL);
+  startPacketLogger(false,true);
+
+  int fd = open(filename, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
+  if (fd < 0)  {
+    logMessage(LOG_ERR, "Unable to open port: %s\n", filename);
+    return;
+  }
+
+  while ( (packet_length = get_packet_new(fd, packet_buffer)) > -1){
+    printf("----------------\n");
+    //logPacket(packet_buffer, packet_length);
+  }
+
+}
+
+void create_bin_file(FILE *in, FILE *out) {
+  char hex[6];
+  unsigned char byte;
+
+  while ( fgets ( hex, 6, in ) != NULL ) /* read a line */
+  {
+    byte = (int)strtol(hex, NULL, 16);
+    //printf("read 0x%02hhx, %s\n",byte,hex);
+    fwrite(&byte, 1,1, out);
+    //return;
+  }
+}
+
 int main(int argc, char *argv[]) {
 
   //unsigned char packet_buffer[10];
@@ -56,12 +94,29 @@ int main(int argc, char *argv[]) {
   int packet_length = 0;
   char hex[5];
   int i;
+  FILE *outfile = NULL;
+  bool writeb = false;
   //int num;
   //int pi;
 
-  if (argc < 1 || access( argv[1], F_OK ) == -1 ) {
+  if (strcmp(argv[1], "-rb") == 0) {
+    read_bin_file(argv[2]);
+    return 0;
+  }
+  else if (argc < 1 || access( argv[1], F_OK ) == -1 ) {
     fprintf(stderr, "ERROR, first param must be valid log file\n");
     return 1;
+  }
+  
+  else if (strcmp(argv[2], "-b") == 0) {
+    outfile = fopen ( argv[3], "w" );
+    if ( outfile == NULL )
+    {
+      fprintf(stderr, "ERROR, Couldn't open out file `%s`\n", argv[3]);
+      perror ( argv[3] ); /* why didn't the file open? */
+      return 1;
+    }
+    writeb = true;
   }
 
   FILE *file = fopen ( argv[1], "r" );
@@ -69,6 +124,13 @@ int main(int argc, char *argv[]) {
   {
     perror ( argv[1] ); /* why didn't the file open? */
     return 1;
+  }
+
+  if (writeb) {
+    create_bin_file(file, outfile);
+    fclose ( file );
+    fclose ( outfile );
+    return 0;
   }
   
   char line [ 128 ]; /* or other suitable maximum line size */
@@ -85,20 +147,22 @@ int main(int argc, char *argv[]) {
     }
     packet_length--;
 
+   
     if (packet_buffer[PKT_DEST] == 0x33 && packet_buffer[PKT_CMD] == 0x25)
-        logiAqualinkMsg(packet_buffer, packet_length);
+      logiAqualinkMsg(packet_buffer, packet_length);
     
     //if (packet_buffer[PKT_CMD] == 0x24 || packet_buffer[PKT_CMD] == 0x25) {
       
-      printf("To 0x%02hhx, type %15.15s, length %2.2d ", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),packet_length);
-      fputs ( line, stdout ); 
+    printf("To 0x%02hhx, type %15.15s, length %2.2d\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),packet_length);
+    fputs ( line, stdout ); 
       //printf("Message : '");
       //fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
       //printf("'\n");
     //}
+    
   }
+
   fclose ( file );
-  
 
   return 0;
 }

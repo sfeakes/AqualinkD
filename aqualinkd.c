@@ -1010,10 +1010,11 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
       if (_config_parameters.pda_sleep_mode && pda_shouldSleep()) {
         logMessage(LOG_DEBUG, "PDA Aqualink daemon in sleep mode\n");
         return;
-      } else if (packet_buffer[PKT_CMD] != CMD_STATUS)
-        send_ack(rs_fd, NUL);
-      else
-        send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
+      //} else if (packet_buffer[PKT_CMD] != CMD_STATUS)  // Moved logic to pop_aq_cmd()
+      //  send_extended_ack(rs_fd, ACK_PDA, NUL);
+      } else {
+        send_extended_ack(rs_fd, ACK_PDA, pop_aq_cmd(&_aqualink_data));
+      }
     
   } else if (_aqualink_data.simulate_panel && _aqualink_data.active_thread.thread_id == 0) { 
     // We are in simlator mode, ack get's complicated now.
@@ -1171,9 +1172,7 @@ void main_loop()
     }
 
     if (_config_parameters.log_raw_RS_bytes)
-      packet_length = get_packet_new_lograw(rs_fd, packet_buffer);
-    else if (_config_parameters.read_pentair_packets)
-      packet_length = get_packet_new(rs_fd, packet_buffer);
+      packet_length = get_packet_lograw(rs_fd, packet_buffer);
     else
       packet_length = get_packet(rs_fd, packet_buffer);
 
