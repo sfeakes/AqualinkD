@@ -48,6 +48,7 @@
 #define SWG_ON 2
 #define SWG_OFF 0
 
+#define MQTT_FLASH "2"
 #define MQTT_ON "1"
 #define MQTT_OFF "0"
 

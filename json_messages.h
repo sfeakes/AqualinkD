@@ -20,7 +20,8 @@
 #define JSON_LOW     "low"
 
 #define JSON_PROGRAMMING "Programming"
-#define JSON_SERVICE     "Service"
+#define JSON_SERVICE     "Service Mode"
+#define JSON_TIMEOUT     "Timeout Mode"
 #define JSON_READY       "Ready"
 
 struct JSONkeyvalue{

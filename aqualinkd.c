@@ -243,7 +243,7 @@ void processMessage(char *message)
   // Don't do any message counts if we are programming
   if (_aqualink_data.active_thread.thread_id == 0) {
   // If we have more than 10 messages without "Service Mode is active" assume it's off.
-    if (_aqualink_data.service_mode_state == ON && service_msg_count++ > 10) {
+    if (_aqualink_data.service_mode_state != OFF && service_msg_count++ > 10) {
       _aqualink_data.service_mode_state = OFF;
       service_msg_count = 0;
     }
@@ -369,6 +369,13 @@ void processMessage(char *message)
     if (_aqualink_data.service_mode_state == OFF)
       logMessage(LOG_NOTICE, "AqualinkD set to Service Mode\n");
     _aqualink_data.service_mode_state = ON;
+    service_msg_count = 0;
+  }
+  else if (stristr(msg, LNG_MSG_TIMEOUT_ACTIVE) != NULL)
+  {
+    if (_aqualink_data.service_mode_state == OFF)
+      logMessage(LOG_NOTICE, "AqualinkD set to Timeout Mode\n");
+    _aqualink_data.service_mode_state = FLASH;
     service_msg_count = 0;
   }
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL)
@@ -1102,7 +1109,6 @@ void main_loop()
   _aqualink_data.single_device = false;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.frz_protect_state = OFF;
-  _aqualink_data.service_mode_state = OFF;
   _aqualink_data.battery = OK;
   _aqualink_data.open_websockets = 0;
 
@@ -1285,8 +1291,11 @@ void main_loop()
           interestedInNextAck = true;
           
           // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
-          if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0)
-          {     
+          if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0 && packet_buffer[4] != 0xFF)
+          {
+            // In service or timeout mode SWG set % message is very strange. AR %% | HEX: 0x10|0x02|0x50|0x11|0xff|0x72|0x10|0x03|
+            // Not really sure what to do with this, just ignore 0xff / 255 for the moment. (if statment above)                                                    
+            
             // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
             if (swg_zero_cnt <= _config_parameters.swg_zero_ignore && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
               logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,_config_parameters.swg_zero_ignore,packet_buffer[4],packet_buffer[5]);

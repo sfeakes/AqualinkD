@@ -138,6 +138,7 @@
 #define SOLAR_HTR_LED_INDEX  19
 
 #define LNG_MSG_SERVICE_ACTIVE        "SERVICE MODE IS ACTIVE"
+#define LNG_MSG_TIMEOUT_ACTIVE        "TIMEOUT MODE IS ACTIVE"
 #define LNG_MSG_POOL_TEMP_SET         "POOL TEMP IS SET TO"
 #define LNG_MSG_SPA_TEMP_SET          "SPA TEMP IS SET TO"
 #define LNG_MSG_FREEZE_PROTECTION_SET "FREEZE PROTECTION IS SET TO"
@@ -267,12 +268,18 @@ void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 int get_packet(int file_descriptor, unsigned char* packet);
 int get_packet_lograw(int fd, unsigned char* packet);
 
-int get_packet_new(int fd, unsigned char* packet);
-int get_packet_new_lograw(int fd, unsigned char* packet);
+//int get_packet_new(int fd, unsigned char* packet);
+//int get_packet_new_lograw(int fd, unsigned char* packet);
 //void close_serial_port(int file_descriptor, struct termios* oldtio);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet , int length);
+
+
+void send_jandy_command(int fd, unsigned char *packet_buffer, int size);
+void send_pentair_command(int fd, unsigned char *packet_buffer, int size);
+void send_command(int fd, unsigned char *packet_buffer, int size);
+
 //void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
 //void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
 //void send_messaged(int fd, unsigned char destination, char *message);

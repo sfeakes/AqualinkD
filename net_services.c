@@ -313,7 +313,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
   if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
      _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
-     send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==ON?MQTT_ON:MQTT_OFF);
+     send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==OFF?MQTT_OFF:(_aqualink_data->service_mode_state==FLASH?MQTT_FLASH:MQTT_ON));
   }
 
   if (_aqualink_data->air_temp != TEMP_UNKNOWN && _aqualink_data->air_temp != _last_mqtt_aqualinkdata.air_temp) {
@@ -369,12 +369,12 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.spa_htr_set_point = _aqualink_data->spa_htr_set_point;
     send_mqtt_setpoint_msg(nc, BTN_SPA_HTR, _aqualink_data->spa_htr_set_point);
   }
-
+/*
   if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
     _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
     send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==ON?MQTT_ON:MQTT_OFF);
   }
-
+*/
   if (_aqualink_data->frz_protect_set_point != TEMP_UNKNOWN && _aqualink_data->frz_protect_set_point != _last_mqtt_aqualinkdata.frz_protect_set_point) {
     _last_mqtt_aqualinkdata.frz_protect_set_point = _aqualink_data->frz_protect_set_point;
     send_mqtt_setpoint_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_set_point);
@@ -1296,6 +1296,7 @@ void start_mqtt(struct mg_mgr *mgr) {
     _last_mqtt_aqualinkdata.battery = -1;
     _last_mqtt_aqualinkdata.frz_protect_state = -1;
     _last_mqtt_aqualinkdata.boost = -1;
+    _last_mqtt_aqualinkdata.service_mode_state = -1;
     _mqtt_exit_flag = false; // set here to stop multiple connects, if it fails truley fails it will get set to false.
   }
 }

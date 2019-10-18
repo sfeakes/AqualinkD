@@ -46,8 +46,11 @@ const char* getStatus(struct aqualinkdata *aqdata)
     return JSON_PROGRAMMING;
   }
  
-  if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
+  //if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
+  if (aqdata->service_mode_state == ON) {
     return JSON_SERVICE;
+  } else if (aqdata->service_mode_state == FLASH) {
+    return JSON_TIMEOUT;
   }
 
   if (aqdata->last_display_message[0] != '\0') {

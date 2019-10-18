@@ -357,17 +357,19 @@ void send_pentair_command(int fd, unsigned char *packet_buffer, int size)
 
   //packet[i++] = 0x00; // from
   //packet[i++] = // to
-  for (i=5; i-4 < size; i++) {
+  for (i=5; i-5 < size; i++) {
     //printf("added 0x%02hhx at position %d\n",packet_buffer[i-4],i);
     if (i==6) {
       // Replace source
-      packet[i] = 0x00;
+      //packet[i] = 0x00;
+      // Don't replace source
+      packet[i] = packet_buffer[i-5];
     } else if (i==9) {
       // Replace length
       //packet[i] = 0xFF;
-      packet[i] = (unsigned char)size-6;
+      packet[i] = (unsigned char)size-5;
     } else {
-      packet[i] = packet_buffer[i-4];
+      packet[i] = packet_buffer[i-5];
     }
 
     //packet[i] = packet_buffer[i-4];    
@@ -383,26 +385,18 @@ void send_pentair_command(int fd, unsigned char *packet_buffer, int size)
   send_packet(fd,packet,i);
 }
 
-//unsigned char packet_buffer[] = {PCOL_PENTAIR, 0x07, 0x0F, 0x10, 0x08, 0x0D, 0x55, 0x55, 0x5B, 0x2A, 0x2B, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00};
-//unsigned char packet_buffer[] = {PCOL_JANDY, 0x07, 0x0F, 0x00, 0x00};
-void send_command(int fd, unsigned char *packet_buffer, int size)
+void send_jandy_command(int fd, unsigned char *packet_buffer, int size)
 {
   unsigned char packet[AQ_MAXPKTLEN];
   int i=0;
   
-  if (packet_buffer[0] != PCOL_JANDY) {
-    //logMessage(LOG_ERR, "Only Jandy protocol supported at present!\n");
-    send_pentair_command(fd, packet_buffer, size);
-    return;
-  }
-
   packet[0] = NUL;
   packet[1] = DLE;
   packet[2] = STX;
 
-  for (i=3; i-2 < size; i++) {
+  for (i=3; i-3 < size; i++) {
     //printf("added 0x%02hhx at position %d\n",packet_buffer[i-2],i);
-    packet[i] = packet_buffer[i-2];
+    packet[i] = packet_buffer[i-3];
   }
 
   packet[++i] = DLE;
@@ -412,6 +406,25 @@ void send_command(int fd, unsigned char *packet_buffer, int size)
   packet[i-3] = generate_checksum(packet, i);
 
   send_packet(fd,packet,++i);
+}
+
+//unsigned char packet_buffer[] = {PCOL_PENTAIR, 0x07, 0x0F, 0x10, 0x08, 0x0D, 0x55, 0x55, 0x5B, 0x2A, 0x2B, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00};
+//unsigned char packet_buffer[] = {PCOL_JANDY, 0x07, 0x0F, 0x00, 0x00};
+void send_command(int fd, unsigned char *packet_buffer, int size)
+{
+  //unsigned char packet[AQ_MAXPKTLEN];
+  //int i=0;
+  
+  if (packet_buffer[0] == PCOL_JANDY) {
+    //logMessage(LOG_ERR, "Only Jandy protocol supported at present!\n");
+    send_jandy_command(fd, &packet_buffer[1], size-1);
+    return;
+  }
+  if (packet_buffer[0] == PCOL_PENTAIR) {
+    //logMessage(LOG_ERR, "Only Jandy protocol supported at present!\n");
+    send_pentair_command(fd, &packet_buffer[1], size-1);
+    return;
+  }
 }
 
 void send_packet(int fd, unsigned char *packet, int length)
