@@ -860,11 +860,16 @@
           if (type == 'setpoint_swg') {
             if (tile.getAttribute('Boost') == 'on')
               text = "Boost";
+            else if (status == 'enabled')
+              text = 'Enabled';
             else
               text = 'Generating';
           }
           else if (type == 'setpoint_thermo')
-            text = 'Heating to ' + tile.getAttribute('setpoint');
+            if (status == 'enabled')
+              text = 'Heat to ' + tile.getAttribute('setpoint');
+            else
+              text = 'Heating to ' + tile.getAttribute('setpoint');
           else if (type == 'setpoint_freeze')
             text = 'Turn on ' + tile.getAttribute('setpoint') + "&deg;";
           //else

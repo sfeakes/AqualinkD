@@ -41,6 +41,7 @@
 #include "pentair_messages.h"
 #include "pda_aq_programmer.h"
 #include "packetLogger.h"
+#include "aquapure.h"
 #include "version.h"
 
 
@@ -1085,7 +1086,7 @@ void main_loop()
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
   bool interestedInNextAck = false;
   bool changed = false;
-  int swg_zero_cnt = 0;
+  //int swg_zero_cnt = 0;
   int swg_noreply_cnt = 0;
   int i;
   //int delayAckCnt = 0;
@@ -1260,21 +1261,7 @@ void main_loop()
         if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true)
         {
           swg_noreply_cnt = 0;
-          if (packet_buffer[PKT_CMD] == CMD_PPM)
-          {
-            _aqualink_data.ar_swg_status = packet_buffer[5];
-            if (_aqualink_data.swg_delayed_percent != TEMP_UNKNOWN && _aqualink_data.ar_swg_status == SWG_STATUS_ON)
-            { // We have a delayed % to set.
-              char sval[10];
-              snprintf(sval, 9, "%d", _aqualink_data.swg_delayed_percent);
-              aq_programmer(AQ_SET_SWG_PERCENT, sval, &_aqualink_data);
-              logMessage(LOG_NOTICE, "Setting SWG %% to %d, from delayed message\n", _aqualink_data.swg_delayed_percent);
-              _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
-            }
-            _aqualink_data.swg_ppm = packet_buffer[4] * 100;
-            changed = true;
-            //logMessage(LOG_DEBUG, "Read SWG PPM %d from ID 0x%02hhx\n", _aqualink_data.swg_ppm, SWG_DEV_ID);
-          }
+          processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
           interestedInNextAck = false;
         }
         //else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00)
@@ -1289,33 +1276,7 @@ void main_loop()
         else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
         {
           interestedInNextAck = true;
-          
-          // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
-          if (packet_buffer[3] == CMD_PERCENT && _aqualink_data.active_thread.thread_id == 0 && packet_buffer[4] != 0xFF)
-          {
-            // In service or timeout mode SWG set % message is very strange. AR %% | HEX: 0x10|0x02|0x50|0x11|0xff|0x72|0x10|0x03|
-            // Not really sure what to do with this, just ignore 0xff / 255 for the moment. (if statment above)                                                    
-            
-            // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
-            if (swg_zero_cnt <= _config_parameters.swg_zero_ignore && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
-              logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,_config_parameters.swg_zero_ignore,packet_buffer[4],packet_buffer[5]);
-              swg_zero_cnt++;
-            } else if (swg_zero_cnt > _config_parameters.swg_zero_ignore && packet_buffer[4] == 0x00 && packet_buffer[5] == 0x73) {
-              _aqualink_data.swg_percent = (int)packet_buffer[4];
-              changed = true;
-              //logMessage(LOG_DEBUG, "SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet_buffer[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet_buffer[4],packet_buffer[5]);
-              //swg_zero_cnt++;
-            } else {
-              swg_zero_cnt = 0;   
-              _aqualink_data.swg_percent = (int)packet_buffer[4];
-              changed = true;
-              //logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n", _aqualink_data.swg_percent,packet_buffer[4],packet_buffer[5]);
-            }
-            if (_aqualink_data.swg_percent > 100)
-              _aqualink_data.boost = true;
-            else
-              _aqualink_data.boost = false;
-          }
+          processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _config_parameters.swg_zero_ignore);
         }
         else
         {
