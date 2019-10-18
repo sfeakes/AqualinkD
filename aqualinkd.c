@@ -1261,7 +1261,7 @@ void main_loop()
         if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true)
         {
           swg_noreply_cnt = 0;
-          processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
+          changed = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
           interestedInNextAck = false;
         }
         //else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00)
@@ -1276,7 +1276,7 @@ void main_loop()
         else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
         {
           interestedInNextAck = true;
-          processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _config_parameters.swg_zero_ignore);
+          changed = processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _config_parameters.swg_zero_ignore);
         }
         else
         {
