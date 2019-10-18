@@ -70,6 +70,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Added panel Timeout mode support to UI and MQTT
 * Fixed SWG bug while in Service & Timeout modes
 * Cleanded up SWG code and MQTT status messages for SWG and SWG/enabled
+* Fixed SWG bounce when changing SWG % 
 # Update in Release 1.3.8
 * Fixed PDA mode from 1.3.7
 * Added SWG Boost to PDA

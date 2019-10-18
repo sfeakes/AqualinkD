@@ -750,6 +750,9 @@ void *set_aqualink_SWG( void *ptr )
   waitForMessage(threadCtrl->aq_data, "SET TO", 1);
   //waitForMessage(threadCtrl->aq_data, "POOL SP IS SET TO", 1);
 
+  // Since we read % directly from RS message, wait for another few messages that way
+  // We won't registed a SWG bounce, since we already told clients SWG was at new % before programming started
+  waitForMessage(threadCtrl->aq_data, NULL, 1);
 
   cleanAndTerminateThread(threadCtrl);
 
