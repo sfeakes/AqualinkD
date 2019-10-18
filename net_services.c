@@ -411,7 +411,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     if (!_aqualink_data->simulate_panel)
       sprintf(_aqualink_data->last_display_message, message);
 
-    send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, dzalert, &message[10]);
+    send_domoticz_mqtt_status_message(nc, _aqualink_config->dzidx_swg_status, dzalert, &message[9]);
     send_mqtt_int_msg(nc, SWG_TOPIC, status);
     
     if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF)
