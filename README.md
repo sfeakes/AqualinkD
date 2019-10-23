@@ -66,7 +66,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 #<a name="release"></a>
-# Update in Release 1.3.9a
+# Update in Release 1.3.9b
 * Small fixes for Jandy protocol.
 * Fixed some debug messages.
 # Update in Release 1.3.9

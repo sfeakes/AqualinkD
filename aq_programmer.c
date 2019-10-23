@@ -107,9 +107,12 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
   // Only send commands on status messages 
   // Are we in programming mode
   if (aq_data->active_thread.thread_id != 0) {
-    if ( (_pgm_command == KEY_MENU && aq_data->last_packet_type == CMD_STATUS) ||
+    /*if ( (_pgm_command == KEY_MENU && aq_data->last_packet_type == CMD_STATUS) ||
     // Need to not the key_menu below
-         ( _pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG) )) {
+         ( _pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG) )) {*/
+    if ( (_pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS)) ||
+        // Boost pool has to send commands to msg long
+         (aq_data->active_thread.ptype == AQ_SET_BOOST && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG)) ) {
       cmd = _pgm_command;
       _pgm_command = NUL;
       logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
