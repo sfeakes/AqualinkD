@@ -732,9 +732,9 @@ STOP BOOST POOL
           break;
         } 
         send_cmd(KEY_RIGHT);
-        printf("WAIT\n");
+        //printf("WAIT\n");
         waitfor_queue2empty();
-        printf("FINISHED WAIT\n");
+        //printf("FINISHED WAIT\n");
       }
       //waitfor_queue2empty();
       //waitForMessage(aq_data, NULL, 1);
@@ -742,7 +742,7 @@ STOP BOOST POOL
 
     waitForMessage(aq_data, "STOP BOOST POOL", 1);
     if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
-      logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
+      //logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
       send_cmd(KEY_ENTER);
     } else {
        logMessage(LOG_DEBUG, "**** GIVING UP ****\n");
