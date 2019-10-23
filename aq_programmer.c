@@ -101,9 +101,41 @@ int get_aq_cmd_length()
   return _stack_place;
 }
 
-unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data);
-
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
+{
+  unsigned char cmd = NUL;
+  // Only send commands on status messages 
+  // Are we in programming mode
+  if (aq_data->active_thread.thread_id != 0) {
+    if ( (_pgm_command == KEY_MENU && aq_data->last_packet_type == CMD_STATUS) ||
+    // Need to not the key_menu below
+         ( _pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG) )) {
+      cmd = _pgm_command;
+      _pgm_command = NUL;
+      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
+    } else if (_pgm_command != NUL) {
+      logMessage(LOG_DEBUG, "RS Waiting to send cmd '0x%02hhx' (programming)\n", _pgm_command);
+    } else {
+      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' empty queue (programming)\n", cmd);
+    }
+  } else if (_stack_place > 0 && aq_data->last_packet_type == CMD_STATUS ) {
+    cmd = _commands[0];
+    _stack_place--;
+    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
+    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
+  } else {
+    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
+  }
+
+//printf("RSM sending cmd '0x%02hhx' in reply to '0x%02hhx'\n",cmd,aq_data->last_packet_type);
+
+  return cmd;
+}
+
+
+//unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data);
+
+unsigned char pop_aq_cmd_XXXXXX(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
   static bool last_sent_was_cmd = false;
@@ -142,6 +174,8 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
     _stack_place--;
     logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
     memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
+  } else {
+    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
   }
 
   if (cmd == NUL)
@@ -180,6 +214,10 @@ unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data)
     _last_sent_was_cmd= true;
 
   return cmd;
+}
+
+int roundTo(int num, int denominator) {
+  return ((num + (denominator/2) ) / denominator )* denominator;
 }
 
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
@@ -251,8 +289,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 
   // If SWG make sure it's 0,5,10,15,20......
   if (type == SWG_SETPOINT) {
-    if (0 != ( rtn % 5) )
-        rtn = ((rtn + 5) / 10) * 10;
+    rtn = roundTo(rtn, 5);
   }
   
   if (rtn != value)
@@ -669,17 +706,65 @@ STOP BOOST POOL
     send_cmd(KEY_ENTER);
     waitfor_queue2empty();
   } else {
+    int wait_messages = 5;
+    int i=0;
+    //waitfor_queue2empty();
+    //waitForMessage(aq_data, NULL, 1);
+    while( i++ < wait_messages) 
+    {
+      waitForMessage(aq_data, "STOP BOOST POOL", 1);
+      if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
+        // This is a really bad hack, message sequence is out for boost for some reason, so as soon as we see stop message, force enter key.
+        _pgm_command = KEY_ENTER;
+        //send_cmd(KEY_ENTER);
+        logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
+        //waitfor_queue2empty();
+        break;
+      } else {
+        logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for 'STOP BOOST POOL' received message '%s'\n",i,wait_messages,aq_data->last_message);
+        delay(200);
+        if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
+          _pgm_command = KEY_ENTER;
+          logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
+          break;
+        } 
+        send_cmd(KEY_RIGHT);
+        printf("WAIT\n");
+        waitfor_queue2empty();
+        printf("FINISHED WAIT\n");
+      }
+      //waitfor_queue2empty();
+      //waitForMessage(aq_data, NULL, 1);
+    }
+
+    waitForMessage(aq_data, "STOP BOOST POOL", 1);
+    if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
+      logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
+      send_cmd(KEY_ENTER);
+    } else {
+       logMessage(LOG_DEBUG, "**** GIVING UP ****\n");
+    }
+/*
+    if (stristr(aq_data->last_message, "STOP BOOST POOL") == NULL) {
+      send_cmd(KEY_RIGHT);
+      logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
+    } else {
+      logMessage(LOG_ERR, "**** NOT FOUND STOP BOOST POOL ****\n");
+    }
+*/
     // Extra message overcome.
-    send_cmd(KEY_RIGHT);
-    waitfor_queue2empty();
+    //send_cmd(KEY_RIGHT);
+    //waitfor_queue2empty();
+    /*
     if ( select_sub_menu_item(aq_data, "STOP BOOST POOL") != true ) {
       logMessage(LOG_WARNING, "Could not select STOP BOOST POOL menu\n");
       cancel_menu();
       cleanAndTerminateThread(threadCtrl);
       return ptr;
-    }
+    }*/
     //send_cmd(KEY_ENTER);
   }
+  waitForMessage(aq_data,NULL, 1);
 
   cleanAndTerminateThread(threadCtrl);
 

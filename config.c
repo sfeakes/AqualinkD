@@ -87,7 +87,7 @@ void init_parameters (struct aqconfig * parms)
   parms->force_swg = false;
   //parms->swg_pool_and_spa = false;
   parms->read_pentair_packets = false;
-  parms->swg_zero_ignore = 0;
+  parms->swg_zero_ignore = DEFAILT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
   parms->log_raw_RS_bytes = false;
  

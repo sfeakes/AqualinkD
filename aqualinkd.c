@@ -44,6 +44,7 @@
 #include "aquapure.h"
 #include "version.h"
 
+//#define PROCESS_INCOMPLETE_MESSAGES
 
 //#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
@@ -571,6 +572,7 @@ bool process_packet(unsigned char *packet, int length)
     return process_pda_packet(packet, length);
   }
 
+  // If we are in the middle of processing a message, and get another, we end the message
   if (processing_long_msg > 0 && packet[PKT_CMD] != CMD_MSG_LONG)
   {
     processing_long_msg = 0;
@@ -610,32 +612,64 @@ bool process_packet(unsigned char *packet, int length)
       kick_aq_program_thread(&_aqualink_data);
     }
     break;
+   case CMD_MSG:
+   case CMD_MSG_LONG:
+     {
+       int index = packet[PKT_DATA]; // Will get 0x00 for complete message, 0x01 for start on long message 0x05 last of long message
+       //printf("RSM received message at index %d '%.*s'\n",index,AQ_MSGLEN,(char *)packet + PKT_DATA + 1);
+       if (index <= 1){
+         memset(message, 0, AQ_MSGLONGLEN + 1);
+         strncpy(message, (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
+         processing_long_msg = index;
+       } else {
+         strncpy(&message[(processing_long_msg * AQ_MSGLEN)], (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
+         if (++processing_long_msg != index) {
+           logMessage(LOG_ERR, "Long message index %d doesn't match buffer %d\n",index,processing_long_msg);
+           //printf("RSM Long message index %d doesn't match buffer %d\n",index,processing_long_msg);
+         }
+         #ifdef  PROCESS_INCOMPLETE_MESSAGES
+           kick_aq_program_thread(&_aqualink_data);
+         #endif
+       }
+
+       if (index == 0 || index == 5) {
+         //printf("RSM process message '%s'\n",message);
+         processMessage(message); // This will kick thread
+       }
+       
+     }
+    break;
+/*
   case CMD_MSG:
     memset(message, 0, AQ_MSGLONGLEN + 1);
     strncpy(message, (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
   
-    //logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",message);
+    logMessage(LOG_DEBUG_SERIAL, "RS Received message '%s'\n",message);
+    //kick_aq_program_thread(&_aqualink_data);
+
     if (packet[PKT_DATA] == 1) // Start of long message, get them all before processing
     {
 //printf ("Start long message thread kicking\n");
 //      kick_aq_program_thread(&_aqualink_data);
-      break;
+       break;
     } 
-    processMessage(message);
+    processMessage(message); // This will kick thread
     //processMessage(message);
     break;
   case CMD_MSG_LONG:
     // First in sequence is normal message.
     processing_long_msg++;
     strncpy(&message[processing_long_msg * AQ_MSGLEN], (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
-    //logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
+    logMessage(LOG_DEBUG_SERIAL, "RS Received long message '%s'\n",message);
     if (processing_long_msg == 3)
     {
       //logMessage(LOG_DEBUG, "RS Finished receiving of MSG_LONG '%s'\n",message);
-      processMessage(message);
+      processMessage(message); // This will kick thread
       processing_long_msg = 0;
+    } else {
+      //kick_aq_program_thread(&_aqualink_data);
     }
-    break;
+    break;*/
   case CMD_PROBE:
     logMessage(LOG_DEBUG, "RS Received PROBE length %d.\n", length);
     //logMessage(LOG_INFO, "Synch'ing with Aqualink master device...\n");
@@ -740,6 +774,17 @@ void action_delayed_request()
   _aqualink_data.unactioned.requested = 0;
 }
 
+void printHelp()
+{
+  printf("%s %s\n",AQUALINKD_NAME,AQUALINKD_VERSION);
+  printf("\t-h         (this message)\n");
+  printf("\t-d         (do not deamonize)\n");
+  printf("\t-c <file>  (Configuration file)\n");
+  printf("\t-v         (Debug logging)\n");
+  printf("\t-vv        (Serial Debug logging)\n");
+  printf("\t-rsd       (RS485 debug)\n");
+  printf("\t-rsrd      (RS485 raw debug)\n");
+}
 int main(int argc, char *argv[])
 {
   // main_loop ();
@@ -751,6 +796,12 @@ int main(int argc, char *argv[])
   int cmdln_loglevel = -1;
   bool cmdln_debugRS485 = false;
   bool cmdln_lograwRS485 = false;
+
+  if (argc > 1 && strcmp(argv[1], "-h") == 0)
+    {
+      printHelp();
+      return 0;
+    }
 
   // struct lws_context_creation_info info;
   // Log only NOTICE messages and above. Debug and info messages
@@ -771,6 +822,11 @@ int main(int argc, char *argv[])
 
   for (i = 1; i < argc; i++)
   {
+    if (strcmp(argv[i], "-h") == 0)
+    {
+      printHelp();
+      return 0;
+    }
     if (strcmp(argv[i], "-d") == 0)
     {
       _config_parameters.deamonize = false;
@@ -778,6 +834,10 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-c") == 0)
     {
       cfgFile = argv[++i];
+    }
+    else if (strcmp(argv[i], "-vv") == 0)
+    {
+      cmdln_loglevel = LOG_DEBUG_SERIAL;
     }
     else if (strcmp(argv[i], "-v") == 0)
     {
@@ -1204,8 +1264,8 @@ void main_loop()
       blank_read = 0;
       changed = false;
 
-      if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
-        logPacket(packet_buffer, packet_length);
+      //if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
+      //  logPacket(packet_buffer, packet_length);
 
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _config_parameters.device_id)
       {

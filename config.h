@@ -7,7 +7,7 @@
 #include "aqualink.h"
 
 
-#define DEFAULT_LOG_LEVEL    10 
+#define DEFAULT_LOG_LEVEL    5 
 #define DEFAULT_WEBPORT      "6580"
 #define DEFAULT_WEBROOT      "./"
 #define DEFAULT_SERIALPORT   "/dev/ttyUSB0"
@@ -18,6 +18,8 @@
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
+// Set this high, as people are confused about SWG bouncing to zero on some panels, just stop the questions
+#define DEFAILT_SWG_ZERO_IGNORE_COUNT 20
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
 

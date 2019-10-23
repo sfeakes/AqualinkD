@@ -441,7 +441,8 @@ void send_packet(int fd, unsigned char *packet, int length)
     //char buf[30];
     //sprintf(buf, "Sent     %8.8s ", get_packet_type(packet+1, length));
     //log_packet(buf, packet, length);
-    logPacket(packet, length);
+    logMessage(LOG_DEBUG_SERIAL, "Serial send %d bytes\n",length-2);
+    logPacket(&packet[1], length-2);
   }
 }
 
@@ -659,8 +660,10 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     return 0;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
-  logPacket(packet, index);
+  if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
+    logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+    logPacket(packet, index);
+  }
   // Return the packet length.
   return index;
 }
