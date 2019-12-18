@@ -25,6 +25,7 @@
 #include <libgen.h>
 #include <termios.h>
 #include <signal.h>
+#include <getopt.h>
 
 #include <time.h> // Need GNU_SOURCE & XOPEN defined for strptime
 
@@ -785,6 +786,21 @@ void printHelp()
   printf("\t-rsd       (RS485 debug)\n");
   printf("\t-rsrd      (RS485 raw debug)\n");
 }
+
+static struct option aqualink_long_options[] =
+{
+    { "help",         no_argument,       NULL, 'h'},
+    { "no-daemonize", no_argument,       NULL, 'd'},
+    { "config-file",  required_argument, NULL, 'c'},
+    { "debug",        no_argument,       NULL, 'v'},
+    { "vv",           no_argument,       NULL, '0'},
+    { "rsd",          no_argument,       NULL, '1'},
+    { "rsrd",         no_argument,       NULL, '2'},
+    {0, 0, 0, 0}
+};
+
+static char* aqualink_short_options = "hdc:v0123";
+
 int main(int argc, char *argv[])
 {
   // main_loop ();
@@ -797,60 +813,59 @@ int main(int argc, char *argv[])
   bool cmdln_debugRS485 = false;
   bool cmdln_lograwRS485 = false;
 
-  if (argc > 1 && strcmp(argv[1], "-h") == 0)
-    {
-      printHelp();
-      return 0;
-    }
-
   // struct lws_context_creation_info info;
   // Log only NOTICE messages and above. Debug and info messages
   // will not be logged to syslog.
   setlogmask(LOG_UPTO(LOG_NOTICE));
-
-  if (getuid() != 0)
-  {
-    //logMessage(LOG_ERR, "%s Can only be run as root\n", argv[0]);
-    fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
-    return EXIT_FAILURE;
-  }
 
   // Initialize the daemon's parameters.
   init_parameters(&_config_parameters);
   cfgFile = defaultCfg;
   //sprintf(cfgFile, "%s", DEFAULT_CONFIG_FILE);
 
-  for (i = 1; i < argc; i++)
+  int ch = 0;
+
+  while ((ch = getopt_long(argc, argv, aqualink_short_options, aqualink_long_options, NULL)) != -1)
   {
-    if (strcmp(argv[i], "-h") == 0)
-    {
-      printHelp();
-      return 0;
-    }
-    if (strcmp(argv[i], "-d") == 0)
-    {
-      _config_parameters.deamonize = false;
-    }
-    else if (strcmp(argv[i], "-c") == 0)
-    {
-      cfgFile = argv[++i];
-    }
-    else if (strcmp(argv[i], "-vv") == 0)
-    {
-      cmdln_loglevel = LOG_DEBUG_SERIAL;
-    }
-    else if (strcmp(argv[i], "-v") == 0)
-    {
-      cmdln_loglevel = LOG_DEBUG;
-    }
-    else if (strcmp(argv[i], "-rsd") == 0)
-    {
-      cmdln_debugRS485 = true;
-    }
-    else if (strcmp(argv[i], "-rsrd") == 0)
-    {
-      cmdln_lograwRS485 = true;
-    }
+      // check to see if a single character or long option came through
+      switch (ch)
+      {
+      case 'd': // short option 'd' / long option "no-daemonize"
+          _config_parameters.deamonize = false;
+          break;
+
+      case 'c': // short option 'c' / long option "config-file"
+          cfgFile = optarg;
+          break;
+
+      case 'v': // short option 'v' / long option "debug"
+          cmdln_loglevel = LOG_DEBUG;
+          break;
+
+      case '0': // short option '0' / long option "vv"
+          cmdln_loglevel = LOG_DEBUG_SERIAL;
+          break;
+
+      case '1': // short option '1' / long option "rsd"
+          cmdln_debugRS485 = true;
+          break;
+
+      case '2': // short option '2' / long option "rsrd"
+          cmdln_lograwRS485 = true;
+          break;
+
+      case 'h': // short option 'h' / long option "help"
+      default:  // any unknown options
+          printHelp();
+          return EXIT_SUCCESS;;
+      }
+  }
+  
+  if (getuid() != 0)
+  {
+      //logMessage(LOG_ERR, "%s Can only be run as root\n", argv[0]);
+      fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
+      return EXIT_FAILURE;
   }
 
   initButtons(&_aqualink_data);
@@ -867,10 +882,14 @@ int main(int argc, char *argv[])
     _config_parameters.log_raw_RS_bytes = true;
       
 
-  if (_config_parameters.display_warnings_web == true)
-    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, _aqualink_data.last_display_message);
-  else
-    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, NULL);
+  if (_config_parameters.display_warnings_web == true) 
+  {
+      setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, _aqualink_data.last_display_message);
+  }
+  else 
+  {
+      setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, NULL);
+  }
 
   logMessage(LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 
@@ -950,7 +969,7 @@ int main(int argc, char *argv[])
     main_loop();
   }
 
-  exit(EXIT_SUCCESS);
+  return EXIT_SUCCESS;
 }
 
 /*
