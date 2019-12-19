@@ -787,19 +787,35 @@ void printHelp()
   printf("\t-rsrd      (RS485 raw debug)\n");
 }
 
-static struct option aqualink_long_options[] =
+// For long options that don't have a corresponding short option, the flag should 
+// be a value thats not part of the optstring.
+//
+// If one chooses a value higher than 255 then it can't possibly be a short option.
+
+enum aqualink_option_flags
 {
-    { "help",         no_argument,       NULL, 'h'},
-    { "no-daemonize", no_argument,       NULL, 'd'},
-    { "config-file",  required_argument, NULL, 'c'},
-    { "debug",        no_argument,       NULL, 'v'},
-    { "vv",           no_argument,       NULL, '0'},
-    { "rsd",          no_argument,       NULL, '1'},
-    { "rsrd",         no_argument,       NULL, '2'},
+	OPTION_FLAG_HELP = 'h',
+	OPTION_FLAG_NO_DAEMONIZE = 'd',
+	OPTION_FLAG_CONFIG_FILE = 'c',
+	OPTION_FLAG_DEBUG = 'v',
+
+	// Long options without a corresponding short option.
+	OPTION_FLAG_RSD = 0x100,
+	OPTION_FLAG_RSRD = 0x101
+};
+
+static const struct option aqualink_long_options[] =
+{
+    { "help",         no_argument,       NULL, OPTION_FLAG_HELP},
+    { "no-daemonize", no_argument,       NULL, OPTION_FLAG_NO_DAEMONIZE},
+    { "config-file",  required_argument, NULL, OPTION_FLAG_CONFIG_FILE},
+    { "debug",        no_argument,       NULL, OPTION_FLAG_DEBUG},
+    { "rsd",          no_argument,       NULL, OPTION_FLAG_RSD},
+    { "rsrd",         no_argument,       NULL, OPTION_FLAG_RSRD},
     {0, 0, 0, 0}
 };
 
-static char* aqualink_short_options = "hdc:v0123";
+static char* aqualink_short_options = "hdc:v";
 
 int main(int argc, char *argv[])
 {
@@ -830,31 +846,40 @@ int main(int argc, char *argv[])
       // check to see if a single character or long option came through
       switch (ch)
       {
-      case 'd': // short option 'd' / long option "no-daemonize"
+      case OPTION_FLAG_NO_DAEMONIZE: // short option 'd' / long option "no-daemonize"
           _config_parameters.deamonize = false;
           break;
 
-      case 'c': // short option 'c' / long option "config-file"
+      case OPTION_FLAG_CONFIG_FILE: // short option 'c' / long option "config-file"
           cfgFile = optarg;
           break;
 
-      case 'v': // short option 'v' / long option "debug"
-          cmdln_loglevel = LOG_DEBUG;
+      case OPTION_FLAG_DEBUG: // short option 'v' / long option "debug"
+		  if (LOG_DEBUG_SERIAL == cmdln_loglevel)
+		  {
+			  // Already at the highest level of debug logging...do nothing.
+			  logMessage(LOG_DEBUG, "Already at highest level of debugging...don't need to specify more verbosity");
+		  }
+		  else if (LOG_DEBUG == cmdln_loglevel) 
+		  {
+			  // There has been more than one "-v" option so increment the logging level.
+			  cmdln_loglevel = LOG_DEBUG_SERIAL;
+		  }
+		  else
+		  {
+			  cmdln_loglevel = LOG_DEBUG;
+		  }
           break;
 
-      case '0': // short option '0' / long option "vv"
-          cmdln_loglevel = LOG_DEBUG_SERIAL;
-          break;
-
-      case '1': // short option '1' / long option "rsd"
+      case OPTION_FLAG_RSD: // long option "rsd"
           cmdln_debugRS485 = true;
           break;
 
-      case '2': // short option '2' / long option "rsrd"
+      case OPTION_FLAG_RSRD: // long option "rsrd"
           cmdln_lograwRS485 = true;
           break;
 
-      case 'h': // short option 'h' / long option "help"
+      case OPTION_FLAG_HELP: // short option 'h' / long option "help"
       default:  // any unknown options
           printHelp();
           return EXIT_SUCCESS;;
