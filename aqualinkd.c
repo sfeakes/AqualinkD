@@ -25,6 +25,7 @@
 #include <libgen.h>
 #include <termios.h>
 #include <signal.h>
+#include <getopt.h>
 
 #include <time.h> // Need GNU_SOURCE & XOPEN defined for strptime
 
@@ -785,6 +786,37 @@ void printHelp()
   printf("\t-rsd       (RS485 debug)\n");
   printf("\t-rsrd      (RS485 raw debug)\n");
 }
+
+// For long options that don't have a corresponding short option, the flag should 
+// be a value thats not part of the optstring.
+//
+// If one chooses a value higher than 255 then it can't possibly be a short option.
+
+enum aqualink_option_flags
+{
+	OPTION_FLAG_HELP = 'h',
+	OPTION_FLAG_NO_DAEMONIZE = 'd',
+	OPTION_FLAG_CONFIG_FILE = 'c',
+	OPTION_FLAG_DEBUG = 'v',
+
+	// Long options without a corresponding short option.
+	OPTION_FLAG_RSD = 0x100,
+	OPTION_FLAG_RSRD = 0x101
+};
+
+static const struct option aqualink_long_options[] =
+{
+    { "help",         no_argument,       NULL, OPTION_FLAG_HELP},
+    { "no-daemonize", no_argument,       NULL, OPTION_FLAG_NO_DAEMONIZE},
+    { "config-file",  required_argument, NULL, OPTION_FLAG_CONFIG_FILE},
+    { "debug",        no_argument,       NULL, OPTION_FLAG_DEBUG},
+    { "rsd",          no_argument,       NULL, OPTION_FLAG_RSD},
+    { "rsrd",         no_argument,       NULL, OPTION_FLAG_RSRD},
+    {0, 0, 0, 0}
+};
+
+static char* aqualink_short_options = "hdc:v";
+
 int main(int argc, char *argv[])
 {
   // main_loop ();
@@ -797,60 +829,68 @@ int main(int argc, char *argv[])
   bool cmdln_debugRS485 = false;
   bool cmdln_lograwRS485 = false;
 
-  if (argc > 1 && strcmp(argv[1], "-h") == 0)
-    {
-      printHelp();
-      return 0;
-    }
-
   // struct lws_context_creation_info info;
   // Log only NOTICE messages and above. Debug and info messages
   // will not be logged to syslog.
   setlogmask(LOG_UPTO(LOG_NOTICE));
-
-  if (getuid() != 0)
-  {
-    //logMessage(LOG_ERR, "%s Can only be run as root\n", argv[0]);
-    fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
-    return EXIT_FAILURE;
-  }
 
   // Initialize the daemon's parameters.
   init_parameters(&_config_parameters);
   cfgFile = defaultCfg;
   //sprintf(cfgFile, "%s", DEFAULT_CONFIG_FILE);
 
-  for (i = 1; i < argc; i++)
+  int ch = 0;
+
+  while ((ch = getopt_long(argc, argv, aqualink_short_options, aqualink_long_options, NULL)) != -1)
   {
-    if (strcmp(argv[i], "-h") == 0)
-    {
-      printHelp();
-      return 0;
-    }
-    if (strcmp(argv[i], "-d") == 0)
-    {
-      _config_parameters.deamonize = false;
-    }
-    else if (strcmp(argv[i], "-c") == 0)
-    {
-      cfgFile = argv[++i];
-    }
-    else if (strcmp(argv[i], "-vv") == 0)
-    {
-      cmdln_loglevel = LOG_DEBUG_SERIAL;
-    }
-    else if (strcmp(argv[i], "-v") == 0)
-    {
-      cmdln_loglevel = LOG_DEBUG;
-    }
-    else if (strcmp(argv[i], "-rsd") == 0)
-    {
-      cmdln_debugRS485 = true;
-    }
-    else if (strcmp(argv[i], "-rsrd") == 0)
-    {
-      cmdln_lograwRS485 = true;
-    }
+      // check to see if a single character or long option came through
+      switch (ch)
+      {
+      case OPTION_FLAG_NO_DAEMONIZE: // short option 'd' / long option "no-daemonize"
+          _config_parameters.deamonize = false;
+          break;
+
+      case OPTION_FLAG_CONFIG_FILE: // short option 'c' / long option "config-file"
+          cfgFile = optarg;
+          break;
+
+      case OPTION_FLAG_DEBUG: // short option 'v' / long option "debug"
+		  if (LOG_DEBUG_SERIAL == cmdln_loglevel)
+		  {
+			  // Already at the highest level of debug logging...do nothing.
+			  logMessage(LOG_DEBUG, "Already at highest level of debugging...don't need to specify more verbosity");
+		  }
+		  else if (LOG_DEBUG == cmdln_loglevel) 
+		  {
+			  // There has been more than one "-v" option so increment the logging level.
+			  cmdln_loglevel = LOG_DEBUG_SERIAL;
+		  }
+		  else
+		  {
+			  cmdln_loglevel = LOG_DEBUG;
+		  }
+          break;
+
+      case OPTION_FLAG_RSD: // long option "rsd"
+          cmdln_debugRS485 = true;
+          break;
+
+      case OPTION_FLAG_RSRD: // long option "rsrd"
+          cmdln_lograwRS485 = true;
+          break;
+
+      case OPTION_FLAG_HELP: // short option 'h' / long option "help"
+      default:  // any unknown options
+          printHelp();
+          return EXIT_SUCCESS;;
+      }
+  }
+  
+  if (getuid() != 0)
+  {
+      //logMessage(LOG_ERR, "%s Can only be run as root\n", argv[0]);
+      fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
+      return EXIT_FAILURE;
   }
 
   initButtons(&_aqualink_data);
@@ -867,10 +907,14 @@ int main(int argc, char *argv[])
     _config_parameters.log_raw_RS_bytes = true;
       
 
-  if (_config_parameters.display_warnings_web == true)
-    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, _aqualink_data.last_display_message);
-  else
-    setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, NULL);
+  if (_config_parameters.display_warnings_web == true) 
+  {
+      setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, _aqualink_data.last_display_message);
+  }
+  else 
+  {
+      setLoggingPrms(_config_parameters.log_level, _config_parameters.deamonize, _config_parameters.log_file, NULL);
+  }
 
   logMessage(LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 
@@ -950,7 +994,7 @@ int main(int argc, char *argv[])
     main_loop();
   }
 
-  exit(EXIT_SUCCESS);
+  return EXIT_SUCCESS;
 }
 
 /*
