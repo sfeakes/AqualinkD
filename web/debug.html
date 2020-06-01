@@ -56,6 +56,8 @@ Button style taken from https://github.com/ubuwaits/css3-buttons */
 
     if (element.id == "start") { 
       document.getElementById('messages').innerHTML = "Debug Starting!"
+    } else if (element.id == "serialstart") { 
+      document.getElementById('messages').innerHTML = "Serial Debug Starting!"
     } else if (element.id == "stop") {
       document.getElementById('messages').innerHTML = "Debug Stopping!"
     } else if (element.id == "clean") {
@@ -90,10 +92,15 @@ Button style taken from https://github.com/ubuwaits/css3-buttons */
             //console.log(data.iLevel + " : " + data.sLevel);
             if ( data.iLevel >= 7 ) {
               document.getElementById('start').disabled = true;
-              document.getElementById('stop').disabled = false;  
-              document.getElementById('messages').innerHTML = "Debug Running!"
+              document.getElementById('serialstart').disabled = true;
+              document.getElementById('stop').disabled = false;
+              if ( data.iLevel >= 8 )
+                document.getElementById('messages').innerHTML = "Serial debug Running!"
+              else
+                document.getElementById('messages').innerHTML = "Debug Running!"
             } else if ( data.iLevel < 7 ) {
               document.getElementById('start').disabled = false;
+              document.getElementById('serialstart').disabled = false;
               document.getElementById('stop').disabled = true;
               document.getElementById('messages').innerHTML = "Not debugging, Log level = "+data.sLevel;
             }
@@ -125,20 +132,25 @@ Button style taken from https://github.com/ubuwaits/css3-buttons */
 
 <body onload="update();">
   <table cellpadding="10" border="0" align="center">
-    <tr><td colspan="2" align="center">
+    <tr><td colspan="3" align="center">
       <div id="messages">&nbsp</div>
     </td></tr>
     <tr><td align="center">
       <button class="blue-pill" id="start" type="button" onclick='action(this);'>Start Debug</button>
     </td><td align="center">
+      <button class="blue-pill" id="serialstart" type="button" onclick='action(this);'>Start Serial Debug</button>
+    </td><td align="center">
       <button class="blue-pill" id="stop" type="button" onclick='action(this);'>Stop Debug</button>
     </td></tr>
-    <tr><td colspan="2" align="center">
-      <button class="blue-pill" id="download" type="button" onclick='action(this);'>Download Debug File</button>
+    <tr><td colspan="3" align="center">
+      <table cellpadding="10" border="0" align="center">
+        <tr><td>
+          <button class="blue-pill" id="download" type="button" onclick='action(this);'>Download Debug File</button>
+        </td><td>
+          <button class="blue-pill" id="clean" type="button" onclick='action(this);'>Clean Debug File</button>
+        </td></tr>
+      </table>
     </td></tr>
-    <tr><td colspan="2" align="center">
-        <button class="blue-pill" id="clean" type="button" onclick='action(this);'>Clean Debug File</button>
-      </td></tr>
   </table>
 </body>
 

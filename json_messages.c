@@ -171,12 +171,15 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
   int length = 0;
   buffer[0] = '\0';
 
-  for (i=0; i < MAX_PUMPS; i++) {
+  for (i=0; i < aqdata->num_pumps; i++) {
     if (button == aqdata->pumps[i].button) {
-      if (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gph != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN) {
-        length += sprintf(buffer, ",\"Pump_RPM\":\"%d\",\"Pump_GPH\":\"%d\",\"Pump_Watts\":\"%d\"", aqdata->pumps[i].rpm,aqdata->pumps[i].gph,aqdata->pumps[i].watts);
+        
+      //if (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gpm != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN) {
+        length += sprintf(buffer, ",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\"", 
+                  aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,
+                  (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
         break;
-      }
+      //}
     }
   }
 
@@ -231,21 +234,38 @@ int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int 
                                      LED2int(aqdata->aqbuttons[i].led->state));
     } else if ( (programable_switch1 > 0 && programable_switch1 == i) || 
                 (programable_switch2 > 0 && programable_switch2 == i)) {
+                  /*
       length += sprintf(buffer+length, "{\"type\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
                                      LED2int(aqdata->aqbuttons[i].led->state),
-                                     get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));
+                                     get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));*/
+        length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch_program\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state),
+                                     LED2int(aqdata->aqbuttons[i].led->state));
     } else {
-      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
+      if ( get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info)[0] == '\0' ) {
+        length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
+                                     aqdata->aqbuttons[i].name, 
+                                     aqdata->aqbuttons[i].label,
+                                     aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
+                                     LED2text(aqdata->aqbuttons[i].led->state),
+                                     LED2int(aqdata->aqbuttons[i].led->state));
+      } else {
+        length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch_vsp\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
                                      LED2text(aqdata->aqbuttons[i].led->state),
                                      LED2int(aqdata->aqbuttons[i].led->state),
-                                     get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));
+                                     aux_info);
+                                     //get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info));
+      }
     }
   }
 
@@ -455,10 +475,12 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   //length += sprintf(buffer+length, "}, \"extra\":{" );
   length += sprintf(buffer+length, "},");
 
-  for (i=0; i < MAX_PUMPS; i++) {
-    if (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gph != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPH\":\"%d\",\"Watts\":\"%d\"},",
-                        i+1,aqdata->pumps[i].button->label,aqdata->pumps[i].button->name,aqdata->pumps[i].rpm,aqdata->pumps[i].gph,aqdata->pumps[i].watts);
+  // NSF Check below needs to be for VSP Pump (any state), not just known state
+  for (i=0; i < aqdata->num_pumps; i++) {
+    if (aqdata->pumps[i].pumpType != PT_UNKNOWN && (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gpm != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN)) {
+      length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPM\":\"%d\",\"Watts\":\"%d\",\"Pump_Type\":\"%s\"},",
+                        i+1,aqdata->pumps[i].button->label,aqdata->pumps[i].button->name,aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,
+                        (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
     }
   }
 

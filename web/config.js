@@ -62,6 +62,10 @@
       // 0 means only load once when page loads.
       //var background_reload = 10;
 
+      // By default all Variable Speed Pumps will show RPM.
+      // this will show GPM on VSP's that you can only set GPM (ie Jandy VF pumps)
+      //var show_vsp_gpm=false; 
+
       var body_background = "#EBEBEA";
       var body_text = "#000000";
       

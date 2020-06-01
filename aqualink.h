@@ -59,25 +59,40 @@ typedef enum action_type {
   SPA_HTR_SETOINT,
   FREEZE_SETPOINT,
   SWG_SETPOINT,
-  SWG_BOOST
+  SWG_BOOST,
+  PUMP_RPM
 } action_type;
 
 struct action {
   action_type type;
   time_t requested;
   int value;
+  int id; // Only used for Pumps at the moment.
   //char value[10];
 };
+
+// Moved to aq_programmer to stop circular dependancy
+/*
+typedef enum pump_type {
+  PT_UNKNOWN = -1,
+  EPUMP,
+  VSPUMP,
+  VFPUMP
+} pump_type;
+*/
 
 typedef struct pumpd
 {
   int rpm;
-  int gph;
+  int gpm;
   int watts;
   unsigned char pumpID;
+  int pumpIndex;
+  pump_type pumpType;
   //int buttonID;
   protocolType ptype;
   aqkey *button;
+  //bool updated;
 } pump_detail;
 
 struct aqualinkdata
@@ -115,6 +130,7 @@ struct aqualinkdata
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
   unsigned char last_packet_type;
+  int num_pumps;
   pump_detail pumps[MAX_PUMPS];
   int open_websockets;
   bool boost;

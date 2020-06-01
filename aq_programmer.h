@@ -2,6 +2,8 @@
 #ifndef AQ_PROGRAMMER_H_
 #define AQ_PROGRAMMER_H_
 
+#include <pthread.h>
+//#include "aqualink.h"
 
 // need to get the C values from aqualink manual and add those just incase
 // someone has the controller set to C.
@@ -21,6 +23,12 @@
 #define PTHREAD_ARG 25
 #define LIGHT_MODE_BUFER PTHREAD_ARG
 
+typedef enum emulation_type{
+  ALLBUTTON,
+  ONETOUCH,
+  AQUAPDA  // AQUAPALM and PDA are taken as specific type.
+} emulation_type;
+
 typedef enum {
   AQP_NULL = -1,
   AQ_GET_POOL_SPA_HEATER_TEMPS,
@@ -39,7 +47,16 @@ typedef enum {
   AQ_PDA_DEVICE_ON_OFF,
   AQ_GET_AUX_LABELS,
   AQ_PDA_WAKE_INIT,
-  AQ_SET_BOOST
+  AQ_SET_BOOST,
+  AQ_SET_ONETOUCH_PUMP_RPM,
+  AQ_SET_ONETOUCH_MACRO,
+  AQ_GET_ONETOUCH_SETPOINTS,
+  AQ_SET_ONETOUCH_POOL_HEATER_TEMP,
+  AQ_SET_ONETOUCH_SPA_HEATER_TEMP,
+  AQ_SET_ONETOUCH_FREEZEPROTECT,
+  AQ_SET_ONETOUCH_TIME,
+  AQ_SET_ONETOUCH_BOOST,
+  AQ_SET_ONETOUCH_SWG_PERCENT
 } program_type;
 
 struct programmingThreadCtrl {
@@ -49,14 +66,22 @@ struct programmingThreadCtrl {
   struct aqualinkdata *aq_data;
 };
 
+typedef enum pump_type {
+  PT_UNKNOWN = -1,
+  EPUMP,
+  VSPUMP,
+  VFPUMP
+} pump_type;
 
 
 //void aq_programmer(program_type type, void *args, struct aqualinkdata *aq_data);
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);
-void kick_aq_program_thread(struct aqualinkdata *aq_data);
-
+//void kick_aq_program_thread(struct aqualinkdata *aq_data);
+void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_type);
+bool in_ot_programming_mode(struct aqualinkdata *aq_data);
 void aq_send_cmd(unsigned char cmd);
-
+void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
+void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 //bool push_aq_cmd(unsigned char cmd);
 
@@ -68,6 +93,8 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
 int get_aq_cmd_length();
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
+int RPM_check(pump_type type, int value, struct aqualinkdata *aqdata);
+//int RPM_check(int type, int value, struct aqualinkdata *aqdata);
 const char *ptypeName(program_type type);
 
 // These shouldn't be here, but just for the PDA AQ PROGRAMMER

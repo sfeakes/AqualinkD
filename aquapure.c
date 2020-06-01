@@ -17,19 +17,23 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
     // Not really sure what to do with this, just ignore 0xff / 255 for the moment. (if statment above)
 
     // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
-    if (swg_zero_cnt <= swg_zero_ignore && packet[4] == 0x00 && packet[5] == 0x73) {
+    if (swg_zero_cnt <= swg_zero_ignore && packet[4] == 0x00) {
       logMessage(LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet[4],
                  swg_zero_cnt, swg_zero_ignore, packet[4], packet[5]);
       swg_zero_cnt++;
-    } else if (swg_zero_cnt > swg_zero_ignore && packet[4] == 0x00 && packet[5] == 0x73) {
-      aqdata->swg_percent = (int)packet[4];
-      changedAnything = true;
+    } else if (swg_zero_cnt > swg_zero_ignore && packet[4] == 0x00) {
+      if (aqdata->swg_percent != (int)packet[4]) {
+        aqdata->swg_percent = (int)packet[4];
+        changedAnything = true;
+      }
       // logMessage(LOG_DEBUG, "SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // (int)packet[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet[4],packet[5]);  swg_zero_cnt++;
     } else {
       swg_zero_cnt = 0;
-      aqdata->swg_percent = (int)packet[4];
-      changedAnything = true;
+      if (aqdata->swg_percent != (int)packet[4]) {
+        aqdata->swg_percent = (int)packet[4];
+        changedAnything = true;
+      }
       // logMessage(LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // aqdata.swg_percent,packet[4],packet[5]);
     }
@@ -66,7 +70,7 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
 aqledstate get_swg_led_state(struct aqualinkdata *aqdata)
 {
   switch (aqdata->ar_swg_status) {
-  // Level = (0=gray, 1=green, 2=yellow, 3=orange, 4=red)
+  
   case SWG_STATUS_ON:
     return (aqdata->swg_percent > 0?ON:ENABLE);
     break;

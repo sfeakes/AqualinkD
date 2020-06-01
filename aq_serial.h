@@ -65,9 +65,27 @@
 
 /* ACK RETURN COMMANDS */
 #define ACK_NORMAL               0x00
-#define ACK_SCREEN_BUSY          0x01 // Seems to be busy but can cache a message,
+#define ACK_SCREEN_BUSY_SCROLL   0x01 // Seems to be busy but can cache a message,
 #define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me shit.
+
+// Remove this and fix all compile errors when get time.
+#define ACK_SCREEN_BUSY ACK_SCREEN_BUSY_SCROLL
+
 #define ACK_PDA                  0x40
+#define ACK_ONETOUCH             0x80
+#define ACK_ALLB_SIM             0x80 // Jandy's Allbutton simulator uses this and not ACK_NORMAL
+#define ACK_ALLB_SIM_BUSY        0x81 // Jandy's Allbutton simulator uses this and not ACK_SCREEN_BUSY_SCROLL
+
+/* ONE TOUCH KEYCODES */
+#define KEY_ONET_UP              0x06
+#define KEY_ONET_DOWN            0x05
+#define KEY_ONET_SELECT          0x04
+#define KEY_ONET_PAGE_UP         0x03  // Top
+#define KEY_ONET_BACK            0x02  // Middle
+#define KEY_ONET_PAGE_DN         0x01  // Bottom
+#define KEY_ONET_SELECT_1        KEY_ONET_PAGE_UP  
+#define KEY_ONET_SELECT_2        KEY_ONET_BACK  
+#define KEY_ONET_SELECT_3        KEY_ONET_PAGE_DN  
 
 /* AquaRite commands */
 #define CMD_GETID       0x14  // May be remote control control
@@ -187,7 +205,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 
 #define MSG_PMP_RPM   "RPM:" 
 #define MSG_PMP_WAT   "Watts:"  
-#define MSG_PMP_GPH   "GPH:" 
+#define MSG_PMP_GPM   "GPM:" 
 
 
 /* AQUAPURE SWG */
@@ -221,11 +239,36 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_PDA_SHIFTLINES     0x0F
 #define CMD_PDA_HIGHLIGHTCHARS 0x10
 
+// One Touch commands
+//#define CMD_PDA_0x04           0x04 // No idea, might be building menu
+
 /* iAqualink */
-#define CMD_IAQ_MSG           0x25
+/* None of these are used, just here to gather data for the moment */
+#define CMD_IAQ_MSG           0x25  // Equiptment status message??
 #define CMD_IAQ_MENU_MSG      0x24
 
+#define CMD_IAQ_MSG_LONG      0x2c  // Long status message??
+#define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??
+#define CMD_IAQ_0x30          0x30
+#define CMD_IAQ_0x23          0x23
+#define CMD_IAQ_0x24          0x24 // Text for labels or maybe buttons (looks like next BIT is placment)
+#define CMD_IAQ_0x25          0x25 // Status for labels
+#define CMD_IAQ_0x31          0x31 // Some pump speed info
 
+#define IAQ_KEY_PUMP          0x11
+#define IAQ_KEY_SPA           0x12
+#define IAQ_KEY_POOL_HEAT     0x13
+#define IAQ_KEY_SPA_HEAT      0x14
+#define IAQ_KEY_CUST_1        0x15
+#define IAQ_KEY_CUST_2        0x16
+#define IAQ_KEY_CUST_3        0x17
+#define IAQ_KEY_AUX1          0x19 // Depending on page this is 0x15
+#define IAQ_KEY_AUX2          0x1a
+#define IAQ_KEY_AUX3          0x1b
+#define IAQ_KEY_AUX4          0x1c
+#define IAQ_KEY_AUX5          0x1d
+#define IAQ_KEY_AUX6          0x1e
+#define IAQ_KEY_AUX7          0x1f
 
 typedef enum {
   ON,
@@ -275,11 +318,22 @@ int get_packet_lograw(int fd, unsigned char* packet);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet , int length);
 
+void set_onetouch_enabled(bool mode);
+bool onetouch_enabled();
+
+void set_extended_device_id_programming(bool mode);
+bool extended_device_id_programming();
 
 void send_jandy_command(int fd, unsigned char *packet_buffer, int size);
 void send_pentair_command(int fd, unsigned char *packet_buffer, int size);
 void send_command(int fd, unsigned char *packet_buffer, int size);
 
+/*
+#ifdef ONETOUCH
+void set_onetouch_mode(bool mode);
+bool onetouch_mode();
+#endif
+*/
 //void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
 //void send_command(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3);
 //void send_messaged(int fd, unsigned char destination, char *message);

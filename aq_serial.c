@@ -40,7 +40,27 @@ static struct termios _oldtio;
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
 
+/*
+#ifdef ONETOUCH
+bool _onetouch_mode = false;
+void set_onetouch_mode(bool mode)
+{
+  if (mode)
+    logMessage(LOG_NOTICE, "AqualinkD is using Onetouch mode\n");
+
+  _onetouch_mode = mode;
+}
+bool onetouch_mode()
+{
+  return _onetouch_mode;
+}
+#endif
+*/
+
 bool _pda_mode = false;
+bool _onetouch_enabled = false;
+bool _extended_device_id_programming = false;
+
 void set_pda_mode(bool mode)
 {
   if (mode)
@@ -51,6 +71,30 @@ void set_pda_mode(bool mode)
 bool pda_mode()
 {
   return _pda_mode;
+}
+
+void set_onetouch_enabled(bool mode)
+{
+  if (mode)
+    logMessage(LOG_NOTICE, "AqualinkD is using use ONETOUCH mode for VSP programming\n");
+  _onetouch_enabled = mode;
+}
+
+bool onetouch_enabled()
+{
+  return _onetouch_enabled;
+}
+
+void set_extended_device_id_programming(bool mode)
+{
+  if (mode)
+    logMessage(LOG_NOTICE, "AqualinkD is using use ONETOUCH mode for programming (where supported)\n");
+  _extended_device_id_programming = mode;
+}
+
+bool extended_device_id_programming()
+{
+  return _extended_device_id_programming;
 }
 
 const char* get_packet_type(unsigned char* packet , int length)
@@ -101,7 +145,7 @@ const char* get_packet_type(unsigned char* packet , int length)
       return "PDA Shiftlines";
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
-      return "PDA C_HlightChar";
+      return "PDA HlightChars";
     break;
     case CMD_IAQ_MSG:
       return "iAq Message";
@@ -438,10 +482,8 @@ void send_packet(int fd, unsigned char *packet, int length)
   }
 
   if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
-    //char buf[30];
-    //sprintf(buf, "Sent     %8.8s ", get_packet_type(packet+1, length));
-    //log_packet(buf, packet, length);
-    logMessage(LOG_DEBUG_SERIAL, "Serial send %d bytes\n",length-2);
+    // Packet is padded with 0x00, so discard for logging
+    logMessage(LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
     logPacket(&packet[1], length-2);
   }
 }
@@ -459,6 +501,8 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
     ackPacket[6] = command;
     ackPacket[7] = generate_checksum(ackPacket, length-1);
   }
+
+  //printf("***Send ACK (%s) ***\n",(ack_type==ACK_NORMAL?"Normal":(ack_type==ACK_SCREEN_BUSY?"ScreenBusy":"ScreenBusyDisplay")) );
 
   send_packet(fd, ackPacket, length);
 }
@@ -660,10 +704,8 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     return 0;
   }
 
-  if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
-    logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
-    logPacket(packet, index);
-  }
+  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  logPacket(packet, index);
   // Return the packet length.
   return index;
 }
@@ -671,6 +713,63 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
 #else // PLAYBACKMODE
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #else  //USE_AQ_SERIAL_OLD

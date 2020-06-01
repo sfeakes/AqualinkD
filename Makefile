@@ -11,9 +11,10 @@ LIBS := -l pthread -l m
 #LIBS := -lpthread -lwebsockets
 
 # debug of not
-#DBG = -g -O0 -fsanitize=address -static-libasan
-#DBG = -g
-DBG =
+#DBG = -g -O0 -fsanitize=address 
+DBG = -g
+#DBG = -D ONETOUCH
+#DBG =
 
 # USe below to remove unused functions and global variables.
 #LFLAGS = -Wl,--gc-sections,--print-gc-sections
@@ -32,7 +33,7 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c aquapure.c packetLogger.c pentair_messages.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c aquapure.c onetouch.c onetouch_aq_programmer.c packetLogger.c pentair_messages.c mongoose.c
 DBG_SRC = timespec_subtract.c
 
 # If run with `make DEBUG=true` add debug files and pass parameter for compile

@@ -38,42 +38,19 @@ command -v systemctl >/dev/null 2>&1 || { echo "This script needs systemd's syst
 systemctl stop $SERVICE > /dev/null 2>&1
 SERVICE_EXISTS=$(echo $?)
 
-# Clean everything if requested.
-if [ "$1" == "clean" ]; then
-  echo "Deleting install"
-  systemctl disable $SERVICE > /dev/null 2>&1
-  if [ -f $BINLocation/$BIN ]; then
-    rm -f $BINLocation/$BIN
-  fi
-  if [ -f $SRVLocation/$SRV ]; then
-    rm -f $SRVLocation/$SRV
-  fi
-  if [ -f $CFGLocation/$CFG ]; then
-    rm -f $CFGLocation/$CFG
-  fi
-  if [ -f $DEFLocation/$DEF ]; then
-    rm -f $DEFLocation/$DEF
-  fi
-  if [ -d $WEBLocation ]; then
-    rm -rf $WEBLocation
-  fi
-  systemctl daemon-reload
-  exit
-fi
-
 # copy files to locations, but only copy cfg if it doesn;t already exist
 
 cp $BUILD/$BIN $BINLocation/$BIN
 cp $BUILD/$SRV $SRVLocation/$SRV
 
 if [ -f $CFGLocation/$CFG ]; then
-  echo "AqualinkD config exists, did not copy new config, you may need to edit existing! $CFGLocation/$CFG"
+  echo "Config exists, did not copy new config, you may need to edit existing! $CFGLocation/$CFG"
 else
   cp $BUILD/$CFG $CFGLocation/$CFG
 fi
 
 if [ -f $DEFLocation/$DEF ]; then
-  echo "AqualinkD defaults exists, did not copy new defaults to $DEFLocation/$DEF"
+  echo "Defaults exists, did not copy new defaults to $DEFLocation/$DEF"
 else
   cp $BUILD/$DEF.defaults $DEFLocation/$DEF
 fi
@@ -93,7 +70,7 @@ if [ ! -d "$WEBLocation" ]; then
 fi
 
 if [ -f "$WEBLocation/config.js" ]; then
-  echo "AqualinkD web config exists, did not copy new config, you may need to edit existing $WEBLocation/config.js "
+  echo "$WEBLocation/config.js exists, did not copy overight, please make sure to update manually"
   rsync -avq --exclude='config.js' $BUILD/../web/* $WEBLocation
 else
   cp -r $BUILD/../web/* $WEBLocation
@@ -106,7 +83,5 @@ systemctl daemon-reload
 if [ $SERVICE_EXISTS -eq 0 ]; then
   echo "Starting daemon $SERVICE"
   systemctl start $SERVICE
-else
-  echo "Please edit $CFGLocation/$CFG, then start AqualinkD service"
 fi
 

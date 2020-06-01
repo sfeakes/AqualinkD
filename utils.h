@@ -56,6 +56,7 @@ char *prittyString(char *str);
 //void writePacketLog(char *buff);
 //void closePacketLog();
 void startInlineDebug();
+void startInlineSerialDebug();
 void stopInlineDebug();
 void cleanInlineDebug();
 char *getInlineLogFName();

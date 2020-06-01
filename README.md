@@ -65,11 +65,17 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/     <- (Standard WEB UI
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
+* http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
-# Update in Release 1.3.9b
-* Small fixes for Jandy protocol.
-* Fixed some debug messages.
-# Update in Release 1.3.9
+# Update in Release 2.0.0a
+* Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki/Version_2</b>
+* Full Variable Speed Pump support.
+* Please consider this ALPHA version, no need to upgrade unless you need VSP support. Use a previous version unless you want VSP.
+* I've noticed there is an issues with colored lights if your light is configured as such in the control panel. For this release suggest you either :-
+  * A) use AqualinkD to control the colors and configure Jandy control panel as normal light
+  * B) Don't use AqualinkD to turn light on/off (or if you do, wait ~10 seconds)
+# Update in Release 1.3.9a
+* Improved Debugging for serial.
 * Added panel Timeout mode support to UI and MQTT
 * Fixed SWG bug while in Service & Timeout modes
 * Cleanded up SWG code and MQTT status messages for SWG and SWG/enabled

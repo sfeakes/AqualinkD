@@ -1,4 +1,4 @@
 
 
 #define AQUALINKD_NAME "Aqualink Daemon"
-#define AQUALINKD_VERSION "1.3.9c"
+#define AQUALINKD_VERSION "2.0.0a"

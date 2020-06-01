@@ -43,11 +43,11 @@ static bool _initWithRS = false;
 
 
 #ifdef BETA_PDA_AUTOLABEL
-static struct aqconfig *_aqualink_config;
-void init_pda(struct aqualinkdata *aqdata, struct aqconfig *aqconfig)
+//static struct aqconfig *_aqconfig_;
+void init_pda(struct aqualinkdata *aqdata)
 {
   _aqualink_data = aqdata;
-  _aqualink_config = aqconfig;
+  //_aqconfig_ = aqconfig;
   set_pda_mode(true);
 }
 #else
@@ -491,7 +491,7 @@ void process_pda_packet_msg_long_level_aux_device(const char *msg)
   int li=-1;
   char *str, *label;
 
-  if (! _aqualink_config->use_panel_aux_labels)
+  if (! _aqconfig_->use_panel_aux_labels)
     return;
   // NSF  Need to check config for use_panel_aux_labels value and ignore if not set
 
@@ -686,10 +686,11 @@ bool process_pda_packet(unsigned char *packet, int length)
       {
         _initWithRS = true;
         logMessage(LOG_DEBUG, "**** PDA INIT ****");
-        aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
+        //aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
+        queueGetProgramData(AQUAPDA, _aqualink_data);
         delay(50);  // Make sure this one runs first.
 #ifdef BETA_PDA_AUTOLABEL
-        if (_aqualink_config->use_panel_aux_labels)
+        if (_aqconfig_->use_panel_aux_labels)
            aq_programmer(AQ_GET_AUX_LABELS, NULL, _aqualink_data);
 #endif
         aq_programmer(AQ_PDA_WAKE_INIT, NULL, _aqualink_data);
@@ -707,7 +708,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       packet[PKT_CMD] == CMD_PDA_HIGHLIGHTCHARS)
   {
     // We processed the next message, kick any threads waiting on the message.
-    kick_aq_program_thread(_aqualink_data);
+    kick_aq_program_thread(_aqualink_data, AQUAPDA);
   }
   return rtn;
 }

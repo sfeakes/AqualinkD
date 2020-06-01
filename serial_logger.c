@@ -28,11 +28,12 @@
 
 #include "aq_serial.h"
 #include "utils.h"
+#include "packetLogger.h"
 
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.1"
+#define VERSION "serial_logger V1.2"
 
 /*
 typedef enum used {
@@ -51,6 +52,7 @@ bool _keepRunning = true;
 
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
 unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
+unsigned char _goodONETID[] = {0x40, 0x41, 0x42, 0x43};
 unsigned char _filter[10];
 int _filters=0;
 bool _rawlog=false;
@@ -67,7 +69,7 @@ void intHandler(int dummy) {
 #define SWG " <-- Salt Water Generator (Aquarite mode)"
 #define KEYPAD " <-- RS Keypad"
 #define SPA_R " <-- Spa remote"
-#define AQUA " <-- Aqualink (iAqualink?)"
+#define AQUA " <-- Aqualink (iAqualink / Touch)"
 #define HEATER " <-- LX Heater"
 #define ONE_T " <-- Onetouch device"
 #define PC_DOCK " <-- PC Interface (RS485 to RS232)"
@@ -152,6 +154,10 @@ bool canUse(unsigned char ID) {
     if (ID == _goodPDAID[i])
       return true;
   }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodONETID[i])
+      return true;
+  }
   return false;
 }
 char* canUseExtended(unsigned char ID) {
@@ -163,6 +169,10 @@ char* canUseExtended(unsigned char ID) {
   for (i = 0; i < 4; i++) {
     if (ID == _goodPDAID[i])
       return " <-- can use for Aqualinkd (PDA mode only)";
+  }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodONETID[i])
+      return " <-- can use for Aqualinkd (Extended Device ID)";
   }
   return "";
 }
@@ -249,6 +259,7 @@ int main(int argc, char *argv[]) {
   int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
+  bool rsRawDebug = false;
   //bool playback_file = false;
 
   //int logLevel; 
@@ -264,7 +275,14 @@ int main(int argc, char *argv[]) {
 
   if (argc < 2 || access( argv[1], F_OK ) == -1 ) {
     fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
-    fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> & -r (raw) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
+    //fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> & -r (raw) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
+    fprintf(stderr, "Optional parameters are :-\n");
+    fprintf(stderr, "\t-d (debug)\n");
+    fprintf(stderr, "\t-p <number> (log # packets)\n");
+    fprintf(stderr, "\t-i <ID> (just log these ID's, can use multiple -i)\n");
+    fprintf(stderr, "\t-r (raw)\n");
+    fprintf(stderr, "\t-rsrd (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
+    fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
   }
 
@@ -286,6 +304,8 @@ int main(int argc, char *argv[]) {
       logLevel = LOG_DEBUG;
     } else if (strcmp(argv[i], "-f") == 0) {
       _playback_file = true;
+    } else if (strcmp(argv[i], "-rsrd") == 0) {
+      rsRawDebug = true;
     }
   }
 
@@ -315,7 +335,10 @@ int main(int argc, char *argv[]) {
     }
 
     //packet_length = get_packet(rs_fd, packet_buffer);
-    packet_length = get_packet(rs_fd, packet_buffer);
+    if (rsRawDebug)
+      packet_length = get_packet_lograw(rs_fd, packet_buffer);
+    else
+      packet_length = get_packet(rs_fd, packet_buffer);
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.
@@ -401,6 +424,7 @@ int main(int argc, char *argv[]) {
 
   if (sindex >= SLOG_MAX)
     logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
+
   logMessage(LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
     //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",

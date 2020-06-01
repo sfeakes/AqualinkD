@@ -105,7 +105,7 @@ bool processiAqualinkMsg(unsigned char *packet_buffer, int packet_length, struct
     
     pumpIndex = atoi((char *) &lastmessage[14]);
 
-    if ( pumpIndex < MAX_PUMPS && pumpIndex < 0) {
+    if ( pumpIndex < aqdata->num_pumps && pumpIndex < 0) {
       pumpIndex = 1; 
       logMessage(LOG_ERR, "Can't find pump index for messsage '%.*s' in string '%.*s' using %d\n",AQ_MSGLEN, packet_buffer+4, AQ_MSGLEN, lastmessage, pumpIndex);
     }

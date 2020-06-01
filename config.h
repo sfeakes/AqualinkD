@@ -7,7 +7,8 @@
 #include "aqualink.h"
 
 
-#define DEFAULT_LOG_LEVEL    5 
+//#define DEFAULT_LOG_LEVEL    10 
+#define DEFAULT_LOG_LEVEL    LOG_NOTICE
 #define DEFAULT_WEBPORT      "6580"
 #define DEFAULT_WEBROOT      "./"
 #define DEFAULT_SERIALPORT   "/dev/ttyUSB0"
@@ -18,7 +19,6 @@
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
-// Set this high, as people are confused about SWG bouncing to zero on some panels, just stop the questions
 #define DEFAILT_SWG_ZERO_IGNORE_COUNT 20
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
@@ -31,6 +31,8 @@ struct aqconfig
   char *socket_port;
   char *web_directory;
   unsigned char device_id;
+  unsigned char onetouch_device_id;
+  bool extended_device_id_programming;
   bool deamonize;
   char *log_file;
   char *mqtt_dz_sub_topic;
@@ -53,6 +55,7 @@ struct aqconfig
   int light_programming_button_spa;
   bool override_freeze_protect;
   bool pda_mode;
+  bool onetouch_mode;
   bool pda_sleep_mode;
   bool convert_mqtt_temp;
   bool convert_dz_temp;
@@ -75,13 +78,31 @@ struct aqconfig
   //char *mqtt_pub_tp_ptr = mqtt_pub_topic[];
 };
 
+#ifndef CONFIG_C
+extern struct aqconfig _aqconfig_;
+#else
+struct aqconfig _aqconfig_;
+#endif
+/*
+#ifndef CONFIG_C
+#ifdef AQUALINKD_C
+extern struct aqconfig _aqconfig_;
+#else
+extern const struct aqconfig _aqconfig_;
+#endif
+#endif
+*/
 
 void init_parameters (struct aqconfig * parms);
 //bool parse_config (struct aqconfig * parms, char *cfgfile);
 //void readCfg (struct aqconfig *config_parameters, char *cfgFile);
-void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqualink_data, char *cfgFile);
-bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata);
-bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value);
+//void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqualink_data, char *cfgFile);
+void read_config(struct aqualinkdata *aqdata, char *cfgFile);
+void init_config();
+
+bool writeCfg (struct aqualinkdata *aqdata);
+bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value);
+
 char *cleanalloc(char*str);
 
 #endif

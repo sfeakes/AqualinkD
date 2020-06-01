@@ -30,6 +30,7 @@
 #include "pda_menu.h"
 #include "init_buttons.h"
 #include "pda_aq_programmer.h"
+#include "onetouch_aq_programmer.h"
 
 #ifdef AQ_DEBUG
   #include <time.h>
@@ -56,6 +57,9 @@ void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
 void *set_aqualink_boost( void *ptr );
+void *set_aqualink_pump_rpm( void *ptr );
+void *set_aqualink_onetouch_macro( void *ptr );
+void *get_aqualink_onetouch_setpoints( void *ptr );
 
 //void *get_aqualink_PDA_device_status( void *ptr );
 //void *set_aqualink_PDA_device_on_off( void *ptr );
@@ -67,12 +71,14 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 
 bool push_aq_cmd(unsigned char cmd);
 void waitfor_queue2empty();
+void longwaitfor_queue2empty();
 
 #define MAX_STACK 20
 int _stack_place = 0;
 unsigned char _commands[MAX_STACK];
 //unsigned char pgm_commands[MAX_STACK];
 unsigned char _pgm_command = NUL;
+//unsigned char _ot_pgm_command = NUL;
 
 bool _last_sent_was_cmd = false;
 
@@ -81,6 +87,23 @@ void aq_send_cmd(unsigned char cmd) {
   push_aq_cmd(cmd);
 }
 
+/*
+void ot_send_cmd(unsigned char cmd) {
+  _ot_pgm_command = cmd;
+}
+
+unsigned char pop_ot_cmd(unsigned char receive_type)
+{
+  unsigned char cmd = NUL;
+
+  if (receive_type  == CMD_STATUS) {
+    cmd = _ot_pgm_command;
+    _ot_pgm_command = NUL;
+  } 
+
+  return cmd;
+}
+*/
 bool push_aq_cmd(unsigned char cmd) {
   
   //logMessage(LOG_DEBUG, "push_aq_cmd '0x%02hhx'\n", cmd);
@@ -105,14 +128,44 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
   // Only send commands on status messages 
+  // Are we in programming mode and it's not ONETOUCH programming mode
+  if (aq_data->active_thread.thread_id != 0 && in_ot_programming_mode(aq_data) == false ) {
+  //if (aq_data->active_thread.thread_id != 0) {
+    if ( _pgm_command != NUL && aq_data->last_packet_type == CMD_STATUS) {
+      cmd = _pgm_command;
+      _pgm_command = NUL;
+      logMessage(LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
+    } else if (_pgm_command != NUL) {
+      logMessage(LOG_DEBUG_SERIAL, "RS Waiting to send cmd '0x%02hhx' (programming)\n", _pgm_command);
+    } else {
+      logMessage(LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx' empty queue (programming)\n", cmd);
+    }
+  } else if (_stack_place > 0 && aq_data->last_packet_type == CMD_STATUS ) {
+    cmd = _commands[0];
+    _stack_place--;
+    logMessage(LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx'\n", cmd);
+    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
+  } else {
+    logMessage(LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx'\n", cmd);
+  }
+
+//printf("RSM sending cmd '0x%02hhx' in reply to '0x%02hhx'\n",cmd,aq_data->last_packet_type);
+
+  return cmd;
+}
+
+
+/*
+
+unsigned char pop_aq_cmd_OLD(struct aqualinkdata *aq_data)
+{
+  unsigned char cmd = NUL;
+  // Only send commands on status messages 
   // Are we in programming mode
   if (aq_data->active_thread.thread_id != 0) {
-    /*if ( (_pgm_command == KEY_MENU && aq_data->last_packet_type == CMD_STATUS) ||
+    if ( (_pgm_command == KEY_MENU && aq_data->last_packet_type == CMD_STATUS) ||
     // Need to not the key_menu below
-         ( _pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG) )) {*/
-    if ( (_pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS)) ||
-        // Boost pool has to send commands to msg long
-         (aq_data->active_thread.ptype == AQ_SET_BOOST && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG)) ) {
+         ( _pgm_command != NUL && (aq_data->last_packet_type == CMD_STATUS || aq_data->last_packet_type == CMD_MSG_LONG) )) {
       cmd = _pgm_command;
       _pgm_command = NUL;
       logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
@@ -134,93 +187,37 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 
   return cmd;
 }
-
-
-//unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data);
-
-unsigned char pop_aq_cmd_XXXXXX(struct aqualinkdata *aq_data)
-{
-  unsigned char cmd = NUL;
-  static bool last_sent_was_cmd = false;
-
-  // USE BELOW IF PDA HAS ISSUES WITH NEW COMMAND LOGIC
-  
-  //if ( pda_mode() == true ) {
-  //  return pop_aq_cmd_old(aq_data);
-  //}
-
-  // Only press menu to a status command
-  // Only send commands on status messages when programming date
-  // Otherwise send every other command.
-
-  // Are we in programming mode
-  if (aq_data->active_thread.thread_id != 0) {
-    if ( ((_pgm_command == KEY_MENU || aq_data->active_thread.ptype == AQ_SET_TIME) && aq_data->last_packet_type == CMD_STATUS) ||
-         (pda_mode() == false && aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) ||
-         (pda_mode() == true && aq_data->last_packet_type == CMD_STATUS)
-         //(pda_mode() == true && last_sent_was_cmd == false)
-      ) {
-      cmd = _pgm_command;
-      _pgm_command = NUL;
-      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);
-    /*} else if (aq_data->active_thread.ptype != AQ_SET_TIME && last_sent_was_cmd == false) {
-      cmd = _pgm_command;
-      _pgm_command = NUL;
-      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' (programming)\n", cmd);*/
-    } else if (_pgm_command != NUL) {
-      logMessage(LOG_DEBUG, "RS Waiting to send cmd '0x%02hhx' (programming)\n", _pgm_command);
-    } else {
-      logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx' empty queue (programming)\n", cmd);
-    }
-  } else if (_stack_place > 0 && aq_data->last_packet_type == CMD_STATUS ) {
-    cmd = _commands[0];
-    _stack_place--;
-    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
-    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
-  } else {
-    logMessage(LOG_DEBUG, "RS SEND cmd '0x%02hhx'\n", cmd);
-  }
-
-  if (cmd == NUL)
-    last_sent_was_cmd= false;
-  else
-    last_sent_was_cmd= true;
-
-  return cmd;
-}
-
-unsigned char pop_aq_cmd_old(struct aqualinkdata *aq_data)
-{
-  unsigned char cmd = NUL;
-  //logMessage(LOG_DEBUG, "pop_aq_cmd\n");
-  // can only send a command every other ack.
-  
-  if (_last_sent_was_cmd == true) {
-    _last_sent_was_cmd= false;
-  } 
-  else if (aq_data->active_thread.thread_id != 0) {
-    cmd = _pgm_command;
-    _pgm_command = NUL;
-    //logMessage(LOG_DEBUG, "pop_aq_cmd '0x%02hhx' (programming)\n", cmd);
-  }
-  else if (_stack_place > 0) {
-    cmd = _commands[0];
-    _stack_place--;
-    //logMessage(LOG_DEBUG, "pop_aq_cmd '0x%02hhx'\n", cmd);
-    //memcpy(&_commands[0], &_commands[1], (sizeof(unsigned char) * MAX_STACK) - 1);
-    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
-  }
-
-  if (cmd == NUL)
-    _last_sent_was_cmd= false;
-  else
-    _last_sent_was_cmd= true;
-
-  return cmd;
-}
+*/
 
 int roundTo(int num, int denominator) {
   return ((num + (denominator/2) ) / denominator )* denominator;
+}
+
+//(Intelliflo VF you set GPM, not RPM)
+int RPM_check(pump_type type, int value, struct aqualinkdata *aqdata)
+{
+  int rtn = value;
+  // RPM 3450 seems to be max
+  // RPM 600 min
+  // GPM 130 max
+  // GPM 15 min
+  if (type == VFPUMP) {
+    if (rtn > 130)
+      rtn = 130;
+    else if (rtn < 15)
+      rtn = 15;
+    else
+      rtn = roundTo(rtn, 5);
+  } else {
+    if (rtn > 3450)
+      rtn = 3450;
+    else if (rtn < 600)
+      rtn = 600;
+    else
+      rtn = roundTo(rtn, 5);
+  }
+
+  return rtn;
 }
 
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
@@ -303,6 +300,28 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   return rtn;
 }
 
+void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels)
+{
+  // Wait for onetouch if enabeled.
+  if ( source_type == ALLBUTTON && ( onetouch_enabled() == false || extended_device_id_programming() == false ) ) {
+    aq_send_cmd(NUL);
+    aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
+    aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data);
+    if (labels)
+      aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+  } else if ( source_type == ONETOUCH) {
+    aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data);
+  } else if ( source_type == AQUAPDA) {
+    aq_programmer(AQ_PDA_INIT, NULL, aq_data);
+  }
+}
+
+void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data)
+{
+  queueGetExtendedProgramData(source_type, aq_data, false);
+}
+
+/*
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
   if (aq_data->active_thread.thread_id != 0) {
@@ -310,11 +329,78 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data)
     pthread_cond_broadcast(&aq_data->active_thread.thread_cond);
   }
 }
+*/
+bool in_ot_programming_mode(struct aqualinkdata *aq_data)
+{
+  //( type != AQ_SET_PUMP_RPM || type != AQ_SET_OT_MACRO )) {
 
-void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
+  if ( ( aq_data->active_thread.thread_id != 0 ) &&
+       ( aq_data->active_thread.ptype == AQ_SET_ONETOUCH_PUMP_RPM ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_MACRO || 
+         aq_data->active_thread.ptype == AQ_GET_ONETOUCH_SETPOINTS ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_TIME ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_BOOST ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_POOL_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_SPA_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_FREEZEPROTECT)
+     ) {
+     return true;
+  }
+
+  return false;
+}
+
+void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_type)
+{
+  if ( aq_data->active_thread.thread_id != 0 ) {
+    if ( (source_type == ONETOUCH) && in_ot_programming_mode(aq_data))
+    {
+      logMessage(LOG_DEBUG, "Kicking OneTouch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);   
+    } 
+    else if (source_type == AQUAPDA && !in_ot_programming_mode(aq_data)) {
+      logMessage(LOG_DEBUG, "Kicking PDA thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
+    }
+    else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data)) {
+      logMessage(LOG_DEBUG, "Kicking RS thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
+    }
+     
+  }
+}
+
+void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data)
 {
   struct programmingThreadCtrl *programmingthread = malloc(sizeof(struct programmingThreadCtrl));
-  
+
+  program_type type = r_type;
+
+  // reset any types if to onetouch if available and if one touch is quicker
+  // At moment. onetouch is quicker for boost, and slower for heaters
+  if (onetouch_enabled() && extended_device_id_programming()) {
+    switch (r_type){
+      case AQ_GET_POOL_SPA_HEATER_TEMPS:
+      case AQ_GET_FREEZE_PROTECT_TEMP:
+        type = AQ_GET_ONETOUCH_SETPOINTS;
+      break;
+      case AQ_SET_POOL_HEATER_TEMP:
+        type = AQ_SET_ONETOUCH_POOL_HEATER_TEMP;
+      break;
+      case AQ_SET_SPA_HEATER_TEMP:
+        type = AQ_SET_ONETOUCH_SPA_HEATER_TEMP;
+      break;
+      case AQ_SET_BOOST:
+        type = AQ_SET_ONETOUCH_BOOST;
+      break;
+      default:
+        type = r_type;
+      break;
+    }
+  }
+
+  // Check we are doing something valid request
   if (pda_mode() == true) {
     pda_reset_sleep();
     if (type != AQ_PDA_INIT && 
@@ -332,7 +418,11 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
         type != AQ_SET_BOOST) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
-    } 
+    } /*else if (onetouch_enabled() == false && 
+        ( type != AQ_SET_ONETOUCH_PUMP_RPM || type != AQ_SET_ONETOUCH_MACRO || type != AQ_GET_ONETOUCH_SETPOINTS)) {
+      logMessage(LOG_ERR, "Selected Programming mode '%d' not supported without OneTouch mode (extra_device_id) enabled\n",type);
+      return;
+    }*/
   }
 
   programmingthread->aq_data = aq_data;
@@ -456,6 +546,54 @@ void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data)
       break;
     case AQ_SET_BOOST:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_boost, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_PUMP_RPM:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_pump_rpm, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_GET_ONETOUCH_SETPOINTS:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_onetouch_setpoints, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_TIME:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_time, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_BOOST:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_boost, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_SWG_PERCENT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_swg_percent, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_POOL_HEATER_TEMP:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_pool_heater_temp, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_spa_heater_temp, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_ONETOUCH_FREEZEPROTECT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_freezeprotect, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
@@ -707,19 +845,17 @@ STOP BOOST POOL
   if (val==true) {
     waitForMessage(threadCtrl->aq_data, "TO START BOOST POOL", 5);
     send_cmd(KEY_ENTER);
-    waitfor_queue2empty();
+    longwaitfor_queue2empty();
   } else {
     int wait_messages = 5;
     int i=0;
-    //waitfor_queue2empty();
-    //waitForMessage(aq_data, NULL, 1);
     while( i++ < wait_messages) 
     {
       waitForMessage(aq_data, "STOP BOOST POOL", 1);
       if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
         // This is a really bad hack, message sequence is out for boost for some reason, so as soon as we see stop message, force enter key.
-        _pgm_command = KEY_ENTER;
-        //send_cmd(KEY_ENTER);
+        //_pgm_command = KEY_ENTER;
+        send_cmd(KEY_ENTER);
         logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
         //waitfor_queue2empty();
         break;
@@ -727,38 +863,29 @@ STOP BOOST POOL
         logMessage(LOG_DEBUG, "Find item in Menu: loop %d of %d looking for 'STOP BOOST POOL' received message '%s'\n",i,wait_messages,aq_data->last_message);
         delay(200);
         if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
-          _pgm_command = KEY_ENTER;
+          //_pgm_command = KEY_ENTER;
+          send_cmd(KEY_ENTER);
           logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
           break;
         } 
         send_cmd(KEY_RIGHT);
         //printf("WAIT\n");
-        waitfor_queue2empty();
+        longwaitfor_queue2empty();
         //printf("FINISHED WAIT\n");
       }
       //waitfor_queue2empty();
       //waitForMessage(aq_data, NULL, 1);
     }
-
-    waitForMessage(aq_data, "STOP BOOST POOL", 1);
-    if (stristr(aq_data->last_message, "STOP BOOST POOL") != NULL) {
-      //logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
-      send_cmd(KEY_ENTER);
-    } else {
-       logMessage(LOG_DEBUG, "**** GIVING UP ****\n");
+    if (i < wait_messages) {
+      // Takes ages to see bost is off from menu, to set it here.
+      aq_data->boost = false;
+      aq_data->boost_msg[0] = '\0';
+      aq_data->swg_percent = 0;
     }
-/*
-    if (stristr(aq_data->last_message, "STOP BOOST POOL") == NULL) {
-      send_cmd(KEY_RIGHT);
-      logMessage(LOG_DEBUG, "**** FOUND STOP BOOST POOL ****\n");
-    } else {
-      logMessage(LOG_ERR, "**** NOT FOUND STOP BOOST POOL ****\n");
-    }
-*/
-    // Extra message overcome.
-    //send_cmd(KEY_RIGHT);
-    //waitfor_queue2empty();
     /*
+    // Extra message overcome.
+    send_cmd(KEY_RIGHT);
+    waitfor_queue2empty();
     if ( select_sub_menu_item(aq_data, "STOP BOOST POOL") != true ) {
       logMessage(LOG_WARNING, "Could not select STOP BOOST POOL menu\n");
       cancel_menu();
@@ -767,6 +894,7 @@ STOP BOOST POOL
     }*/
     //send_cmd(KEY_ENTER);
   }
+
   waitForMessage(aq_data,NULL, 1);
 
   cleanAndTerminateThread(threadCtrl);
@@ -1403,11 +1531,11 @@ void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data)
 }
 */
 
-void waitfor_queue2empty()
+void _waitfor_queue2empty(bool longwait)
 {
   int i=0;
 
-  while ( (_pgm_command != NUL) && ( i++ < 20) ) {
+  while ( (_pgm_command != NUL) && ( i++ < (30*(longwait?2:1) ) ) ) {
     //sleep(1); // NSF Change to smaller time.
     //logMessage(LOG_DEBUG, "********  QUEUE IS FULL ********  delay\n");
     delay(50);
@@ -1416,13 +1544,22 @@ void waitfor_queue2empty()
   if (_pgm_command != NUL) {
     if (pda_mode()) {
       // Wait for longer in PDA mode since it's slower.
-      while ( (_pgm_command != NUL) && ( i++ < 100) ) {
+      while ( (_pgm_command != NUL) && ( i++ < (130*(longwait?2:1)) ) ) {
         delay(100);
       }
     }
     logMessage(LOG_WARNING, "Send command Queue did not empty, timeout\n");
   }
 
+}
+
+void waitfor_queue2empty()
+{
+  _waitfor_queue2empty(false);
+}
+void longwaitfor_queue2empty()
+{
+  _waitfor_queue2empty(true);
 }
 
 void send_cmd(unsigned char cmd)
@@ -1752,6 +1889,33 @@ const char *ptypeName(program_type type)
     break;
      case AQ_SET_BOOST:
       return "SWG Boost";
+    break;
+    case AQ_SET_ONETOUCH_PUMP_RPM:
+      return "Set Pump RPM";
+    break;
+    case AQ_SET_ONETOUCH_MACRO:
+      return "Set OneTouch Macro";
+    break;
+    case AQ_GET_ONETOUCH_SETPOINTS:
+      return "Get OneTouch setpoints";
+    break;
+    case AQ_SET_ONETOUCH_TIME:
+      return "Set OneTouch time";
+    break;
+    case AQ_SET_ONETOUCH_BOOST:
+      return "Set OneTouch Boost";
+    break;
+    case AQ_SET_ONETOUCH_SWG_PERCENT:
+      return "Set OneTouch SWG Percent";
+    break;
+    case AQ_SET_ONETOUCH_FREEZEPROTECT:
+      return "Set OneTouch Freezeprotect";
+    break;
+    case AQ_SET_ONETOUCH_POOL_HEATER_TEMP:
+      return "Set OneTouch Pool Heater Temp";
+    break;
+    case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
+      return "Set OneTouch Spa Heater Temp";
     break;
     case AQP_NULL:
     default:

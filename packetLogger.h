@@ -13,5 +13,8 @@ void logPacket(unsigned char *packet_buffer, int packet_length);
 void logPacketError(unsigned char *packet_buffer, int packet_length);
 void logPacketByte(unsigned char *byte);
 
+// Only use for manual debugging
+void debuglogPacket(unsigned char *packet_buffer, int packet_length);
+
 
 #endif //PACKETLOGGER_H_

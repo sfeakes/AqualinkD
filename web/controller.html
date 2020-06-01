@@ -469,6 +469,12 @@
     var _aqualink_data;
     var _landscape = false;
     var _displayNames = [];
+
+    if (typeof show_vsp_gpm !== 'undefined' && show_vsp_gpm == false)
+      var _show_vsp_gpm=false;
+    else
+      var _show_vsp_gpm=true;
+
     //init();
     function init() {
       setSizeSpecifics();
@@ -476,6 +482,7 @@
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
+      document.getElementById('vspswitch_options').classList.remove("hide");
       setColors();
       load_background();
       showTileOptions(false);
@@ -714,10 +721,13 @@
         subdiv.setAttribute('id', id + '_status');
         subdiv.textContent = formatSatus(status);
         div.appendChild(subdiv);
-        if (type == "switch" && subtype != "switch_program") {
+        if (type == "switch" && (subtype != "switch_program" && subtype != "switch_vsp") ) {
+        //if (type == "switch" && subtype != "switch_program" ) {
           div.setAttribute('onclick', "switchTileState('" + id + "')");
+          //console.log("add onclick switchtilestate to "+id);
         } else /*if (id != "SWG/Percent")*/ {
           add_clickEvent(div, id);
+          //console.log("add click Event to "+id);
         }
       }
       document.getElementById('wrapper').appendChild(div);
@@ -735,9 +745,9 @@
       try {
         if (state == (document.getElementById(id).getAttribute('status') == 'off')) {
           send_command(id);
-          console.log("Switch state "+id+" to "+(state)?"on":"off");
+          //console.log("Switch state "+id+" to "+(state)?"on":"off");
         } else {
-          console.log("state "+id+" to "+(state)?"on":"off")
+          //console.log("state "+id+" to "+(state)?"on":"off")
         }
         setTileOn(id, ((state) ? "on" : "off"));
       } catch(exception) {}
@@ -866,10 +876,10 @@
               text = 'Generating';
           }
           else if (type == 'setpoint_thermo')
-            if (status == 'enabled')
+            //if (status == 'enabled')
               text = 'Heat to ' + tile.getAttribute('setpoint');
-            else
-              text = 'Heating to ' + tile.getAttribute('setpoint');
+            //else
+            //  text = 'Heating to ' + tile.getAttribute('setpoint'); // too large for phone
           else if (type == 'setpoint_freeze')
             text = 'Turn on ' + tile.getAttribute('setpoint') + "&deg;";
           //else
@@ -921,12 +931,42 @@
       if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
         return;
       }
-      if (object.type == 'switch' || object.type == 'switch_program') {
+      //if (object.type == 'switch' || object.type == 'switch_program') {
+      if (object.type == 'switch') {
         var img = object.id.replace('/', '_');
-        add_tile(object.id, object.name, object.state, 'switch', object.type, 'hk/' + img + '-off.png', 'hk/' + img + '-on.png');
+        var ext_type;
+        if (typeof object.type_ext !== 'undefined')
+          ext_type = object.type_ext;
+        else
+          ext_type = object.type;
+
+        add_tile(object.id, object.name, object.state, 'switch', ext_type, 'hk/' + img + '-off.png', 'hk/' + img + '-on.png');
         setTileOn(object.id, object.status, null);
-        if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {
-          setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
+        if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
+          if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {    
+            if (object.Pump_RPM == -2) {
+              setTileOnText(object.id, 'Pump Offline'); // Small txt
+              document.getElementById(object.id).setAttribute('setpoint', 0);
+            } else if (object.Pump_RPM == -1) {
+              setTileOnText(object.id, 'Pump Priming'); // Small text
+              document.getElementById(object.id).setAttribute('setpoint', 0);
+            } else {
+              if (object.Pump_Type == "vfPump") {
+                if (_show_vsp_gpm == true)
+                  setTileOnText(object.id, 'GPM:'+object.Pump_GPM);
+                else
+                  setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
+
+                document.getElementById(object.id).setAttribute('setpoint', object.Pump_GPM);
+              } else {
+                setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
+                document.getElementById(object.id).setAttribute('setpoint', object.Pump_RPM);
+              }
+            }
+          }
+          if (typeof object.Pump_Type !== 'undefined') {
+            document.getElementById(object.id).setAttribute('pumptype', object.Pump_Type);
+          }
         }
       } else if (object.type == 'value' || object.type == 'temperature') {
         add_tile(object.id, object.name, object.state, 'value', object.type);
@@ -942,6 +982,7 @@
     }
 
     function showTileOptions(show, id, contex) {
+  console.log("showTileOptions " + show + " "+id+" "+contex);
       var active_option;
       if (show == true) {
         var wrapH = document.getElementById('wrapper').clientHeight + 'px';
@@ -949,14 +990,22 @@
           active_option = document.getElementById('thermostat_options');
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
           active_option = document.getElementById('pswitch_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('swg_options').style.display = 'none';
-        } else /*if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg')*/ {
+          document.getElementById('vspswitch_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_vsp') {
+          active_option = document.getElementById('vspswitch_options');
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'none';
         }
         active_option.style.display = 'flex';
         var optionH = window.getComputedStyle(active_option, null).getPropertyValue("height");
@@ -974,10 +1023,13 @@
             document.getElementById("swg_options_close").click();
           else if (document.getElementById('pswitch_options').style.display == 'flex')
             document.getElementById("pswitch_options_close").click();
+          else if (document.getElementById('vspswitch_options').style.display == 'flex')
+            document.getElementById("vspswitch_options").click();
         }
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
         document.getElementById('pswitch_options').style.display = 'none';
+        document.getElementById('vspswitch_options').style.display = 'none';
         document.getElementById('wrapper').classList.remove("opaque");
         return;
       }
@@ -1011,6 +1063,12 @@
           title = document.getElementById("pswitch_option_title");
           close_button = document.getElementById("pswitch_options_close");
           //ext = '&deg;' + _temperature_units;
+        } else if (type == 'switch_vsp') {
+          slider = document.getElementById("vspoption_slider_range");
+          slider_output = document.getElementById("vspoption_slider_text_value");
+          title = document.getElementById("vspswitch_option_title");
+          close_button = document.getElementById("vspswitch_option_close");
+          //ext = '&deg;' + _temperature_units;
         } else {
           slider = document.getElementById("option_slider_range");
           slider_output = document.getElementById("option_slider_text_value");
@@ -1042,6 +1100,18 @@
             slider.max = 40;
             slider.step = 1;
           }
+        } else if (type == 'switch_vsp') {
+          if ( tile.getAttribute('pumptype') == "vfPump" ) { // RPM vs GPM
+            slider.min = 15;
+            slider.max = 130;
+            slider.step = 5;
+            ext = ' GPM';
+          } else { 
+            slider.min = 600;
+            slider.max = 3450;
+            slider.step = 5;
+            ext = ' RPM';
+          }
         }
         title.innerHTML = document.getElementById(id + '_name').innerHTML;
         if (type == 'switch_program') {
@@ -1068,6 +1138,21 @@
           }
           oswitch.onclick = function() {
             oswitch_output.innerHTML = ((oswitch.checked) ? "Boost On" : "Boost Off");
+            //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
+          }
+        } else if (type == 'switch_vsp') {
+          slider.value = sp_value;
+          oswitch = document.getElementById("vspoption_switch");
+          oswitch.checked = tile_state;
+          var oswitch_output = document.getElementById("vspoption_switch_text_value");
+          slider_output.innerHTML = slider.value + ext;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          slider.oninput = function() {
+            slider_output.innerHTML = this.value + ext;
+            //sp_value = this.value
+          }
+          oswitch.onclick = function() {
+            oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
             //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
           }
         } else {
@@ -1133,6 +1218,12 @@
               if (sp_value != slider.value && slider.value != 101) // Don't change setpoint if slider is on boost
                 setThermostatSetpoint(id, slider.value);
             }
+          } else if (type == 'switch_program') {
+            var value = slider.value;
+            if (state == (tile.getAttribute('status') == 'off'))
+              setTileState(id, state);
+            if (sp_value != slider.value)
+              setThermostatSetpoint(id, slider.value)
           } else {
             var value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
@@ -1215,7 +1306,24 @@
       while (i < 5) {
         //console.log(data["Pump_"+i].RPM);
         if ((typeof data["Pump_"+i] !== 'undefined') && (typeof data["Pump_"+i].RPM !== 'undefined')) {
-          setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
+          if (data["Pump_"+i].RPM == -2) {
+            setTileOnText(data["Pump_"+i].id, 'Pump Offline');
+          } else if (data["Pump_"+i].RPM == -1) {
+            setTileOnText(data["Pump_"+i].id, 'Pump Priming');
+          } else {
+            //setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
+            if (data["Pump_"+i].Pump_Type == "vfPump") {
+              if (_show_vsp_gpm == true)
+                setTileOnText(data["Pump_"+i].id, 'GPM:'+data["Pump_"+i].GPM);
+              else
+                setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
+
+              document.getElementById(data["Pump_"+i].id).setAttribute('setpoint', data["Pump_"+i].GPM);
+            } else {
+              document.getElementById(data["Pump_"+i].id).setAttribute('setpoint', data["Pump_"+i].RPM);
+              setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
+            }
+          }
           /*
           if (document.getElementById(data["Pump_"+i].id).getAttribute('status') == 'on')
             document.getElementById(data["Pump_"+i].id + '_status').innerHTML = 'RPM:'+data["Pump_"+i].RPM;
@@ -1247,8 +1355,12 @@
           createTile(data['devices'][obj]);
         } else {
           //console.log("old type "+document.getElementById(data['devices'][obj].id).getAttribute('type')+" | new "+data['devices'][obj].type);
-          if (document.getElementById(data['devices'][obj].id).getAttribute('type') != data['devices'][obj].type) {
-            //console.log("Remove and create "+data['devices'][obj].id);
+          var element_type = document.getElementById(data['devices'][obj].id).getAttribute('type');
+
+          if ( (element_type != data['devices'][obj].type) &&
+               (typeof data['devices'][obj].type_ext !== 'undefined' && element_type != data['devices'][obj].type_ext ) ) {
+            console.log("Remove and create "+data['devices'][obj].id);
+            console.log("Old type "+element_type+" | new type "+data['devices'][obj].type+" sub "+data['devices'][obj].type_ext);
             var element = document.getElementById(data['devices'][obj].id);
             element.parentNode.removeChild(element);
             createTile(data['devices'][obj]);
@@ -1335,8 +1447,10 @@
       if ((tile = document.getElementById(id)) == null) {
         return;
       }
+      if (tile.getAttribute('setpoint'))
       temperature.parameter = tile.getAttribute('id');
       temperature.value = tile.getAttribute('setpoint');
+//console.log("Send value back "+temperature.parameter+" "+temperature.value);
       socket_di.send(JSON.stringify(temperature));
     }
 
@@ -1516,6 +1630,42 @@
         </table>
       </div>
     </div>
+    <div id='vspswitch_options' class='options hide'>
+      <div id='vspswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px'>
+          <tr class='options_title'>
+            <th colspan='2'><span id="vspswitch_option_title"></span>
+                </th>
+            </tr>
+            <tr>
+              <td align='right' width='50%'><span class="option_text" id='vspoption_switch_text_value'></span>
+              </td>
+              <td align='left' width='50%'>
+                <label class="option_switch">
+                  <input type="checkbox" id='vspoption_switch'>
+                  <span class="option_switch_slide"></span>
+                </label>
+              </td>
+            </tr>
+            <tr>
+              <td colspan='2' align='center'><span class="option_text" id="vspoption_slider_text_value"></span>
+              </td>
+            </tr>
+            <tr>
+              <td colspan='2'>
+                <div class="slidecontainer">
+                  <input type="range" class="option_slider" id='vspoption_slider_range'>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan='2' align='center'>
+                <input type="button" value="close" id='vspswitch_option_close' class='options_button'>
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
   </div>
 </body>
 

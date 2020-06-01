@@ -87,6 +87,14 @@ void startInlineDebug()
     _log_filename = DEFAULT_LOG_FILE;
 }
 
+void startInlineSerialDebug()
+{
+  _log_level = LOG_DEBUG_SERIAL;
+  _log2file = true;
+  if (_log_filename == NULL)
+    _log_filename = DEFAULT_LOG_FILE;
+}
+
 void stopInlineDebug()
 {
   _log_level = _cfg_log_level;
@@ -343,7 +351,7 @@ void logMessage(int msg_level, char *format, ...)
   strncpy(buffer, "         ", 8);
   vsprintf (&buffer[8], format, args);
   va_end(args);
-  
+
   //test(msg_level, buffer);
   //fprintf (stderr, buffer);
 

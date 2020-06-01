@@ -11,7 +11,7 @@ static FILE *_byteLogFile = NULL;
 static bool _log2file = false;
 static bool _includePentair = false;
 
-void _logPacket(unsigned char *packet_buffer, int packet_length, bool error);
+void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, bool force);
 
 void startPacketLogger(bool debug_RSProtocol_packets, bool read_pentair_packets) {
   _log2file = debug_RSProtocol_packets;
@@ -37,17 +37,21 @@ void writePacketLog(char *buffer) {
 }
 
 void logPacket(unsigned char *packet_buffer, int packet_length) {
-  _logPacket(packet_buffer, packet_length, false);
+  _logPacket(packet_buffer, packet_length, false, false);
 }
 
 void logPacketError(unsigned char *packet_buffer, int packet_length) {
-  _logPacket(packet_buffer, packet_length, true);
+  _logPacket(packet_buffer, packet_length, true, false);
 }
 
-void _logPacket(unsigned char *packet_buffer, int packet_length, bool error)
+void debuglogPacket(unsigned char *packet_buffer, int packet_length) {
+  _logPacket(packet_buffer, packet_length, false, true);
+}
+
+void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, bool force)
 {
   // No point in continuing if loglevel is < debug_serial and not writing to file
-  if ( error == false && getLogLevel() < LOG_DEBUG_SERIAL && _log2file == false)
+  if ( force == false && error == false && getLogLevel() < LOG_DEBUG_SERIAL && _log2file == false)
     return;
 
   char buff[1000];
@@ -70,8 +74,12 @@ void _logPacket(unsigned char *packet_buffer, int packet_length, bool error)
   
   if (error == true)
     logMessage(LOG_WARNING, "%s", buff);
-  else
-    logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+  else {
+    if (force)
+      logMessage(LOG_DEBUG, "%s", buff);
+    else
+      logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+  }
 }
 
 //#define RAW_BUFFER_SIZE 100

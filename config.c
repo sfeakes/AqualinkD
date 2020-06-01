@@ -33,19 +33,24 @@
 #include <unistd.h>
 #include <net/if.h>
 
+#define CONFIG_C
 #include "config.h"
 #include "utils.h"
 #include "aq_serial.h"
 
 #define MAXCFGLINE 256
 
+
+
 char *generate_mqtt_id(char *buf, int len);
+pump_detail *getpump(struct aqualinkdata *aqdata, int button);
 
 /*
 * initialize data to default values
 */
 void init_parameters (struct aqconfig * parms)
 {
+  //int i;
   //char *p;
   parms->serial_port = DEFAULT_SERIALPORT;
   parms->log_level = DEFAULT_LOG_LEVEL;
@@ -53,6 +58,7 @@ void init_parameters (struct aqconfig * parms)
   parms->web_directory = DEFAULT_WEBROOT;
   //parms->device_id = strtoul(DEFAULT_DEVICE_ID, &p, 16);
   parms->device_id = strtoul(DEFAULT_DEVICE_ID, NULL, 16);
+  parms->onetouch_device_id = 0x00;
   //sscanf(DEFAULT_DEVICE_ID, "0x%x", &parms->device_id);
   parms->override_freeze_protect = FALSE;
 
@@ -76,6 +82,7 @@ void init_parameters (struct aqconfig * parms)
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
+  parms->onetouch_mode = false;
   parms->pda_sleep_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
@@ -90,6 +97,7 @@ void init_parameters (struct aqconfig * parms)
   parms->swg_zero_ignore = DEFAILT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
   parms->log_raw_RS_bytes = false;
+  parms->extended_device_id_programming = false;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -219,69 +227,69 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
           if ( indx != NULL) 
           {
             if (strncasecmp (b_ptr, "socket_port", 11) == 0) {
-              //config_parameters->socket_port = cleanint(indx+1);
-              config_parameters->socket_port = cleanalloc(indx+1);
+              //_aqconfig_.socket_port = cleanint(indx+1);
+              _aqconfig_.socket_port = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "serial_port", 11) == 0) {
-              config_parameters->serial_port = cleanalloc(indx+1);
+              _aqconfig_.serial_port = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "log_level", 9) == 0) {
-              config_parameters->log_level = text2elevel(cleanalloc(indx+1));
+              _aqconfig_.log_level = text2elevel(cleanalloc(indx+1));
               // should fee mem here
             } else if (strncasecmp (b_ptr, "device_id", 9) == 0) {
-              config_parameters->device_id = strtoul(cleanalloc(indx+1), NULL, 16);
+              _aqconfig_.device_id = strtoul(cleanalloc(indx+1), NULL, 16);
               // should fee mem here
             } else if (strncasecmp (b_ptr, "web_directory", 13) == 0) {
-              config_parameters->web_directory = cleanalloc(indx+1);
+              _aqconfig_.web_directory = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "log_file", 8) == 0) {
-              config_parameters->log_file = cleanalloc(indx+1);
+              _aqconfig_.log_file = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_address", 12) == 0) {
-              config_parameters->mqtt_server = cleanalloc(indx+1);
+              _aqconfig_.mqtt_server = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_dz_sub_topic", 17) == 0) {
-              config_parameters->mqtt_dz_sub_topic = cleanalloc(indx+1);
+              _aqconfig_.mqtt_dz_sub_topic = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_dz_pub_topic", 17) == 0) {
-              config_parameters->mqtt_dz_pub_topic = cleanalloc(indx+1);
+              _aqconfig_.mqtt_dz_pub_topic = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_aq_topic", 13) == 0) {
-              config_parameters->mqtt_aq_topic = cleanalloc(indx+1);
+              _aqconfig_.mqtt_aq_topic = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_user", 9) == 0) {
-              config_parameters->mqtt_user = cleanalloc(indx+1);
+              _aqconfig_.mqtt_user = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "mqtt_passwd", 11) == 0) {
-              config_parameters->mqtt_passwd = cleanalloc(indx+1);
+              _aqconfig_.mqtt_passwd = cleanalloc(indx+1);
             } else if (strncasecmp (b_ptr, "air_temp_dzidx", 14) == 0) {
-              config_parameters->dzidx_air_temp = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_air_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "pool_water_temp_dzidx", 21) == 0) {
-              config_parameters->dzidx_pool_water_temp = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_pool_water_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "spa_water_temp_dzidx", 20) == 0) {
-              config_parameters->dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_mode", 21) == 0) {
-              config_parameters->light_programming_mode = atof(cleanalloc(indx+1)); // should free this
+              _aqconfig_.light_programming_mode = atof(cleanalloc(indx+1)); // should free this
             } else if (strncasecmp (b_ptr, "light_programming_initial_on", 28) == 0) {
-              config_parameters->light_programming_initial_on = strtoul(indx+1, NULL, 10);
+              _aqconfig_.light_programming_initial_on = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_initial_off", 29) == 0) {
-              config_parameters->light_programming_initial_off = strtoul(indx+1, NULL, 10);
+              _aqconfig_.light_programming_initial_off = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "light_programming_button", 21) == 0) {
-              config_parameters->light_programming_button = strtoul(indx+1, NULL, 10) - 1;
+              _aqconfig_.light_programming_button = strtoul(indx+1, NULL, 10) - 1;
             } else if (strncasecmp (b_ptr, "SWG_percent_dzidx", 17) == 0) {
-              config_parameters->dzidx_swg_percent = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_swg_percent = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
-              config_parameters->dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "SWG_Status_dzidx", 14) == 0) {
-              config_parameters->dzidx_swg_status = strtoul(indx+1, NULL, 10);
+              _aqconfig_.dzidx_swg_status = strtoul(indx+1, NULL, 10);
             } else if (strncasecmp (b_ptr, "override_freeze_protect", 23) == 0) {
-              config_parameters->override_freeze_protect = text2bool(indx+1);
+              _aqconfig_.override_freeze_protect = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {
-              config_parameters->pda_mode = text2bool(indx+1);
-              set_pda_mode(config_parameters->pda_mode);
+              _aqconfig_.pda_mode = text2bool(indx+1);
+              set_pda_mode(_aqconfig_.pda_mode);
             } else if (strncasecmp (b_ptr, "convert_mqtt_temp_to_c", 22) == 0) {
-              config_parameters->convert_mqtt_temp = text2bool(indx+1);
+              _aqconfig_.convert_mqtt_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "convert_dz_temp_to_c", 21) == 0) {
-              config_parameters->convert_dz_temp = text2bool(indx+1);
+              _aqconfig_.convert_dz_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "flash_mqtt_buttons", 18) == 0) {
-              config_parameters->flash_mqtt_buttons = text2bool(indx+1);
+              _aqconfig_.flash_mqtt_buttons = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
-              config_parameters->report_zero_pool_temp = text2bool(indx+1);
+              _aqconfig_.report_zero_pool_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
-              config_parameters->report_zero_spa_temp = text2bool(indx+1);
+              _aqconfig_.report_zero_spa_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
-              config_parameters->report_zero_pool_temp = text2bool(indx+1);
+              _aqconfig_.report_zero_pool_temp = text2bool(indx+1);
             } else if (strncasecmp (b_ptr, "button_", 7) == 0) {
               int num = strtoul(b_ptr+7, NULL, 10) - 1;
               //logMessage (LOG_DEBUG, "Button %d\n", strtoul(b_ptr+7, NULL, 10));
@@ -310,146 +318,154 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
 }
 */
 
-bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *param, char *value) {
+bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
-  static int pi=0;
 
   if (strncasecmp(param, "socket_port", 11) == 0) {
-    config_parameters->socket_port = cleanalloc(value);
+    _aqconfig_.socket_port = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "serial_port", 11) == 0) {
-    config_parameters->serial_port = cleanalloc(value);
+    _aqconfig_.serial_port = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "log_level", 9) == 0) {
-    config_parameters->log_level = text2elevel(cleanalloc(value));
+    _aqconfig_.log_level = text2elevel(cleanalloc(value));
     rtn=true;
   } else if (strncasecmp(param, "device_id", 9) == 0) {
-    config_parameters->device_id = strtoul(cleanalloc(value), NULL, 16);
+    _aqconfig_.device_id = strtoul(cleanalloc(value), NULL, 16);
+  } else if (strncasecmp (param, "extended_device_id_programming", 30) == 0) {
+    // Has to be before the below.
+    _aqconfig_.extended_device_id_programming = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "extended_device_id", 9) == 0) {
+    _aqconfig_.onetouch_device_id = strtoul(cleanalloc(value), NULL, 16);
+    //_config_parameters.onetouch_device_id != 0x00
     rtn=true;
   } else if (strncasecmp(param, "web_directory", 13) == 0) {
-    config_parameters->web_directory = cleanalloc(value);
+    _aqconfig_.web_directory = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "log_file", 8) == 0) {
-    config_parameters->log_file = cleanalloc(value);
+    _aqconfig_.log_file = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_address", 12) == 0) {
-    config_parameters->mqtt_server = cleanalloc(value);
+    _aqconfig_.mqtt_server = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_dz_sub_topic", 17) == 0) {
-    config_parameters->mqtt_dz_sub_topic = cleanalloc(value);
+    _aqconfig_.mqtt_dz_sub_topic = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_dz_pub_topic", 17) == 0) {
-    config_parameters->mqtt_dz_pub_topic = cleanalloc(value);
+    _aqconfig_.mqtt_dz_pub_topic = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_aq_topic", 13) == 0) {
-    config_parameters->mqtt_aq_topic = cleanalloc(value);
+    _aqconfig_.mqtt_aq_topic = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_user", 9) == 0) {
-    config_parameters->mqtt_user = cleanalloc(value);
+    _aqconfig_.mqtt_user = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "mqtt_passwd", 11) == 0) {
-    config_parameters->mqtt_passwd = cleanalloc(value);
+    _aqconfig_.mqtt_passwd = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "air_temp_dzidx", 14) == 0) {
-    config_parameters->dzidx_air_temp = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_air_temp = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "pool_water_temp_dzidx", 21) == 0) {
-    config_parameters->dzidx_pool_water_temp = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_pool_water_temp = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "spa_water_temp_dzidx", 20) == 0) {
-    config_parameters->dzidx_spa_water_temp = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_spa_water_temp = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "light_programming_mode", 21) == 0) {
-    config_parameters->light_programming_mode = atof(cleanalloc(value)); // should free this
+    _aqconfig_.light_programming_mode = atof(cleanalloc(value)); // should free this
     rtn=true;
   } else if (strncasecmp(param, "light_programming_initial_on", 28) == 0) {
-    config_parameters->light_programming_initial_on = strtoul(value, NULL, 10);
+    _aqconfig_.light_programming_initial_on = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "light_programming_initial_off", 29) == 0) {
-    config_parameters->light_programming_initial_off = strtoul(value, NULL, 10);
+    _aqconfig_.light_programming_initial_off = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button_spa", 28) == 0) {
-    config_parameters->light_programming_button_spa = strtoul(value, NULL, 10) - 1;
+    _aqconfig_.light_programming_button_spa = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button", 24) == 0 ||
              strncasecmp(param, "light_programming_button_pool", 29) == 0) {
-    config_parameters->light_programming_button_pool = strtoul(value, NULL, 10) - 1;
+    _aqconfig_.light_programming_button_pool = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
-    config_parameters->dzidx_swg_percent = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_swg_percent = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "SWG_PPM_dzidx", 13) == 0) {
-    config_parameters->dzidx_swg_ppm = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_swg_ppm = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "SWG_Status_dzidx", 14) == 0) {
-    config_parameters->dzidx_swg_status = strtoul(value, NULL, 10);
+    _aqconfig_.dzidx_swg_status = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "override_freeze_protect", 23) == 0) {
-    config_parameters->override_freeze_protect = text2bool(value);
+    _aqconfig_.override_freeze_protect = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "pda_mode", 8) == 0) {
-    config_parameters->pda_mode = text2bool(value);
-    set_pda_mode(config_parameters->pda_mode);
-    //config_parameters->use_PDA_auxiliary = false;
+    _aqconfig_.pda_mode = text2bool(value);
+    set_pda_mode(_aqconfig_.pda_mode);
+    //_aqconfig_.use_PDA_auxiliary = false;
     rtn=true;
   } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
-    config_parameters->pda_sleep_mode = text2bool(value);
-    //set_pda_mode(config_parameters->pda_mode);
+    _aqconfig_.pda_sleep_mode = text2bool(value);
+    //set_pda_mode(_aqconfig_.pda_mode);
     rtn=true;
   } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
-    config_parameters->convert_mqtt_temp = text2bool(value);
+    _aqconfig_.convert_mqtt_temp = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "convert_dz_temp_to_c", 20) == 0) {
-    config_parameters->convert_dz_temp = text2bool(value);
+    _aqconfig_.convert_dz_temp = text2bool(value);
     rtn=true;
     /*
   } else if (strncasecmp(param, "flash_mqtt_buttons", 18) == 0) {
-    config_parameters->flash_mqtt_buttons = text2bool(value);
+    _aqconfig_.flash_mqtt_buttons = text2bool(value);
     rtn=true;*/
   } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
-    config_parameters->report_zero_spa_temp = text2bool(value);
+    _aqconfig_.report_zero_spa_temp = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "report_zero_pool_temp", 21) == 0) {
-    config_parameters->report_zero_pool_temp = text2bool(value);
+    _aqconfig_.report_zero_pool_temp = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "read_all_devices", 16) == 0) {
-    config_parameters->read_all_devices = text2bool(value);
+    _aqconfig_.read_all_devices = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
-    config_parameters->use_panel_aux_labels = text2bool(value);
+    _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;
     } else if (strncasecmp (param, "force_SWG", 9) == 0) {
-    config_parameters->force_swg = text2bool(value);
+    _aqconfig_.force_swg = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
-    config_parameters->debug_RSProtocol_packets = text2bool(value);
+    _aqconfig_.debug_RSProtocol_packets = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "read_pentair_packets", 17) == 0) {
-    config_parameters->read_pentair_packets = text2bool(value);
-    config_parameters->read_all_devices = true;
+    _aqconfig_.read_pentair_packets = text2bool(value);
+    if (_aqconfig_.read_pentair_packets)
+      _aqconfig_.read_all_devices = true;
     rtn=true;
   } else if (strncasecmp (param, "swg_zero_ignore_count", 21) == 0) {
-    config_parameters->swg_zero_ignore = strtoul(value, NULL, 10);
+    _aqconfig_.swg_zero_ignore = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
-    config_parameters->display_warnings_web = text2bool(value);
+    _aqconfig_.display_warnings_web = text2bool(value);
     rtn=true;
   }
+
   /* 
   else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
-    config_parameters->use_PDA_auxiliary = text2bool(value);
+    _aqconfig_.use_PDA_auxiliary = text2bool(value);
     if ( pda_mode() ) {
       logMessage(LOG_ERR, "ERROR Can't use `use_PDA_auxiliary` in PDA mode, ignoring'\n");
-      config_parameters->use_PDA_auxiliary = false;
+      _aqconfig_.use_PDA_auxiliary = false;
     }
     rtn=true;
   } */
   // removed until domoticz has a better virtual thermostat
   /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
-              config_parameters->dzidx_pool_thermostat = strtoul(value, NULL, 10);
+              _aqconfig_.dzidx_pool_thermostat = strtoul(value, NULL, 10);
               rtn=true;
             } else if (strncasecmp (param, "spa_thermostat_dzidx", 20) == 0) {
-              config_parameters->dzidx_spa_thermostat = strtoul(value, NULL, 10);
+              _aqconfig_.dzidx_spa_thermostat = strtoul(value, NULL, 10);
               rtn=true;
             } */
   else if (strncasecmp(param, "button_", 7) == 0) {
@@ -464,29 +480,91 @@ bool setConfigValue(struct aqconfig *config_parameters, struct aqualinkdata *aqd
       aqdata->aqbuttons[num].pda_label = cleanalloc(value);
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
+      pump_detail *pump = getpump(aqdata, num);
+      if (pump != NULL) {
+        pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
+        if (pump->pumpID < 119) {
+          pump->ptype = PENTAIR;
+        } else {
+          pump->ptype = JANDY;
+          //pump->pumpType = EPUMP; // For testing let the interface set this
+        }
+      } else {
+        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS-1,param);
+      }
+      rtn=true;
+    } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1
+      pump_detail *pump = getpump(aqdata, num);
+      if (pump != NULL) {
+        pump->pumpIndex = strtoul(value, NULL, 10);
+      } else {
+        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS-1,param);
+      }
+      rtn=true;
+    }
+      /*
+    } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
       //aqdata->aqbuttons[num].pda_label = cleanalloc(value);
       //96 to 111 = Pentair, 120 to 123 = Jandy
       if (pi < MAX_PUMPS) {
         aqdata->pumps[pi].button = &aqdata->aqbuttons[num];
         aqdata->pumps[pi].pumpID = strtoul(cleanalloc(value), NULL, 16);
+        aqdata->pumps[pi].pumpIndex = pi+1;
         //aqdata->pumps[pi].buttonID = num;
         if (aqdata->pumps[pi].pumpID < 119)
           aqdata->pumps[pi].ptype = PENTAIR;
         else
           aqdata->pumps[pi].ptype = JANDY;
         pi++;
+        
       } else {
         logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
-    }
+    } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1 
+    }*/
   }
 
   return rtn;
 }
 
+pump_detail *getpump(struct aqualinkdata *aqdata, int button)
+{
+  //static int _pumpindex = 0;
+  //aqdata->num_pumps
+  int pi;
 
-void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
+  // Does it exist
+  for (pi=0; pi < aqdata->num_pumps; pi++) {
+    if (aqdata->pumps[pi].button == &aqdata->aqbuttons[button]) {
+      //printf ("Found pump %d\n",button);
+      return &aqdata->pumps[pi];
+    }
+  }
+
+  // Create new entry
+  if (aqdata->num_pumps < MAX_PUMPS) {
+    //printf ("Creating pump %d\n",button);
+    aqdata->pumps[aqdata->num_pumps].button = &aqdata->aqbuttons[button];
+    aqdata->pumps[aqdata->num_pumps].pumpType = PT_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].rpm = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].watts = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].gpm = TEMP_UNKNOWN;
+    aqdata->num_pumps++;
+    return &aqdata->pumps[aqdata->num_pumps-1];
+  }
+
+  return NULL;
+}
+
+
+void init_config()
+{
+  init_parameters(&_aqconfig_);
+}
+
+//void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
+void read_config (struct aqualinkdata *aqdata, char *cfgFile)
 {
   FILE * fp ;
   char bufr[MAXCFGLINE];
@@ -496,7 +574,7 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
   //int tokenindex = 0;
   char *b_ptr;
 
-  config_parameters->config_file = cleanalloc(cfgFile);
+  _aqconfig_.config_file = cleanalloc(cfgFile);
 
   if( (fp = fopen(cfgFile, "r")) != NULL){
     while(! feof(fp)){
@@ -511,7 +589,7 @@ void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, c
           indx = strchr(b_ptr, '=');  
           if ( indx != NULL) 
           {
-            if ( ! setConfigValue(config_parameters, aqdata, b_ptr, indx+1))
+            if ( ! setConfigValue(aqdata, b_ptr, indx+1))
               logMessage(LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr)-1, b_ptr);
           } 
         }
@@ -596,67 +674,67 @@ void writeIntValue (FILE *fp, char *msg, int value)
     fprintf(fp, "%s = %d\n", msg, value);
 }
 
-bool writeCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata)
+bool writeCfg (struct aqualinkdata *aqdata)
 {
   FILE *fp;
   int i;
   bool fs = remount_root_ro(false);
 
-  fp = fopen(config_parameters->config_file, "w");
+  fp = fopen(_aqconfig_.config_file, "w");
   if (fp == NULL) {
-    logMessage(LOG_ERR, "Open config file failed '%s'\n", config_parameters->config_file);
+    logMessage(LOG_ERR, "Open config file failed '%s'\n", _aqconfig_.config_file);
     remount_root_ro(true);
     //fprintf(stdout, "Open file failed 'sprinkler.cron'\n");
     return false;
   }
   fprintf(fp, "#***** AqualinkD configuration *****\n");
 
-  fprintf(fp, "socket_port = %s\n", config_parameters->socket_port);
-  fprintf(fp, "serial_port = %s\n", config_parameters->serial_port);
-  fprintf(fp, "device_id = 0x%02hhx\n", config_parameters->device_id);
-  fprintf(fp, "read_all_devices = %s", bool2text(config_parameters->read_all_devices));
-  writeCharValue(fp, "log_level", errorlevel2text(config_parameters->log_level));
-  writeCharValue(fp, "web_directory", config_parameters->web_directory);
-  writeCharValue(fp, "log_file", config_parameters->log_file);
-  fprintf(fp, "pda_mode = %s\n", bool2text(config_parameters->pda_mode)); 
+  fprintf(fp, "socket_port = %s\n", _aqconfig_.socket_port);
+  fprintf(fp, "serial_port = %s\n", _aqconfig_.serial_port);
+  fprintf(fp, "device_id = 0x%02hhx\n", _aqconfig_.device_id);
+  fprintf(fp, "read_all_devices = %s", bool2text(_aqconfig_.read_all_devices));
+  writeCharValue(fp, "log_level", errorlevel2text(_aqconfig_.log_level));
+  writeCharValue(fp, "web_directory", _aqconfig_.web_directory);
+  writeCharValue(fp, "log_file", _aqconfig_.log_file);
+  fprintf(fp, "pda_mode = %s\n", bool2text(_aqconfig_.pda_mode)); 
 
   fprintf(fp, "\n#** MQTT Configuration **\n");
-  writeCharValue(fp, "mqtt_address", config_parameters->mqtt_server);
-  writeCharValue(fp, "mqtt_dz_sub_topic", config_parameters->mqtt_dz_sub_topic);
-  writeCharValue(fp, "mqtt_dz_pub_topic", config_parameters->mqtt_dz_pub_topic);
-  writeCharValue(fp, "mqtt_aq_topic", config_parameters->mqtt_aq_topic);
-  writeCharValue(fp, "mqtt_user", config_parameters->mqtt_user);
-  writeCharValue(fp, "mqtt_passwd", config_parameters->mqtt_passwd);
+  writeCharValue(fp, "mqtt_address", _aqconfig_.mqtt_server);
+  writeCharValue(fp, "mqtt_dz_sub_topic", _aqconfig_.mqtt_dz_sub_topic);
+  writeCharValue(fp, "mqtt_dz_pub_topic", _aqconfig_.mqtt_dz_pub_topic);
+  writeCharValue(fp, "mqtt_aq_topic", _aqconfig_.mqtt_aq_topic);
+  writeCharValue(fp, "mqtt_user", _aqconfig_.mqtt_user);
+  writeCharValue(fp, "mqtt_passwd", _aqconfig_.mqtt_passwd);
 
   fprintf(fp, "\n#** General **\n");
-  fprintf(fp, "convert_mqtt_temp_to_c = %s\n", bool2text(config_parameters->convert_mqtt_temp));
-  fprintf(fp, "override_freeze_protect = %s\n", bool2text(config_parameters->override_freeze_protect));        
-  //fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(config_parameters->flash_mqtt_buttons)); 
-  fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(config_parameters->report_zero_spa_temp));
-  fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(config_parameters->report_zero_pool_temp));
+  fprintf(fp, "convert_mqtt_temp_to_c = %s\n", bool2text(_aqconfig_.convert_mqtt_temp));
+  fprintf(fp, "override_freeze_protect = %s\n", bool2text(_aqconfig_.override_freeze_protect));        
+  //fprintf(fp, "flash_mqtt_buttons = %s\n", bool2text(_aqconfig_.flash_mqtt_buttons)); 
+  fprintf(fp, "report_zero_spa_temp = %s\n", bool2text(_aqconfig_.report_zero_spa_temp));
+  fprintf(fp, "report_zero_pool_temp = %s\n", bool2text(_aqconfig_.report_zero_pool_temp));
 
   fprintf(fp, "\n#** Programmable light **\n");
-  //if (config_parameters->light_programming_button_pool <= 0) {
-  //  fprintf(fp, "#light_programming_button_pool = %d\n", config_parameters->light_programming_button_pool); 
-  //  fprintf(fp, "#light_programming_mode = %f\n", config_parameters->light_programming_mode);  
-   // fprintf(fp, "#light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
-  //  fprintf(fp, "#light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
+  //if (_aqconfig_.light_programming_button_pool <= 0) {
+  //  fprintf(fp, "#light_programming_button_pool = %d\n", _aqconfig_.light_programming_button_pool); 
+  //  fprintf(fp, "#light_programming_mode = %f\n", _aqconfig_.light_programming_mode);  
+   // fprintf(fp, "#light_programming_initial_on = %d\n", _aqconfig_.light_programming_initial_on);         
+  //  fprintf(fp, "#light_programming_initial_off = %d\n", _aqconfig_.light_programming_initial_off);
   //} else {
-    fprintf(fp, "light_programming_button_pool = %d\n", config_parameters->light_programming_button_pool); 
-    fprintf(fp, "light_programming_button_spa = %d\n", config_parameters->light_programming_button_spa); 
-    fprintf(fp, "light_programming_mode = %f\n", config_parameters->light_programming_mode);  
-    fprintf(fp, "light_programming_initial_on = %d\n", config_parameters->light_programming_initial_on);         
-    fprintf(fp, "light_programming_initial_off = %d\n", config_parameters->light_programming_initial_off);
+    fprintf(fp, "light_programming_button_pool = %d\n", _aqconfig_.light_programming_button_pool); 
+    fprintf(fp, "light_programming_button_spa = %d\n", _aqconfig_.light_programming_button_spa); 
+    fprintf(fp, "light_programming_mode = %f\n", _aqconfig_.light_programming_mode);  
+    fprintf(fp, "light_programming_initial_on = %d\n", _aqconfig_.light_programming_initial_on);         
+    fprintf(fp, "light_programming_initial_off = %d\n", _aqconfig_.light_programming_initial_off);
   //}
 
   fprintf(fp, "\n#** Domoticz **\n");
-  fprintf(fp, "convert_dz_temp_to_c = %s\n", bool2text(config_parameters->convert_dz_temp));
-  writeIntValue(fp, "air_temp_dzidx", config_parameters->dzidx_air_temp); 
-  writeIntValue(fp, "pool_water_temp_dzidx", config_parameters->dzidx_pool_water_temp);     
-  writeIntValue(fp, "spa_water_temp_dzidx", config_parameters->dzidx_spa_water_temp); 
-  writeIntValue(fp, "SWG_percent_dzidx", config_parameters->dzidx_swg_percent); 
-  writeIntValue(fp, "SWG_PPM_dzidx", config_parameters->dzidx_swg_ppm); 
-  writeIntValue(fp, "SWG_Status_dzidx", config_parameters->dzidx_swg_status);    
+  fprintf(fp, "convert_dz_temp_to_c = %s\n", bool2text(_aqconfig_.convert_dz_temp));
+  writeIntValue(fp, "air_temp_dzidx", _aqconfig_.dzidx_air_temp); 
+  writeIntValue(fp, "pool_water_temp_dzidx", _aqconfig_.dzidx_pool_water_temp);     
+  writeIntValue(fp, "spa_water_temp_dzidx", _aqconfig_.dzidx_spa_water_temp); 
+  writeIntValue(fp, "SWG_percent_dzidx", _aqconfig_.dzidx_swg_percent); 
+  writeIntValue(fp, "SWG_PPM_dzidx", _aqconfig_.dzidx_swg_ppm); 
+  writeIntValue(fp, "SWG_Status_dzidx", _aqconfig_.dzidx_swg_status);    
 
   fprintf(fp, "\n#** Buttons **\n");
   for (i=0; i < TOTAL_BUTTONS; i++) 

@@ -33,7 +33,7 @@
 
 //#define PUMP_TOPIC "Pump_"
 #define PUMP_RPM_TOPIC "/RPM"
-#define PUMP_GPH_TOPIC "/GPH"
+#define PUMP_GPM_TOPIC "/GPM"
 #define PUMP_WATTS_TOPIC "/Watts"
 /*
 #define AIR_TEMPERATURE   "Air"
