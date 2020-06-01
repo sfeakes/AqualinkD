@@ -68,7 +68,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
 # Update in Release 2.0.0a
-* Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki/Version_2</b>
+* Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
 * Full Variable Speed Pump support.
 * Please consider this ALPHA version, no need to upgrade unless you need VSP support. Use a previous version unless you want VSP.
 * I've noticed there is an issues with colored lights if your light is configured as such in the control panel. For this release suggest you either :-
