@@ -84,6 +84,11 @@ bool onetouch_enabled()
 {
   return _onetouch_enabled;
 }
+bool VSP_enabled()
+{
+  // At present this is dependant on onetouch.
+  return onetouch_enabled();
+}
 
 void set_extended_device_id_programming(bool mode)
 {

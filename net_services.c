@@ -34,7 +34,8 @@
 #include "domoticz.h"
 #include "aq_mqtt.h"
 #include "pda.h"
-#include "aquapure.h"
+#include "devices_jandy.h"
+#include "color_lights.h"
 
 
 //static struct aqconfig *_aqconfig_;
@@ -405,6 +406,17 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.battery = _aqualink_data->battery;
     send_mqtt_string_msg(nc, BATTERY_STATE, _aqualink_data->battery==OK?MQTT_ON:MQTT_OFF); 
   }
+
+  if (_aqualink_data->ph != TEMP_UNKNOWN && _aqualink_data->ph != _last_mqtt_aqualinkdata.ph) {
+    _last_mqtt_aqualinkdata.ph = _aqualink_data->ph;
+    send_mqtt_float_msg(nc, CHEM_PH_TOPIC, _aqualink_data->ph);
+    send_mqtt_float_msg(nc, CHRM_PH_F_TOPIC, roundf(degFtoC(_aqualink_data->ph)));
+  }
+  if (_aqualink_data->orp != TEMP_UNKNOWN && _aqualink_data->orp != _last_mqtt_aqualinkdata.orp) {
+    _last_mqtt_aqualinkdata.orp = _aqualink_data->orp;
+    send_mqtt_numeric_msg(nc, CHEM_ORP_TOPIC, _aqualink_data->orp);
+    send_mqtt_float_msg(nc, CHRM_ORP_F_TOPIC, roundf(degFtoC(_aqualink_data->orp)));
+  }
   
   if (_aqualink_data->ar_swg_status != _last_mqtt_aqualinkdata.ar_swg_status ||
       _aqualink_data->swg_percent != _last_mqtt_aqualinkdata.swg_percent) {  // Percent can also effect status
@@ -559,25 +571,41 @@ int getTempforMeteohub(char *buffer)
 
 void set_light_mode(char *value, int button) 
 {
+  int i;
+  clight_detail *light = NULL;
+
   if (_aqconfig_.pda_mode == true) {
     logMessage(LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
-  if (_aqconfig_.light_programming_button_pool != button && 
-      _aqconfig_.light_programming_button_spa != button) {
+  for (i=0; i < _aqualink_data->num_lights; i++) {
+    if (&_aqualink_data->aqbuttons[button] == _aqualink_data->lights[i].button) {
+      // Found the programmable light
+      light = &_aqualink_data->lights[i];
+      break;
+    }
+  }
+
+  if (light == NULL) {
     logMessage(LOG_ERR, "Light mode control not configured for button %d\n",button);
     return;
   }
 
   char buf[LIGHT_MODE_BUFER];
+
+  if (light->lightType == LC_PROGRAMABLE ) {
   // 5 below is light index, need to look this up so it's not hard coded.
-  sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
+    sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
                                       button, 
                                       _aqconfig_.light_programming_initial_on,
                                       _aqconfig_.light_programming_initial_off,
                                       _aqconfig_.light_programming_mode );
   //logMessage(LOG_NOTICE, "WEB: requset light mode %s\n", buf);
-  aq_programmer(AQ_SET_COLORMODE, buf, _aqualink_data);
+    aq_programmer(AQ_SET_LIGHTPROGRAM_MODE, buf, _aqualink_data);
+  } else {
+    sprintf(buf, "%-5s%-5d%-5d",value, button, light->lightType);
+    aq_programmer(AQ_SET_LIGHTCOLOR_MODE, buf, _aqualink_data);
+  }
 }
 
 
@@ -600,6 +628,12 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     mg_get_http_var(&http_msg->query_string, "command", command, sizeof(command));
     logMessage(LOG_INFO, "WEB: Message command='%s'\n", command);
 
+    if (strcmp(command, "dynamic_config") == 0) {
+      char data[JSON_BUFFER_SIZE];
+      int size = build_color_lights_js(_aqualink_data, data, JSON_BUFFER_SIZE);
+      mg_send_head(nc, 200, size, "Content-Type: text/javascript");
+      mg_send(nc, data, size);
+    } else
     // if (strstr(http_msg->query_string.p, "command=status")) {
     if (strcmp(command, "status") == 0) {
       char data[JSON_STATUS_SIZE];
@@ -614,19 +648,25 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send_head(nc, 200, size, "Content-Type: text/plain");
       mg_send(nc, data, size);
     } else if (strcmp(command, "poollightmode") == 0) {
+logMessage(LOG_ERR, "WEB: poollightmode taken out for update (forgot to put it back)\n");
+/*
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
       set_light_mode(value, _aqconfig_.light_programming_button_pool);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+*/
     } else if (strcmp(command, "spalightmode") == 0) {
+logMessage(LOG_ERR, "WEB: spalightmode taken out for update (forgot to put it back)\n");
+/*
       char value[20];
       mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
       //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
       set_light_mode(value, _aqconfig_.light_programming_button_spa);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+*/
     } else if (strcmp(command, "diag") == 0) {
       aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
@@ -659,14 +699,25 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
       mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
       mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "extended_device_prg") == 0) {
+      char value[20];
+      char message[JSON_LABEL_SIZE];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      bool prg = request2bool(value);
+      if (prg && !onetouch_enabled())
+        prg = false; // Ignore request if onetouch is not enabeled
+      set_extended_device_id_programming(prg);
+      sprintf(message,"{\"extended_device_prg\":\"%s\"}", bool2text(prg));
+      mg_send_head(nc, 200, strlen(message), "Content-Type: application/json");
+      mg_send(nc, message, strlen(message));
     } else if (strcmp(command, "devices") == 0) {
-      char message[JSON_LABEL_SIZE*10];
-      int size = build_device_JSON(_aqualink_data, _aqconfig_.light_programming_button_pool, _aqconfig_.light_programming_button_spa, message, JSON_LABEL_SIZE*10, false);
+      char message[JSON_BUFFER_SIZE];
+      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else if (strcmp(command, "homebridge") == 0) {
-      char message[JSON_LABEL_SIZE*10];
-      int size = build_device_JSON(_aqualink_data, _aqconfig_.light_programming_button_pool, _aqconfig_.light_programming_button_spa, message, JSON_LABEL_SIZE*10, true);
+      char message[JSON_BUFFER_SIZE];
+      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
       mg_send_head(nc, 200, size, "Content-Type: application/json");
       mg_send(nc, message, size);
     } else if (strcmp(command, "setconfigprm") == 0) {
@@ -866,8 +917,8 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
       ws_send(nc, labels);
     } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
-      char message[JSON_LABEL_SIZE*10];
-      build_device_JSON(_aqualink_data, _aqconfig_.light_programming_button_pool, _aqconfig_.light_programming_button_spa, message, JSON_LABEL_SIZE*10, false);
+      char message[JSON_BUFFER_SIZE];
+      build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
       ws_send(nc, message);
     } else if ( strcmp(request.first.value, "simulator") == 0) {
       _aqualink_data->simulate_panel = true;
@@ -920,11 +971,13 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
         aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
         _aqualink_data->swg_percent = value; // Set the value as if it's already been set, just incase it's 0 as we won't get that message, or will update next time
       }
-    } else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) { 
-      set_light_mode(request.second.value, _aqconfig_.light_programming_button_pool);
+    //} else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) { 
+    //  set_light_mode(request.second.value, _aqconfig_.light_programming_button_pool);
     } else if (strcmp(request.first.value, "LIGHT_MODE") == 0) {
+      // second is mode & third is button_id
       int i;
       for (i = 0; i < TOTAL_BUTTONS; i++) {
+        // NSF I could pull the text here for the real light color name. 4th value in json
         if (strcmp(request.third.value, _aqualink_data->aqbuttons[i].name) == 0) {
           set_light_mode(request.second.value, i);
           break;
@@ -1119,7 +1172,7 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
           logMessage(LOG_INFO, "MQTT: DZ: received '%s' for '%s', already '%s', Ignoring\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (nvalue==DZ_OFF?"OFF":"ON"));
         } else {
           // NSF Below if needs to check that the button pressed is actually a light. Add this later
-          if (_aqualink_data->active_thread.ptype == AQ_SET_COLORMODE ) {
+          if (_aqualink_data->active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE ) {
             logMessage(LOG_NOTICE, "MQTT: DZ: received '%s' for '%s', IGNORING as we are programming light mode\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name);
           } else {
             logMessage(LOG_INFO, "MQTT: DZ: received '%s' for '%s', turning '%s'\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(nvalue==DZ_OFF?"OFF":"ON"));
@@ -1229,7 +1282,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       
       int qos=0;// can't be bothered with ack, so set to 0
 
-      logMessage(LOG_INFO, "MQTT: Connection acknowledged\n");
+      logMessage(LOG_DEBUG, "MQTT: Connection acknowledged\n");
       mqtt_msg = (struct mg_mqtt_message *)ev_data;
       if (mqtt_msg->connack_ret_code != MG_EV_MQTT_CONNACK_ACCEPTED) {
         logMessage(LOG_WARNING, "Got mqtt connection error: %d\n", mqtt_msg->connack_ret_code);
@@ -1262,7 +1315,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     break;
   case MG_EV_MQTT_PUBACK:
     mqtt_msg = (struct mg_mqtt_message *)ev_data;
-    logMessage(LOG_INFO, "MQTT: Message publishing acknowledged (msg_id: %d)\n", mqtt_msg->message_id);
+    logMessage(LOG_DEBUG, "MQTT: Message publishing acknowledged (msg_id: %d)\n", mqtt_msg->message_id);
     break;
   case MG_EV_MQTT_SUBACK:
     logMessage(LOG_INFO, "MQTT: Subscription(s) acknowledged\n");

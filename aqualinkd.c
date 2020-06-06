@@ -39,10 +39,10 @@
 #include "net_services.h"
 #include "pda_menu.h"
 #include "pda.h"
-#include "pentair_messages.h"
+#include "devices_pentair.h"
 #include "pda_aq_programmer.h"
 #include "packetLogger.h"
-#include "aquapure.h"
+#include "devices_jandy.h"
 #include "onetouch.h"
 #include "onetouch_aq_programmer.h"
 #include "version.h"
@@ -496,7 +496,8 @@ void processMessage(char *message)
     if (_aqualink_data.active_thread.thread_id == 0 &&
         stristr(msg, "JANDY AquaLinkRS") == NULL &&
         stristr(msg, "PUMP O") == NULL  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
-        stristr(msg, "MAINTAIN") == NULL /* && // Catch 'MAINTAIN TEMP IS OFF'
+        stristr(msg, "MAINTAIN") == NULL && // Catch 'MAINTAIN TEMP IS OFF'
+        stristr(msg, "0 PSI") == NULL /* // Catch some erronious message on test harness
         stristr(msg, "CLEANER O") == NULL &&
         stristr(msg, "SPA O") == NULL &&
         stristr(msg, "AUX") == NULL*/
@@ -575,7 +576,7 @@ bool process_packet(unsigned char *packet, int length)
     }
 
     // COLOR MODE programming relies on state changes, so let any threads know
-    if (_aqualink_data.active_thread.ptype == AQ_SET_COLORMODE) {
+    if (_aqualink_data.active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE) {
 //printf ("Light thread kicking\n");
       kick_aq_program_thread(&_aqualink_data, ALLBUTTON);
     }
@@ -742,6 +743,7 @@ int main(int argc, char *argv[])
   bool cmdln_debugRS485 = false;
   bool cmdln_lograwRS485 = false;
   _aqualink_data.num_pumps = 0;
+  _aqualink_data.num_lights = 0;
 
 /*
   static unsigned char msg_loop; // = '\0';
@@ -898,26 +900,30 @@ int main(int argc, char *argv[])
 
   for (i = 0; i < TOTAL_BUTONS; i++)
   {
-    char vsp[] = "None";
-    int alid = 0;
+    //char ext[] = " VSP ID None | AL ID 0 ";
+    char ext[40];
+    ext[0] = '\0';
     for (j = 0; j < _aqualink_data.num_pumps; j++) {
-      //if (_aqualink_data.pumps[j].buttonID == i) {
       if (_aqualink_data.pumps[j].button == &_aqualink_data.aqbuttons[i]) {
-        sprintf(vsp,"0x%02hhx",_aqualink_data.pumps[j].pumpID);
-        alid = _aqualink_data.pumps[j].pumpIndex;
-        //printf("Pump %d %d %d\n",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].buttonID, _aqualink_data.pumps[j].ptype);
+        sprintf(ext, "VSP ID 0x%02hhx | PMP ID %-1d |",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].pumpIndex);
       }
     }
-    if (!_aqconfig_.pda_mode) {
-      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s | AL ID %-1d | dzidx %-3d | %s\n", 
-                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp, alid, _aqualink_data.aqbuttons[i].dz_idx,
-                          (i>0 && (i==_aqconfig_.light_programming_button_pool || i==_aqconfig_.light_programming_button_spa)?"Programable":"")  );
-    } else {
-      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | VSP ID %-4s | AL ID %-1d | PDAlabel %-15s | dzidx %d\n", 
-                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, vsp, alid,
-                          _aqualink_data.aqbuttons[i].pda_label, _aqualink_data.aqbuttons[i].dz_idx  );
+    for (j = 0; j < _aqualink_data.num_lights; j++) {
+      if (_aqualink_data.lights[j].button == &_aqualink_data.aqbuttons[i]) {
+        sprintf(ext,"Light Progm | CTYPE %-1d  |",_aqualink_data.lights[j].lightType);
+      }
     }
-    //logMessage(LOG_NOTICE, "Button %d\n", i+1, _aqualink_data.aqbuttons[i].label , _aqualink_data.aqbuttons[i].dz_idx);
+    if (_aqualink_data.aqbuttons[i].dz_idx > 0)
+      sprintf(ext+strlen(ext), "dzidx %-3d", _aqualink_data.aqbuttons[i].dz_idx);
+
+    if (!_aqconfig_.pda_mode) {
+      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);
+    } else {
+      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | PDAlabel %-15s | %s\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label,
+                           _aqualink_data.aqbuttons[i].pda_label, ext);
+    }
   }
 
   if (_aqconfig_.deamonize == true)
@@ -1023,7 +1029,8 @@ void main_loop()
   int rs_fd;
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
-  bool interestedInNextAck = false;
+  //bool interestedInNextAck = false;
+  rsDeviceType interestedInNextAck = DRS_NONE;
   bool changed = false;
   //int swg_zero_cnt = 0;
   int swg_noreply_cnt = 0;
@@ -1051,6 +1058,8 @@ void main_loop()
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.battery = OK;
   _aqualink_data.open_websockets = 0;
+  _aqualink_data.ph = TEMP_UNKNOWN;
+  _aqualink_data.orp = TEMP_UNKNOWN;
 
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
@@ -1148,20 +1157,20 @@ void main_loop()
     }
     else if (packet_length > 0)
     {
+      /* // Use this to check wait time in mg_mgr_poll(&mgr, xx); at bottom of for, and adjust as needed. 
+      if (blank_read > 0) {
+        logMessage(LOG_NOTICE, "RS empry reads %d\n", blank_read);
+      }
+      */
       blank_read = 0;
       changed = false;
-/*
-      // This is handeled by aq_serial now
-      if (_aqconfig_.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
-        logPacket(packet_buffer, packet_length);
-*/
+
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.device_id)
       {
         if (getLogLevel() >= LOG_DEBUG)
           logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
         
         changed = process_packet(packet_buffer, packet_length);
-
         // If we are not in PDA or Simulator mode, just sent ACK & any CMD, else caculate the ACK.
         if (!_aqualink_data.simulate_panel && !_aqconfig_.pda_mode) {
           //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
@@ -1179,29 +1188,39 @@ void main_loop()
       else if (packet_length > 0 && _aqconfig_.read_all_devices == true)
       {
         //logPacket(packet_buffer, packet_length);
-        if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck == true)
+        if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
         {
-          swg_noreply_cnt = 0;
-          changed = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
-          interestedInNextAck = false;
-        }
-        //else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != 0x00)
-        else if (interestedInNextAck == true && packet_buffer[PKT_DEST] != DEV_MASTER && _aqualink_data.ar_swg_status != SWG_STATUS_OFF)
-        {
-          if ( ++swg_noreply_cnt < 3 ) {
-            _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
-            changed = true;
+          if (interestedInNextAck == DRS_SWG) {
+            swg_noreply_cnt = 0;
+            changed = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
+          } else if (interestedInNextAck == DRS_EPUMP) {
+            changed = processPacketFromJandyPump(packet_buffer, packet_length, &_aqualink_data);
           }
-          interestedInNextAck = false;
+          interestedInNextAck = DRS_NONE;
+        }
+        else if ( packet_buffer[PKT_DEST] != DEV_MASTER && interestedInNextAck != DRS_NONE )
+        { // We were expecting an ack from device as next message but didn;t get it, device must be off
+          if (interestedInNextAck == DRS_SWG && _aqualink_data.ar_swg_status != SWG_STATUS_OFF) {
+            if ( ++swg_noreply_cnt < 3 ) {
+              _aqualink_data.ar_swg_status = SWG_STATUS_OFF;
+              changed = true;
+            }
+          }
+          interestedInNextAck = DRS_NONE;
         }
         else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
         {
-          interestedInNextAck = true;
+          interestedInNextAck = DRS_SWG;
           changed = processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _aqconfig_.swg_zero_ignore);
+        }
+        else if (packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
+        {
+          interestedInNextAck = DRS_EPUMP;
+          changed = processPacketToJandyPump(packet_buffer, packet_length, &_aqualink_data);
         }
         else
         {
-          interestedInNextAck = false;
+          interestedInNextAck = DRS_NONE;
         }
 
         if (_aqconfig_.read_pentair_packets && getProtocolType(packet_buffer) == PENTAIR) {
@@ -1216,7 +1235,8 @@ void main_loop()
         broadcast_aqualinkstate(mgr.active_connections);
     }
 
-    mg_mgr_poll(&mgr, 10);
+    //mg_mgr_poll(&mgr, 10);
+    mg_mgr_poll(&mgr, 5);
     tcdrain(rs_fd); // Make sure buffer has been sent.
 
     // Any unactioned commands

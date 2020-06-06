@@ -51,8 +51,8 @@ struct aqconfig
   float light_programming_mode;
   int light_programming_initial_on;
   int light_programming_initial_off;
-  int light_programming_button_pool;
-  int light_programming_button_spa;
+  //int light_programming_button_pool;
+  //int light_programming_button_spa;
   bool override_freeze_protect;
   bool pda_mode;
   bool onetouch_mode;

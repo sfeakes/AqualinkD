@@ -11,6 +11,7 @@
   <link href='aqualinkd.png' rel='apple-touch-icon'>
   <link href='aqualinkd.png' rel='icon'>
   <script src='config.js'></script>
+  <script src='?command=dynamic_config'></script>
   <style>
     :root {
       --fonts: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
@@ -478,7 +479,8 @@
     //init();
     function init() {
       setSizeSpecifics();
-      populateLightProgram();
+      populateLightProgram(-1);
+      //populateLightProgram(0);
       document.getElementById('thermostat_options').classList.remove("hide");
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
@@ -490,7 +492,9 @@
       resetBackgroundSize();
     }
 
-    function populateLightProgram() {
+    function populateLightProgram(type=0) {
+      var light_program = _light_program[type];
+      
       if (_lightProgramDropdown) {
         option = document.getElementById('pswitch_option_list');
         try {
@@ -504,20 +508,27 @@
         } catch (e) {}
       } else {
         var tbody = document.getElementById('pswitch_table').getElementsByTagName('tbody')[0];
+        if (type == -1) {
+          // -1 is Just init, so create another row, just to delete later.
+          row = tbody.insertRow(2);
+          row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
+          light_program = _light_program[0]; // Use aqualinkd light modes to set size below
+        }
         var html1 = '';
         var html2 = '';
         var fLen = light_program.length;
         var i;
         for (i = 0; i < fLen; i++) {
           if (light_program[i].endsWith(" - Show"))
-            html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
+            html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
           else
-            html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this);'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
+            html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
         }
         var row;
         row = tbody.deleteRow(2);
         row = tbody.insertRow(2);
         row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
+        tbody.deleteRow(3);
         row = tbody.insertRow(3);
         row.innerHTML = "<td align='left' valign='top'>" + html1 + "</td><td align='left' valign='top'>" + html2 + "</td>";
       }
@@ -789,7 +800,7 @@
         if (document.getElementById(id).getAttribute('status') == 'on') {
           document.getElementById(id + '_status').innerHTML = text;
         } else {
-          console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
+          //console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
         }
       } catch(exception) {}
     }
@@ -942,7 +953,12 @@
 
         add_tile(object.id, object.name, object.state, 'switch', ext_type, 'hk/' + img + '-off.png', 'hk/' + img + '-on.png');
         setTileOn(object.id, object.status, null);
-        if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
+        if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_program') {
+          if (typeof object.Light_Type !== 'undefined') {
+            document.getElementById(object.id).setAttribute('lighttype', object.Light_Type);
+          }
+          // Other switch_program types (other than light_type) GO HERE 
+        } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
           if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {    
             if (object.Pump_RPM == -2) {
               setTileOnText(object.id, 'Pump Offline'); // Small txt
@@ -982,7 +998,6 @@
     }
 
     function showTileOptions(show, id, contex) {
-  console.log("showTileOptions " + show + " "+id+" "+contex);
       var active_option;
       if (show == true) {
         var wrapH = document.getElementById('wrapper').clientHeight + 'px';
@@ -997,6 +1012,11 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg') {
+          active_option = document.getElementById('swg_options');
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_freeze') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
@@ -1058,17 +1078,14 @@
           close_button = document.getElementById("swg_options_close");
           ext = '&deg;' + _temperature_units;
         } else if (type == 'switch_program') {
-          //slider = document.getElementById("pswitch_option_slider_range");
-          //slider_output = document.getElementById("pswitch_option_slider_text_value");
+          populateLightProgram(tile.getAttribute('lighttype') );
           title = document.getElementById("pswitch_option_title");
           close_button = document.getElementById("pswitch_options_close");
-          //ext = '&deg;' + _temperature_units;
         } else if (type == 'switch_vsp') {
           slider = document.getElementById("vspoption_slider_range");
           slider_output = document.getElementById("vspoption_slider_text_value");
           title = document.getElementById("vspswitch_option_title");
           close_button = document.getElementById("vspswitch_option_close");
-          //ext = '&deg;' + _temperature_units;
         } else {
           slider = document.getElementById("option_slider_range");
           slider_output = document.getElementById("option_slider_text_value");
@@ -1113,7 +1130,9 @@
             ext = ' RPM';
           }
         }
+
         title.innerHTML = document.getElementById(id + '_name').innerHTML;
+
         if (type == 'switch_program') {
           var pswitch = document.getElementById("pswitch_option_list");
           oswitch = document.getElementById("pswitch_option_switch");
@@ -1126,19 +1145,24 @@
         } else if (type == 'setpoint_swg') {
           slider.value = sp_value;
           oswitch = document.getElementById("swg_option_switch");
-          //oswitch.checked = tile_state;
-//console.log("Boost attribute " + getTileAttribute(id, "boost") + " for "+id);
-          oswitch.checked = getTileAttribute(id, "Boost")=='on'?true:false ;
           var oswitch_output = document.getElementById("swg_option_switch_text_value");
+          document.getElementById("swg_option_switch_row").style.display = "table-row";
+          oswitch.checked = getTileAttribute(id, "Boost")=='on'?true:false ;
           slider_output.innerHTML = slider.value + ext;
           oswitch_output.innerHTML = ((oswitch.checked) ? "Boost On" : "Boost Off");
           slider.oninput = function() {
             slider_output.innerHTML = this.value + ext;
-            //sp_value = this.value
           }
           oswitch.onclick = function() {
             oswitch_output.innerHTML = ((oswitch.checked) ? "Boost On" : "Boost Off");
-            //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
+          }
+        } else if (type == 'setpoint_freeze') {
+          slider.value = sp_value;
+          oswitch = document.getElementById("swg_option_switch");
+          document.getElementById("swg_option_switch_row").style.display = "none";
+          slider_output.innerHTML = slider.value + ext;
+          slider.oninput = function() {
+            slider_output.innerHTML = this.value + ext;
           }
         } else if (type == 'switch_vsp') {
           slider.value = sp_value;
@@ -1190,7 +1214,7 @@
             var mode=false;
             if (_lightProgramDropdown) {
               if (pswitch.selectedIndex > 0) {
-                send_light_mode(pswitch.selectedIndex, id);
+                send_light_mode(pswitch.selectedIndex, id, pswitch.options[pswitch.selectedIndex].text);
                 mode=true;
               }
             } else {
@@ -1198,7 +1222,7 @@
               var x;
               for (x = 0; x < radio.length; x++) {
                  if (radio[x].checked == true) {
-                   send_light_mode(radio[x].value, id);
+                   send_light_mode(radio[x].value, id, document.getElementById('pswitch_option_switch_text_value').innerHTML);
                    mode=true;
                    break;
                  }
@@ -1268,6 +1292,11 @@
       setTileValue("Temperature/Air", data.air_temp);
       setTileValue("Temperature/Pool", data.pool_temp);
       setTileValue("Temperature/Spa", data.spa_temp);
+
+      if (typeof(data.chem_ph) !== 'undefined')
+        setTileValue("CHEM/pH", data.chem_ph);
+      if (typeof(data.chem_orp) !== 'undefined')
+        setTileValue("CHEM/ORP", data.chem_orp);
       /*
       setTileValue("Air", data.air_temp);
       setTileValue("Pool_Water", data.pool_temp);
@@ -1454,13 +1483,14 @@
       socket_di.send(JSON.stringify(temperature));
     }
 
-    function send_light_mode(value, id) {
-      console.log("Set light mode to "+value+" id="+id);
+    function send_light_mode(value, id, textvalue) {
+      console.log("Set light mode to "+value+" id="+id+" text="+textvalue);
       var mode = {};
       //mode.parameter = 'POOL_LIGHT_MODE';
       mode.parameter = 'LIGHT_MODE';
       mode.value = value;
       mode.button = id;
+      mode.text_value = textvalue;
       socket_di.send(JSON.stringify(mode));  
     }
 
@@ -1487,9 +1517,12 @@
       }, 5000);
     }
 
-    function updatePwsitchOptions(source) {
+    function updatePwsitchOptions(source, light_type) {
       if (source.type == 'radio') {
-        document.getElementById('pswitch_option_switch_text_value').innerHTML = light_program[source.value-1];
+        var modename = _light_program[light_type][source.value-1];
+        if (modename.endsWith(" - Show"))
+          modename = modename.substr(0, (modename.length - 7));
+        document.getElementById('pswitch_option_switch_text_value').innerHTML = modename;
         document.getElementById('pswitch_option_switch').checked = true;
       } else if (source.type == 'checkbox') {
         //console.log(source);
@@ -1567,7 +1600,7 @@
             <th colspan='2'><span id="swg_option_title"></span>
             </th>
           </tr>
-          <tr>
+          <tr id="swg_option_switch_row">
             <td align='right' width='50%'><span class="option_text" id='swg_option_switch_text_value'></span>
             </td>
             <td align='left' width='50%'>

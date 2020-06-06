@@ -40,7 +40,8 @@ typedef enum {
   AQ_GET_DIAGNOSTICS_MODEL,
   //AQ_SEND_CMD,
   AQ_GET_PROGRAMS,
-  AQ_SET_COLORMODE,
+  AQ_SET_LIGHTPROGRAM_MODE,
+  AQ_SET_LIGHTCOLOR_MODE, 
   AQ_PDA_INIT,
   AQ_SET_SWG_PERCENT,
   AQ_PDA_DEVICE_STATUS,
@@ -83,6 +84,8 @@ void aq_send_cmd(unsigned char cmd);
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
 void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
+
+
 //bool push_aq_cmd(unsigned char cmd);
 
 //void send_cmd(unsigned char cmd, struct aqualinkdata *aq_data);
@@ -96,6 +99,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
 int RPM_check(pump_type type, int value, struct aqualinkdata *aqdata);
 //int RPM_check(int type, int value, struct aqualinkdata *aqdata);
 const char *ptypeName(program_type type);
+const char *programtypeDisplayName(program_type type);
 
 // These shouldn't be here, but just for the PDA AQ PROGRAMMER
 void send_cmd(unsigned char cmd);

@@ -26,11 +26,12 @@
         "Pool_Water",
         "Spa_Water",
         "Freeze_Protect",
+        "CHEM/pH",
+        "CHEM/ORP"
         //"Solar_Heater",
       ];
   
-      // Add the light program names below, the name index MUST correlate to
-      // the number of pulses.  ie (Blue Sea is #2 or 2 pulses)
+      // This get's picked up by dynamic_config.js and used as mode 0
       var light_program = [
         "Voodoo Lounge - Show",
         "Blue Sea",
@@ -50,6 +51,7 @@
         "Mardi Gras - Show",
         "Cool Cabaret - Show"
       ];
+
       /*
       *  BELOW IS NOT RELIVENT FOR simple.html or simple inteface
       *

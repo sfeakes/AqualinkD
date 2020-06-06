@@ -129,7 +129,7 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
   // Also need page up and down  "   ^^ More vv"
   if ( (index = onetouch_menu_find_index(item)) != -1) {
     cnt = index - onetouch_menu_hlightindex();
-    logMessage(LOG_DEBUG, "*** OneTouch menu caculator selected=%d, wanted=%d, move=%d times ***\n",onetouch_menu_hlightindex(),index,cnt);
+    logMessage(LOG_DEBUG, "OneTouch menu caculator selected=%d, wanted=%d, move=%d timesn",onetouch_menu_hlightindex(),index,cnt);
     for (i=0; i < cnt; i ++) {
         send_ot_cmd(KEY_ONET_DOWN);
         waitfor_ot_queue2empty();
@@ -209,6 +209,7 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
   // Get back to a known point, the system menu
   while (get_onetouch_memu_type() != OTM_SYSTEM && get_onetouch_memu_type() != OTM_ONETOUCH && i < 5 ) {
     send_ot_cmd(KEY_ONET_BACK);
+    waitfor_ot_queue2empty();
     waitForNextOT_Menu(aq_data);
     i++;
   }
@@ -244,6 +245,7 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
 
 bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
 {
+  bool equErr = false;
   char *second_menu = false;
   char *third_menu = false;
 
@@ -292,14 +294,10 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
       return true;
     break;
     case OTM_EQUIPTMENT_ONOFF:
-      //if ( select_onetouch_menu_item(aq_data, "Equipment ON/OFF") == false ) { // NSF Should use this
-      if ( ot_strcmp(onetouch_menu_hlight(), "Equipment ON/OFF") == 0) {
-        send_ot_cmd(KEY_ONET_SELECT);
-        waitfor_ot_queue2empty();
-        waitForNextOT_Menu(aq_data);
-        return true;
+      if ( select_onetouch_menu_item(aq_data, "Equipment ON/OFF") == false ) {
+        logMessage(LOG_ERR, "OneTouch device programmer couldn't select 'Equipment ON/OFF' menu %d\n",menu);
+        equErr = true;
       }
-      return false;
     break;
     case OTM_MENUHELP:
     case OTM_SET_TEMP:
@@ -308,26 +306,23 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
     case OTM_FREEZE_PROTECT:
     case OTM_BOOST:
     case OTM_SYSTEM_SETUP:
-      if ( select_onetouch_menu_item(aq_data, "   Menu / Help") == false ) {
+      if ( select_onetouch_menu_item(aq_data, "Menu / Help") == false ) {
         logMessage(LOG_ERR, "OneTouch device programmer couldn't select menu %d\n",menu);
+        break;
       }
       if (second_menu)
         select_onetouch_menu_item(aq_data, second_menu);
       if (third_menu)
         select_onetouch_menu_item(aq_data, third_menu);
-      /*
-      if (menu == OTM_SET_HEATER) {
-        select_onetouch_menu_item(aq_data, "Set Temp");
-      } else if (menu == OTM_SET_TIME) {
-        select_onetouch_menu_item(aq_data, "Set Time");
-      } else if (menu == OTM_SET_AQUAPURE) {
-        select_onetouch_menu_item(aq_data, "Set AQUAPURE");
-      }
-      */
     break;
     default:
       logMessage(LOG_ERR, "OneTouch device programmer doesn't know how to access menu %d\n",menu);
     break;
+  }
+
+  // We can't detect Equiptment menu yet, so use the find test above not get_onetouch_memu_type() below
+  if (menu == OTM_EQUIPTMENT_ONOFF ) {
+    return !equErr;
   }
 
   if (get_onetouch_memu_type() != menu)
@@ -335,23 +330,6 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
 
   return true;
 }
-
-/*
-bool in_ot_programming_mode(struct aqualinkdata *aq_data)
-{
-  //( type != AQ_SET_PUMP_RPM || type != AQ_SET_OT_MACRO )) {
-
-  if ( ( aq_data->active_thread.thread_id != 0 ) &&
-       ( aq_data->active_thread.ptype == AQ_SET_PUMP_RPM ||
-         aq_data->active_thread.ptype == AQ_SET_OT_MACRO || 
-         aq_data->active_thread.ptype == AQ_GET_OT_POOL_SPA_HEATER_TEMPS)
-     ) {
-     return true;
-  }
-
-  return false;
-}
-*/
 
 
 // Return the digit at factor
@@ -422,7 +400,8 @@ void *set_aqualink_pump_rpm( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_PUMP_RPM);
 
-  logMessage(LOG_NOTICE, "OneTouch Set Pump %d to RPM %d, from '%s'\n",pumpIndex,pumpRPM,buf);
+  logMessage(LOG_NOTICE, "OneTouch Set Pump %d to RPM %d\n",pumpIndex,pumpRPM);
+
 
   if (! goto_onetouch_menu(aq_data, OTM_EQUIPTMENT_ONOFF) ){
     logMessage(LOG_ERR, "OneTouch device programmer didn't get Equiptment on/off menu\n");
@@ -461,21 +440,26 @@ void *set_aqualink_pump_rpm( void *ptr )
         //printf("FOUND MENU")
         if (strstr(onetouch_menu_hlight(), "RPM") != NULL ) {
           // RPM 3450 & 600 max & min
+          // Panel will change 2nd,3rd & 4th digits depending on previos digit
+          // so reget the RPM after every change.
           int RPM = ot_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 10000));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
+          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 1000));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
+          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 100));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
+          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 10));
+          // Get the new RPM.
+          aq_data->pumps[structIndex].rpm = ot_atoi(&onetouch_menu_hlight()[7]);
           send_ot_cmd(KEY_ONET_SELECT);
-          waitfor_ot_queue2empty();
-          // Reset the pump RPM
-          aq_data->pumps[structIndex].rpm = RPM;
+          waitfor_ot_queue2empty(); 
         } else if (strstr(onetouch_menu_hlight(), "GPM") != NULL ) {
           // GPM 130 max, GPM 15 min
           for (i=0; i < 24 ; i++) { // Max of 23 key presses to get from max to min
@@ -486,8 +470,8 @@ void *set_aqualink_pump_rpm( void *ptr )
             } else if (GPM < pumpRPM) {
               send_ot_cmd(KEY_ONET_UP);
             } else {
+              aq_data->pumps[structIndex].gpm = ot_atoi(&onetouch_menu_hlight()[8]);;
               send_ot_cmd(KEY_ONET_SELECT);
-              aq_data->pumps[structIndex].gpm = GPM;
               waitfor_ot_queue2empty();
               break;
             }
@@ -531,7 +515,7 @@ void *set_aqualink_onetouch_macro( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
-  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  //struct aqualinkdata *aq_data = threadCtrl->aq_data;
 
   //sprintf(msg, "%-5d%-5d",index, (strcmp(value, "on") == 0)?ON:OFF);
   // Use above to set
@@ -783,6 +767,8 @@ void *set_aqualink_onetouch_time( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_TIME);
   
+  logMessage(LOG_ERR, "OneTouch set time not implimented\n");
+
   logMessage(LOG_DEBUG, "OneTouch set time\n");
 
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TIME) ){

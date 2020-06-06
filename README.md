@@ -67,13 +67,12 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
-# Update in Release 2.0.0a
+# Update in Release 2.0.0b
 * Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
-* Full Variable Speed Pump support.
-* Please consider this ALPHA version, no need to upgrade unless you need VSP support. Use a previous version unless you want VSP.
-* I've noticed there is an issues with colored lights if your light is configured as such in the control panel. For this release suggest you either :-
-  * A) use AqualinkD to control the colors and configure Jandy control panel as normal light
-  * B) Don't use AqualinkD to turn light on/off (or if you do, wait ~10 seconds)
+* Full Variable Speed Pump support. (Can read,set & change RPM,GPM)
+* Full support for all Colored Lights (even if Jandy Control Panel doesn't support them)
+* Chemlink pH & ORP now supported. (along with posting MQTT information)
+* There are some configuration changes, make sure to read wiki (link above)
 # Update in Release 1.3.9a
 * Improved Debugging for serial.
 * Added panel Timeout mode support to UI and MQTT
@@ -387,7 +386,10 @@ Other Information (Salt Water Generator)
 aqualinkd/SWG/Percent               ( SWG Generating %, i.e. 50)
 aqualinkd/SWG/PPM                   ( SWG Parts Per Million i.e. 3100)
 aqualinkd/SWG/Percent_f             (since we use a homekit thermostat for SWG and use degC as %, we need to pass degF for US phone)
-
+aqualinkd/CHEM/pH                   (pH reading if Chemlink installed)
+aqualinkd/CHEM/pH_f                 (since we use a homekit temperature for pH and use degC as %, we need to pass degF for US phone)
+aqualinkd/CHEM/ORP                  (ORP reading if Chemlink installed)
+aqualinkd/CHEM/ORP_f                (since we use a homekit temperature for pH and use degC as %, we need to pass degF for US phone)
 ```
 
 To turn something on, or set information, simply add `set` to the end of the above topics, and post 1 or 0 in the message for a button, or a number for a setpoint. Topics Aqualinkd will act on.

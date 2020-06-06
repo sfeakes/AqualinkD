@@ -23,6 +23,7 @@
 #define DATE_STRING_LEN   30
 
 #define MAX_PUMPS 4
+#define MAX_LIGHTS 4
 
 enum {
  FAHRENHEIT,
@@ -90,10 +91,26 @@ typedef struct pumpd
   int pumpIndex;
   pump_type pumpType;
   //int buttonID;
-  protocolType ptype;
+  protocolType prclType;
   aqkey *button;
   //bool updated;
 } pump_detail;
+
+// color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
+typedef enum clight_type {
+  LC_PROGRAMABLE=0, 
+  LC_JANDY, 
+  LC_JANDYLED, 
+  LC_SAL, 
+  LC_CLOGIG, 
+  LC_INTELLIB
+} clight_type;
+
+typedef struct clightd
+{
+  clight_type lightType;
+  aqkey *button;
+} clight_detail;
 
 struct aqualinkdata
 {
@@ -132,9 +149,13 @@ struct aqualinkdata
   unsigned char last_packet_type;
   int num_pumps;
   pump_detail pumps[MAX_PUMPS];
+  int num_lights;
+  clight_detail lights[MAX_LIGHTS];
   int open_websockets;
   bool boost;
   char boost_msg[10];
+  float ph;
+  int orp;
   //bool last_msg_was_status;
   //bool ar_swg_connected;
   #ifdef AQ_DEBUG

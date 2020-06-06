@@ -77,8 +77,8 @@ void init_parameters (struct aqconfig * parms)
   parms->light_programming_mode = 0;
   parms->light_programming_initial_on = 15;
   parms->light_programming_initial_off = 12;
-  parms->light_programming_button_pool = TEMP_UNKNOWN;
-  parms->light_programming_button_spa = TEMP_UNKNOWN;
+  //parms->light_programming_button_pool = TEMP_UNKNOWN;
+  //parms->light_programming_button_spa = TEMP_UNKNOWN;
   parms->deamonize = true;
   parms->log_file = '\0';
   parms->pda_mode = false;
@@ -383,11 +383,13 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.light_programming_initial_off = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button_spa", 28) == 0) {
-    _aqconfig_.light_programming_button_spa = strtoul(value, NULL, 10) - 1;
+    logMessage(LOG_ERR, "Config error, 'light_programming_button_spa' no longer supported\n");
+    //_aqconfig_.light_programming_button_spa = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button", 24) == 0 ||
              strncasecmp(param, "light_programming_button_pool", 29) == 0) {
-    _aqconfig_.light_programming_button_pool = strtoul(value, NULL, 10) - 1;
+    logMessage(LOG_ERR, "Config error, 'light_programming_button' & 'light_programming_button_pool' are no longer supported\n");
+    //_aqconfig_.light_programming_button_pool = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
     _aqconfig_.dzidx_swg_percent = strtoul(value, NULL, 10);
@@ -479,18 +481,32 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     } else if (strncasecmp(param + 9, "_PDA_label", 10) == 0) {
       aqdata->aqbuttons[num].pda_label = cleanalloc(value);
       rtn=true;
+    } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
+      if (aqdata->num_lights < MAX_LIGHTS) {
+        int type = strtoul(value, NULL, 10);
+        if (type < LC_PROGRAMABLE || type > LC_INTELLIB) {
+          logMessage(LOG_ERR, "Config error, unknown light mode '%s'\n",type);
+        } else {
+          aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
+          aqdata->lights[aqdata->num_lights].lightType = type;
+          aqdata->num_lights++;
+        }
+      } else {
+        logMessage(LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
+      }
+      rtn=true;
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
       pump_detail *pump = getpump(aqdata, num);
       if (pump != NULL) {
         pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
-        if (pump->pumpID < 119) {
-          pump->ptype = PENTAIR;
+        if (pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
+          pump->prclType = PENTAIR;
         } else {
-          pump->ptype = JANDY;
+          pump->prclType = JANDY;
           //pump->pumpType = EPUMP; // For testing let the interface set this
         }
       } else {
-        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS-1,param);
+        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1
@@ -498,7 +514,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       if (pump != NULL) {
         pump->pumpIndex = strtoul(value, NULL, 10);
       } else {
-        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS-1,param);
+        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
     }
@@ -527,6 +543,8 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
 
   return rtn;
 }
+
+
 
 pump_detail *getpump(struct aqualinkdata *aqdata, int button)
 {
@@ -674,8 +692,11 @@ void writeIntValue (FILE *fp, char *msg, int value)
     fprintf(fp, "%s = %d\n", msg, value);
 }
 
+
 bool writeCfg (struct aqualinkdata *aqdata)
-{
+{ 
+  logMessage(LOG_ERR, "writeCfg() not implimented\n");
+  /*
   FILE *fp;
   int i;
   bool fs = remount_root_ro(false);
@@ -747,6 +768,7 @@ bool writeCfg (struct aqualinkdata *aqdata)
   }
   fclose(fp);
   remount_root_ro(fs);
-
+  */
   return true;
 }
+

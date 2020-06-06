@@ -25,6 +25,18 @@
 #define SWG_DEV_ID      0x50
 #define IAQ_DEV_ID      0x33
 
+/* Few Device ID's in decimal for quick checking
+#  Pentair pump ID's
+#  0x60 to 0x6F (0x60, 0x61 0x62, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E, 0x6F)
+#  Jandy pump ID's
+#  0x78, 0x79, 0x7A, 0x7B
+*/
+#define PENTAIR_DEC_PUMP_MIN   96
+#define PENTAIR_DEC_PUMP_MAX  111
+#define JANDY_DEC_PUMP_MIN    120
+#define JANDY_DEC_PUMP_MAX    123
+
+
 // PACKET DEFINES Jandy
 #define NUL  0x00
 #define DLE  0x10
@@ -270,6 +282,13 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_KEY_AUX6          0x1e
 #define IAQ_KEY_AUX7          0x1f
 
+// At the moment just used for next ack
+typedef enum {
+  DRS_NONE,
+  DRS_SWG,
+  DRS_EPUMP
+} rsDeviceType;
+
 typedef enum {
   ON,
   OFF,
@@ -320,6 +339,7 @@ const char* get_packet_type(unsigned char* packet , int length);
 
 void set_onetouch_enabled(bool mode);
 bool onetouch_enabled();
+bool VSP_enabled();
 
 void set_extended_device_id_programming(bool mode);
 bool extended_device_id_programming();

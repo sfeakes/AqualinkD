@@ -351,9 +351,19 @@ void logMessage(int msg_level, char *format, ...)
   strncpy(buffer, "         ", 8);
   vsprintf (&buffer[8], format, args);
   va_end(args);
+  int i;
 
   //test(msg_level, buffer);
   //fprintf (stderr, buffer);
+
+  // Make all printable chars
+  for(i = 8; i < strlen(buffer); i++) {
+    if ( (buffer[i] < 0 || buffer[i] > 125) && buffer[1] != 10 )
+      buffer[i] = ' ';
+  }
+  //if ( buffer[i] != '\n' )
+  //  buffer[i+1] = '\n';
+
 
   // Logging has not been setup yet, so STD error & syslog
   if (_log_level == -1) {
@@ -372,16 +382,18 @@ void logMessage(int msg_level, char *format, ...)
     //return;
   }
   
-  int len;
+  //int len;
   char *strLevel = elevel2text(msg_level);
   strncpy(buffer, strLevel, strlen(strLevel));
-  len = strlen(buffer); 
+  //len = strlen(buffer); 
+  /*
   if ( buffer[len-1] != '\n') {
     strcat(buffer, "\n");
   }
+  */
 
   // Sent the log to the UI if configured.
-  if (msg_level <= LOG_WARNING && _loq_display_message != NULL) {
+  if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
     snprintf(_loq_display_message, 127, buffer);
   } 
 
@@ -571,7 +583,8 @@ char* stristr(const char* haystack, const char* needle) {
 int ascii(char *destination, char *source) {
   unsigned int i;
   for(i = 0; i < strlen(source); i++) {
-    if ( source[i] >= 0 && source[i] < 128 )
+    //if ( source[i] >= 0 && source[i] < 128 )
+    if ( source[i] >= 0 && source[i] < 127 )
       destination[i] = source[i];
     else
       destination[i] = ' ';

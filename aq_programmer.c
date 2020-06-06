@@ -31,6 +31,7 @@
 #include "init_buttons.h"
 #include "pda_aq_programmer.h"
 #include "onetouch_aq_programmer.h"
+#include "color_lights.h"
 
 #ifdef AQ_DEBUG
   #include <time.h>
@@ -53,6 +54,7 @@ void *get_freeze_protect_temp( void *ptr );
 void *get_aqualink_diag_model( void *ptr );
 void *get_aqualink_aux_labels( void *ptr );
 //void *threadded_send_cmd( void *ptr );
+void *set_aqualink_light_programmode( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
 void *set_aqualink_PDA_init( void *ptr );
 void *set_aqualink_SWG( void *ptr );
@@ -294,8 +296,8 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   
   if (rtn != value)
     logMessage(LOG_WARNING, "Setpoint of %d for %s is outside range, using %d\n",value,type_msg,rtn);
-  else
-    logMessage(LOG_NOTICE, "Setting setpoint of %s to %d\n",type_msg,rtn);
+  //else
+  //  logMessage(LOG_NOTICE, "Setting setpoint of %s to %d\n",type_msg,rtn);
 
   return rtn;
 }
@@ -502,7 +504,13 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
-    case AQ_SET_COLORMODE:
+    case AQ_SET_LIGHTPROGRAM_MODE:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_light_programmode, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_LIGHTCOLOR_MODE:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_light_colormode, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
@@ -599,7 +607,7 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
       }
       break;
     default:
-        logMessage (LOG_ERR, "Don't understand thread type\n");
+        logMessage (LOG_ERR, "Didn't understand programming mode type\n");
       break;
   }
   
@@ -671,7 +679,7 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
   struct timespec elapsed;
   clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->last_active_time);
   timespec_subtract(&elapsed, &threadCtrl->aq_data->last_active_time, &threadCtrl->aq_data->start_active_time);
-  logMessage(LOG_DEBUG, "Thread %d,%p (%s) finished in %d.%03ld sec\n",
+  logMessage(LOG_NOTICE, "Thread %d,%p (%s) finished in %d.%03ld sec\n",
              threadCtrl->aq_data->active_thread.ptype,
              threadCtrl->aq_data->active_thread.thread_id,
              ptypeName(threadCtrl->aq_data->active_thread.ptype),
@@ -921,7 +929,7 @@ void *set_aqualink_SWG( void *ptr )
       return ptr;
   }
 
-  logMessage(LOG_DEBUG, "programming SWG percent to %d\n", val);
+  logMessage(LOG_NOTICE, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
     logMessage(LOG_WARNING, "Could not select SET AQUAPURE menu\n");
@@ -1021,7 +1029,97 @@ void *set_aqualink_light_colormode( void *ptr )
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   
-  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_COLORMODE);
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_LIGHTCOLOR_MODE);
+
+  char *buf = (char*)threadCtrl->thread_args;
+  const char *mode_name;
+  int val = atoi(&buf[0]);
+  int btn = atoi(&buf[5]);
+  int typ = atoi(&buf[10]);
+
+  if (btn < 0 || btn >= TOTAL_BUTTONS ) {
+    logMessage(LOG_ERR, "Can't program light mode on button %d\n", btn);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  aqkey *button = &aq_data->aqbuttons[btn];
+  unsigned char code = button->code;
+
+  //logMessage(LOG_NOTICE, "Light Programming #: %d, on button: %s, color light type: %d\n", val, button->label, typ);
+  
+  mode_name = light_mode_name(typ, val-1);
+
+  if (mode_name == NULL) {
+    logMessage(LOG_ERR, "Light Programming #: %d, on button: %s, color light type: %d, couldn't find mode name '%s'\n", val, button->label, typ, mode_name);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  } else {
+    logMessage(LOG_NOTICE, "Light Programming #: %d, on button: %s, color light type: %d, name '%s'\n", val, button->label, typ, mode_name);
+  }
+
+  // Simply turn the light off if value is 0
+  if (val <= 0) {
+    if ( button->led->state == ON ) {
+      send_cmd(code);
+    }
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  // Needs to start programming sequence with light off
+  if ( button->led->state == ON ) {
+    logMessage(LOG_INFO, "Light Programming Initial state on, turning off\n");
+    send_cmd(code);
+    waitfor_queue2empty();
+    if ( !waitForMessage(threadCtrl->aq_data, "OFF", 5)) // Message like 'Aux3 Off'
+      logMessage(LOG_ERR, "Light Programming didn't receive OFF message\n");
+  }
+
+  // Now turn on and wait for the message "color mode name<>*"
+  send_cmd(code);
+  waitfor_queue2empty();
+  i=0;
+
+  do{
+    if ( !waitForMessage(threadCtrl->aq_data, "~*", 3))
+      logMessage(LOG_ERR, "Light Programming didn't receive color light mode message\n");
+
+    if (strncasecmp(aq_data->last_message, mode_name, strlen(mode_name)) == 0) {
+      logMessage(LOG_INFO, "Light Programming found color mode %s\n",mode_name);
+      send_cmd(KEY_ENTER);
+      waitfor_queue2empty();
+      break;
+    }
+
+    send_cmd(KEY_RIGHT);
+    waitfor_queue2empty();
+    // Just clear current message before waiting for next, since the test in the do can't distinguish
+    // as both messages end in "~*"
+    waitForMessage(threadCtrl->aq_data, NULL, 1); 
+
+    i++;
+  } while (i <= LIGHT_COLOR_OPTIONS);
+
+  if (i == LIGHT_COLOR_OPTIONS) {
+    logMessage(LOG_ERR, "Light Programming didn't receive color light mode message for '%s'\n",mode_name);
+  }
+
+  cleanAndTerminateThread(threadCtrl);
+  
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
+
+
+void *set_aqualink_light_programmode( void *ptr )
+{
+  int i;
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_LIGHTPROGRAM_MODE);
 
   char *buf = (char*)threadCtrl->thread_args;
   int val = atoi(&buf[0]);
@@ -1535,7 +1633,8 @@ void _waitfor_queue2empty(bool longwait)
 {
   int i=0;
 
-  while ( (_pgm_command != NUL) && ( i++ < (30*(longwait?2:1) ) ) ) {
+  //while ( (_pgm_command != NUL) && ( i++ < (30*(longwait?2:1) ) ) ) {
+  while ( (_pgm_command != NUL) && ( i++ < (50*(longwait?2:1) ) ) ) {
     //sleep(1); // NSF Change to smaller time.
     //logMessage(LOG_DEBUG, "********  QUEUE IS FULL ********  delay\n");
     delay(50);
@@ -1544,7 +1643,7 @@ void _waitfor_queue2empty(bool longwait)
   if (_pgm_command != NUL) {
     if (pda_mode()) {
       // Wait for longer in PDA mode since it's slower.
-      while ( (_pgm_command != NUL) && ( i++ < (130*(longwait?2:1)) ) ) {
+      while ( (_pgm_command != NUL) && ( i++ < (150*(longwait?2:1)) ) ) {
         delay(100);
       }
     }
@@ -1866,8 +1965,11 @@ const char *ptypeName(program_type type)
     case AQ_GET_PROGRAMS:
       return "Get programs";
     break;
-    case AQ_SET_COLORMODE:
-      return "Set light color";
+    case AQ_SET_LIGHTPROGRAM_MODE:
+      return "Set light color (using AqualinkD)";
+    break;
+    case AQ_SET_LIGHTCOLOR_MODE:
+      return "Set light color (using Panel)";
     break;
     case AQ_PDA_INIT:
       return "Init PDA";
@@ -1891,7 +1993,7 @@ const char *ptypeName(program_type type)
       return "SWG Boost";
     break;
     case AQ_SET_ONETOUCH_PUMP_RPM:
-      return "Set Pump RPM";
+      return "Set OneTouch Pump RPM";
     break;
     case AQ_SET_ONETOUCH_MACRO:
       return "Set OneTouch Macro";
@@ -1920,6 +2022,73 @@ const char *ptypeName(program_type type)
     case AQP_NULL:
     default:
       return "Unknown";
+    break;
+  }
+}
+
+// Cleaner version of above for UI display purposes.
+const char *programtypeDisplayName(program_type type)
+{
+  switch (type) {
+    case AQ_GET_POOL_SPA_HEATER_TEMPS:
+    case AQ_GET_ONETOUCH_SETPOINTS:
+    case AQ_GET_FREEZE_PROTECT_TEMP:
+    case AQ_PDA_INIT:
+      return "Programming: retrieving setpoints";
+    break;
+    case AQ_SET_ONETOUCH_TIME:
+    case AQ_SET_TIME:
+      return "Programming: setting time";
+    break;
+    case AQ_SET_POOL_HEATER_TEMP:
+    case AQ_SET_ONETOUCH_POOL_HEATER_TEMP:
+    case AQ_SET_SPA_HEATER_TEMP:
+    case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
+      return "Programming: setting heater";
+    break;
+    case AQ_SET_FRZ_PROTECTION_TEMP:
+    case AQ_SET_ONETOUCH_FREEZEPROTECT:
+      return "Programming: setting Freeze protect";
+    break;
+    case AQ_GET_DIAGNOSTICS_MODEL:
+      return "Programming: retrieving diagnostics";
+    break;
+    case AQ_GET_PROGRAMS:
+      return "Programming: retrieving programs";
+    break;
+    case AQ_SET_LIGHTPROGRAM_MODE:
+    case AQ_SET_LIGHTCOLOR_MODE:
+      return "Programming: setting light color";
+    break;
+    case AQ_SET_SWG_PERCENT:
+    case AQ_SET_ONETOUCH_SWG_PERCENT:
+      return "Programming: setting SWG percent";
+    break;
+    case AQ_PDA_DEVICE_STATUS:
+      return "Programming: retrieving PDA Device status";
+    break;
+    case AQ_PDA_DEVICE_ON_OFF:
+      return "Programming: setting device on/off";
+    break;
+    case AQ_GET_AUX_LABELS:
+      return "Programming: retrieving AUX labels";
+    break;
+    case AQ_PDA_WAKE_INIT:
+      return "Programming: PDA wakeup";
+    break;
+     case AQ_SET_BOOST:
+     case AQ_SET_ONETOUCH_BOOST:
+      return "Programming: setting SWG Boost";
+    break;
+    case AQ_SET_ONETOUCH_PUMP_RPM:
+      return "Programming: setting Pump RPM";
+    break;
+    case AQ_SET_ONETOUCH_MACRO:
+      return "Programming: setting OneTouch Macro";
+    break;
+ 
+    default:
+      return "Programming: please wait!";
     break;
   }
 }

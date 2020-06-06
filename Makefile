@@ -12,7 +12,7 @@ LIBS := -l pthread -l m
 
 # debug of not
 #DBG = -g -O0 -fsanitize=address 
-DBG = -g
+#DBG = -g -O0
 #DBG = -D ONETOUCH
 #DBG =
 
@@ -33,13 +33,14 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c pda_aq_programmer.c aquapure.c onetouch.c onetouch_aq_programmer.c packetLogger.c pentair_messages.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \
+       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
 DBG_SRC = timespec_subtract.c
 
 # If run with `make DEBUG=true` add debug files and pass parameter for compile
 ifeq ($(DEBUG), true)
   SRCS := $(SRCS) $(DBG_SRC)
-  CFLAGS := $(CFLAGS) -D AQ_DEBUG
+  CFLAGS := -g -O0 $(CFLAGS) -D AQ_DEBUG
 endif
 
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c

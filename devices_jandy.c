@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 
-#include "aquapure.h"
+#include "devices_jandy.h"
 #include "aq_serial.h"
 #include "aqualink.h"
 #include "utils.h"
@@ -176,4 +176,15 @@ void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status
     *dzalert = 4;
     break;
   }
+}
+
+bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  return false;
+}
+bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  return false;
 }

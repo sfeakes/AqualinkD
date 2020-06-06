@@ -22,7 +22,7 @@
 
 #include "aqualink.h"
 #include "aq_serial.h"
-#include "pentair_messages.h"
+#include "devices_pentair.h"
 #include "utils.h"
 
 bool processPentairPacket(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) 
@@ -35,12 +35,12 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
 
   //static int pumpIndex = 1;
   
-  if ( packet[PEN_PKT_CMD] == PEN_CMD_STATUS && packet[PEN_PKT_FROM] >= 96 &&  packet[PEN_PKT_FROM] <= 111 ){
+  if ( packet[PEN_PKT_CMD] == PEN_CMD_STATUS && packet[PEN_PKT_FROM] >= PENTAIR_DEC_PUMP_MIN &&  packet[PEN_PKT_FROM] <= PENTAIR_DEC_PUMP_MAX ){
     // We have Pentair Pump packet, let's see if it's configured.
     //printf("PUMP\n");
 
     for (i = 0; i < MAX_PUMPS; i++) {
-      if ( aqdata->pumps[i].ptype == PENTAIR && aqdata->pumps[i].pumpID == packet[PEN_PKT_FROM] ) {
+      if ( aqdata->pumps[i].prclType == PENTAIR && aqdata->pumps[i].pumpID == packet[PEN_PKT_FROM] ) {
         // We found the pump.
         logMessage(LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
           (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],

@@ -4,6 +4,7 @@
 //FUNCTION PROTOTYPES
 
 #define JSON_LABEL_SIZE 300
+#define JSON_BUFFER_SIZE 4000
 #define JSON_STATUS_SIZE 1024
 #define JSON_MQTT_MSG_SIZE 100
 
@@ -42,8 +43,8 @@ bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, ch
 int build_aqualink_error_status_JSON(char* buffer, int size, char *msg);
 int build_mqtt_status_message_JSON(char* buffer, int size, int idx, int nvalue, char *svalue);
 //int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit);
-int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit);
-
+//int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit);
+int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool homekit);
 
 #endif /* JSON_MESSAGES_H_ */
 

@@ -281,18 +281,46 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
         //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
       }
     }
-    
-    //aqdata->pumps[pumpIndex-1].rpm = atoi((char *) &packet_buffer[13]);
+  } else if (ot_strcmp(_menu[2],"AQUAPURE") == 0) {
+    /* Info:   OneTouch Menu Line 0 = Equipment Status
+       Info:   OneTouch Menu Line 1 = 
+       Info:   OneTouch Menu Line 2 =   AQUAPURE 60%  
+       Info:   OneTouch Menu Line 3 =  Salt 7600 PPM  */
+    int swgp = atoi(&_menu[2][11]);
+    if ( aq_data->swg_percent != swgp ) {
+      aq_data->swg_percent = swgp;
+      rtn = true;
+    }
+    logMessage(LOG_DEBUG, "OneTouch SWG = %d\n",swgp);
 
-  } else if (true == false) {
-    /*
-    Debug:  OneTouch Menu Line 0 = Equipment Status
-    Debug:  OneTouch Menu Line 1 = 
-    Debug:  OneTouch Menu Line 2 =   AQUAPURE 30%  
-    Debug:  OneTouch Menu Line 3 =  Salt 3800 PPM  
-    Debug:  OneTouch Menu Line 4 =  Add 2 lbs Salt 
-     */
+    if (ot_strcmp(_menu[3],"Salt") == 0) {
+      int ppm = atoi(&_menu[3][6]);
+      if ( aq_data->swg_ppm != ppm ) {
+        aq_data->swg_ppm = ppm;
+        rtn = true;
+      }
+      logMessage(LOG_DEBUG, "OneTouch PPM = %d\n",ppm);
+    }
+  } else if (ot_strcmp(_menu[2],"Chemlink") == 0) {
+    /*   Info:   OneTouch Menu Line 0 = Equipment Status
+         Info:   OneTouch Menu Line 1 = 
+         Info:   OneTouch Menu Line 2 =    Chemlink 1   
+         Info:   OneTouch Menu Line 3 =  ORP 750/PH 7.0  */
+    if (ot_strcmp(_menu[3],"ORP") == 0) {
+      int orp = atoi(&_menu[3][4]);
+      char *indx = strchr(_menu[3], '/');
+      float ph = atof(indx+3);
+      if (aq_data->ph != ph || aq_data->orp != orp) {
+         aq_data->ph = ph;
+         aq_data->orp = orp;
+        return true;
+      }
+      logMessage(LOG_INFO, "OneTouch Cemlink ORP = %d PH = %f\n",orp,ph);
+    }
   }
+
+
+
   return rtn;
 }
 
