@@ -50,7 +50,7 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
    <tr><td colspan="2">
      In web browser/tablet
    <ul>
-   <img src="extras/web_ui2.png?raw=true" width="700">
+   <img src="extras/web_ui2.png?raw=true" width="800">
    </td></tr>
  </table>
 
