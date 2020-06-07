@@ -1165,7 +1165,7 @@ void main_loop()
       blank_read = 0;
       changed = false;
 
-      if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.device_id)
+      if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.device_id && getProtocolType(packet_buffer) == JANDY)
       {
         if (getLogLevel() >= LOG_DEBUG)
           logMessage(LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
@@ -1179,7 +1179,7 @@ void main_loop()
           caculate_ack_packet(rs_fd, packet_buffer);
 
       }
-      else if (packet_length > 0 && onetouch_enabled() && packet_buffer[PKT_DEST] == _aqconfig_.onetouch_device_id) {
+      else if (packet_length > 0 && onetouch_enabled() && packet_buffer[PKT_DEST] == _aqconfig_.onetouch_device_id && getProtocolType(packet_buffer) == JANDY) {
         //if (getLogLevel() >= LOG_DEBUG)
         //  logMessage(LOG_DEBUG, "RS received ONETOUCH packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
         changed = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);

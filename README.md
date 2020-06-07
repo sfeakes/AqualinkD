@@ -47,6 +47,11 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
       <li>Supports live background images (ie: poll camera for still image every X seconds).</li>
       </ul>
    </td></tr>
+   <tr><td colspan="2">
+     In web browser/tablet
+   <ul>
+   <img src="extras/web_ui2.png?raw=true" width="700">
+   </td></tr>
  </table>
 
 ### Simulator
@@ -67,7 +72,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
-# Update in Release 2.0.0b
+# Update in Release 2.0.1
 * Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
 * Full Variable Speed Pump support. (Can read,set & change RPM,GPM)
 * Full support for all Colored Lights (even if Jandy Control Panel doesn't support them)
