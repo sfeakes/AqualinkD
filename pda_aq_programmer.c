@@ -475,7 +475,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   unsigned int device = atoi(&buf[0]);
   unsigned int state = atoi(&buf[5]);
 
-  if (device > TOTAL_BUTTONS) {
+  if (device > aq_data->total_buttons) {
     logMessage(LOG_ERR, "PDA Device On/Off :- bad device number '%d'\n",device);
     cleanAndTerminateThread(threadCtrl);
     return ptr;

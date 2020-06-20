@@ -14,6 +14,14 @@
         "Aux_5",
         "Aux_6",
         "Aux_7",
+        "Aux_B1",
+        "Aux_B2",
+        "Aux_B3",
+        "Aux_B4",
+        "Aux_B5",
+        "Aux_B6",
+        "Aux_B7",
+        "Aux_B8",
         "Pool_Heater",
         "Spa_Heater",
         "SWG",
@@ -66,7 +74,11 @@
 
       // By default all Variable Speed Pumps will show RPM.
       // this will show GPM on VSP's that you can only set GPM (ie Jandy VF pumps)
-      //var show_vsp_gpm=false; 
+      //var show_vsp_gpm=false;
+
+      // By default all Temperatures & Value tiles are off.
+      // this will turn them on
+      var turn_on_sensortiles = true;
 
       var body_background = "#EBEBEA";
       var body_text = "#000000";

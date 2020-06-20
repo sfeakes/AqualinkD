@@ -6,6 +6,7 @@
 #include "aqualink.h"
 #include "utils.h"
 #include "aq_mqtt.h"
+#include "packetLogger.h"
 
 bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore) {
   static int swg_zero_cnt = 0;
@@ -180,11 +181,27 @@ void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status
 
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
-  logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  char msg[1000];
+  //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  beautifyPacket(msg, packet_buffer, packet_length);
+  logMessage(LOG_DEBUG, "To   ePump: %s\n", msg);
   return false;
 }
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
-  logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  char msg[1000];
+  //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+  beautifyPacket(msg, packet_buffer, packet_length);
+  logMessage(LOG_DEBUG, "From ePump: %s\n", msg);
   return false;
 }
+
+/*
+Messages to ePump so far.
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x42|0xcc|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x10|0x27|0x05|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x45|0x00|0x05|0xd4|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x46|0x00|0x00|0x03|0xd3|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x46|0x00|0x04|0x00|0xd4|0x10|0x03|
+*/

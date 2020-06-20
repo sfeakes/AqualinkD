@@ -16,7 +16,16 @@
 
 #define MAX_ZERO_READ_BEFORE_RECONNECT 500
 
-#define TOTAL_BUTTONS     12
+
+//#define TOTAL_BUTTONS     12
+
+#ifndef AQ_RS16
+#define TOTAL_BUTTONS          12
+#else
+#define TOTAL_BUTTONS          20
+#define RS16_VBUTTONS_START    13  // RS16 panel has 4 buttons with no LED's, so list them for manual matching to RS messages
+#define RS16_VBUTTONS_END      16  // RS16 panel has 4 buttons with no LED's, so list them for manual matching to RS messages
+#endif
 
 #define TEMP_UNKNOWN    -999
 //#define UNKNOWN TEMP_UNKNOWN
@@ -38,7 +47,9 @@ typedef struct aqualinkkey
   aqled *led;
   char *label;
   char *name;
+#ifdef AQ_PDA
   char *pda_label;
+#endif
   unsigned char code;
   int dz_idx;
 } aqkey;
@@ -126,6 +137,8 @@ struct aqualinkdata
   unsigned char raw_status[AQ_PSTLEN];
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
+  unsigned short total_buttons;  // Should probably malloc the above to this in the future
+  //aqkey *aqbuttons;
   int air_temp;
   int pool_temp;
   int spa_temp;

@@ -15,6 +15,6 @@ void logPacketByte(unsigned char *byte);
 
 // Only use for manual debugging
 void debuglogPacket(unsigned char *packet_buffer, int packet_length);
-
+int beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length);
 
 #endif //PACKETLOGGER_H_

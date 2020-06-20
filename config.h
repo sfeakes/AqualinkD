@@ -34,6 +34,8 @@ struct aqconfig
   unsigned char onetouch_device_id;
   bool extended_device_id_programming;
   bool deamonize;
+  unsigned short rs_panel_size;
+  //unsigned short rs_panel_size;
   char *log_file;
   char *mqtt_dz_sub_topic;
   char *mqtt_dz_pub_topic;
@@ -54,9 +56,11 @@ struct aqconfig
   //int light_programming_button_pool;
   //int light_programming_button_spa;
   bool override_freeze_protect;
+  #ifdef AQ_PDA
   bool pda_mode;
-  bool onetouch_mode;
   bool pda_sleep_mode;
+  #endif
+  bool onetouch_mode;
   bool convert_mqtt_temp;
   bool convert_dz_temp;
   //bool flash_mqtt_buttons;

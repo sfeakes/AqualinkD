@@ -400,7 +400,7 @@ void *set_aqualink_pump_rpm( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_PUMP_RPM);
 
-  logMessage(LOG_NOTICE, "OneTouch Set Pump %d to RPM %d\n",pumpIndex,pumpRPM);
+  logMessage(LOG_INFO, "OneTouch Set Pump %d to RPM %d\n",pumpIndex,pumpRPM);
 
 
   if (! goto_onetouch_menu(aq_data, OTM_EQUIPTMENT_ONOFF) ){

@@ -37,6 +37,7 @@
 #include "config.h"
 #include "utils.h"
 #include "aq_serial.h"
+#include "init_buttons.h"
 
 #define MAXCFGLINE 256
 
@@ -52,6 +53,7 @@ void init_parameters (struct aqconfig * parms)
 {
   //int i;
   //char *p;
+  parms->rs_panel_size = 8;
   parms->serial_port = DEFAULT_SERIALPORT;
   parms->log_level = DEFAULT_LOG_LEVEL;
   parms->socket_port = DEFAULT_WEBPORT;
@@ -81,9 +83,11 @@ void init_parameters (struct aqconfig * parms)
   //parms->light_programming_button_spa = TEMP_UNKNOWN;
   parms->deamonize = true;
   parms->log_file = '\0';
+#ifdef AQ_PDA
   parms->pda_mode = false;
-  parms->onetouch_mode = false;
   parms->pda_sleep_mode = false;
+#endif
+  parms->onetouch_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
   parms->report_zero_pool_temp = false;
@@ -340,6 +344,17 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.onetouch_device_id = strtoul(cleanalloc(value), NULL, 16);
     //_config_parameters.onetouch_device_id != 0x00
     rtn=true;
+  } else if (strncasecmp(param, "rs_panel_size", 13) == 0) {
+    _aqconfig_.rs_panel_size = strtoul(value, NULL, 10);
+    if ( _aqconfig_.rs_panel_size > TOTAL_BUTTONS) {
+      logMessage(LOG_ERR, "Config error, 'rs_panel_size' is either invalid or too large for compiled parameters, reset to %d\n",TOTAL_BUTTONS);
+      _aqconfig_.rs_panel_size = TOTAL_BUTTONS;
+    }
+#ifdef AQ_RS16 // Need to re-order button hex values
+    if (_aqconfig_.rs_panel_size >= 12)
+      initButtons_RS16(aqdata);
+#endif
+    rtn=true;
   } else if (strncasecmp(param, "web_directory", 13) == 0) {
     _aqconfig_.web_directory = cleanalloc(value);
     rtn=true;
@@ -403,15 +418,15 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "override_freeze_protect", 23) == 0) {
     _aqconfig_.override_freeze_protect = text2bool(value);
     rtn=true;
+#ifdef AQ_PDA
   } else if (strncasecmp(param, "pda_mode", 8) == 0) {
     _aqconfig_.pda_mode = text2bool(value);
     set_pda_mode(_aqconfig_.pda_mode);
-    //_aqconfig_.use_PDA_auxiliary = false;
     rtn=true;
   } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
     _aqconfig_.pda_sleep_mode = text2bool(value);
-    //set_pda_mode(_aqconfig_.pda_mode);
     rtn=true;
+#endif
   } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
     _aqconfig_.convert_mqtt_temp = text2bool(value);
     rtn=true;
@@ -478,9 +493,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     } else if (strncasecmp(param + 9, "_dzidx", 6) == 0) {
       aqdata->aqbuttons[num].dz_idx = strtoul(value, NULL, 10);
       rtn=true;
+#ifdef AQ_PDA
     } else if (strncasecmp(param + 9, "_PDA_label", 10) == 0) {
       aqdata->aqbuttons[num].pda_label = cleanalloc(value);
       rtn=true;
+#endif
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
       if (aqdata->num_lights < MAX_LIGHTS) {
         int type = strtoul(value, NULL, 10);

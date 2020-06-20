@@ -72,12 +72,16 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
-# Update in Release 2.0.1
+# Update in Release 2.1.0
 * Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
 * Full Variable Speed Pump support. (Can read,set & change RPM,GPM)
 * Full support for all Colored Lights (even if Jandy Control Panel doesn't support them)
 * Chemlink pH & ORP now supported. (along with posting MQTT information)
 * There are some configuration changes, make sure to read wiki (link above)
+* RS12 & RS16 Panels now supported. (RS16 will also need `extended_device_id` set for full AUXB5-B8 support)
+* New UI option(s) `turn_on_sensortiles = true` & `show_vsp_gpm=false` in `config.js`
+* Added compile flags. If you make your own aqualinkd and have no need for PDA or RS16 support, edit the Makefile.
+* Completley new API.
 # Update in Release 1.3.9a
 * Improved Debugging for serial.
 * Added panel Timeout mode support to UI and MQTT

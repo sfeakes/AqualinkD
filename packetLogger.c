@@ -12,6 +12,7 @@ static bool _log2file = false;
 static bool _includePentair = false;
 
 void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, bool force);
+int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error);
 
 void startPacketLogger(bool debug_RSProtocol_packets, bool read_pentair_packets) {
   _log2file = debug_RSProtocol_packets;
@@ -55,6 +56,41 @@ void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, boo
     return;
 
   char buff[1000];
+  //int i = 0;
+  //int cnt = 0;
+
+  _beautifyPacket(buff, packet_buffer, packet_length, error);
+/*
+  if (_includePentair) {
+    cnt = sprintf(buff, "%s%8.8s Packet | HEX: ",(error?"BAD PACKET ":""),getProtocolType(packet_buffer)==JANDY?"Jandy":"Pentair");
+  } else {
+    cnt = sprintf(buff, "%sTo 0x%02hhx of type %8.8s | HEX: ",(error?"BAD PACKET ":""), packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
+  }
+
+  for (i = 0; i < packet_length; i++)
+    cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
+
+  cnt += sprintf(buff + cnt, "\n");
+*/
+  if (_log2file)
+    writePacketLog(buff);
+  
+  if (error == true)
+    logMessage(LOG_WARNING, "%s", buff);
+  else {
+    if (force)
+      logMessage(LOG_DEBUG, "%s", buff);
+    else
+      logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+  }
+}
+
+int beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length)
+{
+  return _beautifyPacket(buff, packet_buffer, packet_length, false);
+}
+int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error)
+{
   int i = 0;
   int cnt = 0;
 
@@ -69,17 +105,7 @@ void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, boo
 
   cnt += sprintf(buff + cnt, "\n");
 
-  if (_log2file)
-    writePacketLog(buff);
-  
-  if (error == true)
-    logMessage(LOG_WARNING, "%s", buff);
-  else {
-    if (force)
-      logMessage(LOG_DEBUG, "%s", buff);
-    else
-      logMessage(LOG_DEBUG_SERIAL, "%s", buff);
-  }
+  return cnt;
 }
 
 //#define RAW_BUFFER_SIZE 100

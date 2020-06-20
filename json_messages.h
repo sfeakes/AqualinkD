@@ -3,9 +3,13 @@
 
 //FUNCTION PROTOTYPES
 
-#define JSON_LABEL_SIZE 300
-#define JSON_BUFFER_SIZE 4000
-#define JSON_STATUS_SIZE 1024
+//#define JSON_LABEL_SIZE 300
+//#define JSON_BUFFER_SIZE 4000
+//#define JSON_STATUS_SIZE 1024
+#define JSON_LABEL_SIZE 600
+#define JSON_BUFFER_SIZE 5120
+#define JSON_STATUS_SIZE 2048
+
 #define JSON_MQTT_MSG_SIZE 100
 
 #define JSON_ON      "on"
@@ -34,10 +38,15 @@ struct JSONwebrequest {
   struct JSONkeyvalue second;
   struct JSONkeyvalue third;
 };
+struct JSONkvptr {
+  struct JSONkeyvalue kv[4];
+};
 
 int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request);
+bool parseJSONrequest(char *buffer, struct JSONkvptr *request);
+
 int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float setpoint/*char *svalue*/);
 bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, char *svalue);
 int build_aqualink_error_status_JSON(char* buffer, int size, char *msg);

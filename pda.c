@@ -222,7 +222,7 @@ void pass_pda_equiptment_status_item(char *msg)
     }
     else
     {
-      for (i = 0; i < TOTAL_BUTTONS; i++)
+      for (i = 0; i < _aqualink_data->total_buttons; i++)
       {
         if (strcasecmp(msg, _aqualink_data->aqbuttons[i].pda_label) == 0)
         {
@@ -304,7 +304,7 @@ void process_pda_packet_msg_long_equipment_control(const char *msg)
 
   logMessage(LOG_DEBUG, "*** Checking Equiptment '%s'\n", labelBuff);
 
-  for (i = 0; i < TOTAL_BUTTONS; i++)
+  for (i = 0; i < _aqualink_data->total_buttons; i++)
   {
     if (strcasecmp(stripwhitespace(labelBuff), _aqualink_data->aqbuttons[i].pda_label) == 0)
     {
@@ -474,7 +474,7 @@ void process_pda_packet_msg_long_unknown(const char *msg)
   // So we are not in any PDA menu, try to catch that message here so we catch new device state ASAP.
   if (msg[AQ_MSGLEN - 1] == 'N' || msg[AQ_MSGLEN - 1] == 'F' || msg[AQ_MSGLEN - 1] == 'A' || msg[AQ_MSGLEN - 1] == '*')
   {
-    for (i = 0; i < TOTAL_BUTTONS; i++)
+    for (i = 0; i < _aqualink_data->total_buttons; i++)
     {
       if (stristr(msg, _aqualink_data->aqbuttons[i].pda_label) != NULL)
       {
@@ -593,7 +593,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       
       if (pda_m_line(PDA_LINES - 1)[0] == '\0')
       {
-        for (i = 0; i < TOTAL_BUTTONS; i++)
+        for (i = 0; i < _aqualink_data->total_buttons; i++)
         {
           if (_aqualink_data->aqbuttons[i].led->state != FLASH)
           {

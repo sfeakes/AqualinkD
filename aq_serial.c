@@ -57,9 +57,8 @@ bool onetouch_mode()
 #endif
 */
 
+#ifdef AQ_PDA
 bool _pda_mode = false;
-bool _onetouch_enabled = false;
-bool _extended_device_id_programming = false;
 
 void set_pda_mode(bool mode)
 {
@@ -72,6 +71,11 @@ bool pda_mode()
 {
   return _pda_mode;
 }
+#endif
+
+bool _onetouch_enabled = false;
+bool _extended_device_id_programming = false;
+
 
 void set_onetouch_enabled(bool mode)
 {
@@ -505,6 +509,13 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
     ackPacket[5] = ack_type;
     ackPacket[6] = command;
     ackPacket[7] = generate_checksum(ackPacket, length-1);
+    if (command == DLE) {  // We shuld probably also check the ack type as well, just for future proofing.
+      // 0x10(DLE) that's not part of the headder or footer needs to be escaped AFTER with NUL, so shif everyting uo one
+      ackPacket[8] = ackPacket[7]; // move the caculated checksum
+      ackPacket[7] = NUL; // escape the DLE
+      ackPacket[9] = DLE; // add new end sequence 
+      ackPacket[10] = ETX; // add new end sequence 
+    }
   }
 
   //printf("***Send ACK (%s) ***\n",(ack_type==ACK_NORMAL?"Normal":(ack_type==ACK_SCREEN_BUSY?"ScreenBusy":"ScreenBusyDisplay")) );

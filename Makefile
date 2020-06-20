@@ -1,8 +1,15 @@
 #
 # Options
-# make DEBUG=true                             // Turn on timing statments
+
+# Valid flags for AQ_FLAGS
+# AQ_DEBUG = true
+AQ_RS16 = true
+AQ_PDA  = true
+
+
 # make EXFLAGS="-D BETA_PDA_AUTOLABEL"        // Add compile flags
 #
+
 # define the C compiler to use
 CC = gcc
 
@@ -12,9 +19,7 @@ LIBS := -l pthread -l m
 
 # debug of not
 #DBG = -g -O0 -fsanitize=address 
-#DBG = -g -O0
-#DBG = -D ONETOUCH
-#DBG =
+
 
 # USe below to remove unused functions and global variables.
 #LFLAGS = -Wl,--gc-sections,--print-gc-sections
@@ -27,20 +32,37 @@ GCCFLAGS = -Wall -O3 $(EXFLAGS)
 
 #CFLAGS = -Wall -g $(LIBS)
 #CFLAGS = -Wall -g $(LIBS) -std=gnu11
+#CFLAGS = $(GCCFLAGS) $(DBG) $(AQ_FLAGS) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 
 
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # define the C source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \
-       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
+#SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \
+#       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
+
+SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c \
+       devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
 DBG_SRC = timespec_subtract.c
+
+ifeq ($(AQ_PDA), true)
+  SRCS := $(SRCS) pda.c pda_menu.c pda_aq_programmer.c
+  CFLAGS := $(CFLAGS) -D AQ_PDA
+endif
+
+ifeq ($(AQ_RS16), true)
+  CFLAGS := $(CFLAGS) -D AQ_RS16
+endif
+
+ifeq ($(AQ_DEBUG), true)
+  DEBUG=true
+endif
 
 # If run with `make DEBUG=true` add debug files and pass parameter for compile
 ifeq ($(DEBUG), true)
   SRCS := $(SRCS) $(DBG_SRC)
-  CFLAGS := -g -O0 $(CFLAGS) -D AQ_DEBUG
+  CFLAGS := -g -O0 $(CFLAGS) -D AQ_DEBUG 
 endif
 
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c

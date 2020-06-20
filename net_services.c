@@ -33,9 +33,12 @@
 #include "json_messages.h"
 #include "domoticz.h"
 #include "aq_mqtt.h"
-#include "pda.h"
 #include "devices_jandy.h"
 #include "color_lights.h"
+
+#ifdef AQ_PDA
+#include "pda.h"
+#endif
 
 
 //static struct aqconfig *_aqconfig_;
@@ -51,7 +54,9 @@ static const char *s_topic = "domoticz/out";
 */
 //static struct mg_mqtt_topic_expression s_topic_expr = {NULL, 0};
 
-
+// Will remove this once we deprecate V1 API's
+void OLD_action_web_request(struct mg_connection *nc, struct http_message *http_msg);
+void OLD_action_websocket_request(struct mg_connection *nc, struct websocket_message *wm);
 
 #ifndef MG_DISABLE_MQTT
 void start_mqtt(struct mg_mgr *mgr);
@@ -469,7 +474,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 //if (time(NULL) % 2) {}   <-- use to determin odd/even second in time to make state flash on enabled.
 
   // Loop over LED's and send any changes.
-  for (i=0; i < TOTAL_BUTTONS; i++) {
+  for (i=0; i < _aqualink_data->total_buttons; i++) {
     /*
    if ( _aqualink_data->aqbuttons[i].led->state == FLASH && _aqconfig_.flash_mqtt_buttons == true ) {
       // Simply send on or off depending on if current second is odd or even.
@@ -573,11 +578,12 @@ void set_light_mode(char *value, int button)
 {
   int i;
   clight_detail *light = NULL;
-
+#ifdef AQ_PDA
   if (_aqconfig_.pda_mode == true) {
     logMessage(LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
+#endif
   for (i=0; i < _aqualink_data->num_lights; i++) {
     if (&_aqualink_data->aqbuttons[button] == _aqualink_data->lights[i].button) {
       // Found the programmable light
@@ -610,392 +616,160 @@ void set_light_mode(char *value, int button)
 
 
 
-void action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
-  // struct http_message *http_msg = (struct http_message *)ev_data;
-  if (getLogLevel() >= LOG_INFO) { // Simply for log message, check we are at
-                                   // this log level before running all this
-                                   // junk
-    char *uri = (char *)malloc(http_msg->uri.len + http_msg->query_string.len + 2);
-    strncpy(uri, http_msg->uri.p, http_msg->uri.len + http_msg->query_string.len + 1);
-    uri[http_msg->uri.len + http_msg->query_string.len + 1] = '\0';
-    logMessage(LOG_INFO, "URI request: '%s'\n", uri);
-    free(uri);
+
+
+
+/*
+aqkey *findButton(char *name, int by) {
+  // By 0 = either name or label
+  //    1 = label
+  //    2 = name
+  int i;
+
+  for (i=0; i < _aqualink_data->total_buttons; i++) 
+  {
+    if ( ((by == 0 || by == 2) && strncmp(name, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0) ||
+         ((by == 0 || by == 1) && strncmp(name, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0)) 
+    {
+      return &_aqualink_data->aqbuttons[i];
+    }
   }
-  // If we have a get request, pass it
-  if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
-    char command[20];
 
-    mg_get_http_var(&http_msg->query_string, "command", command, sizeof(command));
-    logMessage(LOG_INFO, "WEB: Message command='%s'\n", command);
-
-    if (strcmp(command, "dynamic_config") == 0) {
-      char data[JSON_BUFFER_SIZE];
-      int size = build_color_lights_js(_aqualink_data, data, JSON_BUFFER_SIZE);
-      mg_send_head(nc, 200, size, "Content-Type: text/javascript");
-      mg_send(nc, data, size);
-    } else
-    // if (strstr(http_msg->query_string.p, "command=status")) {
-    if (strcmp(command, "status") == 0) {
-      char data[JSON_STATUS_SIZE];
-      int size = build_aqualink_status_JSON(_aqualink_data, data, JSON_STATUS_SIZE);
-      mg_send_head(nc, 200, size, "Content-Type: application/json");
-      mg_send(nc, data, size);
-
-      //} else if (strstr(http_msg->query_string.p, "command=mhstatus")) {
-    } else if (strcmp(command, "mhstatus") == 0) {
-      char data[20];
-      int size = getTempforMeteohub(data);
-      mg_send_head(nc, 200, size, "Content-Type: text/plain");
-      mg_send(nc, data, size);
-    } else if (strcmp(command, "poollightmode") == 0) {
-logMessage(LOG_ERR, "WEB: poollightmode taken out for update (forgot to put it back)\n");
-/*
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
-      set_light_mode(value, _aqconfig_.light_programming_button_pool);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+  return NULL;
+}
 */
-    } else if (strcmp(command, "spalightmode") == 0) {
-logMessage(LOG_ERR, "WEB: spalightmode taken out for update (forgot to put it back)\n");
-/*
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
-      set_light_mode(value, _aqconfig_.light_programming_button_spa);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-*/
-    } else if (strcmp(command, "diag") == 0) {
-      aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "swg_percent") == 0) {
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      aq_programmer(AQ_SET_SWG_PERCENT, value, _aqualink_data);
-      logMessage(LOG_INFO, "Web: request to set SWG to %s\n", value);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      aq_programmer(AQ_SET_POOL_HEATER_TEMP, value, _aqualink_data);
-      logMessage(LOG_INFO, "Web: request to set Pool heater to %s\n", value);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      aq_programmer(AQ_SET_SPA_HEATER_TEMP, value, _aqualink_data);
-      logMessage(LOG_INFO, "Web: request to set Spa heater to %s\n", value);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
-      char value[20];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
-      logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
-      mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-    } else if (strcmp(command, "extended_device_prg") == 0) {
-      char value[20];
-      char message[JSON_LABEL_SIZE];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      bool prg = request2bool(value);
-      if (prg && !onetouch_enabled())
-        prg = false; // Ignore request if onetouch is not enabeled
-      set_extended_device_id_programming(prg);
-      sprintf(message,"{\"extended_device_prg\":\"%s\"}", bool2text(prg));
-      mg_send_head(nc, 200, strlen(message), "Content-Type: application/json");
-      mg_send(nc, message, strlen(message));
-    } else if (strcmp(command, "devices") == 0) {
-      char message[JSON_BUFFER_SIZE];
-      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
-      mg_send_head(nc, 200, size, "Content-Type: application/json");
-      mg_send(nc, message, size);
-    } else if (strcmp(command, "homebridge") == 0) {
-      char message[JSON_BUFFER_SIZE];
-      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
-      mg_send_head(nc, 200, size, "Content-Type: application/json");
-      mg_send(nc, message, size);
-    } else if (strcmp(command, "setconfigprm") == 0) {
-      char value[20];
-      char param[30];
-      char *webrtn;
-      mg_get_http_var(&http_msg->query_string, "param", param, sizeof(param));
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      
-      if (setConfigValue(_aqualink_data, param, value)) {
-        webrtn = GET_RTN_OK;
-        logMessage(LOG_INFO, "Web: request to config %s to %s\n", param, value);
-      } else {
-        webrtn = GET_RTN_ERROR;
-        logMessage(LOG_ERR, "Web: request to config %s to %s failed\n", param, value);
+
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf} uriAtype;
+
+uriAtype action_URI(char *from, const char *URI, int uri_length, float value, bool convertTemp) {
+  /* Example URI ()
+  * Note URI is NOT terminated
+  * devices
+  * status
+  * Freeze/setpoint/set
+  * Filter_Pump/set
+  * Pool_Heater/setpoint/set
+  * Pool_Heater/set
+  * SWG/Percent_f/set
+  * Filter_Pump/RPM/set
+  * Pump_1/RPM/set
+  * Pool Light/color/set
+  */
+  uriAtype rtn = uBad;
+  bool found = false;
+  int i;
+  char *ri1 = (char *)URI;
+  char *ri2 = NULL;
+  char *ri3 = NULL;
+
+  logMessage(LOG_DEBUG, "%s: URI Request '%.*s'\n", from, uri_length, URI);
+
+  // Split up the URI into parts.
+  for (i=1; i < uri_length; i++) {
+    if ( URI[i] == '/' ) {
+      if (ri2 == NULL) {
+        ri2 = (char *)&URI[++i];
+      } else if (ri3 == NULL) {
+        ri3 = (char *)&URI[++i];
+        break;
       }
-      mg_send_head(nc, 200, strlen(webrtn), "Content-Type: text/plain");
-      mg_send(nc, webrtn, strlen(webrtn));
-    } else if (strcmp(command, "writeconfig") == 0) {
-      if (writeCfg (_aqualink_data)) {
-        mg_send_head(nc, 200, strlen(GET_RTN_OK), "Content-Type: text/plain");
-        mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
-      } else {
-        mg_send_head(nc, 200, strlen(GET_RTN_ERROR), "Content-Type: text/plain");
-        mg_send(nc, GET_RTN_ERROR, strlen(GET_RTN_ERROR));
+    }
+  }
+
+  //logMessage(LOG_NOTICE, "URI Request: %.*s, %.*s, %.*s | %f\n", uri_length, ri1, uri_length - (ri2 - ri1), ri2, uri_length - (ri3 - ri1), ri3, value);
+  
+  if (strncmp(ri1, "devices", 7) == 0) {
+    return uDevices;
+  } else if (strncmp(ri1, "status", 6) == 0) {
+    return uStatus;
+  } else if (strncmp(ri1, "homebridge", 10) == 0) {
+    return uHomebridge;
+  } else if (strncmp(ri1, "dynamicconfig", 13) == 0) {
+    return uDynamicconf;
+  // Action a setpoint message
+  } else if (ri3 != NULL && (strncasecmp(ri2, "setpoint", 8) == 0) && (strncasecmp(ri3, "set", 3) == 0)) {
+    //int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
+    int val =  convertTemp? round(degCtoF(value)) : round(value);
+    if (strncmp(ri1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(POOL_HTR_SETOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
+    } else if (strncmp(ri1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(SPA_HTR_SETOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
+    } else if (strncmp(ri1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
+      _aqualink_data->unactioned.value = setpoint_check(FREEZE_SETPOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = FREEZE_SETPOINT;
+    } else if (strncmp(ri1, "SWG", 3) == 0) {  // If we get SWG percent as setpoint message it's from homebridge so use the convert
+      //int val = round(degCtoF(value));
+      //int val = convertTemp? round(degCtoF(value)) : round(value);
+      _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
+      _aqualink_data->unactioned.type = SWG_SETPOINT;
+    } else {
+      // Not sure what the setpoint is, ignore.
+      logMessage(LOG_WARNING, "%s: ignoring %.*s don't recognise button setpoint\n", from, uri_length, URI);
+      return uBad;
+    }
+    rtn = uActioned;
+    time(&_aqualink_data->unactioned.requested);
+  // Action a SWG Percent message
+  } else if ((ri3 != NULL && (strncmp(ri1, "SWG", 3) == 0) && (strncasecmp(ri2, "Percent", 7) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
+    int val;
+    if ( (strncmp(ri2, "Percent_f", 9) == 0)  ) {
+      val = _aqualink_data->unactioned.value = round(degCtoF(value));
+    } else {
+      val = _aqualink_data->unactioned.value = round(value);
+    }
+    _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
+    _aqualink_data->unactioned.type = SWG_SETPOINT;
+    rtn = uActioned;
+  // Action a SWG boost message
+  } else if ((ri3 != NULL && (strncmp(ri1, "SWG", 3) == 0) && (strncasecmp(ri2, "Boost", 5) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
+    _aqualink_data->unactioned.value = round(value);
+    _aqualink_data->unactioned.type = SWG_BOOST;
+    rtn = uActioned;
+  // Action Light program.
+  } else if ((ri3 != NULL && ((strncasecmp(ri2, "color", 5) == 0) || (strncasecmp(ri2, "program", 7) == 0)) && (strncasecmp(ri3, "set", 3) == 0))) {
+    found = false;
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
+      if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
+          strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0)
+      {
+        char buf[5];
+        found = true;
+        sprintf(buf,"%.0f",value);
+        set_light_mode(buf, i);
+        break;
       }
-    } else if (strcmp(command, "debug") == 0) {
-      char value[80];
-      char *rtn;
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      if (strcmp(value, "start") == 0) {
-        startInlineDebug();
-        rtn = GET_RTN_OK;
-        logMessage(LOG_DEBUG, "WEB: Started inline debug mode\n");
-      } else if (strcmp(value, "stop") == 0) {
-        logMessage(LOG_DEBUG, "WEB: Stoped inline debug mode\n");
-        stopInlineDebug();
-        rtn = GET_RTN_OK;
-      } else if (strcmp(value, "serialstart") == 0) {
-        startInlineSerialDebug();
-        logMessage(LOG_DEBUG, "WEB: Started inline debug mode\n");
-        rtn = GET_RTN_OK;
-      } else if (strcmp(value, "serialstop") == 0) {
-        logMessage(LOG_DEBUG, "WEB: Stoped inline debug mode\n");
-        stopInlineDebug();
-        rtn = GET_RTN_OK;
-      } else if (strcmp(value, "status") == 0) {
-        snprintf(value,80,"{\"sLevel\":\"%s\", \"iLevel\":%d, \"logReady\":\"%s\"}\n",elevel2text(getLogLevel()),getLogLevel(),islogFileReady()?"true":"false" );
-        mg_send_head(nc, 200, strlen(value), "Content-Type: text/json");
-        mg_send(nc, value, strlen(value));
-        return;
-        //rtn = value;
-      } else if (strcmp(value, "clean") == 0) {
-        cleanInlineDebug();
-        rtn = GET_RTN_OK;
-      } else if (strcmp(value, "download") == 0) {
-        mg_http_serve_file(nc, http_msg, getInlineLogFName(), mg_mk_str("text/plain"), mg_mk_str(""));
-        return;
-      } else {
-        rtn = GET_RTN_UNKNOWN;
-      }
-      mg_send_head(nc, 200, strlen(rtn), "Content-Type: text/plain");
-      mg_send(nc, rtn, strlen(rtn));
-    } else if (strncmp(command, "Pump_", 5) == 0) {
-    // Set Pump RPM
-      bool found = false;
-      int pumpIndex = atoi(command+5); // Check for 0
-      char value[10];
-      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-      int rpm = atoi(value);
-    // Check for pumpIndex = 0 (BAD) and check RPM Value
-    //printf("******** ADD CHECK FOR PUMP & RPM HERE ********\n");
-      int pi;
-      for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
-        if (_aqualink_data->pumps[pi].pumpIndex == pumpIndex) {
-          logMessage(LOG_NOTICE, "WEB: request to change pump %d to %d\n",pumpIndex, round(rpm));
+    }
+    if(!found) {
+      logMessage(LOG_WARNING, "%s: Didn't find device that matched URI '%.*s'\n",from, uri_length, URI);
+      rtn = uBad;
+    }
+  // Action a pump RPM/GPM message
+  } else if ((ri3 != NULL && ((strncasecmp(ri2, "RPM", 3) == 0) || (strncasecmp(ri2, "GPM", 3) == 0) || (strncasecmp(ri2, "vsp", 3) == 0)) && (strncasecmp(ri3, "set", 3) == 0))) {
+    found = false;
+    // Is it a pump index or pump name
+    if (strncmp(ri1, "Pump_", 5) == 0) { // Pump by number
+      int pumpIndex = atoi(ri1+5); // Check for 0   
+      for (i=0; i < _aqualink_data->num_pumps; i++) {
+        if (_aqualink_data->pumps[i].pumpIndex == pumpIndex) {
+          logMessage(LOG_NOTICE, "%s: request to change pump %d %s to %d\n",from,pumpIndex, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
           _aqualink_data->unactioned.type = PUMP_RPM;
-          _aqualink_data->unactioned.value = round(rpm);
+          _aqualink_data->unactioned.value = round(value);
           _aqualink_data->unactioned.id = pumpIndex;
           found=true;
           break;
         }
       }
-      if(!found)
-        logMessage(LOG_ERR, "WEB: Didn't find pump %d from command %s\n",pumpIndex,command);
-    } else {
-      int i;
-      for (i = 0; i < TOTAL_BUTTONS; i++) {
-        if (strcmp(command, _aqualink_data->aqbuttons[i].name) == 0) {
-          char value[20];
-          char *rtn;
-          mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
-          // logMessage (LOG_INFO, "Web Message command='%s'\n",command);
-          // aq_programmer(AQ_SEND_CMD, (char
-          // *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-          logMessage(LOG_DEBUG, "WEB: Message request '%s' change state to '%s'\n", command, value);
-          
-          if (_aqconfig_.pda_mode == true) {
-            char msg[PTHREAD_ARG];
-            sprintf(msg, "%-5d%-5d",i, (strcmp(value, "on") == 0)?ON:OFF);
-            //printf("******* '%s' ********\n",msg);
-            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-            rtn = GET_RTN_OK;
-          }
-          else if (strcmp(value, "on") == 0) {
-            if (_aqualink_data->aqbuttons[i].led->state == OFF || _aqualink_data->aqbuttons[i].led->state == FLASH) {
-              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-              rtn = GET_RTN_OK;
-              logMessage(LOG_INFO, "WEB: turn ON '%s' changed state to '%s'\n", command, value);
-            } else {
-              rtn = GET_RTN_NOT_CHANGED;
-              logMessage(LOG_INFO, "WEB: '%s' is already on '%s', current state %d\n", command, value, _aqualink_data->aqbuttons[i].led->state);
-            }
-          } else if (strcmp(value, "off") == 0) {
-            if (_aqualink_data->aqbuttons[i].led->state == ON || 
-                _aqualink_data->aqbuttons[i].led->state == ENABLE ||
-                _aqualink_data->aqbuttons[i].led->state == FLASH) {
-              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-              rtn = GET_RTN_OK;
-              logMessage(LOG_INFO, "WEB: turn Off '%s' changed state to '%s'\n", command, value);
-            } else {
-              rtn = GET_RTN_NOT_CHANGED;
-              logMessage(LOG_INFO, "WEB: '%s' is already off '%s', current state %d\n", command, value, _aqualink_data->aqbuttons[i].led->state);
-            }
-          } else { // Blind switch
-            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-            rtn = GET_RTN_OK;
-            logMessage(LOG_INFO, "WEB: '%s' blindly changed state\n", command, value);
-          }
-
-          logMessage(LOG_DEBUG, "WEB: On=%d, Off=%d, Enable=%d, Flash=%d\n", ON, OFF, ENABLE, FLASH);
-          // NSF change OK and 2 below to a constant
-          mg_send_head(nc, 200, strlen(rtn), "Content-Type: text/plain");
-          mg_send(nc, rtn, strlen(rtn));
-
-          // NSF place check we found command here
-        }
-      }
-    }
-    // If we get here, got a bad query
-    mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), "Content-Type: text/plain");
-    mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
-
-  } else {
-    struct mg_serve_http_opts opts;
-    memset(&opts, 0, sizeof(opts)); // Reset all options to defaults
-    opts.document_root = _web_root; // Serve files from the current directory
-    // logMessage (LOG_DEBUG, "Doc root=%s\n",opts.document_root);
-    mg_serve_http(nc, http_msg, s_http_server_opts);
-  }
-
-}
-
-void action_websocket_request(struct mg_connection *nc, struct websocket_message *wm) {
-  char buffer[50];
-  struct JSONwebrequest request;
-  
-  // Any websocket request means UI is active, so don't let AqualinkD go to sleep if in PDA mode
-  if (pda_mode())
-    pda_reset_sleep();
-  
-  strncpy(buffer, (char *)wm->data, wm->size);
-  buffer[wm->size] = '\0';
-  // logMessage (LOG_DEBUG, "buffer '%s'\n", buffer);
-
-  parseJSONwebrequest(buffer, &request);
-  logMessage(LOG_INFO, "WS: Message - Key '%s' Value '%s' | Key2 '%s' Value2 '%s'\n", request.first.key, request.first.value, request.second.key,
-             request.second.value);
-/*
-  if (strcmp(request.first.key, "raw") == 0 || strcmp(request.first.key, "simulator") == 0 )
-    _aqualink_data->simulate_panel = true;
-  else
-    _aqualink_data->simulate_panel = false;
-*/
-
-  if (strcmp(request.first.key, "raw") == 0) {
-    _aqualink_data->simulate_panel = true;
-    logMessage (LOG_NOTICE, "WS: Send raw command to controller %s\n",request.first.value);
-    unsigned int n;
-    sscanf(request.first.value, "0x%2x", &n);
-    //aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
-    aq_send_cmd((unsigned char)n);
-    //char message[JSON_LABEL_SIZE*10];
-    //build_device_JSON(_aqualink_data, _aqconfig_.light_programming_button, message, JSON_LABEL_SIZE*10);
-    //ws_send(nc, message);
-  } else if (strcmp(request.first.key, "mode") == 0) {
-    if (strcmp(request.first.value, "onetouchraw") == 0) {
-      set_websocket_RSraw(nc);
-    }
-  } else if (strcmp(request.first.key, "command") == 0) {
-    _aqualink_data->simulate_panel = false;
-    if (strcmp(request.first.value, "GET_AUX_LABELS") == 0) {
-      char labels[JSON_LABEL_SIZE];
-      build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
-      ws_send(nc, labels);
-    } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
-      char message[JSON_BUFFER_SIZE];
-      build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
-      ws_send(nc, message);
-    } else if ( strcmp(request.first.value, "simulator") == 0) {
-      _aqualink_data->simulate_panel = true;
-      logMessage(LOG_INFO, "WS: Set Simulator mode");
-      char labels[JSON_LABEL_SIZE];
-      build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
-      ws_send(nc, labels);
-    } else if ( strcmp(request.first.value, SWG_BOOST_TOPIC) == 0) {
-      //logMessage(LOG_INFO, "Boost ");
-      if (request.second.value != NULL)
-        _aqualink_data->unactioned.value = request2bool(request.second.value);
-      else
-        _aqualink_data->unactioned.value = !_aqualink_data->boost;
-        
-      _aqualink_data->unactioned.type = SWG_BOOST;
-    } else { // Search for value in command list
-      int i;
-      for (i = 0; i < TOTAL_BUTTONS; i++) {
-        if (strcmp(request.first.value, _aqualink_data->aqbuttons[i].name) == 0) {
-          logMessage (LOG_INFO, "WS: button '%s' pressed\n",_aqualink_data->aqbuttons[i].name);
-          // send_command( (unsigned char)_aqualink_data->aqbuttons[i].code);
-          if (_aqconfig_.pda_mode == false) {
-            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-          } else {
-            char msg[PTHREAD_ARG];
-            sprintf(msg, "%-5d%-5d",i, (_aqualink_data->aqbuttons[i].led->state!=OFF)?OFF:ON);
-            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-          }
-          break;
-          // NSF place check we found command here
-        }
-      }
-    }
-  } else if (strcmp(request.first.key, "parameter") == 0) {
-    _aqualink_data->simulate_panel = false;
-    if (strcmp(request.first.value, "FRZ_PROTECT") == 0 || strcmp(request.first.value, FREEZE_PROTECT) == 0) {
-      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, "POOL_HTR") == 0 || strcmp(request.first.value, BTN_POOL_HTR) == 0 ) {
-      aq_programmer(AQ_SET_POOL_HEATER_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, "SPA_HTR") == 0 || strcmp(request.first.value, BTN_SPA_HTR) == 0) {
-      aq_programmer(AQ_SET_SPA_HEATER_TEMP, request.second.value, _aqualink_data);
-    } else if (strcmp(request.first.value, SWG_TOPIC) == 0) {
-      //aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
-      int value = setpoint_check(SWG_SETPOINT, atoi(request.second.value), _aqualink_data);
-      if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF ) {
-         // SWG is off, can't set %, so delay the set until it's on.
-        _aqualink_data->swg_delayed_percent = value;
-      } else {
-        aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
-        _aqualink_data->swg_percent = value; // Set the value as if it's already been set, just incase it's 0 as we won't get that message, or will update next time
-      }
-    //} else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) { 
-    //  set_light_mode(request.second.value, _aqconfig_.light_programming_button_pool);
-    } else if (strcmp(request.first.value, "LIGHT_MODE") == 0) {
-      // second is mode & third is button_id
-      int i;
-      for (i = 0; i < TOTAL_BUTTONS; i++) {
-        // NSF I could pull the text here for the real light color name. 4th value in json
-        if (strcmp(request.third.value, _aqualink_data->aqbuttons[i].name) == 0) {
-          set_light_mode(request.second.value, i);
-          break;
-        }
-      }
-      //set_light_mode(request.second.value, 0);
-    } else {
-      int i;
-      bool found = false;
-      for (i = 0; i < TOTAL_BUTTONS; i++) {
-        if (strcmp(request.first.value, _aqualink_data->aqbuttons[i].name) == 0) {
+    } else { // Pump by button name
+      for (i=0; i < _aqualink_data->total_buttons ; i++) {
+        if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
           int pi;
-          logMessage (LOG_INFO, "WS: button parameter request '%s' '%s'\n",_aqualink_data->aqbuttons[i].name, request.second.value);
           for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
             if (_aqualink_data->pumps[pi].button == &_aqualink_data->aqbuttons[i]) {
-              logMessage(LOG_NOTICE, "WS: request to change pump %d %s to %s\n",pi, _aqualink_data->aqbuttons[i].name, request.second.value);
+              logMessage(LOG_NOTICE, "%s: request to change pump %d %s to %d\n",from, pi, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
               _aqualink_data->unactioned.type = PUMP_RPM;
-              _aqualink_data->unactioned.value = atoi(request.second.value);
+              _aqualink_data->unactioned.value = round(value);
               _aqualink_data->unactioned.id = _aqualink_data->pumps[pi].pumpIndex;
               found=true;
               break;
@@ -1003,14 +777,71 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
           }
         }
       }
-      if (!found)
-        logMessage(LOG_DEBUG, "WS: Unknown parameter %s\n", request.first.value);
     }
-  } 
+    if(!found) {
+      logMessage(LOG_WARNING, "%s: Didn't find pump from message %.*s\n",from, uri_length, URI);
+      rtn = uBad;
+    } else {
+      rtn = uActioned;
+    }
+  // Action a Turn on / off message
+  } else if (ri2 != NULL && (strncasecmp(ri2, "set", 3) == 0) && (strncasecmp(ri2, "setpoint", 8) != 0)) {
+    // Must be a switch on / off
+    rtn = uActioned;
+    found = false;
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
+      if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
+          strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0)
+      {
+        found = true;
+        //logMessage(LOG_INFO, "%s: MATCH %s to topic %.*s\n",from,_aqualink_data->aqbuttons[i].name,uri_length, URI);
+        // Message is either a 1 or 0 for on or off
+        //int status = atoi(msg->payload.p);
+        if ( value > 1 || value < 0) {
+          logMessage(LOG_WARNING, "%s: URI %s has invalid value %.2f\n",from, URI, value);
+          rtn = false;
+        }
+        else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && value==0) ||
+           (value == 1 && (_aqualink_data->aqbuttons[i].led->state == ON || 
+                                _aqualink_data->aqbuttons[i].led->state == FLASH || 
+                                _aqualink_data->aqbuttons[i].led->state == ENABLE))) {
+          logMessage(LOG_INFO, "%s: received '%s' for '%s', already '%s', Ignoring\n",from, (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (value==0?"OFF":"ON"));
+          rtn = uBad;
+        } else {
+          logMessage(LOG_INFO, "%s: received '%s' for '%s', turning '%s'\n",from, (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
+#ifdef AQ_PDA
+          if (_aqconfig_.pda_mode) {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (value==0?OFF:ON) );
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+          } else
+#endif
+          {
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+          }
+          // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
+          // This causes a good MQTT button to flash on/off once before getting the latest update.  Need to find a better way
+          //_last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
+          // NSF   Update above to cater for ignored buttons.
+        }
+        break;
+      }
+    }
+    if(!found) {
+      logMessage(LOG_WARNING, "%s: Didn't find device that matched URI '%.*s'\n",from, uri_length, URI);
+      rtn = uBad;
+    }
+  } else {
+    // We don's care
+    logMessage(LOG_WARNING, "%s: ignoring, unknown URI %.*s\n",from,uri_length,URI);
+    rtn = uBad;
+  }
+
+  return rtn;
 }
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
-  unsigned int i;
+  //unsigned int i;
   //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   // If message doesn't end in set we don't care about it.
   if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0) {
@@ -1025,132 +856,191 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   tmp[msg->payload.len] = '\0';
 
   float value = atof(tmp);
-  //logMessage(LOG_DEBUG, "MQTT: topic converted %.*s %s %.2f\n",msg->topic.len, msg->topic.p, tmp, value);
+  //int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
+  bool convert = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp)?true:false;
+  int offset = strlen(_aqconfig_.mqtt_aq_topic)+1;
+  action_URI("MQTT", &msg->topic.p[offset], msg->topic.len - offset, value, convert);
+}
 
-//printf("Topic %.*s\n",msg->topic.len, msg->topic.p);
-  // get the parts from the topic
-  char *pt1 = (char *)&msg->topic.p[strlen(_aqconfig_.mqtt_aq_topic)+1];
-  char *pt2 = NULL;
-  char *pt3 = NULL;
+float pass_mg_body(struct mg_str *body) {
+  logMessage(LOG_INFO, "Message body:\n'%.*s'\n", body->len, body->p);
+  // Quick n dirty pass value from either of below.
+  // value=1.5&arg2=val2
+  // {"value":"1.5"}
+  int i;
+  
+  // NSF Really need to come back and clean this up
 
-  //for (i=10; i < msg->topic.len; i++) {
-  for (i=strlen(_aqconfig_.mqtt_aq_topic)+1; i < msg->topic.len; i++) {
-    if ( msg->topic.p[i] == '/' ) {
-      if (pt2 == NULL) {
-        pt2 = (char *)&msg->topic.p[++i];
-      } else if (pt3 == NULL) {
-        pt3 = (char *)&msg->topic.p[++i];
-        break;
-      }
+  for (i=0; i < body->len; i++) {
+    if ( body->p[i] == '=' || body->p[i] == ':' ) {
+      while (!isdigit((unsigned char) body->p[i]) && i < body->len) {i++;}
+      if(i < body->len)
+        return atof(&body->p[i]);
     }
   }
+  return -1;
+}
 
-  //logMessage(LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
-  //only care about topics with set at the end.
-  //aqualinkd/Freeze/setpoint/set
-  //aqualinkd/Filter_Pump/set
-  //aqualinkd/Pool_Heater/setpoint/set
-  //aqualinkd/Pool_Heater/set
-  //aqualinkd/SWG/Percent_f/set
 
-  //aqualinkd/Filter_Pump/RPM/set // Should add this at some point
-  //aqualinkd/Pump_1/RPM/set
 
-  if (pt3 != NULL && (strncmp(pt2, "setpoint", 8) == 0) && (strncmp(pt3, "set", 3) == 0)) {
-    int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
-    if (strncmp(pt1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
-      _aqualink_data->unactioned.value = setpoint_check(POOL_HTR_SETOINT, val, _aqualink_data);
-      _aqualink_data->unactioned.type = POOL_HTR_SETOINT;
-    } else if (strncmp(pt1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
-      _aqualink_data->unactioned.value = setpoint_check(SPA_HTR_SETOINT, val, _aqualink_data);
-      _aqualink_data->unactioned.type = SPA_HTR_SETOINT;
-    } else if (strncmp(pt1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
-      _aqualink_data->unactioned.value = setpoint_check(FREEZE_SETPOINT, val, _aqualink_data);
-      _aqualink_data->unactioned.type = FREEZE_SETPOINT;
-    } else if (strncmp(pt1, "SWG", 3) == 0) {  // If we get SWG percent as setpoint message.
-      int val = round(degCtoF(value));
-      _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
-      _aqualink_data->unactioned.type = SWG_SETPOINT;
+void action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
+  // struct http_message *http_msg = (struct http_message *)ev_data;
+  if (getLogLevel() >= LOG_INFO) { // Simply for log message, check we are at
+                                   // this log level before running all this
+                                   // junk
+    char *uri = (char *)malloc(http_msg->uri.len + http_msg->query_string.len + 2);
+    strncpy(uri, http_msg->uri.p, http_msg->uri.len + http_msg->query_string.len + 1);
+    uri[http_msg->uri.len + http_msg->query_string.len + 1] = '\0';
+    logMessage(LOG_INFO, "URI request: '%s'\n", uri);
+    free(uri);
+  }
+
+  //logMessage(LOG_INFO, "Message request:\n'%.*s'\n", http_msg->message.len, http_msg->message.p);
+
+  // If we have a get request, pass it
+  if (strncmp(http_msg->uri.p, "/api", 4 ) != 0) {
+    if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
+      logMessage(LOG_WARNING, "WEB: Old stanza, using old method to action\n");
+      OLD_action_web_request(nc, http_msg);
     } else {
-      // Not sure what the setpoint is, ignore.
-      logMessage(LOG_DEBUG, "MQTT: ignoring %.*s don't recognise button setpoint\n", msg->topic.len, msg->topic.p);
-      return;
+      struct mg_serve_http_opts opts;
+      memset(&opts, 0, sizeof(opts)); // Reset all options to defaults
+      opts.document_root = _web_root; // Serve files from the current directory
+      // logMessage (LOG_DEBUG, "Doc root=%s\n",opts.document_root);
+      mg_serve_http(nc, http_msg, s_http_server_opts);
     }
-    // logMessage(LOG_INFO, "MQTT: topic %.*s %.2f, setting %s\n",msg->topic.len, msg->topic.p, value);
-    time(&_aqualink_data->unactioned.requested);
-  //} else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent_f", 8) == 0) && (strncmp(pt3, "set", 3) == 0))) {
-  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Percent", 7) == 0) && (strncmp(pt3, "set", 3) == 0))) {
-      int val;
-      if ( (strncmp(pt2, "Percent_f", 9) == 0)  ) {
-        val = _aqualink_data->unactioned.value = round(degCtoF(value));
-      } else {
-        val = _aqualink_data->unactioned.value = round(value);
-      }
-      _aqualink_data->unactioned.value = setpoint_check(SWG_SETPOINT, val, _aqualink_data);
-      _aqualink_data->unactioned.type = SWG_SETPOINT;
-  } else if ((pt3 != NULL && (strncmp(pt1, "SWG", 3) == 0) && (strncmp(pt2, "Boost", 5) == 0) && (strncmp(pt3, "set", 3) == 0))) {
-    _aqualink_data->unactioned.value = round(value);
-    _aqualink_data->unactioned.type = SWG_BOOST;
-  } else if ((pt3 != NULL && (strncmp(pt1, "Pump_", 5) == 0) && ((strncmp(pt2, "RPM", 3) == 0) || (strncmp(pt2, "GPM", 3) == 0)) && (strncmp(pt3, "set", 3) == 0))) {
-    // Set Pump RPM
-    bool found = false;
-    int pumpIndex = atoi(pt1+5); // Check for 0
-    // Check for pumpIndex = 0 (BAD) and check RPM Value
-    //printf("******** ADD CHECK FOR PUMP & RPM HERE ********\n");
-    int pi;
-    for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
-      if (_aqualink_data->pumps[pi].pumpIndex == pumpIndex) {
-        //printf("******** Set pump %d RPM to %d ******\n",pumpIndex, round(value));
-        //int val = RPM_check(_aqualink_data->pumps[pi].pumpType, val, _aqualink_data);
-        //RPM_check( val)
-        logMessage(LOG_NOTICE, "MQTT: request to change pump %d %s to %d\n",pumpIndex, (strncmp(pt2, "RPM", 3) == 0)?"RPM":"GPM", round(value));
-        _aqualink_data->unactioned.type = PUMP_RPM;
-        _aqualink_data->unactioned.value = round(value);
-        _aqualink_data->unactioned.id = pumpIndex;
-        found=true;
-        break;
-      }
-    }
-    if(!found)
-      logMessage(LOG_ERR, "MQTT: Didn't find pump %d from message %.*s\n",pumpIndex,msg->topic.len, msg->topic.p);
-  } else if (pt2 != NULL && (strncmp(pt2, "set", 3) == 0) && (strncmp(pt2, "setpoint", 8) != 0)) {
-    // Must be a switch on / off
-    for (i=0; i < TOTAL_BUTTONS; i++) {
-      if (strncmp(pt1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
-        logMessage(LOG_INFO, "MQTT: MATCH %s to topic %.*s\n",_aqualink_data->aqbuttons[i].name,msg->topic.len, msg->topic.p);
-        // Message is either a 1 or 0 for on or off
-        //int status = atoi(msg->payload.p);
-        if ( value > 1 || value < 0) {
-          logMessage(LOG_ERR, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, value);
-          logMessage(LOG_ERR, "MQTT: received unknown status of '%.*s' for '%s', Ignoring!\n", msg->payload.len, msg->payload.p, _aqualink_data->aqbuttons[i].name);
-        }
-        else if ( (_aqualink_data->aqbuttons[i].led->state == OFF && value==0) ||
-           (value == 1 && (_aqualink_data->aqbuttons[i].led->state == ON || 
-                                _aqualink_data->aqbuttons[i].led->state == FLASH || 
-                                _aqualink_data->aqbuttons[i].led->state == ENABLE))) {
-          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', already '%s', Ignoring\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name, (value==0?"OFF":"ON"));
-        } else {
-          logMessage(LOG_INFO, "MQTT: received '%s' for '%s', turning '%s'\n", (value==0?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(value==0?"OFF":"ON"));
-          //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-          if (_aqconfig_.pda_mode == false) {
-            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-          } else {
-            char msg[PTHREAD_ARG];
-            sprintf(msg, "%-5d%-5d",i, (value==0?OFF:ON) );
-            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-          }
-          // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
-          // This causes a good MQTT button to flash on/off once before getting the latest update.  Need to find a better way
-          //_last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
-          // NSF   Update above to cater for ignored buttons.
-        }
-        break;
-      }
-    }
+  //} else if (strstr(http_msg->method.p, "PUT")) {
   } else {
-    // We don's care
-    logMessage(LOG_DEBUG, "MQTT: ignoring topic %.*s\n",msg->topic.len, msg->topic.p);
+    char buf[50];
+    float value;
+
+    // If query string.
+    if (http_msg->query_string.len > 1) {
+      mg_get_http_var(&http_msg->query_string, "value", buf, sizeof(buf));
+      value = atof(buf);
+    } else {
+      value = pass_mg_body(&http_msg->body);
+    }
+    
+    int len = mg_url_decode(http_msg->uri.p, http_msg->uri.len, buf, 50, 0);
+    
+    if (strncmp(http_msg->uri.p, "/api/",4) == 0) {
+      switch (action_URI("API", &buf[5], len-5, value, false)) {
+        case uActioned:
+          mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+          mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+        break;
+        case uDevices:
+        {
+          char message[JSON_BUFFER_SIZE];
+          build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
+          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
+          mg_send(nc, message, strlen(message));
+        }
+        break;
+        case uHomebridge:
+        {
+          char message[JSON_BUFFER_SIZE];
+          build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
+          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
+          mg_send(nc, message, strlen(message));
+        }
+        break;
+        case uStatus:
+        {
+          char message[JSON_BUFFER_SIZE];
+          build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
+          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
+          mg_send(nc, message, strlen(message));
+        }
+        case uDynamicconf:
+        {
+          char message[JSON_BUFFER_SIZE];
+          int size = build_color_lights_js(_aqualink_data, message, JSON_BUFFER_SIZE);
+          mg_send_head(nc, 200, size, CONTENT_JS);
+          mg_send(nc, message, size); 
+        }
+        break;
+        case uBad:
+        default:
+          mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), CONTENT_TEXT);
+          mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
+        break;
+      }
+    } else {
+      mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
+    }
+    /*
+  } else {
+    struct mg_serve_http_opts opts;
+    memset(&opts, 0, sizeof(opts)); // Reset all options to defaults
+    opts.document_root = _web_root; // Serve files from the current directory
+    // logMessage (LOG_DEBUG, "Doc root=%s\n",opts.document_root);
+    mg_serve_http(nc, http_msg, s_http_server_opts);
+    */
+  }
+
+}
+
+
+void action_websocket_request(struct mg_connection *nc, struct websocket_message *wm) {
+  char buffer[100];
+  struct JSONkvptr jsonkv;
+  int i;
+  char *uri = NULL;
+  char *value = NULL;
+  
+#ifdef AQ_PDA
+  // Any websocket request means UI is active, so don't let AqualinkD go to sleep if in PDA mode
+  if (pda_mode())
+    pda_reset_sleep();
+#endif
+   
+  strncpy(buffer, (char *)wm->data, wm->size);
+  buffer[wm->size] = '\0';
+
+  parseJSONrequest(buffer, &jsonkv);
+
+  for(i=0; i < 4; i++) {
+    if (jsonkv.kv[i].key != NULL)
+      logMessage(LOG_DEBUG, "WS: Message - Key '%s' Value '%s'n",jsonkv.kv[i].key,jsonkv.kv[i].value);
+    
+    if (jsonkv.kv[i].key != NULL && strncmp(jsonkv.kv[i].key, "uri", 3) == 0)
+      uri = jsonkv.kv[i].value;
+    else if (jsonkv.kv[i].key != NULL && strncmp(jsonkv.kv[i].key, "value", 4) == 0)
+      value = jsonkv.kv[i].value;
+  }
+  
+  if (uri == NULL) {
+    logMessage(LOG_WARNING, "WS: Old stanza, using old method to action\n");
+    return OLD_action_websocket_request(nc, wm);
+  }
+
+  switch ( action_URI("WS", uri, strlen(uri), (value!=NULL?atof(value):-1), false)) {
+    case uActioned:
+      sprintf(buffer, "{\"message\":\"ok\"}");
+      ws_send(nc, buffer);
+    break;
+    case uDevices:
+    {
+      char message[JSON_BUFFER_SIZE];
+      build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
+      ws_send(nc, message);
+    }
+    break;
+    case uStatus:
+    {
+      char message[JSON_BUFFER_SIZE];
+      build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
+      ws_send(nc, message);
+    }
+    break;
+    case uBad:
+    default:
+      sprintf(buffer, "{\"message\":\"Bad request\"}");
+      ws_send(nc, buffer);
+    break;
   }
 }
 
@@ -1162,7 +1052,7 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
 
   if (parseJSONmqttrequest(msg->payload.p, msg->payload.len, &idx, &nvalue, svalue)) {
     logMessage(LOG_DEBUG, "MQTT: DZ: Received message IDX=%d nValue=%d sValue=%s\n", idx, nvalue, svalue);
-    for (i=0; i < TOTAL_BUTTONS; i++) {
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
       if (_aqualink_data->aqbuttons[i].dz_idx == idx){
         //NSF, should try to simplify this if statment, but not easy since AQ ON and DZ ON are different, and AQ has other states.
         if ( (_aqualink_data->aqbuttons[i].led->state == OFF && nvalue==DZ_OFF) ||
@@ -1176,41 +1066,21 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
             logMessage(LOG_NOTICE, "MQTT: DZ: received '%s' for '%s', IGNORING as we are programming light mode\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name);
           } else {
             logMessage(LOG_INFO, "MQTT: DZ: received '%s' for '%s', turning '%s'\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(nvalue==DZ_OFF?"OFF":"ON"));
-            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-            if (_aqconfig_.pda_mode == false) {
-              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
-              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-            } else {
+#ifdef AQ_PDA
+            if (_aqconfig_.pda_mode) {
               char msg[PTHREAD_ARG];
               sprintf(msg, "%-5d%-5d",i, (nvalue == DZ_OFF?OFF:ON) );
               aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+            } else
+#endif
+            {
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
             }
           }
         }
         break; // no need to continue in for loop, we found button.
       }
     }
-    /* removed until domoticz has a better virtual thermostat
-    if (idx == _aqconfig_.dzidx_pool_thermostat) {
-      float degC = atof(svalue);
-      int degF = (int)degCtoF(degC);
-      if (degC > 0.0 && 1 < (degF - _aqualink_data->pool_htr_set_point)) {
-        logMessage(LOG_INFO, "MQTT: DZ: received temp setting '%s' for 'pool heater setpoint' old value %d(f) setting to %f(c) %d(f)\n",svalue, _aqualink_data->pool_htr_set_point, degC, degF);
-        //aq_programmer(AQ_SET_POOL_HEATER_TEMP, (int)degCtoF(degl), _aqualink_data);
-      } else {
-        logMessage(LOG_INFO, "MQTT: DZ: received temp setting '%s' for 'pool heater setpoint' matched current setting (or was zero), ignoring!\n", svalue);
-      }
-    } else if (idx == _aqconfig_.dzidx_spa_thermostat) {
-      float degC = atof(svalue);
-      int degF = (int)degCtoF(degC);
-      if (degC > 0.0 && 1 < (degF - _aqualink_data->spa_htr_set_point)) {
-        logMessage(LOG_INFO, "MQTT: DZ: received temp setting '%s' for 'spa heater setpoint' old value %d(f) setting to %f(c) %d(f)\n",svalue, _aqualink_data->spa_htr_set_point, degC, degF);
-        //aq_programmer(AQ_SET_POOL_HEATER_TEMP, (int)degCtoF(degl), _aqualink_data);
-      } else {
-        logMessage(LOG_INFO, "MQTT: DZ: received temp setting '%s' for 'spa heater setpoint' matched current setting (or was zero), ignoring!\n", svalue);
-      }
-    }*/
-//printf("Finished checking IDX for setpoint\n"); 
   }
 
   // NSF Need to check idx against ours and decide if we are interested in it.
@@ -1363,7 +1233,7 @@ void start_mqtt(struct mg_mgr *mgr) {
       logMessage (LOG_ERR, "Failed to create MQTT listener to %s\n", _aqconfig_.mqtt_server);
   } else {
     int i;
-    for (i=0; i < TOTAL_BUTTONS; i++) {
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
     }
     _last_mqtt_aqualinkdata.ar_swg_status = SWG_STATUS_UNKNOWN;
@@ -1407,4 +1277,426 @@ bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
 
 
   return true;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* OLD Functions to be deprecated */
+
+
+/* Leave the old API / web function intact until we deprecate */
+
+void OLD_action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
+  // struct http_message *http_msg = (struct http_message *)ev_data;
+  if (getLogLevel() >= LOG_INFO) { // Simply for log message, check we are at
+                                   // this log level before running all this
+                                   // junk
+    char *uri = (char *)malloc(http_msg->uri.len + http_msg->query_string.len + 2);
+    strncpy(uri, http_msg->uri.p, http_msg->uri.len + http_msg->query_string.len + 1);
+    uri[http_msg->uri.len + http_msg->query_string.len + 1] = '\0';
+    logMessage(LOG_INFO, "URI request: '%s'\n", uri);
+    free(uri);
+  }
+  // If we have a get request, pass it
+  if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
+    char command[20];
+
+    mg_get_http_var(&http_msg->query_string, "command", command, sizeof(command));
+    logMessage(LOG_INFO, "WEB: Message command='%s'\n", command);
+
+    if (strcmp(command, "dynamic_config") == 0) {
+      char data[JSON_BUFFER_SIZE];
+      int size = build_color_lights_js(_aqualink_data, data, JSON_BUFFER_SIZE);
+      mg_send_head(nc, 200, size, CONTENT_JS);
+      mg_send(nc, data, size);
+    } else
+    // if (strstr(http_msg->query_string.p, "command=status")) {
+    if (strcmp(command, "status") == 0) {
+      char data[JSON_STATUS_SIZE];
+      int size = build_aqualink_status_JSON(_aqualink_data, data, JSON_STATUS_SIZE);
+      mg_send_head(nc, 200, size, CONTENT_JSON);
+      mg_send(nc, data, size);
+
+      //} else if (strstr(http_msg->query_string.p, "command=mhstatus")) {
+    } else if (strcmp(command, "mhstatus") == 0) {
+      char data[20];
+      int size = getTempforMeteohub(data);
+      mg_send_head(nc, 200, size, CONTENT_TEXT);
+      mg_send(nc, data, size);
+    } else if (strcmp(command, "poollightmode") == 0) {
+logMessage(LOG_ERR, "WEB: poollightmode taken out for update (forgot to put it back)\n");
+/*
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
+      set_light_mode(value, _aqconfig_.light_programming_button_pool);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+*/
+    } else if (strcmp(command, "spalightmode") == 0) {
+logMessage(LOG_ERR, "WEB: spalightmode taken out for update (forgot to put it back)\n");
+/*
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      //aq_programmer(AQ_SET_COLORMODE, value, _aqualink_data);
+      set_light_mode(value, _aqconfig_.light_programming_button_spa);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+*/
+    } else if (strcmp(command, "diag") == 0) {
+      aq_programmer(AQ_GET_DIAGNOSTICS_MODEL, NULL, _aqualink_data);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "swg_percent") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_SWG_PERCENT, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set SWG to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "pool_htr_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_POOL_HEATER_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Pool heater to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "spa_htr_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_SPA_HEATER_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Spa heater to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "frz_protect_set_pnt") == 0) {
+      char value[20];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, value, _aqualink_data);
+      logMessage(LOG_INFO, "Web: request to set Freeze protect to %s\n", value);
+      mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+      mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+    } else if (strcmp(command, "extended_device_prg") == 0) {
+      char value[20];
+      char message[JSON_LABEL_SIZE];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      bool prg = request2bool(value);
+      if (prg && !onetouch_enabled())
+        prg = false; // Ignore request if onetouch is not enabeled
+      set_extended_device_id_programming(prg);
+      sprintf(message,"{\"extended_device_prg\":\"%s\"}", bool2text(prg));
+      mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
+      mg_send(nc, message, strlen(message));
+    } else if (strcmp(command, "devices") == 0) {
+      char message[JSON_BUFFER_SIZE];
+      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
+      mg_send_head(nc, 200, size, CONTENT_JSON);
+      mg_send(nc, message, size);
+    } else if (strcmp(command, "homebridge") == 0) {
+      char message[JSON_BUFFER_SIZE];
+      int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
+      mg_send_head(nc, 200, size, CONTENT_JSON);
+      mg_send(nc, message, size);
+    } else if (strcmp(command, "setconfigprm") == 0) {
+      char value[20];
+      char param[30];
+      char *webrtn;
+      mg_get_http_var(&http_msg->query_string, "param", param, sizeof(param));
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      
+      if (setConfigValue(_aqualink_data, param, value)) {
+        webrtn = GET_RTN_OK;
+        logMessage(LOG_INFO, "Web: request to config %s to %s\n", param, value);
+      } else {
+        webrtn = GET_RTN_ERROR;
+        logMessage(LOG_ERR, "Web: request to config %s to %s failed\n", param, value);
+      }
+      mg_send_head(nc, 200, strlen(webrtn), CONTENT_TEXT);
+      mg_send(nc, webrtn, strlen(webrtn));
+    } else if (strcmp(command, "writeconfig") == 0) {
+      if (writeCfg (_aqualink_data)) {
+        mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
+        mg_send(nc, GET_RTN_OK, strlen(GET_RTN_OK));
+      } else {
+        mg_send_head(nc, 200, strlen(GET_RTN_ERROR), CONTENT_TEXT);
+        mg_send(nc, GET_RTN_ERROR, strlen(GET_RTN_ERROR));
+      }
+    } else if (strcmp(command, "debug") == 0) {
+      char value[80];
+      char *rtn;
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      if (strcmp(value, "start") == 0) {
+        startInlineDebug();
+        rtn = GET_RTN_OK;
+        logMessage(LOG_DEBUG, "WEB: Started inline debug mode\n");
+      } else if (strcmp(value, "stop") == 0) {
+        logMessage(LOG_DEBUG, "WEB: Stoped inline debug mode\n");
+        stopInlineDebug();
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "serialstart") == 0) {
+        startInlineSerialDebug();
+        logMessage(LOG_DEBUG, "WEB: Started inline debug mode\n");
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "serialstop") == 0) {
+        logMessage(LOG_DEBUG, "WEB: Stoped inline debug mode\n");
+        stopInlineDebug();
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "status") == 0) {
+        snprintf(value,80,"{\"sLevel\":\"%s\", \"iLevel\":%d, \"logReady\":\"%s\"}\n",elevel2text(getLogLevel()),getLogLevel(),islogFileReady()?"true":"false" );
+        mg_send_head(nc, 200, strlen(value), "Content-Type: text/json");
+        mg_send(nc, value, strlen(value));
+        return;
+        //rtn = value;
+      } else if (strcmp(value, "clean") == 0) {
+        cleanInlineDebug();
+        rtn = GET_RTN_OK;
+      } else if (strcmp(value, "download") == 0) {
+        mg_http_serve_file(nc, http_msg, getInlineLogFName(), mg_mk_str("text/plain"), mg_mk_str(""));
+        return;
+      } else {
+        rtn = GET_RTN_UNKNOWN;
+      }
+      mg_send_head(nc, 200, strlen(rtn), CONTENT_TEXT);
+      mg_send(nc, rtn, strlen(rtn));
+    } else if (strncmp(command, "Pump_", 5) == 0) {
+    // Set Pump RPM
+      bool found = false;
+      int pumpIndex = atoi(command+5); // Check for 0
+      char value[10];
+      mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+      int rpm = atoi(value);
+    // Check for pumpIndex = 0 (BAD) and check RPM Value
+    //printf("******** ADD CHECK FOR PUMP & RPM HERE ********\n");
+      int pi;
+      for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
+        if (_aqualink_data->pumps[pi].pumpIndex == pumpIndex) {
+          logMessage(LOG_NOTICE, "WEB: request to change pump %d to %d\n",pumpIndex, round(rpm));
+          _aqualink_data->unactioned.type = PUMP_RPM;
+          _aqualink_data->unactioned.value = round(rpm);
+          _aqualink_data->unactioned.id = pumpIndex;
+          found=true;
+          break;
+        }
+      }
+      if(!found)
+        logMessage(LOG_ERR, "WEB: Didn't find pump %d from command %s\n",pumpIndex,command);
+    } else {
+      int i;
+      for (i = 0; i < _aqualink_data->total_buttons; i++) {
+        if (strcmp(command, _aqualink_data->aqbuttons[i].name) == 0) {
+          char value[20];
+          char *rtn;
+          mg_get_http_var(&http_msg->query_string, "value", value, sizeof(value));
+          // logMessage (LOG_INFO, "Web Message command='%s'\n",command);
+          // aq_programmer(AQ_SEND_CMD, (char
+          // *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+          logMessage(LOG_DEBUG, "WEB: Message request '%s' change state to '%s'\n", command, value);
+#ifdef AQ_PDA          
+          if (_aqconfig_.pda_mode == true) {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (strcmp(value, "on") == 0)?ON:OFF);
+            //printf("******* '%s' ********\n",msg);
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+            rtn = GET_RTN_OK;
+          }
+          else
+#endif 
+          if (strcmp(value, "on") == 0) {
+            if (_aqualink_data->aqbuttons[i].led->state == OFF || _aqualink_data->aqbuttons[i].led->state == FLASH) {
+              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+              rtn = GET_RTN_OK;
+              logMessage(LOG_INFO, "WEB: turn ON '%s' changed state to '%s'\n", command, value);
+            } else {
+              rtn = GET_RTN_NOT_CHANGED;
+              logMessage(LOG_INFO, "WEB: '%s' is already on '%s', current state %d\n", command, value, _aqualink_data->aqbuttons[i].led->state);
+            }
+          } else if (strcmp(value, "off") == 0) {
+            if (_aqualink_data->aqbuttons[i].led->state == ON || 
+                _aqualink_data->aqbuttons[i].led->state == ENABLE ||
+                _aqualink_data->aqbuttons[i].led->state == FLASH) {
+              //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+              rtn = GET_RTN_OK;
+              logMessage(LOG_INFO, "WEB: turn Off '%s' changed state to '%s'\n", command, value);
+            } else {
+              rtn = GET_RTN_NOT_CHANGED;
+              logMessage(LOG_INFO, "WEB: '%s' is already off '%s', current state %d\n", command, value, _aqualink_data->aqbuttons[i].led->state);
+            }
+          } else { // Blind switch
+            //aq_programmer(AQ_SEND_CMD, (char *)&_aqualink_data->aqbuttons[i].code, _aqualink_data);
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+            rtn = GET_RTN_OK;
+            logMessage(LOG_INFO, "WEB: '%s' blindly changed state\n", command, value);
+          }
+
+          logMessage(LOG_DEBUG, "WEB: On=%d, Off=%d, Enable=%d, Flash=%d\n", ON, OFF, ENABLE, FLASH);
+          // NSF change OK and 2 below to a constant
+          mg_send_head(nc, 200, strlen(rtn), CONTENT_TEXT);
+          mg_send(nc, rtn, strlen(rtn));
+
+          // NSF place check we found command here
+        }
+      }
+    }
+    // If we get here, got a bad query
+    mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), CONTENT_TEXT);
+    mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
+
+  } else {
+    struct mg_serve_http_opts opts;
+    memset(&opts, 0, sizeof(opts)); // Reset all options to defaults
+    opts.document_root = _web_root; // Serve files from the current directory
+    // logMessage (LOG_DEBUG, "Doc root=%s\n",opts.document_root);
+    mg_serve_http(nc, http_msg, s_http_server_opts);
+  }
+
+}
+
+
+void OLD_action_websocket_request(struct mg_connection *nc, struct websocket_message *wm) {
+  char buffer[100];
+  struct JSONwebrequest request;
+  
+#ifdef AQ_PDA
+  // Any websocket request means UI is active, so don't let AqualinkD go to sleep if in PDA mode
+  if (pda_mode())
+    pda_reset_sleep();
+#endif
+   
+  strncpy(buffer, (char *)wm->data, wm->size);
+  buffer[wm->size] = '\0';
+  // logMessage (LOG_DEBUG, "buffer '%s'\n", buffer);
+  parseJSONwebrequest(buffer, &request);
+  logMessage(LOG_INFO, "WS: Message - Key '%s' Value '%s' | Key2 '%s' Value2 '%s'\n", request.first.key, request.first.value, request.second.key,
+             request.second.value);
+/*
+  if (strcmp(request.first.key, "raw") == 0 || strcmp(request.first.key, "simulator") == 0 )
+    _aqualink_data->simulate_panel = true;
+  else
+    _aqualink_data->simulate_panel = false;
+*/
+
+  if (strcmp(request.first.key, "raw") == 0) {
+    _aqualink_data->simulate_panel = true;
+    logMessage (LOG_NOTICE, "WS: Send raw command to controller %s\n",request.first.value);
+    unsigned int n;
+    sscanf(request.first.value, "0x%2x", &n);
+    //aq_programmer(AQ_SEND_CMD, (char *)&n, NULL);
+    aq_send_cmd((unsigned char)n);
+    //char message[JSON_LABEL_SIZE*10];
+    //build_device_JSON(_aqualink_data, _aqconfig_.light_programming_button, message, JSON_LABEL_SIZE*10);
+    //ws_send(nc, message);
+  } else if (strcmp(request.first.key, "mode") == 0) {
+    if (strcmp(request.first.value, "onetouchraw") == 0) {
+      set_websocket_RSraw(nc);
+    }
+  } else if (strcmp(request.first.key, "command") == 0) {
+    _aqualink_data->simulate_panel = false;
+    if (strcmp(request.first.value, "GET_AUX_LABELS") == 0) {
+      char labels[JSON_LABEL_SIZE];
+      build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
+      ws_send(nc, labels);
+    } else if (strcmp(request.first.value, "GET_DEVICES") == 0) {
+      char message[JSON_BUFFER_SIZE];
+      build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
+      ws_send(nc, message);
+    } else if ( strcmp(request.first.value, "simulator") == 0) {
+      _aqualink_data->simulate_panel = true;
+      logMessage(LOG_INFO, "WS: Set Simulator mode");
+      char labels[JSON_LABEL_SIZE];
+      build_aux_labels_JSON(_aqualink_data, labels, JSON_LABEL_SIZE);
+      ws_send(nc, labels);
+    } else if ( strcmp(request.first.value, SWG_BOOST_TOPIC) == 0) {
+      //logMessage(LOG_INFO, "Boost ");
+      if (request.second.value != NULL)
+        _aqualink_data->unactioned.value = request2bool(request.second.value);
+      else
+        _aqualink_data->unactioned.value = !_aqualink_data->boost;
+        
+      _aqualink_data->unactioned.type = SWG_BOOST;
+    } else { // Search for value in command list
+      int i;
+      for (i = 0; i < _aqualink_data->total_buttons; i++) {
+        if (strcmp(request.first.value, _aqualink_data->aqbuttons[i].name) == 0) {
+          logMessage (LOG_INFO, "WS: button '%s' pressed\n",_aqualink_data->aqbuttons[i].name);
+#ifdef AQ_PDA
+          if (_aqconfig_.pda_mode) {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d",i, (_aqualink_data->aqbuttons[i].led->state!=OFF)?OFF:ON);
+            aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
+          } else
+#endif
+          {
+            logMessage (LOG_DEBUG, "WS: request 0x%02hhx to be sent to controller\n",_aqualink_data->aqbuttons[i].code);
+            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+          }
+          break;
+          // NSF place check we found command here
+        }
+      }
+    }
+  } else if (strcmp(request.first.key, "parameter") == 0) {
+    _aqualink_data->simulate_panel = false;
+    if (strcmp(request.first.value, "FRZ_PROTECT") == 0 || strcmp(request.first.value, FREEZE_PROTECT) == 0) {
+      aq_programmer(AQ_SET_FRZ_PROTECTION_TEMP, request.second.value, _aqualink_data);
+    } else if (strcmp(request.first.value, "POOL_HTR") == 0 || strcmp(request.first.value, BTN_POOL_HTR) == 0 ) {
+      aq_programmer(AQ_SET_POOL_HEATER_TEMP, request.second.value, _aqualink_data);
+    } else if (strcmp(request.first.value, "SPA_HTR") == 0 || strcmp(request.first.value, BTN_SPA_HTR) == 0) {
+      aq_programmer(AQ_SET_SPA_HEATER_TEMP, request.second.value, _aqualink_data);
+    } else if (strcmp(request.first.value, SWG_TOPIC) == 0) {
+      //aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
+      int value = setpoint_check(SWG_SETPOINT, atoi(request.second.value), _aqualink_data);
+      
+      if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF ) {
+         // SWG is off, can't set %, so delay the set until it's on.
+        _aqualink_data->swg_delayed_percent = value;
+      } else {
+        aq_programmer(AQ_SET_SWG_PERCENT, request.second.value, _aqualink_data);
+        _aqualink_data->swg_percent = value; // Set the value as if it's already been set, just incase it's 0 as we won't get that message, or will update next time
+      }
+      
+    //} else if (strcmp(request.first.value, "POOL_LIGHT_MODE") == 0) { 
+    //  set_light_mode(request.second.value, _aqconfig_.light_programming_button_pool);
+    } else if (strcmp(request.first.value, "LIGHT_MODE") == 0) {
+      // second is mode & third is button_id
+      int i;
+      for (i = 0; i < _aqualink_data->total_buttons; i++) {
+        // NSF I could pull the text here for the real light color name. 4th value in json
+        if (strcmp(request.third.value, _aqualink_data->aqbuttons[i].name) == 0) {
+          set_light_mode(request.second.value, i);
+          break;
+        }
+      }
+      //set_light_mode(request.second.value, 0);
+    } else {
+      int i;
+      bool found = false;
+      for (i = 0; i < _aqualink_data->total_buttons; i++) {
+        if (strcmp(request.first.value, _aqualink_data->aqbuttons[i].name) == 0) {
+          int pi;
+          logMessage (LOG_INFO, "WS: button parameter request '%s' '%s'\n",_aqualink_data->aqbuttons[i].name, request.second.value);
+          for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
+            if (_aqualink_data->pumps[pi].button == &_aqualink_data->aqbuttons[i]) {
+              logMessage(LOG_NOTICE, "WS: request to change pump %d %s to %s\n",pi, _aqualink_data->aqbuttons[i].name, request.second.value);
+              _aqualink_data->unactioned.type = PUMP_RPM;
+              _aqualink_data->unactioned.value = atoi(request.second.value);
+              _aqualink_data->unactioned.id = _aqualink_data->pumps[pi].pumpIndex;
+              found=true;
+              break;
+            }
+          }
+        }
+      }
+      if (!found)
+        logMessage(LOG_DEBUG, "WS: Unknown parameter %s\n", request.first.value);
+    }
+  } 
 }

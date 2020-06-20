@@ -11,7 +11,8 @@
   <link href='aqualinkd.png' rel='apple-touch-icon'>
   <link href='aqualinkd.png' rel='icon'>
   <script src='config.js'></script>
-  <script src='?command=dynamic_config'></script>
+  <!--<script src='?command=dynamic_config'></script>-->
+  <script src='/api/dynamicconfig'></script>
   <style>
     :root {
       --fonts: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
@@ -755,11 +756,12 @@
     function setTileState(id, state) {
       try {
         if (state == (document.getElementById(id).getAttribute('status') == 'off')) {
-          send_command(id);
+          send_command(id, (state==true?1:0) );
           //console.log("Switch state "+id+" to "+(state)?"on":"off");
         } else {
           //console.log("state "+id+" to "+(state)?"on":"off")
         }
+        
         setTileOn(id, ((state) ? "on" : "off"));
       } catch(exception) {}
     }
@@ -772,22 +774,62 @@
       tile.setAttribute('setpoint', sp_value);
       send_setpoint(id);
     }
-
+/*
     function setTileValue(id, value) {
       var ext = '';
+      var type;
       if (value == undefined || value.startsWith("-999") || value.startsWith(" "))
         value = '--';
       else {
         try {
-          if ((type = document.getElementById(id).getAttribute('type')) != null) {
+          if ((type = document.getElementById(id).getAttribute('type')) != null) { 
+            if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
+              ext = '&deg;';
+            else if (type == 'setpoint_swg')
+              ext = '%';
+
+            if ((type == 'temperature' || type == 'value') && turn_on_sensortiles == true) {
+              if (value == 0 || value == '--')
+                setTileOn(id, 'off');
+              else
+                setTileOn(id, 'on');
+            }
+          }
+        } catch (e) {
+          //console.log('ERROR id=' + id + ' Line 764 | element = '+document.getElementById(id));
+        }
+      }
+      //document.getElementById(id + '_tile_icon_value').textContent = value;
+      var tile;
+      if ((tile = document.getElementById(id + '_tile_icon_value')) != null)
+        tile.innerHTML = value + ext;
+    }
+*/
+    function setTileValue(id, value) {
+      var ext = '';
+      var type = null;
+      try {
+        type = document.getElementById(id).getAttribute('type');
+
+        if (value == undefined || value.startsWith("-999") || value.startsWith(" ")) {
+          value = '--';
+        } else {
+          if ((type = document.getElementById(id).getAttribute('type')) != null) { 
             if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
               ext = '&deg;';
             else if (type == 'setpoint_swg')
               ext = '%';
           }
-        } catch (e) {
-          //console.log('ERROR id=' + id + ' Line 764 | element = '+document.getElementById(id));
         }
+
+        if ((type == 'temperature' || type == 'value') && turn_on_sensortiles == true) {
+          if (value == 0 || value == '--')
+            setTileOn(id, 'off');
+          else
+            setTileOn(id, 'on');
+        }
+      } catch (e) {
+          console.log('ERROR id=' + id + ' Line 829 | element = '+document.getElementById(id));
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
       var tile;
@@ -847,13 +889,14 @@
     }
 
     function setTileOn(id, status) {
-      //function setTileOn(id, status, text) {
+      //console.log("setTileOn "+id+ " "+status);
       var tile;
       var text;
       if ((tile = document.getElementById(id)) == null) {
         //console.log("Error unknown ID '"+id+"' can't set to '"+status+"'");
         return;
       }
+      // Display is a special status to "brighten up" sensor values. 
       if (status != "on" && status != "off" && status != "enabled" && status != "flash") {
         console.log("Error unknown status '" + status + "' for '" + id + "'");
         return;
@@ -907,7 +950,10 @@
         }
         text = "Off";
       }
-      document.getElementById(id + '_status').innerHTML = text;
+
+      try {
+        document.getElementById(id + '_status').innerHTML = text;
+      } catch (e) {} 
       var tile_icon = document.getElementById(id + '_tile_icon_value');
       type = tile.getAttribute('type');
       if (status != null && tile_icon != null) {
@@ -921,7 +967,8 @@
           tile_icon.classList.add("disabled");
           tile_icon.classList.remove("cool");
           tile_icon.classList.remove("heat");
-        } else if (status == 'on' && type != 'setpoint_swg' && type != 'setpoint_freeze') {
+        //} else if (status == 'on' && type != 'setpoint_swg' && type != 'setpoint_freeze' && type != 'temperature' && type != 'value') {
+        } else if (status == 'on' && type == 'setpoint_thermo') {
           tile_icon.classList.remove("enabled");
           tile_icon.classList.remove("disabled");
           tile_icon.classList.remove("cool");
@@ -1237,7 +1284,7 @@
             //console.log ("state = "+state);
             if (state == (tile.getAttribute('Boost') == 'off')) {
               //console.log ("change boost");
-              send_command( 'SWG/Boost', (state==true?"on":"off") );
+              send_command( 'SWG/Boost', (state==true?"1":"0") );
             } else {
               if (sp_value != slider.value && slider.value != 101) // Don't change setpoint if slider is on boost
                 setThermostatSetpoint(id, slider.value);
@@ -1456,8 +1503,12 @@
     }
 
     function get_devices() {
+      /*
       var msg = {
         command: "GET_DEVICES"
+      };*/
+      var msg = {
+        uri: "devices"
       };
       socket_di.send(JSON.stringify(msg));
     }
@@ -1465,31 +1516,41 @@
     function send_command(cmd, value=null) {
       var _cmd = {};
       _cmd.command = cmd;
-      if (value != null)
-      _cmd.value = value;
+      _cmd.uri = cmd+"/set";
+      if (value != null) {
+        _cmd.value = value;
+      }
       socket_di.send(JSON.stringify(_cmd));
     }
 
     function send_setpoint(id) {
-      var temperature = {};
+      var message = {};
       var tile;
       if ((tile = document.getElementById(id)) == null) {
         return;
       }
-      if (tile.getAttribute('setpoint'))
-      temperature.parameter = tile.getAttribute('id');
-      temperature.value = tile.getAttribute('setpoint');
+      var type = tile.getAttribute('type');
+      message.parameter = tile.getAttribute('id');
+      message.value = tile.getAttribute('setpoint');
+
+      if (type == "setpoint_swg")
+        message.uri = id+"/percent/set";
+      else if (type == "switch_vsp")
+        message.uri = id+"/RPM/set";
+      else
+        message.uri = id+"/setpoint/set";
 //console.log("Send value back "+temperature.parameter+" "+temperature.value);
-      socket_di.send(JSON.stringify(temperature));
+      socket_di.send(JSON.stringify(message));
     }
 
     function send_light_mode(value, id, textvalue) {
       console.log("Set light mode to "+value+" id="+id+" text="+textvalue);
       var mode = {};
       //mode.parameter = 'POOL_LIGHT_MODE';
-      mode.parameter = 'LIGHT_MODE';
+      //mode.parameter = 'LIGHT_MODE';
       mode.value = value;
       mode.button = id;
+      mode.uri = id+"/program/set";
       mode.text_value = textvalue;
       socket_di.send(JSON.stringify(mode));  
     }

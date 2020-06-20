@@ -48,6 +48,7 @@
 #include "version.h"
 
 
+
 //#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
 static volatile bool _keepRunning = true;
@@ -223,7 +224,48 @@ void setUnits(char *msg)
   logMessage(LOG_INFO, "Temp Units set to %d (F=0, C=1, Unknown=2)\n", _aqualink_data.temp_units);
 }
 
+#ifdef AQ_RS16
+bool RS16_endswithLEDstate(char *msg)
+{
+  char *sp;
+  int i;
+  aqledstate state = LED_S_UNKNOWN;
 
+  if (_aqconfig_.rs_panel_size < 16)
+    return false;
+
+  sp = strrchr(msg, ' ');
+
+  if( sp == NULL )
+    return false;
+  
+  if (strncasecmp(sp, " on", 3) == 0)
+    state = ON;
+  else if (strncasecmp(sp, " off", 4) == 0)
+    state = OFF;
+  else if (strncasecmp(sp, " enabled", 8) == 0) // Total guess, need to check
+    state = ENABLE;
+  else if (strncasecmp(sp, " no idea", 8) == 0) // need to figure out these states
+    state = FLASH;
+
+  if (state == LED_S_UNKNOWN)
+    return false;
+
+  // Only need to start at Aux B5->B8 (12-15)
+  // Loop over only aqdata->aqbuttons[13] to aqdata->aqbuttons[16]
+  for (i = RS16_VBUTTONS_START; i <= RS16_VBUTTONS_END; i++) {
+    //TOTAL_BUTTONS
+    if ( stristr(msg, _aqualink_data.aqbuttons[i].label) != NULL) {
+      _aqualink_data.aqbuttons[i].led->state = state;
+      logMessage(LOG_INFO, "Set %s to %d\n", _aqualink_data.aqbuttons[i].label, _aqualink_data.aqbuttons[i].led->state);
+      // Return true should be the result, but in the if we want to continue to display message
+      return true;
+    }
+  }
+
+  return false;
+}
+#endif
 
 #define MSG_FREEZE   1  // 2^0, bit 0
 #define MSG_SERVICE  2  // 2^1, bit 1
@@ -448,8 +490,8 @@ void processMessage(char *message)
     logMessage(LOG_NOTICE, "Control Panel %s\n", msg);
     if (_initWithRS == false)
     {
-      //queueGetProgramData(ALLBUTTON, &_aqualink_data);
-      queueGetExtendedProgramData(ALLBUTTON, &_aqualink_data, _aqconfig_.use_panel_aux_labels);
+      queueGetProgramData(ALLBUTTON, &_aqualink_data);
+      //queueGetExtendedProgramData(ALLBUTTON, &_aqualink_data, _aqconfig_.use_panel_aux_labels);
       _initWithRS = true;
     }
   }
@@ -463,14 +505,40 @@ void processMessage(char *message)
     //aq_programmer(AQ_SEND_CMD, (char *)KEY_ENTER, &_aqualink_data);
     aq_send_cmd(KEY_ENTER);
   }
-  else if ((msg[4] == ':') && (strncasecmp(msg, "AUX", 3) == 0))
-  { // AUX label "AUX1:"
-    int labelid = atoi(msg + 3);
+  // Process any button states (fake LED) for RS12 and above keypads
+  // Text will be button label on or off  ie Aux_B2 off or WaterFall off
+  
+#ifdef AQ_RS16
+  else if ( _aqconfig_.rs_panel_size >= 16 && RS16_endswithLEDstate(msg) == true )
+  {
+    // Do nothing, just stop other else if statments executing
+    // make sure we also display the message.
+    // Note we only get ON messages here, Off messages will not be sent if something else turned it off
+    // use the Onetouch or iAqua equiptment page for off.
+    strcpy(_aqualink_data.last_display_message, msg);
+  }
+#endif
+  else if (((msg[4] == ':') || (msg[6] == ':')) && (strncasecmp(msg, "AUX", 3) == 0) )
+  { // Should probable check we are in programming mode.
+    // 'Aux3: No Label'
+    // 'Aux B1: No Label'
+    int labelid;
+    int ni = 3;
+    if (msg[4] == 'B') { ni = 5; }
+    labelid = atoi(msg + ni);
     if (labelid > 0 && _aqconfig_.use_panel_aux_labels == true)
     {
+      if (ni == 5)
+        labelid = labelid + 8;
+      else
+        labelid = labelid + 1;
       // Aux1: on panel = Button 3 in aqualinkd  (button 2 in array)
-      logMessage(LOG_NOTICE, "AUX LABEL %d '%s'\n", labelid + 1, msg);
-      _aqualink_data.aqbuttons[labelid+1].label = prittyString(cleanalloc(msg+5));
+      if (strncasecmp(msg+ni+3, "No Label", 8) != 0) {
+        _aqualink_data.aqbuttons[labelid].label = prittyString(cleanalloc(msg+ni+2));
+        logMessage(LOG_NOTICE, "AUX ID %s label set to '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
+      } else {
+        logMessage(LOG_NOTICE, "AUX ID %s has no control panel label using '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
+      }
       //_aqualink_data.aqbuttons[labelid + 1].label = cleanalloc(msg + 5);
     }
   }
@@ -495,7 +563,8 @@ void processMessage(char *message)
     //_aqualink_data.display_message = msg;
     if (_aqualink_data.active_thread.thread_id == 0 &&
         stristr(msg, "JANDY AquaLinkRS") == NULL &&
-        stristr(msg, "PUMP O") == NULL  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
+        //stristr(msg, "PUMP O") == NULL  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
+        strncasecmp(msg, "PUMP O", 6) != 0  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
         stristr(msg, "MAINTAIN") == NULL && // Catch 'MAINTAIN TEMP IS OFF'
         stristr(msg, "0 PSI") == NULL /* // Catch some erronious message on test harness
         stristr(msg, "CLEANER O") == NULL &&
@@ -536,12 +605,12 @@ bool process_packet(unsigned char *packet, int length)
     _aqualink_data.last_packet_type = packet[PKT_CMD];
     rtn = true;
   }
-
+#ifdef AQ_PDA
   if (_aqconfig_.pda_mode == true)
   {
     return process_pda_packet(packet, length);
   }
-
+#endif
   if (processing_long_msg > 0 && packet[PKT_CMD] != CMD_MSG_LONG)
   {
     processing_long_msg = 0;
@@ -611,6 +680,10 @@ bool process_packet(unsigned char *packet, int length)
   case CMD_PROBE:
     logMessage(LOG_DEBUG, "RS Received PROBE length %d.\n", length);
     //logMessage(LOG_INFO, "Synch'ing with Aqualink master device...\n");
+    rtn = false;
+    break;
+  case CMD_RS_UNKNOWN:
+    logMessage(LOG_INFO, "RS Received command, 0x%02hhx, not sure what this is for!\n", packet[PKT_CMD]);
     rtn = false;
     break;
   default:
@@ -836,7 +909,16 @@ int main(int argc, char *argv[])
   initButtons(&_aqualink_data);
   
   read_config(&_aqualink_data, cfgFile);
-
+  
+  // Just so we catch the heaters, make all panels RS8 or RS16
+  //_aqualink_data.total_buttons = _aqconfig_.rs_panel_size + 4; // This would be correct if we re-index heaters.
+#ifdef AQ_RS16
+  if (_aqconfig_.rs_panel_size >= 12)
+    _aqualink_data.total_buttons = 20;
+  else
+#endif
+    _aqualink_data.total_buttons = 12;
+  
   if (cmdln_loglevel != -1)
     _aqconfig_.log_level = cmdln_loglevel;
 
@@ -855,11 +937,12 @@ int main(int argc, char *argv[])
   logMessage(LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 
   logMessage(LOG_NOTICE, "Config log_level         = %d\n", _aqconfig_.log_level);
-  logMessage(LOG_NOTICE, "Config socket_port       = %s\n", _aqconfig_.socket_port);
-  logMessage(LOG_NOTICE, "Config serial_port       = %s\n", _aqconfig_.serial_port);
-  logMessage(LOG_NOTICE, "Config web_directory     = %s\n", _aqconfig_.web_directory);
   logMessage(LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _aqconfig_.device_id);
   logMessage(LOG_NOTICE, "Config extra_device_id   = 0x%02hhx\n", _aqconfig_.onetouch_device_id);
+  logMessage(LOG_NOTICE, "Config serial_port       = %s\n", _aqconfig_.serial_port);
+  logMessage(LOG_NOTICE, "Config rs_panel_size     = %d\n", _aqconfig_.rs_panel_size);
+  logMessage(LOG_NOTICE, "Config socket_port       = %s\n", _aqconfig_.socket_port);
+  logMessage(LOG_NOTICE, "Config web_directory     = %s\n", _aqconfig_.web_directory);
   logMessage(LOG_NOTICE, "Config extra_device_prog = %s\n", bool2text(_aqconfig_.extended_device_id_programming));
   logMessage(LOG_NOTICE, "Config read_all_devices  = %s\n", bool2text(_aqconfig_.read_all_devices));
   logMessage(LOG_NOTICE, "Config use_aux_labels    = %s\n", bool2text(_aqconfig_.use_panel_aux_labels));
@@ -877,8 +960,10 @@ int main(int argc, char *argv[])
   logMessage(LOG_NOTICE, "Config idx spa temp      = %d\n", _aqconfig_.dzidx_spa_water_temp);
   logMessage(LOG_NOTICE, "Config idx SWG Percent   = %d\n", _aqconfig_.dzidx_swg_percent);
   logMessage(LOG_NOTICE, "Config idx SWG PPM       = %d\n", _aqconfig_.dzidx_swg_ppm);
+#ifdef AQ_PDA
   logMessage(LOG_NOTICE, "Config PDA Mode          = %s\n", bool2text(_aqconfig_.pda_mode));
   logMessage(LOG_NOTICE, "Config PDA Sleep Mode    = %s\n", bool2text(_aqconfig_.pda_sleep_mode));
+#endif
   logMessage(LOG_NOTICE, "Config force SWG         = %s\n", bool2text(_aqconfig_.force_swg));
   /* removed until domoticz has a better virtual thermostat
   logMessage(LOG_NOTICE, "Config idx pool thermostat = %d\n", _aqconfig_.dzidx_pool_thermostat);
@@ -898,7 +983,8 @@ int main(int argc, char *argv[])
     logMessage(LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
 
 
-  for (i = 0; i < TOTAL_BUTONS; i++)
+  //for (i = 0; i < TOTAL_BUTONS; i++)
+  for (i = 0; i < _aqualink_data.total_buttons; i++)
   {
     //char ext[] = " VSP ID None | AL ID 0 ";
     char ext[40];
@@ -916,13 +1002,16 @@ int main(int argc, char *argv[])
     if (_aqualink_data.aqbuttons[i].dz_idx > 0)
       sprintf(ext+strlen(ext), "dzidx %-3d", _aqualink_data.aqbuttons[i].dz_idx);
 
-    if (!_aqconfig_.pda_mode) {
-      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
-                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);
-    } else {
+#ifdef AQ_PDA
+    if (_aqconfig_.pda_mode) {
       logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | PDAlabel %-15s | %s\n", 
                            _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label,
                            _aqualink_data.aqbuttons[i].pda_label, ext);
+    } else
+#endif
+    {
+      logMessage(LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
     }
   }
 
@@ -954,20 +1043,20 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer) {
     return;
   } 
 
-  //if (!_aqualink_data.simulate_panel || _aqualink_data.active_thread.thread_id != 0) {
-    // if PDA mode, should we sleep? if not Can only send command to status message on PDA.
+  // if PDA mode, should we sleep? if not Can only send command to status message on PDA.
+#ifdef AQ_PDA
   if (_aqconfig_.pda_mode == true) {
       //pda_programming_thread_check(&_aqualink_data);
       if (_aqconfig_.pda_sleep_mode && pda_shouldSleep()) {
         logMessage(LOG_DEBUG, "PDA Aqualink daemon in sleep mode\n");
         return;
-      //} else if (packet_buffer[PKT_CMD] != CMD_STATUS)  // Moved logic to pop_aq_cmd()
-      //  send_extended_ack(rs_fd, ACK_PDA, NUL);
       } else {
         send_extended_ack(rs_fd, ACK_PDA, pop_aq_cmd(&_aqualink_data));
       }
     
-  } else if (_aqualink_data.simulate_panel && _aqualink_data.active_thread.thread_id == 0) { 
+  } else
+#endif 
+  if (_aqualink_data.simulate_panel && _aqualink_data.active_thread.thread_id == 0) { 
     // We are in simlator mode, ack get's complicated now.
     // If have a command to send, send a normal ack.
     // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
@@ -1090,6 +1179,7 @@ void main_loop()
   rs_fd = init_serial_port(_aqconfig_.serial_port);
   logMessage(LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
 
+#ifdef AQ_PDA
   if (_aqconfig_.pda_mode == true)
   {
     #ifdef BETA_PDA_AUTOLABEL
@@ -1098,6 +1188,7 @@ void main_loop()
       init_pda(&_aqualink_data);
     #endif
   }
+#endif
   if (_aqconfig_.onetouch_device_id != 0x00)
   {
     set_onetouch_enabled(true);
@@ -1172,7 +1263,11 @@ void main_loop()
         
         changed = process_packet(packet_buffer, packet_length);
         // If we are not in PDA or Simulator mode, just sent ACK & any CMD, else caculate the ACK.
-        if (!_aqualink_data.simulate_panel && !_aqconfig_.pda_mode) {
+        if (!_aqualink_data.simulate_panel 
+#ifdef AQ_PDA 
+               && !_aqconfig_.pda_mode 
+#endif 
+           ) {
           //send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
           send_extended_ack(rs_fd, (_aqualink_data.last_packet_type==CMD_MSG_LONG?ACK_SCREEN_BUSY_SCROLL:ACK_NORMAL), pop_aq_cmd(&_aqualink_data));
         } else

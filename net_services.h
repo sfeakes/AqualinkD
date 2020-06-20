@@ -6,6 +6,11 @@
 #define GET_RTN_NOT_CHANGED "Not Changed"
 #define GET_RTN_ERROR "Error"
 
+
+#define CONTENT_JSON "Content-Type: application/json"
+#define CONTENT_JS   "Content-Type: text/javascript"
+#define CONTENT_TEXT  "Content-Type: text/plain"
+
 //void main_server();
 //void main_server_TEST(struct aqualinkdata *aqdata, char *s_http_port);
 //bool start_web_server(struct mg_mgr *mgr, struct aqualinkdata *aqdata, char *port, char* web_root);

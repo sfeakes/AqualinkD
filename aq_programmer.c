@@ -26,12 +26,17 @@
 #include "utils.h"
 #include "aq_programmer.h"
 #include "aq_serial.h"
-#include "pda.h"
-#include "pda_menu.h"
+
+#ifdef AQ_PDA
+  #include "pda.h"
+  #include "pda_menu.h"
+  #include "pda_aq_programmer.h"
+#endif
+
 #include "init_buttons.h"
-#include "pda_aq_programmer.h"
 #include "onetouch_aq_programmer.h"
 #include "color_lights.h"
+#include "config.h"
 
 #ifdef AQ_DEBUG
   #include <time.h>
@@ -56,7 +61,9 @@ void *get_aqualink_aux_labels( void *ptr );
 //void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_programmode( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
+#ifdef AQ_PDA
 void *set_aqualink_PDA_init( void *ptr );
+#endif
 void *set_aqualink_SWG( void *ptr );
 void *set_aqualink_boost( void *ptr );
 void *set_aqualink_pump_rpm( void *ptr );
@@ -302,27 +309,32 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   return rtn;
 }
 
-void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels)
+void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data)
 {
   // Wait for onetouch if enabeled.
   if ( source_type == ALLBUTTON && ( onetouch_enabled() == false || extended_device_id_programming() == false ) ) {
     aq_send_cmd(NUL);
     aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
     aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data);
-    if (labels)
+    if (_aqconfig_.use_panel_aux_labels)
       aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
   } else if ( source_type == ONETOUCH) {
     aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data);
+    if (_aqconfig_.use_panel_aux_labels)
+      aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+#ifdef AQ_PDA
   } else if ( source_type == AQUAPDA) {
     aq_programmer(AQ_PDA_INIT, NULL, aq_data);
+#endif
   }
 }
 
+/*
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data)
 {
   queueGetExtendedProgramData(source_type, aq_data, false);
 }
-
+*/
 /*
 void kick_aq_program_thread(struct aqualinkdata *aq_data)
 {
@@ -361,15 +373,16 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
       logMessage(LOG_DEBUG, "Kicking OneTouch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);   
     } 
-    else if (source_type == AQUAPDA && !in_ot_programming_mode(aq_data)) {
-      logMessage(LOG_DEBUG, "Kicking PDA thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
-      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
-    }
     else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data)) {
       logMessage(LOG_DEBUG, "Kicking RS thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
-     
+#ifdef AQ_PDA
+    else if (source_type == AQUAPDA && !in_ot_programming_mode(aq_data)) {
+      logMessage(LOG_DEBUG, "Kicking PDA thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
+    }
+#endif     
   }
 }
 
@@ -402,6 +415,7 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
     }
   }
 
+#ifdef AQ_PDA
   // Check we are doing something valid request
   if (pda_mode() == true) {
     pda_reset_sleep();
@@ -420,12 +434,9 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         type != AQ_SET_BOOST) {
       logMessage(LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
-    } /*else if (onetouch_enabled() == false && 
-        ( type != AQ_SET_ONETOUCH_PUMP_RPM || type != AQ_SET_ONETOUCH_MACRO || type != AQ_GET_ONETOUCH_SETPOINTS)) {
-      logMessage(LOG_ERR, "Selected Programming mode '%d' not supported without OneTouch mode (extra_device_id) enabled\n",type);
-      return;
-    }*/
+    } 
   }
+#endif
 
   programmingthread->aq_data = aq_data;
   programmingthread->thread_id = 0;
@@ -516,32 +527,8 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
-    case AQ_PDA_INIT:
-      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_init, (void*)programmingthread) < 0) {
-        logMessage (LOG_ERR, "could not create thread\n");
-        return;
-      }
-      break;
-    case AQ_PDA_WAKE_INIT:
-      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_wakeinit, (void*)programmingthread) < 0) {
-        logMessage (LOG_ERR, "could not create thread\n");
-        return;
-      }
-      break;
     case AQ_SET_SWG_PERCENT:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_SWG, (void*)programmingthread) < 0) {
-        logMessage (LOG_ERR, "could not create thread\n");
-        return;
-      }
-      break;
-    case AQ_PDA_DEVICE_STATUS:
-      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_PDA_device_status, (void*)programmingthread) < 0) {
-        logMessage (LOG_ERR, "could not create thread\n");
-        return;
-      }
-      break;
-    case AQ_PDA_DEVICE_ON_OFF:
-      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_device_on_off, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
@@ -606,6 +593,34 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
+
+#ifdef AQ_PDA
+    case AQ_PDA_INIT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_init, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_PDA_WAKE_INIT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_wakeinit, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_PDA_DEVICE_STATUS:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_PDA_device_status, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_PDA_DEVICE_ON_OFF:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_device_on_off, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+  #endif
+
     default:
         logMessage (LOG_ERR, "Didn't understand programming mode type\n");
       break;
@@ -664,7 +679,8 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
     clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
   #endif
 
-  //logMessage (LOG_DEBUG, "Thread %d is active\n", threadCtrl->aq_data->active_thread.thread_id);
+  logMessage (LOG_NOTICE, "Programming: %s\n", ptypeName(threadCtrl->aq_data->active_thread.ptype));
+
   logMessage (LOG_DEBUG, "Thread %d,%p is active (%s)\n",
               threadCtrl->aq_data->active_thread.ptype,
               threadCtrl->aq_data->active_thread.thread_id,
@@ -835,11 +851,13 @@ STOP BOOST POOL
  */
   int val = atoi((char*)threadCtrl->thread_args);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
       set_PDA_aqualink_boost(aq_data, val);
       cleanAndTerminateThread(threadCtrl);
       return ptr;
   }
+#endif
 
   logMessage(LOG_DEBUG, "programming BOOST to %s\n", val==true?"On":"Off");
 
@@ -923,13 +941,15 @@ void *set_aqualink_SWG( void *ptr )
   int val = atoi((char*)threadCtrl->thread_args);
   val = setpoint_check(SWG_SETPOINT, val, aq_data);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
       set_PDA_aqualink_SWG_setpoint(aq_data, val);
       cleanAndTerminateThread(threadCtrl);
       return ptr;
   }
+#endif 
 
-  logMessage(LOG_NOTICE, "programming SWG percent to %d\n", val);
+  //logMessage(LOG_NOTICE, "programming SWG percent to %d\n", val);
 
   if ( select_menu_item(aq_data, "SET AQUAPURE") != true ) {
     logMessage(LOG_WARNING, "Could not select SET AQUAPURE menu\n");
@@ -994,11 +1014,13 @@ void *get_aqualink_aux_labels( void *ptr )
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_AUX_LABELS);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
       get_PDA_aqualink_aux_labels(aq_data);
       cleanAndTerminateThread(threadCtrl);
       return ptr;
   }
+#endif
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
@@ -1037,7 +1059,7 @@ void *set_aqualink_light_colormode( void *ptr )
   int btn = atoi(&buf[5]);
   int typ = atoi(&buf[10]);
 
-  if (btn < 0 || btn >= TOTAL_BUTTONS ) {
+  if (btn < 0 || btn >= aq_data->total_buttons ) {
     logMessage(LOG_ERR, "Can't program light mode on button %d\n", btn);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1055,7 +1077,7 @@ void *set_aqualink_light_colormode( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   } else {
-    logMessage(LOG_NOTICE, "Light Programming #: %d, on button: %s, color light type: %d, name '%s'\n", val, button->label, typ, mode_name);
+    logMessage(LOG_INFO, "Light Programming #: %d, on button: %s, color light type: %d, name '%s'\n", val, button->label, typ, mode_name);
   }
 
   // Simply turn the light off if value is 0
@@ -1128,7 +1150,7 @@ void *set_aqualink_light_programmode( void *ptr )
   int iOff = atoi(&buf[15]);
   float pmode = atof(&buf[20]);
 
-  if (btn < 0 || btn >= TOTAL_BUTTONS ) {
+  if (btn < 0 || btn >= aq_data->total_buttons ) {
     logMessage(LOG_ERR, "Can't program light mode on button %d\n", btn);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1137,7 +1159,7 @@ void *set_aqualink_light_programmode( void *ptr )
   aqkey *button = &aq_data->aqbuttons[btn];
   unsigned char code = button->code;
 
-  logMessage(LOG_NOTICE, "Light Programming #: %d, on button: %s, with pause mode: %f (initial on=%d, initial off=%d)\n", val, button->label, pmode, iOn, iOff);
+  logMessage(LOG_INFO, "Light Programming #: %d, on button: %s, with pause mode: %f (initial on=%d, initial off=%d)\n", val, button->label, pmode, iOn, iOff);
 
   // Simply turn the light off if value is 0
   if (val <= 0) {
@@ -1211,11 +1233,13 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   */
   val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
     set_PDA_aqualink_heater_setpoint(aq_data, val, true);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
+#endif
 
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
   if (aq_data->single_device == true ){
@@ -1284,12 +1308,13 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   }*/
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
     set_PDA_aqualink_heater_setpoint(aq_data, val, false);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
-
+#endif
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
 
   if (aq_data->single_device == true ){
@@ -1360,12 +1385,13 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
 
   logMessage(LOG_DEBUG, "Setting sfreeze protection to %d\n", val);
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
     set_PDA_aqualink_freezeprotect_setpoint(aq_data, val);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
-
+#endif
   //setAqualinkTemp(aq_data, "SYSTEM SETUP", "FRZ PROTECT", "TEMP SETTING", "FRZ", val);
   if ( select_menu_item(aq_data, "SYSTEM SETUP") != true ) {
     logMessage(LOG_WARNING, "Could not select SYSTEM SETUP menu\n");
@@ -1404,7 +1430,7 @@ void *set_aqualink_time( void *ptr )
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_TIME);
-  logMessage(LOG_NOTICE, "Setting time on aqualink\n");
+  //logMessage(LOG_NOTICE, "Setting time on aqualink\n");
 
   time_t now = time(0);   // get time now
   struct tm *result = localtime(&now);
@@ -1482,8 +1508,9 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr )
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_POOL_SPA_HEATER_TEMPS);
-  logMessage(LOG_NOTICE, "Getting pool & spa heat setpoints from aqualink\n");
+  //logMessage(LOG_NOTICE, "Getting pool & spa heat setpoints from aqualink\n");
 
+#ifdef AQ_PDA
   if (pda_mode() == true) {
     if (!get_PDA_aqualink_pool_spa_heater_temps(aq_data)) {
       logMessage(LOG_ERR, "Error Getting PDA pool & spa heat protection setpoints\n");
@@ -1491,6 +1518,7 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
+#endif
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
@@ -1524,9 +1552,9 @@ void *get_freeze_protect_temp( void *ptr )
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_FREEZE_PROTECT_TEMP);
-  logMessage(LOG_NOTICE, "Getting freeze protection setpoints\n");
+  //logMessage(LOG_NOTICE, "Getting freeze protection setpoints\n");
 
-
+#ifdef AQ_PDA
   if (pda_mode() == true) {
     if (! get_PDA_freeze_protect_temp(aq_data)) {
       logMessage(LOG_ERR, "Error Getting PDA freeze protection setpoints\n");
@@ -1534,6 +1562,7 @@ void *get_freeze_protect_temp( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
+#endif
 
   if ( select_menu_item(aq_data, "REVIEW") != true ) {
     logMessage(LOG_WARNING, "Could not select REVIEW menu\n");
@@ -1641,12 +1670,14 @@ void _waitfor_queue2empty(bool longwait)
   }
 
   if (_pgm_command != NUL) {
+    #ifdef AQ_PDA
     if (pda_mode()) {
       // Wait for longer in PDA mode since it's slower.
       while ( (_pgm_command != NUL) && ( i++ < (150*(longwait?2:1)) ) ) {
         delay(100);
       }
     }
+    #endif
     logMessage(LOG_WARNING, "Send command Queue did not empty, timeout\n");
   }
 
@@ -1971,23 +2002,8 @@ const char *ptypeName(program_type type)
     case AQ_SET_LIGHTCOLOR_MODE:
       return "Set light color (using Panel)";
     break;
-    case AQ_PDA_INIT:
-      return "Init PDA";
-    break;
-    case AQ_SET_SWG_PERCENT:
+     case AQ_SET_SWG_PERCENT:
       return "Set SWG percent";
-    break;
-    case AQ_PDA_DEVICE_STATUS:
-      return "Get PDA Device status";
-    break;
-    case AQ_PDA_DEVICE_ON_OFF:
-      return "Switch PDA device on/off";
-    break;
-    case AQ_GET_AUX_LABELS:
-      return "Get AUX labels";
-    break;
-    case AQ_PDA_WAKE_INIT:
-      return "PDA init after wake";
     break;
      case AQ_SET_BOOST:
       return "SWG Boost";
@@ -2019,6 +2035,23 @@ const char *ptypeName(program_type type)
     case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
       return "Set OneTouch Spa Heater Temp";
     break;
+#ifdef AQ_PDA
+    case AQ_PDA_INIT:
+      return "Init PDA";
+    break;
+    case AQ_PDA_DEVICE_STATUS:
+      return "Get PDA Device status";
+    break;
+    case AQ_PDA_DEVICE_ON_OFF:
+      return "Switch PDA device on/off";
+    break;
+    case AQ_GET_AUX_LABELS:
+      return "Get AUX labels";
+    break;
+    case AQ_PDA_WAKE_INIT:
+      return "PDA init after wake";
+    break;
+#endif
     case AQP_NULL:
     default:
       return "Unknown";
@@ -2033,7 +2066,9 @@ const char *programtypeDisplayName(program_type type)
     case AQ_GET_POOL_SPA_HEATER_TEMPS:
     case AQ_GET_ONETOUCH_SETPOINTS:
     case AQ_GET_FREEZE_PROTECT_TEMP:
+#ifdef AQ_PDA
     case AQ_PDA_INIT:
+#endif
       return "Programming: retrieving setpoints";
     break;
     case AQ_SET_ONETOUCH_TIME:
@@ -2064,20 +2099,11 @@ const char *programtypeDisplayName(program_type type)
     case AQ_SET_ONETOUCH_SWG_PERCENT:
       return "Programming: setting SWG percent";
     break;
-    case AQ_PDA_DEVICE_STATUS:
-      return "Programming: retrieving PDA Device status";
-    break;
-    case AQ_PDA_DEVICE_ON_OFF:
-      return "Programming: setting device on/off";
-    break;
     case AQ_GET_AUX_LABELS:
       return "Programming: retrieving AUX labels";
     break;
-    case AQ_PDA_WAKE_INIT:
-      return "Programming: PDA wakeup";
-    break;
-     case AQ_SET_BOOST:
-     case AQ_SET_ONETOUCH_BOOST:
+    case AQ_SET_BOOST:
+    case AQ_SET_ONETOUCH_BOOST:
       return "Programming: setting SWG Boost";
     break;
     case AQ_SET_ONETOUCH_PUMP_RPM:
@@ -2086,7 +2112,17 @@ const char *programtypeDisplayName(program_type type)
     case AQ_SET_ONETOUCH_MACRO:
       return "Programming: setting OneTouch Macro";
     break;
- 
+#ifdef AQ_PDA
+    case AQ_PDA_DEVICE_STATUS:
+      return "Programming: retrieving PDA Device status";
+    break;
+    case AQ_PDA_DEVICE_ON_OFF:
+      return "Programming: setting device on/off";
+    break;
+    case AQ_PDA_WAKE_INIT:
+      return "Programming: PDA wakeup";
+    break;
+#endif
     default:
       return "Programming: please wait!";
     break;

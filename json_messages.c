@@ -216,7 +216,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
 
   length += sprintf(buffer+length,  ", \"devices\": [");
   
-  for (i=0; i < TOTAL_BUTTONS; i++) 
+  for (i=0; i < aqdata->total_buttons; i++) 
   {
     if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && aqdata->pool_htr_set_point != TEMP_UNKNOWN) {
       length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
@@ -468,30 +468,12 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     length += sprintf(buffer+length, ",\"chem_orp\":\"%d\"",aqdata->orp );
 
   length += sprintf(buffer+length, ",\"leds\":{" );
-  for (i=0; i < TOTAL_BUTTONS; i++) 
+  for (i=0; i < aqdata->total_buttons; i++) 
   {
-    /*
-    char *state = JSON_OFF;
-    switch (aqdata->aqbuttons[i].led->state)
-    {
-      case ON:
-        state = JSON_ON;
-      break;
-      case OFF:
-      case LED_S_UNKNOWN:
-        state = JSON_OFF;
-      break;
-      case FLASH:
-        state = JSON_FLASH;
-      break;
-      case ENABLE:
-        state = JSON_ENABLED;
-      break;
-    }*/ 
     char *state = LED2text(aqdata->aqbuttons[i].led->state);
     length += sprintf(buffer+length, "\"%s\": \"%s\"", aqdata->aqbuttons[i].name, state);
     
-    if (i+1 < TOTAL_BUTTONS)
+    if (i+1 < aqdata->total_buttons)
       length += sprintf(buffer+length, "," );
   }
 
@@ -524,40 +506,6 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   length += sprintf(buffer+length, "}" );
   
   buffer[length] = '\0';
- 
- /*
-  buffer[length] = '\0';
-  
-  strncpy(buffer2, test_message, strlen(test_message)+1);
-   
-  for (i=0; i < strlen(buffer); i++) {
-    logMessage (LOG_DEBUG, "buffer[%d] = '%c' | '%c'\n",i,buffer[i],buffer2[i]);
-  }
-  
-  logMessage (LOG_DEBUG, "JSON Size %d\n",strlen(buffer));
-  printf("%s\n",buffer);
-  for (i=strlen(buffer); i > strlen(buffer)-10; i--) {
-    logMessage (LOG_DEBUG, "buffer[%d] = '%c'\n",i,buffer[i]);
-  }
-  for (i=10; i >= 0; i--) {
-    logMessage (LOG_DEBUG, "buffer[%d] = '%c'\n",i,buffer[i]);
-  }
-  
-  //return length-1;
-  
- 
-  logMessage (LOG_DEBUG, "JSON Size %d\n",strlen(buffer2));
-  printf("%s\n",buffer2);
-  for (i=strlen(buffer2); i > strlen(buffer2)-10; i--) {
-    logMessage (LOG_DEBUG, "buffer[%d] = '%c'\n",i,buffer2[i]);
-  }
-  for (i=10; i >= 0; i--) {
-    logMessage (LOG_DEBUG, "buffer[%d] = '%c'\n",i,buffer2[i]);
-  }
-  //return strlen(test_message);
-  */
-  
-  //printf("Buffer = %d, JSON = %d",size ,strlen(buffer));
   
   return strlen(buffer);
 }
@@ -570,7 +518,7 @@ int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
   
   length += sprintf(buffer+length, "{\"type\": \"aux_labels\"");
   
-  for (i=0; i < TOTAL_BUTTONS; i++) 
+  for (i=0; i < aqdata->total_buttons; i++) 
   {
     length += sprintf(buffer+length, ",\"%s\": \"%s\"", aqdata->aqbuttons[i].name, aqdata->aqbuttons[i].label);
   }
@@ -587,6 +535,63 @@ int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 // WS Received '{"parameter":"SPA_HTR","value":99}'
 // WS Received '{"command":"KEY_HTR_POOL"}'
 // WS Received '{"command":"GET_AUX_LABELS"}'
+
+bool parseJSONrequest(char *buffer, struct JSONkvptr *request)
+{
+  int i=0;
+  int found=0;
+  bool reading = false;
+
+  request->kv[0].key   = NULL;
+  request->kv[0].value = NULL;
+  request->kv[1].key   = NULL;
+  request->kv[1].value = NULL;
+  request->kv[2].key   = NULL;
+  request->kv[2].value = NULL;
+  request->kv[3].key   = NULL;
+  request->kv[3].value = NULL;
+
+  int length = strlen(buffer);
+
+  while ( i < length )
+  {
+//printf ("Reading %c",buffer[i]);
+    switch (buffer[i]) {
+    case '{':
+    case '"':
+    case '}':
+    case ':':
+    case ',':
+    case ' ':
+      // Ignore space , : if reading a string
+      if (reading == true && buffer[i] != ' ' && buffer[i] != ',' && buffer[i] != ':'){
+ //printf (" <-  END");
+        reading = false;
+        buffer[i] = '\0';
+        found++;
+      }
+      break;
+      
+    default:
+      if (reading == false) {
+//printf (" <-  START");
+        reading = true;
+        if ( found%2 == 0 )
+          request->kv[found / 2].key = &buffer[i];
+        else
+          request->kv[(found-1) / 2].value = &buffer[i];
+      }
+      break;
+    }
+//printf ("\n");
+    if (found >= 8)
+    break;
+    
+    i++;
+  }
+  
+  return true;
+}
 
 bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request)
 {

@@ -82,7 +82,7 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
 bool in_ot_programming_mode(struct aqualinkdata *aq_data);
 void aq_send_cmd(unsigned char cmd);
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
-void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
+//void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
 

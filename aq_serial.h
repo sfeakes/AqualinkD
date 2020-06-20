@@ -74,11 +74,19 @@
 #define CMD_STATUS      0x02
 #define CMD_MSG         0x03
 #define CMD_MSG_LONG    0x04
+#define CMD_RS_UNKNOWN  0x08
 
 /* ACK RETURN COMMANDS */
+/*
 #define ACK_NORMAL               0x00
-#define ACK_SCREEN_BUSY_SCROLL   0x01 // Seems to be busy but can cache a message,
-#define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me shit.
+#define ACK_SCREEN_BUSY_SCROLL   0x01 // Seems to be busy displaying last message, but can cache next message,
+#define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me any more shit.
+*/
+// Some keypads use 0x00 some 0x80 (think it's something to do with version, but need to figure it out)
+#define ACK_NORMAL               0x80
+#define ACK_SCREEN_BUSY_SCROLL   0x81 // Seems to be busy displaying last message, but can cache next message,
+#define ACK_SCREEN_BUSY_BLOCK    0x83 // Seems to be don't send me any more shit.
+
 
 // Remove this and fix all compile errors when get time.
 #define ACK_SCREEN_BUSY ACK_SCREEN_BUSY_SCROLL
@@ -133,6 +141,24 @@
 #define KEY_OVERRIDE  0x1e
 #define KEY_ENTER     0x1d
 
+#ifdef AQ_RS16
+//RS 12 & 16 are different from Aux4 to Aux7
+#define KEY_RS16_AUX4      0x14
+#define KEY_RS16_AUX5      0x03
+#define KEY_RS16_AUX6      0x07
+#define KEY_RS16_AUX7      0x06
+// RS 12 & 16 have extra buttons
+#define KEY_AUXB1     0x0b
+#define KEY_AUXB2     0x10
+#define KEY_AUXB3     0x15
+#define KEY_AUXB4     0x1a
+#define KEY_AUXB5     0x04
+#define KEY_AUXB6     0x08
+#define KEY_AUXB7     0x0d
+#define KEY_AUXB8     0x0c
+// End diff in RS12
+#endif
+
 #define BTN_PUMP      "Filter_Pump"
 #define BTN_SPA       "Spa_Mode"
 #define BTN_AUX1      "Aux_1"
@@ -145,6 +171,17 @@
 #define BTN_POOL_HTR  "Pool_Heater"
 #define BTN_SPA_HTR   "Spa_Heater"
 #define BTN_SOLAR_HTR "Solar_Heater"
+
+#ifdef AQ_RS16
+#define BTN_AUXB1      "Aux_B1"
+#define BTN_AUXB2      "Aux_B2"
+#define BTN_AUXB3      "Aux_B3"
+#define BTN_AUXB4      "Aux_B4"
+#define BTN_AUXB5      "Aux_B5"
+#define BTN_AUXB6      "Aux_B6"
+#define BTN_AUXB7      "Aux_B7"
+#define BTN_AUXB8      "Aux_B8"
+#endif
 
 #define BTN_PDA_PUMP      "FILTER PUMP"
 #define BTN_PDA_SPA       "SPA"
@@ -160,7 +197,12 @@
 #define BTN_PDA_SOLAR_HTR "EXTRA AUX"
 
 #define BUTTON_LABEL_LENGTH 20
+
+#ifndef AQ_RS16
 #define TOTAL_LEDS          20
+#else
+#define TOTAL_LEDS          24  // Only 20 exist in control panel, but need space for the extra buttons on RS16 panel
+#endif
 
 // Index starting at 1
 #define POOL_HTR_LED_INDEX   15
@@ -318,8 +360,10 @@ typedef enum {
 
 int init_serial_port(const char* tty);
 void close_serial_port(int file_descriptor);
+#ifdef AQ_PDA
 void set_pda_mode(bool mode);
 bool pda_mode();
+#endif
 int generate_checksum(unsigned char* packet, int length);
 protocolType getProtocolType(unsigned char* packet);
 bool check_jandy_checksum(unsigned char* packet, int length);

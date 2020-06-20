@@ -9,6 +9,12 @@
 
 void initButtons(struct aqualinkdata *aqdata);
 
+#ifndef AQ_RS16
 #define TOTAL_BUTONS 12
+#else
+#define TOTAL_BUTONS 20
+// This needs to be called AFTER and as well as initButtons
+void initButtons_RS16(struct aqualinkdata *aqdata);
+#endif
 
 #endif

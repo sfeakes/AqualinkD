@@ -1,0 +1,247 @@
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x41|0xcb|0x10|0x03|
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x02|0x00|0x10|0x40|0x00|0x00|0x6f|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x00|0x1c|0x10|0x03|
+Debug:  RS received packet of type Probe length 7
+Debug:  RS Received PROBE length 7.
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x02|0x00|0x10|0x40|0x00|0x00|0x6f|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Info:   URI request: '/debug.html?command=debug&value=status'
+Info:   WEB: Message command='debug'
+Debug:  Served WEB request
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x02|0x00|0x10|0x40|0x00|0x00|0x6e|0x10|0x03|
+Debug:  RS received packet of type Status length 12
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Info:   MQTT: Published id=2: aqualinkd-test/Service_Mode 0
+Info:   MQTT: Published id=3: aqualinkd-test/Temperature/Spa -18.00
+Info:   MQTT: Published id=4: aqualinkd-test/Freeze_Protect 0
+Info:   MQTT: Published id=5: aqualinkd-test/Battery 1
+Info:   MQTT: Published id=6: aqualinkd-test/SWG 0
+Info:   MQTT: Published id=7: aqualinkd-test/SWG/enabled 0
+Info:   MQTT: Published id=8: aqualinkd-test/SWG/fullstatus 255
+Info:   MQTT: Published id=9: aqualinkd-test/SWG/Boost 0
+Info:   MQTT: Published id=10: aqualinkd-test/Filter_Pump/delay 0
+Info:   MQTT: Published id=11: aqualinkd-test/Filter_Pump 1
+Info:   MQTT: Published id=12: aqualinkd-test/Spa_Mode/delay 0
+Info:   MQTT: Published id=13: aqualinkd-test/Spa_Mode 0
+Info:   MQTT: Published id=14: aqualinkd-test/Aux_1/delay 0
+Info:   MQTT: Published id=15: aqualinkd-test/Aux_1 0
+Info:   MQTT: Published id=16: aqualinkd-test/Aux_2/delay 0
+Info:   MQTT: Published id=17: aqualinkd-test/Aux_2 0
+Info:   MQTT: Published id=18: aqualinkd-test/Aux_3/delay 0
+Info:   MQTT: Published id=19: aqualinkd-test/Aux_3 0
+Info:   MQTT: Published id=20: aqualinkd-test/Aux_4/delay 0
+Info:   MQTT: Published id=21: aqualinkd-test/Aux_4 0
+Info:   MQTT: Published id=22: aqualinkd-test/Aux_5/delay 0
+Info:   MQTT: Published id=23: aqualinkd-test/Aux_5 0
+Info:   MQTT: Published id=24: aqualinkd-test/Aux_6/delay 0
+Info:   MQTT: Published id=25: aqualinkd-test/Aux_6 0
+Info:   MQTT: Published id=26: aqualinkd-test/Aux_7/delay 0
+Info:   MQTT: Published id=27: aqualinkd-test/Aux_7 0
+Info:   MQTT: Published id=28: aqualinkd-test/Aux_B1/delay 0
+Info:   MQTT: Published id=29: aqualinkd-test/Aux_B1 0
+Info:   MQTT: Published id=30: aqualinkd-test/Aux_B2/delay 0
+Info:   MQTT: Published id=31: aqualinkd-test/Aux_B2 1
+Info:   MQTT: Published id=32: aqualinkd-test/Aux_B3/delay 0
+Info:   MQTT: Published id=33: aqualinkd-test/Aux_B3 0
+Info:   MQTT: Published id=34: aqualinkd-test/Aux_B4/delay 0
+Info:   MQTT: Published id=35: aqualinkd-test/Aux_B4 0
+Info:   MQTT: Published id=36: aqualinkd-test/Pool_Heater 0
+Info:   MQTT: Published id=37: aqualinkd-test/Pool_Heater/enabled 0
+Info:   MQTT: Published id=38: aqualinkd-test/Spa_Heater 0
+Info:   MQTT: Published id=39: aqualinkd-test/Spa_Heater/enabled 0
+Info:   MQTT: Published id=40: aqualinkd-test/Solar_Heater/delay 0
+Info:   MQTT: Published id=41: aqualinkd-test/Solar_Heater 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 2)
+Debug:  MQTT: Ignore aqualinkd-test/Service_Mode 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 3)
+Debug:  MQTT: received (msg_id: 3), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Temperature/Spa -18.00
+Debug:  MQTT: Message publishing acknowledged (msg_id: 4)
+Debug:  MQTT: received (msg_id: 4), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Freeze_Protect 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 5)
+Debug:  MQTT: received (msg_id: 5), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Battery 1
+Debug:  MQTT: Message publishing acknowledged (msg_id: 6)
+Debug:  MQTT: received (msg_id: 6), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/SWG 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 7)
+Debug:  MQTT: received (msg_id: 7), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/SWG/enabled 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 8)
+Debug:  MQTT: received (msg_id: 8), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/SWG/fullstatus 255
+Debug:  MQTT: Message publishing acknowledged (msg_id: 9)
+Debug:  MQTT: received (msg_id: 9), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/SWG/Boost 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 10)
+Debug:  MQTT: received (msg_id: 10), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Filter_Pump/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 11)
+Debug:  MQTT: received (msg_id: 11), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Filter_Pump 1
+Debug:  MQTT: Message publishing acknowledged (msg_id: 12)
+Debug:  MQTT: received (msg_id: 12), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Spa_Mode/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 13)
+Debug:  MQTT: received (msg_id: 13), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Spa_Mode 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 14)
+Debug:  MQTT: received (msg_id: 14), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_1/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 15)
+Debug:  MQTT: received (msg_id: 15), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_1 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 16)
+Debug:  MQTT: received (msg_id: 16), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_2/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 17)
+Debug:  MQTT: received (msg_id: 17), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_2 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 18)
+Debug:  MQTT: received (msg_id: 18), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_3/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 19)
+Debug:  MQTT: received (msg_id: 19), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_3 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 20)
+Debug:  MQTT: received (msg_id: 20), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_4/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 21)
+Debug:  MQTT: received (msg_id: 21), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_4 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 22)
+Debug:  MQTT: received (msg_id: 22), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_5/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 23)
+Debug:  MQTT: received (msg_id: 23), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_5 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 24)
+Debug:  MQTT: received (msg_id: 24), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_6/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 25)
+Debug:  MQTT: received (msg_id: 25), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_6 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 26)
+Debug:  MQTT: received (msg_id: 26), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_7/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 27)
+Debug:  MQTT: received (msg_id: 27), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_7 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 28)
+Debug:  MQTT: received (msg_id: 28), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B1/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 29)
+Debug:  MQTT: received (msg_id: 29), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B1 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 30)
+Debug:  MQTT: received (msg_id: 30), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B2/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 31)
+Debug:  MQTT: received (msg_id: 31), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B2 1
+Debug:  MQTT: Message publishing acknowledged (msg_id: 32)
+Debug:  MQTT: received (msg_id: 32), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B3/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 33)
+Debug:  MQTT: received (msg_id: 33), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B3 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 34)
+Debug:  MQTT: received (msg_id: 34), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B4/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 35)
+Debug:  MQTT: received (msg_id: 35), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Aux_B4 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 36)
+Debug:  MQTT: received (msg_id: 36), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Pool_Heater 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 37)
+Debug:  MQTT: received (msg_id: 37), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Pool_Heater/enabled 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 38)
+Debug:  MQTT: received (msg_id: 38), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Spa_Heater 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 39)
+Debug:  MQTT: received (msg_id: 39), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Spa_Heater/enabled 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 40)
+Debug:  MQTT: received (msg_id: 40), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd-test/Solar_Heater/delay 0
+Debug:  MQTT: Message publishing acknowledged (msg_id: 41)
+Debug:  MQTT: Ignore aqualinkd-test/Solar_Heater 0
+Debug:  Serial read 10 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x08|0x00|0x1c|0x22|0x62|0x10|0x03|
+Debug:  RS received packet of type PDA Hlight length 10
+Info:   RS Received unknown packet, 0x08
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 24 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x03|0x01|0x42|0x30|0x30|0x32|0x39|0x32|0x33|0x31|0x20|0x52|0x45|0x56|0x20|0x54|0x2e|0x30|0xa2|0x10|0x03|
+Debug:  RS received packet of type Message length 24
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 10 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x41|0xcb|0x10|0x03|
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x60|0x00|0x72|0x10|0x03|
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x02|0x00|0x10|0x40|0x00|0x00|0x6f|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 24 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x03|0x00|0x50|0x6f|0x6f|0x6c|0x20|0x54|0x65|0x6d|0x70|0x20|0x20|0x36|0x35|0xdf|0x46|0x20|0x60|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 24 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x04|0x02|0x2e|0x31|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x41|0x10|0x03|
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x81|0x00|0x94|0x10|0x03|
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x41|0x00|0x53|0x10|0x03|
+Debug:  Serial read 10 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x41|0xcb|0x10|0x03|
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x02|0x00|0x10|0x40|0x00|0x00|0x6f|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 24 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0a|0x04|0x03|0x20|0x20|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x00|0x63|0x10|0x03|
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS SEND cmd '0x00'
+Debug:  Serial write 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x81|0x00|0x94|0x10|0x03|
+Debug:  Serial read 7 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x60|0x00|0x72|0x10|0x03|
+Debug:  Serial read 12 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x0b|0x02|0x00|0x10|0x40|0x00|0x00|0x6f|0x10|0x03|
+Debug:  Serial read 9 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x00|0x01|0x80|0x00|0x93|0x10|0x03|
+Debug:  Serial read 10 bytes
+Debug:     Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
+

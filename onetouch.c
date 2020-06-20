@@ -12,6 +12,7 @@
 #include "packetLogger.h"
 #include "aq_programmer.h"
 #include "aqualink.h"
+#include "config.h"
 //#include "pda_menu.h"
 
 
@@ -23,6 +24,9 @@ struct ot_macro _macros[3];
 
 void set_macro_status();
 void pump_update(struct aqualinkdata *aq_data, int updated);
+#ifdef AQ_RS16
+void rs16led_update(struct aqualinkdata *aq_data, int updated);
+#endif
 
 void print_onetouch_menu()
 {
@@ -234,6 +238,7 @@ bool log_freeze_setpoints(struct aqualinkdata *aq_data)
 
 bool log_qeuiptment_status(struct aqualinkdata *aq_data)
 {
+  int i;
   bool rtn = false;
 
   if (ot_strcmp(_menu[2],"Intelliflo VS") == 0 ||
@@ -261,7 +266,6 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
 
     logMessage(LOG_DEBUG, "OneTouch Pump %s, Index %d, RPM %d, Watts %d, GPM %d\n",_menu[2],pump_index,rpm,watts,gpm);
 
-    int i;
     for (i=0; i < aq_data->num_pumps; i++) {
       if (aq_data->pumps[i].pumpIndex == pump_index) {
         //printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
@@ -301,6 +305,10 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
       }
       logMessage(LOG_DEBUG, "OneTouch PPM = %d\n",ppm);
     }
+    // If it's off, turn it on.
+    if (aq_data->ar_swg_status == SWG_STATUS_OFF || aq_data->ar_swg_status == SWG_STATUS_UNKNOWN)
+      aq_data->ar_swg_status = SWG_STATUS_ON;
+
   } else if (ot_strcmp(_menu[2],"Chemlink") == 0) {
     /*   Info:   OneTouch Menu Line 0 = Equipment Status
          Info:   OneTouch Menu Line 1 = 
@@ -318,6 +326,22 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
       logMessage(LOG_INFO, "OneTouch Cemlink ORP = %d PH = %f\n",orp,ph);
     }
   }
+
+  #ifdef AQ_RS16
+  else if (_aqconfig_.rs_panel_size >= 16 ) { // Run over devices that have no status LED's on RS12&16 panels.
+    int j;
+    for (i=2; i <= ONETOUCH_LINES; i++) {
+      for (j = RS16_VBUTTONS_START; j <= RS16_VBUTTONS_END; j++) {
+        if ( ot_strcmp(_menu[i], aq_data->aqbuttons[j].label) == 0 ) {
+          //Matched must be on.
+          logMessage(LOG_DEBUG, "OneTouch equiptment status '%s' matched '%s'\n",_menu[i],aq_data->aqbuttons[j].label);
+          rs16led_update(aq_data, j);
+          aq_data->aqbuttons[j].led->state = ON;
+        }
+      }
+    }
+  }
+#endif
 
 
 
@@ -371,6 +395,32 @@ void pump_update(struct aqualinkdata *aq_data, int updated) {
   }
 }
 
+#ifdef AQ_RS16
+void rs16led_update(struct aqualinkdata *aq_data, int updated) {
+  //logMessage(LOG_INFO, "******* VLED check %d ******\n",updated);
+  const int bitmask[4] = {1,2,4,8};
+  static unsigned char updates = '\0';
+  int i;
+
+  if (_aqconfig_.rs_panel_size < 16)
+    return;
+
+  if (updated == -1) {
+    for(i=RS16_VBUTTONS_START; i <= RS16_VBUTTONS_END; i++) {
+      if ((updates & bitmask[i-RS16_VBUTTONS_START]) != bitmask[i-RS16_VBUTTONS_START]) {
+        aq_data->aqbuttons[i].led->state = OFF;
+        //logMessage(LOG_INFO, "******* Turning off VLED %d ******\n",i);
+      }
+    }
+    updates = '\0';
+  } else if (updated >= RS16_VBUTTONS_START && updated <= RS16_VBUTTONS_END) {
+    updates |= bitmask[updated - RS16_VBUTTONS_START];
+    //logMessage(LOG_INFO, "******* Updated VLED status %d ******\n",updated);
+  }
+}
+#endif
+
+
 bool new_menu(struct aqualinkdata *aq_data)
 {
   static bool initRS = false;
@@ -416,6 +466,10 @@ bool new_menu(struct aqualinkdata *aq_data)
   if (last_menu_type == OTM_EQUIPTMENT_STATUS && menu_type != OTM_EQUIPTMENT_STATUS ) {
     // End of equiptment status chain of menus, reset any pump that wasn't listed in menus
     pump_update(aq_data, -1);
+#ifdef AQ_RS16
+    if (_aqconfig_.rs_panel_size >= 16)
+      rs16led_update(aq_data, -1);
+#endif
   }
 
   last_menu_type = menu_type;

@@ -190,6 +190,7 @@ void printHex(char *pk, int length)
 
 void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length)
 {
+  int i;
   //if (_filter != 0x00 && ID != _filter && packet_buffer[PKT_DEST] != _filter )
   //  return;
   if (_rawlog) {
@@ -200,7 +201,7 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
 
   if (_filters != 0)
   {
-    int i;
+    //int i;
     bool dest_match = false;
     bool src_match = false;
 
@@ -236,7 +237,11 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
   if (packet_buffer[PKT_CMD] == CMD_MSG || packet_buffer[PKT_CMD] == CMD_MSG_LONG) {
     printf("  Message : ");
     //fwrite(packet_buffer + 4, 1, AQ_MSGLEN+1, stdout);
-    fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
+    //fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
+    for(i=4; i < packet_length-3; i++) {
+      if (packet_buffer[i] >= 32 && packet_buffer[i] <= 126)
+        printf("%c",packet_buffer[i]);
+    }
   }
   
   //if (packet_buffer[PKT_DEST]==0x00)
