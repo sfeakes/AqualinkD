@@ -7,7 +7,7 @@ bool ot_queue_cmd(unsigned char cmd);
 
 //bool in_ot_programming_mode(struct aqualinkdata *aq_data);
 
-void *set_aqualink_pump_rpm( void *ptr );
+void *set_aqualink_onetouch_pump_rpm( void *ptr );
 void *set_aqualink_onetouch_macro( void *ptr );
 void *get_aqualink_onetouch_setpoints( void *ptr );
 void *set_aqualink_onetouch_spa_heater_temp( void *ptr );

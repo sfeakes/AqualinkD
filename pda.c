@@ -23,12 +23,12 @@
 
 #include "aqualink.h"
 
-#include "init_buttons.h"
 #include "pda.h"
 #include "pda_menu.h"
 #include "utils.h"
-
-
+#include "aq_panel.h"
+#include "packetLogger.h"
+#include "devices_jandy.h"
 
 // static struct aqualinkdata _aqualink_data;
 static struct aqualinkdata *_aqualink_data;
@@ -42,25 +42,16 @@ static bool _initWithRS = false;
 #define PDA_WAKE_FOR 6 // ~1 seconds
 
 
-#ifdef BETA_PDA_AUTOLABEL
-//static struct aqconfig *_aqconfig_;
+
 void init_pda(struct aqualinkdata *aqdata)
 {
   _aqualink_data = aqdata;
-  //_aqconfig_ = aqconfig;
-  set_pda_mode(true);
+  //set_pda_mode(true);
 }
-#else
-void init_pda(struct aqualinkdata *aqdata)
-{
-  _aqualink_data = aqdata;
-  set_pda_mode(true);
-}
-#endif
 
 
 bool pda_shouldSleep() {
-  //logMessage(LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
+  //LOG(PDA_LOG,LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
   if (_pda_loop_cnt++ < PDA_WAKE_FOR) {
     return false;
   } else if (_pda_loop_cnt > PDA_WAKE_FOR + PDA_SLEEP_FOR) {
@@ -70,7 +61,7 @@ bool pda_shouldSleep() {
 
   // NSF NEED TO CHECK ACTIVE THREADS.
   if (_aqualink_data->active_thread.thread_id != 0) {
-    logMessage(LOG_DEBUG, "PDA can't sleep as thread %d,%p is active",
+    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as thread %d,%p is active\n",
                _aqualink_data->active_thread.ptype,
                _aqualink_data->active_thread.thread_id);
 
@@ -80,7 +71,7 @@ bool pda_shouldSleep() {
 
   // Last see if there are any open websockets. (don't sleep if the web UI is open)
   if ( _aqualink_data->open_websockets > 0 ) {
-    logMessage(LOG_DEBUG, "PDA can't sleep as websocket is active");
+    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as websocket is active\n");
     return false;
   }
   
@@ -89,7 +80,7 @@ bool pda_shouldSleep() {
 
 /*
 bool pda_shouldSleep() {
-  //logMessage(LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
+  //LOG(PDA_LOG,LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
   if (_pda_loop_cnt++ < PDA_LOOP_COUNT) {
     return false;
   } else if (_pda_loop_cnt > PDA_LOOP_COUNT*2) {
@@ -136,7 +127,7 @@ void set_pda_led(struct aqualinkled *led, char state)
   }
   if (old_state != led->state)
   {
-    logMessage(LOG_DEBUG, "set_pda_led from %d to %d\n", old_state, led->state);
+    LOG(PDA_LOG,LOG_DEBUG, "set_pda_led from %d to %d\n", old_state, led->state);
   }
 }
 
@@ -178,7 +169,7 @@ void pass_pda_equiptment_status_item(char *msg)
   // Loop through all buttons and match the PDA text.
   if ((index = strcasestr(msg, "CHECK AquaPure")) != NULL)
   {
-    logMessage(LOG_DEBUG, "CHECK AquaPure\n");
+    LOG(PDA_LOG,LOG_DEBUG, "CHECK AquaPure\n");
   }
   else if ((index = strcasestr(msg, "FREEZE PROTECT")) != NULL)
   {
@@ -186,25 +177,26 @@ void pass_pda_equiptment_status_item(char *msg)
   }
   else if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
   {
-    _aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
-    if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
-    logMessage(LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
+    changeSWGpercent(_aqualink_data, atoi(index + strlen(MSG_SWG_PCT)));
+    //_aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
+    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
+    LOG(PDA_LOG,LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
   }
   else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
   {
     _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
-    if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
-    logMessage(LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
+    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
+    LOG(PDA_LOG,LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
   }
   else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
   { // Default to pump 0, should check for correct pump
     _aqualink_data->pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
-    logMessage(LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
+    LOG(PDA_LOG,LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
   }
   else if ((index = strcasestr(msg, MSG_PMP_WAT)) != NULL)
   { // Default to pump 0, should check for correct pump
     _aqualink_data->pumps[0].watts = atoi(index + strlen(MSG_PMP_WAT));
-    logMessage(LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
+    LOG(PDA_LOG,LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
   }
   else
   {
@@ -214,19 +206,19 @@ void pass_pda_equiptment_status_item(char *msg)
 
     if (strcasecmp(msg, "POOL HEAT ENA") == 0)
     {
-      _aqualink_data->aqbuttons[POOL_HEAT_INDEX].led->state = ENABLE;
+      _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
     }
     else if (strcasecmp(msg, "SPA HEAT ENA") == 0)
     {
-      _aqualink_data->aqbuttons[SPA_HEAT_INDEX].led->state = ENABLE;
+      _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
     }
     else
     {
       for (i = 0; i < _aqualink_data->total_buttons; i++)
       {
-        if (strcasecmp(msg, _aqualink_data->aqbuttons[i].pda_label) == 0)
+        if (strcasecmp(msg, _aqualink_data->aqbuttons[i].label) == 0)
         {
-          logMessage(LOG_DEBUG, "*** Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+          LOG(PDA_LOG,LOG_DEBUG, "*** Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
           // It's on (or delayed) if it's listed here.
           if (_aqualink_data->aqbuttons[i].led->state != FLASH)
           {
@@ -302,27 +294,28 @@ void process_pda_packet_msg_long_equipment_control(const char *msg)
   strncpy(labelBuff, msg, AQ_MSGLEN - 4);
   labelBuff[AQ_MSGLEN - 4] = 0;
 
-  logMessage(LOG_DEBUG, "*** Checking Equiptment '%s'\n", labelBuff);
+  LOG(PDA_LOG,LOG_DEBUG, "*** Checking Equiptment '%s'\n", labelBuff);
 
   for (i = 0; i < _aqualink_data->total_buttons; i++)
   {
-    if (strcasecmp(stripwhitespace(labelBuff), _aqualink_data->aqbuttons[i].pda_label) == 0)
+    if (strcasecmp(stripwhitespace(labelBuff), _aqualink_data->aqbuttons[i].label) == 0)
     {
-      logMessage(LOG_DEBUG, "*** Found EQ CTL Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+      LOG(PDA_LOG,LOG_DEBUG, "*** Found EQ CTL Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
       set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN - 1]);
     }
   }
 
   // Force SWG off if pump is off.
   if (_aqualink_data->aqbuttons[0].led->state == OFF )
-    _aqualink_data->ar_swg_status = SWG_STATUS_OFF;
+    setSWGoff(_aqualink_data);
+    //_aqualink_data->ar_swg_status = SWG_STATUS_OFF;
 
   // NSF I think we need to check TEMP1 and TEMP2 and set Pool HEater and Spa heater directly, to support single device.
-  if (_aqualink_data->single_device){
+  if (isSINGLE_DEV_PANEL){
     if (strcasecmp(stripwhitespace(labelBuff), "TEMP1") == 0)
-      set_pda_led(_aqualink_data->aqbuttons[POOL_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+      set_pda_led(_aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led, msg[AQ_MSGLEN - 1]);
     if (strcasecmp(stripwhitespace(labelBuff), "TEMP2") == 0)
-      set_pda_led(_aqualink_data->aqbuttons[SPA_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+      set_pda_led(_aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led, msg[AQ_MSGLEN - 1]);
   }
 }
 
@@ -342,7 +335,7 @@ void process_pda_packet_msg_long_home(const char *msg)
   }
   else if (stristr(msg, "POOL HEATER") != NULL)
   {
-    set_pda_led(_aqualink_data->aqbuttons[POOL_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+    set_pda_led(_aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led, msg[AQ_MSGLEN - 1]);
   }
   else if (stristr(msg, "SPA MODE") != NULL)
   {
@@ -364,44 +357,44 @@ void process_pda_packet_msg_long_home(const char *msg)
   }
   else if (stristr(msg, "SPA HEATER") != NULL)
   {
-    set_pda_led(_aqualink_data->aqbuttons[SPA_HEAT_INDEX].led, msg[AQ_MSGLEN - 1]);
+    set_pda_led(_aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led, msg[AQ_MSGLEN - 1]);
   }
 }
 
 void setSingleDeviceMode()
 {
-  if (_aqualink_data->single_device != true)
+  if (isSINGLE_DEV_PANEL != true)
   {
-    _aqualink_data->single_device = true;
-    logMessage(LOG_NOTICE, "AqualinkD set to 'Pool OR Spa Only' mode\n");
+    changePanelToMode_Only();
+    LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
   }
 }
 
 void process_pda_packet_msg_long_set_temp(const char *msg)
 {
-  logMessage(LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
+  LOG(PDA_LOG,LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
 
   if (stristr(msg, "POOL HEAT") != NULL)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
-    logMessage(LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
   }
   else if (stristr(msg, "SPA HEAT") != NULL)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
-    logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
   }
   else if (stristr(msg, "TEMP1") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
-    logMessage(LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
   }
   else if (stristr(msg, "TEMP2") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
-    logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
   }
 
  
@@ -411,12 +404,12 @@ void process_pda_packet_msg_long_spa_heat(const char *msg)
 {
   if (strncasecmp(msg, "    ENABLED     ", 16) == 0)
   {
-    _aqualink_data->aqbuttons[SPA_HEAT_INDEX].led->state = ENABLE;
+    _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
   }
   else if (strncasecmp(msg, "  SET TO", 8) == 0)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 8);
-    logMessage(LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
   }
 }
 
@@ -424,12 +417,12 @@ void process_pda_packet_msg_long_pool_heat(const char *msg)
 {
   if (strncasecmp(msg, "    ENABLED     ", 16) == 0)
   {
-    _aqualink_data->aqbuttons[POOL_HEAT_INDEX].led->state = ENABLE;
+    _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
   }
   else if (strncasecmp(msg, "  SET TO", 8) == 0)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 8);
-    logMessage(LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
   }
 }
 
@@ -438,7 +431,7 @@ void process_pda_packet_msg_long_freeze_protect(const char *msg)
   if (strncasecmp(msg, "TEMP      ", 10) == 0)
   {
     _aqualink_data->frz_protect_set_point = atoi(msg + 10);
-    logMessage(LOG_DEBUG, "frz_protect_set_point = %d\n", _aqualink_data->frz_protect_set_point);
+    LOG(PDA_LOG,LOG_DEBUG, "frz_protect_set_point = %d\n", _aqualink_data->frz_protect_set_point);
   }
 }
 
@@ -454,14 +447,16 @@ void process_pda_packet_msg_long_SWG(const char *msg)
   if (_aqualink_data->aqbuttons[SPA_INDEX].led->state != OFF) {
     if (strncasecmp(msg, "SET SPA TO:", 11) == 0)
     {
-      _aqualink_data->swg_percent = atoi(msg + 13);
-      logMessage(LOG_DEBUG, "SPA swg_percent = %d\n", _aqualink_data->swg_percent);
+      //_aqualink_data->swg_percent = atoi(msg + 13);
+      setSWGpercent(_aqualink_data, atoi(msg + 13));
+      LOG(PDA_LOG,LOG_DEBUG, "SPA swg_percent = %d\n", _aqualink_data->swg_percent);
     }
   } else {
     if (strncasecmp(msg, "SET POOL TO:", 12) == 0)
     {
-      _aqualink_data->swg_percent = atoi(msg + 13);
-      logMessage(LOG_DEBUG, "POOL swg_percent = %d\n", _aqualink_data->swg_percent);
+      //_aqualink_data->swg_percent = atoi(msg + 13);
+      setSWGpercent(_aqualink_data, atoi(msg + 13));
+      LOG(PDA_LOG,LOG_DEBUG, "POOL swg_percent = %d\n", _aqualink_data->swg_percent);
     } 
   }
 }
@@ -476,9 +471,9 @@ void process_pda_packet_msg_long_unknown(const char *msg)
   {
     for (i = 0; i < _aqualink_data->total_buttons; i++)
     {
-      if (stristr(msg, _aqualink_data->aqbuttons[i].pda_label) != NULL)
+      if (stristr(msg, _aqualink_data->aqbuttons[i].label) != NULL)
       {
-        printf("*** UNKNOWN Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].pda_label, AQ_MSGLEN, msg);
+        printf("*** UNKNOWN Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
         // set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN-1]);
       }
     }
@@ -511,9 +506,9 @@ void process_pda_packet_msg_long_level_aux_device(const char *msg)
       str = cleanwhitespace(pda_m_line(3));
       label = (char*)malloc(strlen(str)+1);
       strcpy ( label, str );
-      _aqualink_data->aqbuttons[li-1].pda_label = label;
+      _aqualink_data->aqbuttons[li-1].label = label;
     } else {
-      logMessage(LOG_ERR, "PDA couldn't get AUX? number\n", pda_m_line(0));
+      LOG(PDA_LOG,LOG_ERR, "PDA couldn't get AUX? number\n", pda_m_line(0));
     }
   }
 #endif
@@ -532,12 +527,12 @@ void process_pda_freeze_protect_devices()
   //  PDA Line 8 = EXTRA AUX
   //  PDA Line 9 =
   int i;
-  logMessage(LOG_DEBUG, "process_pda_freeze_protect_devices\n");
+  LOG(PDA_LOG,LOG_DEBUG, "process_pda_freeze_protect_devices\n");
   for (i = 1; i < PDA_LINES; i++)
   {
     if (pda_m_line(i)[AQ_MSGLEN - 1] == 'X')
     {
-      logMessage(LOG_DEBUG, "PDA freeze protect enabled by %s\n", pda_m_line(i));
+      LOG(PDA_LOG,LOG_DEBUG, "PDA freeze protect enabled by %s\n", pda_m_line(i));
       if (_aqualink_data->frz_protect_state == OFF)
       {
         _aqualink_data->frz_protect_state = ENABLE;
@@ -554,6 +549,19 @@ bool process_pda_packet(unsigned char *packet, int length)
   char *msg;
   //static bool init = false;
 
+  if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
+    char buff[1024];
+    beautifyPacket(buff, packet, length);
+    LOG(PDA_LOG,LOG_DEBUG, "%s", buff);
+  }
+/*
+    // Some panels don't give the startup messages we used to key the init sequence, so check here
+  // need to put this in a better spot some time in the future
+  if (_initWithRS == false && pda_m_type() == PM_FW_VERSION && packet[PKT_CMD] ==  CMD_PDA_CLEAR ) {
+    _initWithRS == true;
+    queueGetProgramData(AQUAPDA, _aqualink_data);
+  }
+*/
   process_pda_menu_packet(packet, length);
 
   // NSF.
@@ -566,14 +574,15 @@ bool process_pda_packet(unsigned char *packet, int length)
   {
 
   case CMD_ACK:
-    logMessage(LOG_DEBUG, "RS Received ACK length %d.\n", length);
+    LOG(PDA_LOG,LOG_DEBUG, "RS Received ACK length %d.\n", length);
     //if (init == false)
+    /*
     if (_initWithRS == false)
     {
-      logMessage(LOG_DEBUG, "Running PDA_INIT\n");
+      LOG(PDA_LOG,LOG_DEBUG, "Running PDA_INIT\n");
       aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
       //init = true;
-    }
+    }*/
     break;
 
   case CMD_STATUS:
@@ -588,8 +597,11 @@ bool process_pda_packet(unsigned char *packet, int length)
       if (_aqualink_data->frz_protect_state == ON)
         _aqualink_data->frz_protect_state = ENABLE;
       
-      if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) 
-        _aqualink_data->ar_swg_status = SWG_STATUS_OFF;
+      //if (_aqualink_data->ar_swg_status == SWG_STATUS_ON) 
+      //  _aqualink_data->ar_swg_status = SWG_STATUS_OFF;
+
+      if (_aqualink_data->swg_led_state == ON)
+        setSWGenabled(_aqualink_data);
       
       if (pda_m_line(PDA_LINES - 1)[0] == '\0')
       {
@@ -603,7 +615,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       }
       else
       {
-        logMessage(LOG_DEBUG, "PDA Equipment status may be truncated.\n");
+        LOG(PDA_LOG,LOG_DEBUG, "PDA Equipment status may be truncated.\n");
       }
       for (i = 1; i < PDA_LINES; i++)
       {
@@ -674,7 +686,7 @@ bool process_pda_packet(unsigned char *packet, int length)
     }
 
     // printf("** Line index='%d' Highligh='%s' Message='%.*s'\n",pda_m_hlightindex(), pda_m_hlight(), AQ_MSGLEN, msg);
-    logMessage(LOG_INFO, "PDA Menu '%d' Selectedline '%s', Last line received '%.*s'\n", pda_m_type(), pda_m_hlight(), AQ_MSGLEN, msg);
+    LOG(PDA_LOG,LOG_INFO, "PDA Menu '%d' Selectedline '%s', Last line received '%.*s'\n", pda_m_type(), pda_m_hlight(), AQ_MSGLEN, msg);
     break;
   }
   case CMD_PDA_0x1B:
@@ -685,7 +697,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       if (_initWithRS == false)
       {
         _initWithRS = true;
-        logMessage(LOG_DEBUG, "**** PDA INIT ****");
+        LOG(PDA_LOG,LOG_DEBUG, "**** PDA INIT ****\n");
         //aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
         queueGetProgramData(AQUAPDA, _aqualink_data);
         delay(50);  // Make sure this one runs first.
@@ -695,7 +707,7 @@ bool process_pda_packet(unsigned char *packet, int length)
 #endif
         aq_programmer(AQ_PDA_WAKE_INIT, NULL, _aqualink_data);
       } else {
-        logMessage(LOG_DEBUG, "**** PDA WAKE INIT ****");
+        LOG(PDA_LOG,LOG_DEBUG, "**** PDA WAKE INIT ****\n");
         aq_programmer(AQ_PDA_WAKE_INIT, NULL, _aqualink_data);
       }
     }
@@ -710,5 +722,8 @@ bool process_pda_packet(unsigned char *packet, int length)
     // We processed the next message, kick any threads waiting on the message.
     kick_aq_program_thread(_aqualink_data, AQUAPDA);
   }
+
+  
+
   return rtn;
 }

@@ -37,7 +37,7 @@
 #include "config.h"
 #include "utils.h"
 #include "aq_serial.h"
-#include "init_buttons.h"
+#include "aq_panel.h"
 
 #define MAXCFGLINE 256
 
@@ -46,21 +46,41 @@
 char *generate_mqtt_id(char *buf, int len);
 pump_detail *getpump(struct aqualinkdata *aqdata, int button);
 
+struct tmpPanelInfo {
+  int size;
+  bool rs;
+  bool combo;
+  bool dual;
+};
+
+struct tmpPanelInfo *_tmpPanel;
+
 /*
 * initialize data to default values
 */
 void init_parameters (struct aqconfig * parms)
 {
+  // Set default panel if it get's missed from config
+  _tmpPanel = malloc(sizeof(struct tmpPanelInfo));
+  _tmpPanel->size = 8;
+  _tmpPanel->rs = true;
+  _tmpPanel->combo = true;
+  _tmpPanel->dual = false;
+
   //int i;
   //char *p;
-  parms->rs_panel_size = 8;
+  //parms->rs_panel_size = 8;
   parms->serial_port = DEFAULT_SERIALPORT;
   parms->log_level = DEFAULT_LOG_LEVEL;
   parms->socket_port = DEFAULT_WEBPORT;
   parms->web_directory = DEFAULT_WEBROOT;
   //parms->device_id = strtoul(DEFAULT_DEVICE_ID, &p, 16);
   parms->device_id = strtoul(DEFAULT_DEVICE_ID, NULL, 16);
-  parms->onetouch_device_id = 0x00;
+  parms->paneltype_mask = 0;
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  parms->extended_device_id = NUL;
+  parms->extended_device_id_programming = false;
+#endif
   //sscanf(DEFAULT_DEVICE_ID, "0x%x", &parms->device_id);
   parms->override_freeze_protect = FALSE;
 
@@ -84,10 +104,9 @@ void init_parameters (struct aqconfig * parms)
   parms->deamonize = true;
   parms->log_file = '\0';
 #ifdef AQ_PDA
-  parms->pda_mode = false;
   parms->pda_sleep_mode = false;
 #endif
-  parms->onetouch_mode = false;
+  //parms->onetouch_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
   parms->report_zero_pool_temp = false;
@@ -101,7 +120,8 @@ void init_parameters (struct aqconfig * parms)
   parms->swg_zero_ignore = DEFAILT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
   parms->log_raw_RS_bytes = false;
-  parms->extended_device_id_programming = false;
+  parms->readahead_b4_write = false;
+  parms->sync_panel_time = true;
  
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -325,7 +345,10 @@ void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdat
 bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
 
-  if (strncasecmp(param, "socket_port", 11) == 0) {
+  if (strncasecmp(param, "debug_log_mask", 14) == 0) {
+    addDebugLogMask(strtoul(value, NULL, 10));
+    rtn=true;
+  } else if (strncasecmp(param, "socket_port", 11) == 0) {
     _aqconfig_.socket_port = cleanalloc(value);
     rtn=true;
   } else if (strncasecmp(param, "serial_port", 11) == 0) {
@@ -336,24 +359,38 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp(param, "device_id", 9) == 0) {
     _aqconfig_.device_id = strtoul(cleanalloc(value), NULL, 16);
+    rtn=true;
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   } else if (strncasecmp (param, "extended_device_id_programming", 30) == 0) {
     // Has to be before the below.
     _aqconfig_.extended_device_id_programming = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "extended_device_id", 9) == 0) {
-    _aqconfig_.onetouch_device_id = strtoul(cleanalloc(value), NULL, 16);
+    _aqconfig_.extended_device_id = strtoul(cleanalloc(value), NULL, 16);
     //_config_parameters.onetouch_device_id != 0x00
     rtn=true;
-  } else if (strncasecmp(param, "rs_panel_size", 13) == 0) {
-    _aqconfig_.rs_panel_size = strtoul(value, NULL, 10);
-    if ( _aqconfig_.rs_panel_size > TOTAL_BUTTONS) {
-      logMessage(LOG_ERR, "Config error, 'rs_panel_size' is either invalid or too large for compiled parameters, reset to %d\n",TOTAL_BUTTONS);
-      _aqconfig_.rs_panel_size = TOTAL_BUTTONS;
-    }
-#ifdef AQ_RS16 // Need to re-order button hex values
-    if (_aqconfig_.rs_panel_size >= 12)
-      initButtons_RS16(aqdata);
 #endif
+  } else if (strncasecmp(param, "panel_type_size", 15) == 0) {
+    _tmpPanel->size = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "panel_type_combo", 16) == 0) {
+    _tmpPanel->combo = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "panel_type_dual", 15) == 0) {
+    _tmpPanel->dual = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "panel_type_pda", 14) == 0) {
+    _tmpPanel->rs = !text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, "panel_type_rs", 13) == 0) {
+    _tmpPanel->rs = text2bool(value);
+    rtn=true;
+   } else if (strncasecmp(param, "panel_type", 10) == 0) { // This must be last so it doesn't get picked up by other settings
+    setPanelByName(aqdata, cleanwhitespace(value));
+    rtn=true;
+  } else if (strncasecmp(param, "rs_panel_size", 13) == 0) {
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'rs_panel_size' no longer supported, please use 'panel_type'\n");
+    _tmpPanel->size = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "web_directory", 13) == 0) {
     _aqconfig_.web_directory = cleanalloc(value);
@@ -398,12 +435,12 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.light_programming_initial_off = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button_spa", 28) == 0) {
-    logMessage(LOG_ERR, "Config error, 'light_programming_button_spa' no longer supported\n");
+    LOG(AQUA_LOG,LOG_ERR, "Config error, 'light_programming_button_spa' no longer supported\n");
     //_aqconfig_.light_programming_button_spa = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "light_programming_button", 24) == 0 ||
              strncasecmp(param, "light_programming_button_pool", 29) == 0) {
-    logMessage(LOG_ERR, "Config error, 'light_programming_button' & 'light_programming_button_pool' are no longer supported\n");
+    LOG(AQUA_LOG,LOG_ERR, "Config error, 'light_programming_button' & 'light_programming_button_pool' are no longer supported\n");
     //_aqconfig_.light_programming_button_pool = strtoul(value, NULL, 10) - 1;
     rtn=true;
   } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
@@ -420,8 +457,10 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
 #ifdef AQ_PDA
   } else if (strncasecmp(param, "pda_mode", 8) == 0) {
-    _aqconfig_.pda_mode = text2bool(value);
-    set_pda_mode(_aqconfig_.pda_mode);
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'pda_mode' is no longer supported, please use rs_panel_type\n");
+    //_aqconfig_.pda_mode = text2bool(value);
+    //set_pda_mode(_aqconfig_.pda_mode);
+    _tmpPanel->rs = !text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
     _aqconfig_.pda_sleep_mode = text2bool(value);
@@ -466,28 +505,27 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
     _aqconfig_.display_warnings_web = text2bool(value);
     rtn=true;
-  }
-
-  /* 
-  else if (strncasecmp (param, "use_PDA_auxiliary", 17) == 0) {
-    _aqconfig_.use_PDA_auxiliary = text2bool(value);
-    if ( pda_mode() ) {
-      logMessage(LOG_ERR, "ERROR Can't use `use_PDA_auxiliary` in PDA mode, ignoring'\n");
-      _aqconfig_.use_PDA_auxiliary = false;
-    }
+  } else if (strncasecmp (param, "serial_readahead_b4_write", 25) == 0) {
+    _aqconfig_.readahead_b4_write = text2bool(value);
     rtn=true;
-  } */
-  // removed until domoticz has a better virtual thermostat
-  /*else if (strncasecmp (param, "pool_thermostat_dzidx", 21) == 0) {      
-              _aqconfig_.dzidx_pool_thermostat = strtoul(value, NULL, 10);
-              rtn=true;
-            } else if (strncasecmp (param, "spa_thermostat_dzidx", 20) == 0) {
-              _aqconfig_.dzidx_spa_thermostat = strtoul(value, NULL, 10);
-              rtn=true;
-            } */
+  } else if (strncasecmp (param, "mqtt_timed_update", 17) == 0) {
+    _aqconfig_.mqtt_timed_update = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "keep_paneltime_synced", 21) == 0) {
+    _aqconfig_.sync_panel_time = text2bool(value);
+    rtn=true;
+  }
+  
   else if (strncasecmp(param, "button_", 7) == 0) {
+    // Check we have inichalized panel information, if not use any settings we may have
+    if (_aqconfig_.paneltype_mask == 0)
+      setPanel(aqdata, _tmpPanel->rs, _tmpPanel->size, _tmpPanel->combo, _tmpPanel->dual);
+
     int num = strtoul(param + 7, NULL, 10) - 1;
-    if (strncasecmp(param + 9, "_label", 6) == 0) {
+    if (num > TOTAL_BUTTONS) {
+      LOG(AQUA_LOG,LOG_ERR, "Config error, button_%d is out of range\n",num+1);
+      rtn=false;
+    } else if (strncasecmp(param + 9, "_label", 6) == 0) {
       aqdata->aqbuttons[num].label = cleanalloc(value);
       rtn=true;
     } else if (strncasecmp(param + 9, "_dzidx", 6) == 0) {
@@ -495,21 +533,23 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       rtn=true;
 #ifdef AQ_PDA
     } else if (strncasecmp(param + 9, "_PDA_label", 10) == 0) {
-      aqdata->aqbuttons[num].pda_label = cleanalloc(value);
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, 'button_%d_PDA_label' is no longer supported, please use 'button_%d_label'\n",num,num);
+      //aqdata->aqbuttons[num].pda_label = cleanalloc(value);
+      aqdata->aqbuttons[num].label = cleanalloc(value);
       rtn=true;
 #endif
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
       if (aqdata->num_lights < MAX_LIGHTS) {
         int type = strtoul(value, NULL, 10);
         if (type < LC_PROGRAMABLE || type > LC_INTELLIB) {
-          logMessage(LOG_ERR, "Config error, unknown light mode '%s'\n",type);
+          LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%s'\n",type);
         } else {
           aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
           aqdata->lights[aqdata->num_lights].lightType = type;
           aqdata->num_lights++;
         }
       } else {
-        logMessage(LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
@@ -523,7 +563,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
           //pump->pumpType = EPUMP; // For testing let the interface set this
         }
       } else {
-        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1
@@ -531,7 +571,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       if (pump != NULL) {
         pump->pumpIndex = strtoul(value, NULL, 10);
       } else {
-        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
     }
@@ -551,7 +591,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         pi++;
         
       } else {
-        logMessage(LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1 
@@ -609,6 +649,8 @@ void read_config (struct aqualinkdata *aqdata, char *cfgFile)
   //int tokenindex = 0;
   char *b_ptr;
 
+ 
+
   _aqconfig_.config_file = cleanalloc(cfgFile);
 
   if( (fp = fopen(cfgFile, "r")) != NULL){
@@ -625,7 +667,7 @@ void read_config (struct aqualinkdata *aqdata, char *cfgFile)
           if ( indx != NULL) 
           {
             if ( ! setConfigValue(aqdata, b_ptr, indx+1))
-              logMessage(LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr)-1, b_ptr);
+              LOG(AQUA_LOG,LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr)-1, b_ptr);
           } 
         }
       }
@@ -633,10 +675,12 @@ void read_config (struct aqualinkdata *aqdata, char *cfgFile)
     fclose(fp);
   } else {
     /* error processing, couldn't open file */
-    logMessage(LOG_ERR, "Error reading config file '%s'\n",cfgFile);
+    LOG(AQUA_LOG,LOG_ERR, "Error reading config file '%s'\n",cfgFile);
     displayLastSystemError(cfgFile);
     exit (EXIT_FAILURE);
   }
+
+  free(_tmpPanel);
 }
 
 
@@ -677,7 +721,7 @@ bool remount_root_ro(bool readonly) {
   if (readonly) {} // Dummy to stop compile warnings.
 /*
   if (readonly) {
-    logMessage(LOG_INFO, "reMounting root RO\n");
+    LOG(AQUA_LOG,LOG_INFO, "reMounting root RO\n");
     mount (NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL);
     return true;
   } else {
@@ -686,7 +730,7 @@ bool remount_root_ro(bool readonly) {
     if ((fsinfo.f_flag & ST_RDONLY) == 0) // We are readwrite, ignore
       return false;
 
-    logMessage(LOG_INFO, "reMounting root RW\n");
+    LOG(AQUA_LOG,LOG_INFO, "reMounting root RW\n");
     mount (NULL, "/", NULL, MS_REMOUNT, NULL);
     return true;
   }
@@ -712,7 +756,7 @@ void writeIntValue (FILE *fp, char *msg, int value)
 
 bool writeCfg (struct aqualinkdata *aqdata)
 { 
-  logMessage(LOG_ERR, "writeCfg() not implimented\n");
+  LOG(AQUA_LOG,LOG_ERR, "writeCfg() not implimented\n");
   /*
   FILE *fp;
   int i;
@@ -720,7 +764,7 @@ bool writeCfg (struct aqualinkdata *aqdata)
 
   fp = fopen(_aqconfig_.config_file, "w");
   if (fp == NULL) {
-    logMessage(LOG_ERR, "Open config file failed '%s'\n", _aqconfig_.config_file);
+    LOG(AQUA_LOG,LOG_ERR, "Open config file failed '%s'\n", _aqconfig_.config_file);
     remount_root_ro(true);
     //fprintf(stdout, "Open file failed 'sprinkler.cron'\n");
     return false;

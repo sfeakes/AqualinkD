@@ -33,10 +33,12 @@
   #include "pda_aq_programmer.h"
 #endif
 
-#include "init_buttons.h"
+#include "aq_panel.h"
 #include "onetouch_aq_programmer.h"
+#include "iaqtouch_aq_programmer.h"
 #include "color_lights.h"
 #include "config.h"
+#include "devices_jandy.h"
 
 #ifdef AQ_DEBUG
   #include <time.h>
@@ -66,9 +68,11 @@ void *set_aqualink_PDA_init( void *ptr );
 #endif
 void *set_aqualink_SWG( void *ptr );
 void *set_aqualink_boost( void *ptr );
-void *set_aqualink_pump_rpm( void *ptr );
+/*
+void *set_aqualink_onetouch_pump_rpm( void *ptr );
 void *set_aqualink_onetouch_macro( void *ptr );
 void *get_aqualink_onetouch_setpoints( void *ptr );
+*/
 
 //void *get_aqualink_PDA_device_status( void *ptr );
 //void *set_aqualink_PDA_device_on_off( void *ptr );
@@ -238,16 +242,16 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 
   switch(type) {
     case POOL_HTR_SETOINT:
-      type_msg = (aqdata->single_device?"Temp1":"Pool");
+      type_msg = (isSINGLE_DEV_PANEL?"Temp1":"Pool");
       if ( aqdata->temp_units == CELSIUS ) {
         max = HEATER_MAX_C;
-        min = (aqdata->single_device?HEATER_MIN_C:HEATER_MIN_C-1);
+        min = (isSINGLE_DEV_PANEL?HEATER_MIN_C:HEATER_MIN_C-1);
       } else {
         max = HEATER_MAX_F;
-        min = (aqdata->single_device?HEATER_MIN_F:HEATER_MIN_F-1);
+        min = (isSINGLE_DEV_PANEL?HEATER_MIN_F:HEATER_MIN_F-1);
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP1 must be set higher than TEMP2
-      if (aqdata->single_device && 
+      if (isSINGLE_DEV_PANEL && 
           aqdata->spa_htr_set_point != TEMP_UNKNOWN &&
           min <= aqdata->spa_htr_set_point) 
       {
@@ -255,16 +259,16 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       }
     break;
     case SPA_HTR_SETOINT:
-      type_msg = (aqdata->single_device?"Temp2":"Spa");
+      type_msg = (isSINGLE_DEV_PANEL?"Temp2":"Spa");
       if ( aqdata->temp_units == CELSIUS ) {
-        max = (aqdata->single_device?HEATER_MAX_C:HEATER_MAX_C-1);
+        max = (isSINGLE_DEV_PANEL?HEATER_MAX_C:HEATER_MAX_C-1);
         min = HEATER_MIN_C;
       } else {
-        max = (aqdata->single_device?HEATER_MAX_F:HEATER_MAX_F-1);
+        max = (isSINGLE_DEV_PANEL?HEATER_MAX_F:HEATER_MAX_F-1);
         min = HEATER_MIN_F;
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP2 must be set lower than TEMP1
-      if (aqdata->single_device && 
+      if (isSINGLE_DEV_PANEL && 
           aqdata->pool_htr_set_point != TEMP_UNKNOWN &&
           max >= aqdata->pool_htr_set_point) 
       {
@@ -312,16 +316,25 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data)
 {
   // Wait for onetouch if enabeled.
-  if ( source_type == ALLBUTTON && ( onetouch_enabled() == false || extended_device_id_programming() == false ) ) {
+  //if ( source_type == ALLBUTTON && ( onetouch_enabled() == false || extended_device_id_programming() == false ) ) {
+  if ( source_type == ALLBUTTON && ( isEXTP_ENABLED == false || (isONET_ENABLED == false && isIAQT_ENABLED == false)) ) {
     aq_send_cmd(NUL);
     aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
     aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data);
     if (_aqconfig_.use_panel_aux_labels)
       aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+#ifdef AQ_ONETOUCH
   } else if ( source_type == ONETOUCH) {
     aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data);
     if (_aqconfig_.use_panel_aux_labels)
       aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+#endif
+#ifdef AQ_IAQTOUCH
+  } else if ( source_type == IAQTOUCH) {
+    aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data);
+    if (_aqconfig_.use_panel_aux_labels)
+      aq_programmer(AQ_GET_IAQTOUCH_AUX_LABELS, NULL, aq_data);
+#endif
 #ifdef AQ_PDA
   } else if ( source_type == AQUAPDA) {
     aq_programmer(AQ_PDA_INIT, NULL, aq_data);
@@ -344,6 +357,22 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data)
   }
 }
 */
+bool in_swg_programming_mode(struct aqualinkdata *aq_data)
+{
+  if ( ( aq_data->active_thread.thread_id != 0 ) &&
+       ( aq_data->active_thread.ptype == AQ_SET_ONETOUCH_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_SET_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_SET_ONETOUCH_BOOST ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SWG_BOOST ||
+         aq_data->active_thread.ptype == AQ_SET_BOOST)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 bool in_ot_programming_mode(struct aqualinkdata *aq_data)
 {
   //( type != AQ_SET_PUMP_RPM || type != AQ_SET_OT_MACRO )) {
@@ -365,6 +394,37 @@ bool in_ot_programming_mode(struct aqualinkdata *aq_data)
   return false;
 }
 
+bool in_iaqt_programming_mode(struct aqualinkdata *aq_data)
+{
+  //( type != AQ_SET_PUMP_RPM || type != AQ_SET_OT_MACRO )) {
+
+  if ( ( aq_data->active_thread.thread_id != 0 ) &&
+       ( aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_PUMP_RPM ||
+         aq_data->active_thread.ptype == AQ_GET_IAQTOUCH_VSP_ASSIGNMENT ||
+         aq_data->active_thread.ptype == AQ_GET_IAQTOUCH_SETPOINTS ||
+         aq_data->active_thread.ptype == AQ_GET_IAQTOUCH_AUX_LABELS ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SWG_BOOST ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_POOL_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SPA_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SET_TIME ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM)
+     ) {
+     return true;
+  }
+
+  return false;
+}
+
+bool in_programming_mode(struct aqualinkdata *aq_data)
+{
+  if ( aq_data->active_thread.thread_id != 0 ) {
+     return true;
+  }
+
+  return false;
+}
+
 void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_type)
 {
   if ( aq_data->active_thread.thread_id != 0 ) {
@@ -375,6 +435,10 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
     } 
     else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data)) {
       logMessage(LOG_DEBUG, "Kicking RS thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
+    }
+    else if (source_type == IAQTOUCH && in_iaqt_programming_mode(aq_data)) {
+      logMessage(LOG_DEBUG, "Kicking IAQ Touch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
 #ifdef AQ_PDA
@@ -392,9 +456,27 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
 
   program_type type = r_type;
 
+  if (r_type == AQ_SET_PUMP_RPM) {
+    if (isONET_ENABLED)
+      type = AQ_SET_ONETOUCH_PUMP_RPM;
+    else if (isIAQT_ENABLED)
+      type = AQ_SET_IAQTOUCH_PUMP_RPM;
+    else {
+      logMessage(LOG_ERR, "Can only change pump RPM with an extended device id\n",type);
+      return;
+    }
+  } else if (r_type == AQ_SET_PUMP_VS_PROGRAM) {
+    if (isIAQT_ENABLED)
+      type = AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM;
+    else {
+      logMessage(LOG_ERR, "Can only change pump VS Program with an iAqualink Touch device id\n",type);
+      return;
+    }
+  }
+#ifdef AQ_ONETOUCH
   // reset any types if to onetouch if available and if one touch is quicker
   // At moment. onetouch is quicker for boost, and slower for heaters
-  if (onetouch_enabled() && extended_device_id_programming()) {
+  else if (isONET_ENABLED && isEXTP_ENABLED) {
     switch (r_type){
       case AQ_GET_POOL_SPA_HEATER_TEMPS:
       case AQ_GET_FREEZE_PROTECT_TEMP:
@@ -406,6 +488,9 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
       case AQ_SET_SPA_HEATER_TEMP:
         type = AQ_SET_ONETOUCH_SPA_HEATER_TEMP;
       break;
+      case AQ_SET_SWG_PERCENT:
+        type = AQ_SET_ONETOUCH_SWG_PERCENT;
+      break;
       case AQ_SET_BOOST:
         type = AQ_SET_ONETOUCH_BOOST;
       break;
@@ -414,10 +499,39 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
       break;
     }
   }
-
+#endif
+#ifdef AQ_IAQTOUCH
+  else if (isIAQT_ENABLED && isEXTP_ENABLED) {
+    // IAQ Touch programming modes that should overite standard ones.
+    switch (r_type){
+      case AQ_GET_POOL_SPA_HEATER_TEMPS:
+      case AQ_GET_FREEZE_PROTECT_TEMP:
+        type = AQ_GET_IAQTOUCH_SETPOINTS;
+      break;
+      case AQ_SET_SWG_PERCENT:
+        type = AQ_SET_IAQTOUCH_SWG_PERCENT;
+      break;
+      case AQ_SET_BOOST:
+        type = AQ_SET_IAQTOUCH_SWG_BOOST;
+      break;
+      case AQ_SET_POOL_HEATER_TEMP:
+        type = AQ_SET_IAQTOUCH_POOL_HEATER_TEMP;
+      break;
+      case AQ_SET_SPA_HEATER_TEMP:
+        type = AQ_SET_IAQTOUCH_SPA_HEATER_TEMP;
+      break;
+      case AQ_SET_TIME:
+        type = AQ_SET_IAQTOUCH_SET_TIME;
+      break;
+      default:
+        type = r_type;
+      break;
+    }
+  }
+#endif
 #ifdef AQ_PDA
   // Check we are doing something valid request
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     pda_reset_sleep();
     if (type != AQ_PDA_INIT && 
         type != AQ_PDA_WAKE_INIT &&
@@ -545,8 +659,9 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
+#ifdef AQ_ONETOUCH
     case AQ_SET_ONETOUCH_PUMP_RPM:
-      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_pump_rpm, (void*)programmingthread) < 0) {
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_onetouch_pump_rpm, (void*)programmingthread) < 0) {
         logMessage (LOG_ERR, "could not create thread\n");
         return;
       }
@@ -593,7 +708,68 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
-
+#endif
+#ifdef AQ_IAQTOUCH
+    case AQ_SET_IAQTOUCH_PUMP_RPM:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_pump_rpm, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_GET_IAQTOUCH_VSP_ASSIGNMENT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_vsp_assignments, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_GET_IAQTOUCH_SETPOINTS:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_iaqtouch_setpoints, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_GET_IAQTOUCH_AUX_LABELS:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_iaqtouch_aux_labels, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_SWG_PERCENT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_swg_percent, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_SWG_BOOST:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_swg_boost, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_POOL_HEATER_TEMP:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_pool_heater_temp, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_spa_heater_temp, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_SET_TIME:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_time, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_pump_vs_program, (void*)programmingthread) < 0) {
+        logMessage (LOG_ERR, "could not create thread\n");
+        return;
+      }
+#endif
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_init, (void*)programmingthread) < 0) {
@@ -641,7 +817,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   int tries = 120;
   static int waitTime = 1;
   int i=0;
-  
+
   i = 0;
   while (get_aq_cmd_length() > 0 && ( i++ <= tries) ) {
     logMessage (LOG_DEBUG, "Thread %p (%s) sleeping, waiting command queue to empty\n", &threadCtrl->thread_id, ptypeName(type));
@@ -852,7 +1028,7 @@ STOP BOOST POOL
   int val = atoi((char*)threadCtrl->thread_args);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
       set_PDA_aqualink_boost(aq_data, val);
       cleanAndTerminateThread(threadCtrl);
       return ptr;
@@ -904,9 +1080,7 @@ STOP BOOST POOL
     }
     if (i < wait_messages) {
       // Takes ages to see bost is off from menu, to set it here.
-      aq_data->boost = false;
-      aq_data->boost_msg[0] = '\0';
-      aq_data->swg_percent = 0;
+      setSWGboost(aq_data, false);
     }
     /*
     // Extra message overcome.
@@ -942,8 +1116,9 @@ void *set_aqualink_SWG( void *ptr )
   val = setpoint_check(SWG_SETPOINT, val, aq_data);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
-      set_PDA_aqualink_SWG_setpoint(aq_data, val);
+  if (isPDA_PANEL) {
+      if (set_PDA_aqualink_SWG_setpoint(aq_data, val))
+        setSWGpercent(aq_data, val); // Don't use chageSWGpercent as we are in programming mode.
       cleanAndTerminateThread(threadCtrl);
       return ptr;
   }
@@ -976,6 +1151,9 @@ void *set_aqualink_SWG( void *ptr )
     }
     setAqualinkNumericField_new(aq_data, "POOL SP", val, 5);
   }
+
+  // Let everyone know we set SWG, if it failed we will update on next message, unless it's 0.
+  setSWGpercent(aq_data, val); // Don't use chageSWGpercent as we are in programming mode.
 
 /*
   if (select_sub_menu_item(aq_data, "SET POOL SP") != true) {
@@ -1015,7 +1193,7 @@ void *get_aqualink_aux_labels( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_AUX_LABELS);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
       get_PDA_aqualink_aux_labels(aq_data);
       cleanAndTerminateThread(threadCtrl);
       return ptr;
@@ -1234,7 +1412,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
   val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     set_PDA_aqualink_heater_setpoint(aq_data, val, true);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1242,7 +1420,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
 #endif
 
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
-  if (aq_data->single_device == true ){
+  if (isSINGLE_DEV_PANEL){
     name = "TEMP1";
     menu_name = "SET TEMP1";
   } else {
@@ -1268,7 +1446,7 @@ void *set_aqualink_pool_heater_temps( void *ptr )
     return ptr;
   }
   
-  if (aq_data->single_device == true ){
+  if (isSINGLE_DEV_PANEL){
     // Need to get pass this message 'TEMP1 MUST BE SET HIGHER THAN TEMP2'
     // and get this message 'TEMP1 20�C ~*'
     // Before going to numeric field.
@@ -1309,7 +1487,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     set_PDA_aqualink_heater_setpoint(aq_data, val, false);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1317,7 +1495,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
 #endif
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
 
-  if (aq_data->single_device == true ){
+  if (isSINGLE_DEV_PANEL){
     name = "TEMP2";
     menu_name = "SET TEMP2";
   } else {
@@ -1343,7 +1521,7 @@ void *set_aqualink_spa_heater_temps( void *ptr )
     return ptr;
   }
 
-  if (aq_data->single_device == true ){
+  if (isSINGLE_DEV_PANEL){
     // Need to get pass this message 'TEMP2 MUST BE SET LOWER THAN TEMP1'
     // and get this message 'TEMP2 20�C ~*'
     // Before going to numeric field.
@@ -1386,7 +1564,7 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
   logMessage(LOG_DEBUG, "Setting sfreeze protection to %d\n", val);
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     set_PDA_aqualink_freezeprotect_setpoint(aq_data, val);
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1511,9 +1689,9 @@ void *get_aqualink_pool_spa_heater_temps( void *ptr )
   //logMessage(LOG_NOTICE, "Getting pool & spa heat setpoints from aqualink\n");
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     if (!get_PDA_aqualink_pool_spa_heater_temps(aq_data)) {
-      logMessage(LOG_ERR, "Error Getting PDA pool & spa heat protection setpoints\n");
+      logMessage(LOG_ERR, "Error Getting PDA pool & spa heater setpoints\n");
     }
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1555,7 +1733,7 @@ void *get_freeze_protect_temp( void *ptr )
   //logMessage(LOG_NOTICE, "Getting freeze protection setpoints\n");
 
 #ifdef AQ_PDA
-  if (pda_mode() == true) {
+  if (isPDA_PANEL) {
     if (! get_PDA_freeze_protect_temp(aq_data)) {
       logMessage(LOG_ERR, "Error Getting PDA freeze protection setpoints\n");
     }
@@ -1671,7 +1849,7 @@ void _waitfor_queue2empty(bool longwait)
 
   if (_pgm_command != NUL) {
     #ifdef AQ_PDA
-    if (pda_mode()) {
+    if (isPDA_PANEL) {
       // Wait for longer in PDA mode since it's slower.
       while ( (_pgm_command != NUL) && ( i++ < (150*(longwait?2:1)) ) ) {
         delay(100);
@@ -2008,6 +2186,13 @@ const char *ptypeName(program_type type)
      case AQ_SET_BOOST:
       return "SWG Boost";
     break;
+    case AQ_SET_PUMP_RPM:
+      return "Set Pump RPM";
+    break;
+    case AQ_SET_PUMP_VS_PROGRAM:
+      return "Set Pump VS Program";
+    break;
+#ifdef AQ_ONETOUCH
     case AQ_SET_ONETOUCH_PUMP_RPM:
       return "Set OneTouch Pump RPM";
     break;
@@ -2035,6 +2220,39 @@ const char *ptypeName(program_type type)
     case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
       return "Set OneTouch Spa Heater Temp";
     break;
+#endif
+#ifdef AQ_IAQTOUCH
+    case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
+      return "Set iAqualink Touch Pump VS Program";
+    break;
+    case AQ_SET_IAQTOUCH_PUMP_RPM:
+      return "Set iAqualink Touch Pump RPM";
+    break;
+    case AQ_GET_IAQTOUCH_VSP_ASSIGNMENT:
+      return "Get iAqualink Touch Pump Assignment";
+    break;
+    case AQ_GET_IAQTOUCH_SETPOINTS:
+      return "Get iAqualink Touch Setpoints";
+    break;
+    case AQ_GET_IAQTOUCH_AUX_LABELS:
+      return "Get iAqualink AUX Labels";
+    break;
+    case AQ_SET_IAQTOUCH_SWG_PERCENT:
+      return "Set iAqualink SWG Percent";
+    break;
+    case AQ_SET_IAQTOUCH_SWG_BOOST:
+      return "Set iAqualink Boost";
+    break;
+    case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
+      return "Set iAqualink Spa Heater";
+    break;
+    case AQ_SET_IAQTOUCH_POOL_HEATER_TEMP:
+      return "Set iAqualink Pool Heater";
+    break;
+    case AQ_SET_IAQTOUCH_SET_TIME:
+      return "Set iAqualink Set Time";
+    break;
+#endif
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
       return "Init PDA";
@@ -2066,11 +2284,13 @@ const char *programtypeDisplayName(program_type type)
     case AQ_GET_POOL_SPA_HEATER_TEMPS:
     case AQ_GET_ONETOUCH_SETPOINTS:
     case AQ_GET_FREEZE_PROTECT_TEMP:
+    case AQ_GET_IAQTOUCH_SETPOINTS:
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
 #endif
       return "Programming: retrieving setpoints";
     break;
+    case AQ_SET_IAQTOUCH_SET_TIME:
     case AQ_SET_ONETOUCH_TIME:
     case AQ_SET_TIME:
       return "Programming: setting time";
@@ -2079,6 +2299,8 @@ const char *programtypeDisplayName(program_type type)
     case AQ_SET_ONETOUCH_POOL_HEATER_TEMP:
     case AQ_SET_SPA_HEATER_TEMP:
     case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
+    case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
+    case AQ_SET_IAQTOUCH_POOL_HEATER_TEMP:
       return "Programming: setting heater";
     break;
     case AQ_SET_FRZ_PROTECTION_TEMP:
@@ -2097,20 +2319,30 @@ const char *programtypeDisplayName(program_type type)
     break;
     case AQ_SET_SWG_PERCENT:
     case AQ_SET_ONETOUCH_SWG_PERCENT:
+    case AQ_SET_IAQTOUCH_SWG_PERCENT:
       return "Programming: setting SWG percent";
     break;
     case AQ_GET_AUX_LABELS:
+    case AQ_GET_IAQTOUCH_AUX_LABELS:
       return "Programming: retrieving AUX labels";
     break;
     case AQ_SET_BOOST:
     case AQ_SET_ONETOUCH_BOOST:
+    case AQ_SET_IAQTOUCH_SWG_BOOST:
       return "Programming: setting SWG Boost";
     break;
     case AQ_SET_ONETOUCH_PUMP_RPM:
+    case AQ_SET_IAQTOUCH_PUMP_RPM:
+    case AQ_SET_PUMP_RPM:
+    case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
+    case AQ_SET_PUMP_VS_PROGRAM:
       return "Programming: setting Pump RPM";
     break;
     case AQ_SET_ONETOUCH_MACRO:
       return "Programming: setting OneTouch Macro";
+    break;
+    case AQ_GET_IAQTOUCH_VSP_ASSIGNMENT:
+      return "Get Pump Assignment";
     break;
 #ifdef AQ_PDA
     case AQ_PDA_DEVICE_STATUS:

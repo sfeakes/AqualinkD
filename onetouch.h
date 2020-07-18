@@ -7,8 +7,7 @@
 
 #define ONETOUCH_LINES 12
 
-#define PUMP_PRIMING -1
-#define PUMP_OFFLINE -2
+
 
 #define KICKT_CMD  0
 #define KICKT_MENU 1

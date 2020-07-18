@@ -42,7 +42,7 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
     for (i = 0; i < MAX_PUMPS; i++) {
       if ( aqdata->pumps[i].prclType == PENTAIR && aqdata->pumps[i].pumpID == packet[PEN_PKT_FROM] ) {
         // We found the pump.
-        logMessage(LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
+        LOG(DPEN_LOG, LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
           (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
           (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
 
@@ -53,7 +53,7 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
         break;
       }
       if (changedAnything != true)
-        logMessage(LOG_NOTICE, "Pentair Pump found at ID 0x%02hhx with RPM %d | WATTS %d, but not configured, information ignored!\n",
+        LOG(DPEN_LOG, LOG_NOTICE, "Pentair Pump found at ID 0x%02hhx with RPM %d | WATTS %d, but not configured, information ignored!\n",
                                packet[PEN_PKT_FROM],
                                (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
                                (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);

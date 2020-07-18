@@ -66,8 +66,8 @@ typedef enum pda_menu_type {
   PM_SET_AQUAPURE
 } pda_menu_type;
 */
-bool pda_mode();
-void set_pda_mode(bool val);
+//bool pda_mode();
+//void set_pda_mode(bool val);
 bool process_pda_menu_packet(unsigned char* packet, int length);
 int pda_m_hlightindex();
 char *pda_m_hlight();

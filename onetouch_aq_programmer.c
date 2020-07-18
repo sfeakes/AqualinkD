@@ -1,3 +1,18 @@
+/*
+ * Copyright (c) 2017 Shaun Feakes - All rights reserved
+ *
+ * You may use redistribute and/or modify this code under the terms of
+ * the GNU General Public License version 2 as published by the 
+ * Free Software Foundation. For the terms of this license, 
+ * see <http://www.gnu.org/licenses/>.
+ *
+ * You are free to use this software under the terms of the GNU General
+ * Public License, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ *  https://github.com/sfeakes/aqualinkd
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +22,9 @@
 #include "aq_programmer.h"
 #include "onetouch.h"
 #include "aqualink.h"
+#include "rs_msg_utils.h"
+#include "config.h"
+#include "devices_jandy.h"
 
 unsigned char _ot_pgm_command = NUL;
 
@@ -30,7 +48,7 @@ unsigned char pop_ot_cmd(unsigned char receive_type)
     _ot_pgm_command = NUL;
   } 
 
-  logMessage(LOG_DEBUG, "OneTouch Sending '0x%02hhx' to controller\n", cmd);
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch Sending '0x%02hhx' to controller\n", cmd);
   return cmd;
 }
 
@@ -50,7 +68,7 @@ void waitfor_ot_queue2empty()
   }
 
   if (_ot_pgm_command != NUL) {
-    logMessage(LOG_WARNING, "OneTouch Send command Queue did not empty, timeout\n");
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch Send command Queue did not empty, timeout\n");
   }
 }
 
@@ -62,19 +80,19 @@ void send_ot_cmd(unsigned char cmd)
   
   ot_queue_cmd(cmd);
 
-  logMessage(LOG_INFO, "OneTouch Queue send '0x%02hhx' to controller (programming)\n", _ot_pgm_command);
+  LOG(ONET_LOG,LOG_INFO, "OneTouch Queue send '0x%02hhx' to controller (programming)\n", _ot_pgm_command);
 }
 
 bool waitForOT_MessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived)
 {
-  //logMessage(LOG_DEBUG, "waitForOT_MessageType  0x%02hhx || 0x%02hhx\n",mtype1,mtype2);
+  //LOG(ONET_LOG,LOG_DEBUG, "waitForOT_MessageType  0x%02hhx || 0x%02hhx\n",mtype1,mtype2);
 
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
   while( ++i <= numMessageReceived)
   {
-    logMessage(LOG_DEBUG, "waitForOT_MessageType 0x%02hhx||0x%02hhx, last message type was 0x%02hhx (%d of %d)\n",mtype1,mtype2,*last_onetouch_packet(),i,numMessageReceived);
+    LOG(ONET_LOG,LOG_DEBUG, "waitForOT_MessageType 0x%02hhx||0x%02hhx, last message type was 0x%02hhx (%d of %d)\n",mtype1,mtype2,*last_onetouch_packet(),i,numMessageReceived);
 
     if (*last_onetouch_packet() == mtype1 || *last_onetouch_packet() == mtype2) break;
 
@@ -84,11 +102,11 @@ bool waitForOT_MessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, 
   pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
   
   if (*last_onetouch_packet() != mtype1 && *last_onetouch_packet() != mtype2) {
-    //logMessage(LOG_ERR, "Could not select MENU of Aqualink control panel\n");
-    logMessage(LOG_DEBUG, "waitForOT_MessageType: did not receive 0x%02hhx||0x%02hhx\n",mtype1,mtype2);
+    //LOG(ONET_LOG,LOG_ERR, "Could not select MENU of Aqualink control panel\n");
+    LOG(ONET_LOG,LOG_DEBUG, "waitForOT_MessageType: did not receive 0x%02hhx||0x%02hhx\n",mtype1,mtype2);
     return false;
   } else 
-    logMessage(LOG_DEBUG, "waitForOT_MessageType: received 0x%02hhx\n",*last_onetouch_packet());
+    LOG(ONET_LOG,LOG_DEBUG, "waitForOT_MessageType: received 0x%02hhx\n",*last_onetouch_packet());
   
   return true;
 }
@@ -104,7 +122,7 @@ bool waitForNextOT_Menu(struct aqualinkdata *aq_data) {
 
   while( ++i <= 20)
   {
-    logMessage(LOG_DEBUG, "waitForNextOT_Menu (%d of %d)\n",i,numMessageReceived);
+    LOG(ONET_LOG,LOG_DEBUG, "waitForNextOT_Menu (%d of %d)\n",i,numMessageReceived);
 
     //if(thread_kick_type() == KICKT_MENU) break;
 
@@ -129,12 +147,12 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
   // Also need page up and down  "   ^^ More vv"
   if ( (index = onetouch_menu_find_index(item)) != -1) {
     cnt = index - onetouch_menu_hlightindex();
-    logMessage(LOG_DEBUG, "OneTouch menu caculator selected=%d, wanted=%d, move=%d timesn",onetouch_menu_hlightindex(),index,cnt);
+    LOG(ONET_LOG,LOG_DEBUG, "OneTouch menu caculator selected=%d, wanted=%d, move=%d times\n",onetouch_menu_hlightindex(),index,cnt);
     for (i=0; i < cnt; i ++) {
         send_ot_cmd(KEY_ONET_DOWN);
         waitfor_ot_queue2empty();
         waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,3);
-        if (ot_strcmp(onetouch_menu_hlight(), item) == 0) {
+        if (rsm_strcmp(onetouch_menu_hlight(), item) == 0) {
           // We got here early, probably because blank menu item
           break;
         }
@@ -142,8 +160,8 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
     // check if it's quicker to go up rather than down, if second page can't go up.
     // This doesn;t work yet, not all versions of control panels have the same amount of items.
     /*
-    if (cnt <= 5 || ot_strcmp(onetouch_menu_line(10), "   ^^ More", 10) == 0 ) { 
-      logMessage(LOG_DEBUG, "OneTouch device programmer pressing down %d times\n",cnt);
+    if (cnt <= 5 || rsm_strcmp(onetouch_menu_line(10), "   ^^ More", 10) == 0 ) { 
+      LOG(ONET_LOG,LOG_DEBUG, "OneTouch device programmer pressing down %d times\n",cnt);
       for (i=0; i < cnt; i ++) {
         send_ot_cmd(KEY_ONET_DOWN);
         //waitfor_ot_queue2empty();
@@ -151,7 +169,7 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
       }
     } else {
       cnt = 11 - cnt;
-      logMessage(LOG_DEBUG, "OneTouch device programmer pressing up %d times\n",cnt);
+      LOG(ONET_LOG,LOG_DEBUG, "OneTouch device programmer pressing up %d times\n",cnt);
       for (i=0; i < cnt; i ++) {
         send_ot_cmd(KEY_ONET_UP);
         //waitfor_ot_queue2empty();
@@ -163,7 +181,7 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
     //waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,15);
   } else {
     // Is their another page to search
-    if (ot_strcmp(onetouch_menu_line(10), "^^ More") == 0) {
+    if (rsm_strcmp(onetouch_menu_line(10), "^^ More") == 0) {
       char first_item[AQ_MSGLEN+1];
       do {
         send_ot_cmd(KEY_ONET_PAGE_DN);
@@ -175,12 +193,12 @@ bool highlight_onetouch_menu_item(struct aqualinkdata *aq_data, char *item)
       // Need to get menu item 1.
       // Hit page down until menu item matches 1.
     } else
-      logMessage(LOG_ERR, "OneTouch device programmer menu item '%s' does not exist\n",item);
+      LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer menu item '%s' does not exist\n",item);
     //print_onetouch_menu();
   }
 
-  if ( ot_strcmp(onetouch_menu_hlight(), item) != 0) {
-    logMessage(LOG_ERR, "OneTouch device programmer menu item '%s' not selected\n",item);
+  if ( rsm_strcmp(onetouch_menu_hlight(), item) != 0) {
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer menu item '%s' not selected\n",item);
     //print_onetouch_menu();
     return false;
   } else {
@@ -220,7 +238,7 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
   } else if (get_onetouch_memu_type() == OTM_ONETOUCH) {
     //printf("*** ONE TOUCH MENU ***\n");
     // Can only be one of 2 options in this menu, so if it's not the one we want, hit down first
-    if ( ot_strcmp(onetouch_menu_hlight(), "System") != 0) {
+    if ( rsm_strcmp(onetouch_menu_hlight(), "System") != 0) {
       send_ot_cmd(KEY_ONET_DOWN);
       waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,15);
     }
@@ -229,12 +247,12 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
     waitForNextOT_Menu(aq_data);
     //return false;
   } else {
-    logMessage(LOG_ERR, "OneTouch device programmer couldn't get to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer couldn't get to System menu\n");
     return false;
   }
 
   if (get_onetouch_memu_type() != OTM_SYSTEM) {
-    logMessage(LOG_ERR, "OneTouch device programmer couldn't get to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer couldn't get to System menu\n");
     return false;
   }
 
@@ -249,10 +267,10 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
   char *second_menu = false;
   char *third_menu = false;
 
-  logMessage(LOG_DEBUG, "OneTouch device programmer request for menu %d\n",menu);
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch device programmer request for menu %d\n",menu);
 
   if ( ! goto_onetouch_system_menu(aq_data) ) {
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get system menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get system menu\n");
     return false;
   }
 
@@ -295,7 +313,7 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
     break;
     case OTM_EQUIPTMENT_ONOFF:
       if ( select_onetouch_menu_item(aq_data, "Equipment ON/OFF") == false ) {
-        logMessage(LOG_ERR, "OneTouch device programmer couldn't select 'Equipment ON/OFF' menu %d\n",menu);
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer couldn't select 'Equipment ON/OFF' menu %d\n",menu);
         equErr = true;
       }
     break;
@@ -307,7 +325,7 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
     case OTM_BOOST:
     case OTM_SYSTEM_SETUP:
       if ( select_onetouch_menu_item(aq_data, "Menu / Help") == false ) {
-        logMessage(LOG_ERR, "OneTouch device programmer couldn't select menu %d\n",menu);
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer couldn't select menu %d\n",menu);
         break;
       }
       if (second_menu)
@@ -316,13 +334,18 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
         select_onetouch_menu_item(aq_data, third_menu);
     break;
     default:
-      logMessage(LOG_ERR, "OneTouch device programmer doesn't know how to access menu %d\n",menu);
+      LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer doesn't know how to access menu %d\n",menu);
     break;
   }
 
   // We can't detect Equiptment menu yet, so use the find test above not get_onetouch_memu_type() below
   if (menu == OTM_EQUIPTMENT_ONOFF ) {
     return !equErr;
+  }
+
+  // Need to wait a bit longer for set temp menu if single device (nag screen temp1 higher than temp2)
+  if ( menu == OTM_SET_TEMP && get_onetouch_memu_type() != menu) {
+    waitForNextOT_Menu(aq_data);
   }
 
   if (get_onetouch_memu_type() != menu)
@@ -371,7 +394,7 @@ bool intPress(int diff) {
   PROGRAMMING FUNCTIONS
 */
 
-void *set_aqualink_pump_rpm( void *ptr )
+void *set_aqualink_onetouch_pump_rpm( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
@@ -388,7 +411,7 @@ void *set_aqualink_pump_rpm( void *ptr )
   for (structIndex=0; structIndex < aq_data->num_pumps; structIndex++) {
     if (aq_data->pumps[structIndex].pumpIndex == pumpIndex) {
       if (aq_data->pumps[structIndex].pumpType == PT_UNKNOWN) {
-        logMessage(LOG_ERR, "Can't set Pump RPM/GPM until type is known\n");
+        LOG(ONET_LOG,LOG_ERR, "Can't set Pump RPM/GPM until type is known\n");
         cleanAndTerminateThread(threadCtrl);
         return ptr;
       }
@@ -400,11 +423,11 @@ void *set_aqualink_pump_rpm( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_PUMP_RPM);
 
-  logMessage(LOG_INFO, "OneTouch Set Pump %d to RPM %d\n",pumpIndex,pumpRPM);
+  LOG(ONET_LOG,LOG_INFO, "OneTouch Set Pump %d to RPM %d\n",pumpIndex,pumpRPM);
 
 
   if (! goto_onetouch_menu(aq_data, OTM_EQUIPTMENT_ONOFF) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get Equiptment on/off menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get Equiptment on/off menu\n");
   }
 
   sprintf(VSPstr, "VSP%1d Spd Adj",pumpIndex);
@@ -434,6 +457,7 @@ void *set_aqualink_pump_rpm( void *ptr )
           break;
         }
       }
+      //OneTouch Menu Line 3 =  set to  50 GPM 
       //OneTouch Menu Line 3 =  set to  50 GPM
       //OneTouch Menu Line 3 = set to 1750 RPM
       if ( strstr(onetouch_menu_hlight(), "set to") != NULL ) {
@@ -442,65 +466,67 @@ void *set_aqualink_pump_rpm( void *ptr )
           // RPM 3450 & 600 max & min
           // Panel will change 2nd,3rd & 4th digits depending on previos digit
           // so reget the RPM after every change.
-          int RPM = ot_atoi(&onetouch_menu_hlight()[7]);
+          int RPM = rsm_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 10000));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
-          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
+          RPM = rsm_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 1000));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
-          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
+          RPM = rsm_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 100));
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
-          RPM = ot_atoi(&onetouch_menu_hlight()[7]);
+          RPM = rsm_atoi(&onetouch_menu_hlight()[7]);
           intPress(digitDiff(RPM, pumpRPM, 10));
           // Get the new RPM.
-          aq_data->pumps[structIndex].rpm = ot_atoi(&onetouch_menu_hlight()[7]);
+          aq_data->pumps[structIndex].rpm = rsm_atoi(&onetouch_menu_hlight()[7]);
           send_ot_cmd(KEY_ONET_SELECT);
-          waitfor_ot_queue2empty(); 
+          waitfor_ot_queue2empty();
+          waitForOT_MessageTypes(aq_data,CMD_MSG_LONG,CMD_PDA_HIGHLIGHTCHARS,5);
         } else if (strstr(onetouch_menu_hlight(), "GPM") != NULL ) {
           // GPM 130 max, GPM 15 min
           for (i=0; i < 24 ; i++) { // Max of 23 key presses to get from max to min
-            int GPM = ot_atoi(&onetouch_menu_hlight()[8]);
+            int GPM = rsm_atoi(&onetouch_menu_hlight()[8]);
             //printf ("*** GPM = %d | Setting to %d\n",GPM,pumpRPM);
             if ( GPM > pumpRPM ) {
               send_ot_cmd(KEY_ONET_DOWN);
             } else if (GPM < pumpRPM) {
               send_ot_cmd(KEY_ONET_UP);
             } else {
-              aq_data->pumps[structIndex].gpm = ot_atoi(&onetouch_menu_hlight()[8]);;
+              aq_data->pumps[structIndex].gpm = rsm_atoi(&onetouch_menu_hlight()[8]);;
               send_ot_cmd(KEY_ONET_SELECT);
               waitfor_ot_queue2empty();
               break;
             }
             waitfor_ot_queue2empty();
             // This really does slow it down, but we hit up.down once too ofter without it, need to fix.
-            waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,5);
+            //waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,5);
+            waitForOT_MessageTypes(aq_data,CMD_MSG_LONG,CMD_PDA_HIGHLIGHTCHARS,5);
             // Reset the pump GPM
-            aq_data->pumps[structIndex].rpm = GPM;
+            //aq_data->pumps[structIndex].rpm = GPM;
             //waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_MSG_LONG,5);
             //waitForNextOT_Menu(aq_data);
           }
         } else {
-          logMessage(LOG_ERR, "OneTouch device programmer Not sure how to set '%s'\n",onetouch_menu_hlight());
+          LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer Not sure how to set '%s'\n",onetouch_menu_hlight());
         }
       } else {
-        logMessage(LOG_ERR, "OneTouch device programmer didn't select VSP\n");
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't select VSP\n");
       }
     } else {
-      logMessage(LOG_ERR, "OneTouch device programmer Couldn't find Select Speed menu\n");
+      LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer Couldn't find Select Speed menu\n");
     }
   } else {
-    logMessage(LOG_ERR, "OneTouch device programmer Couldn't find VSP in Equiptment on/off menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer Couldn't find VSP in Equiptment on/off menu\n");
   }
   //printf( "Menu Index %d\n", onetouch_menu_find_index(VSPstr));
 
   //printf("**** GOT THIS FAR, NOW LET'S GO BACK ****\n");
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   //printf("**** CLEAN EXIT ****\n");
@@ -525,9 +551,9 @@ void *set_aqualink_onetouch_macro( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_MACRO);
   
-  logMessage(LOG_DEBUG, "OneTouch Marco\n");
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch Marco\n");
 
-  logMessage(LOG_ERR, "OneTouch Macro not implimented (device=%d|state=%d)\n",device,state);
+  LOG(ONET_LOG,LOG_ERR, "OneTouch Macro not implimented (device=%d|state=%d)\n",device,state);
 
   cleanAndTerminateThread(threadCtrl);
 
@@ -543,28 +569,20 @@ void *get_aqualink_onetouch_setpoints( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_ONETOUCH_SETPOINTS);
   
-  logMessage(LOG_DEBUG, "OneTouch get heater temps\n");
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch get heater temps\n");
 
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TEMP) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get heater temp menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get heater temp menu\n");
   }
 
   if ( !goto_onetouch_menu(aq_data, OTM_FREEZE_PROTECT) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get freeze protect menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get freeze protect menu\n");
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
   }
-/*
-  logMessage(LOG_DEBUG, "*** OneTouch device programmer TEST page down ***\n");
-  goto_onetouch_menu(aq_data, OTM_SYSTEM_SETUP);
-  highlight_onetouch_menu_item(aq_data, "About");
-  send_ot_cmd(KEY_ONET_SELECT);
-  waitfor_ot_queue2empty();
-  waitForNextOT_Menu(aq_data);
-  logMessage(LOG_DEBUG, "*** OneTouch device programmer END TEST page down ***\n");
-*/
+
   cleanAndTerminateThread(threadCtrl);
 
   // just stop compiler error, ptr is not valid as it's just been freed
@@ -581,18 +599,32 @@ void set_aqualink_onetouch_heater_setpoint( struct aqualinkdata *aq_data, bool i
   unsigned char direction;
 
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TEMP) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get heater temp menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get heater temp menu\n");
   }
 
   if(ispool){
-    if (!highlight_onetouch_menu_item(aq_data, "Pool Heat")) {
-      logMessage(LOG_ERR, "OneTouch device programmer failed to get pool heater temp menu\n");
-      return;
+    if (isCOMBO_PANEL) {
+      if (!highlight_onetouch_menu_item(aq_data, "Pool Heat")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get pool heater temp menu\n");
+        return;
+      }
+    } else {
+      if (!highlight_onetouch_menu_item(aq_data, "Temp1")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Temp1 temp menu\n");
+        return;
+      }
     }
   } else {
-    if (!highlight_onetouch_menu_item(aq_data, "Spa Heat")) {
-      logMessage(LOG_ERR, "OneTouch device programmer failed to get spa heater temp menu\n");
-      return;
+    if (isCOMBO_PANEL) {
+      if (!highlight_onetouch_menu_item(aq_data, "Spa Heat")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get spa heater temp menu\n");
+        return;
+      }
+    } else {
+      if (!highlight_onetouch_menu_item(aq_data, "Temp2")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Temp2 temp menu\n");
+        return;
+      }
     }
   }
 
@@ -602,7 +634,7 @@ void set_aqualink_onetouch_heater_setpoint( struct aqualinkdata *aq_data, bool i
  
   {
     char *st = onetouch_menu_hlightchars(&len);
-    logMessage(LOG_DEBUG, "** OneTouch set heater temp highlighted='%.*s'\n", len, st);
+    LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp highlighted='%.*s'\n", len, st);
   }
   
   cval = atoi(onetouch_menu_hlightchars(&len));
@@ -614,7 +646,7 @@ void set_aqualink_onetouch_heater_setpoint( struct aqualinkdata *aq_data, bool i
     diff=-diff;
   }
 
-  logMessage(LOG_DEBUG, "** OneTouch set heater temp diff='%d'\n", diff);
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp diff='%d'\n", diff);
 
   for (i=0; i < diff; i++) {
     send_ot_cmd(direction);
@@ -627,10 +659,10 @@ void set_aqualink_onetouch_heater_setpoint( struct aqualinkdata *aq_data, bool i
   waitfor_ot_queue2empty();
   
 /*
-  logMessage(LOG_DEBUG, "** OneTouch set heater temp line='%s'\n", onetouch_menu_line(line));
-  logMessage(LOG_DEBUG, "** OneTouch set heater temp highlight='%d'\n", onetouch_menu_hlightindex());
-  logMessage(LOG_DEBUG, "** OneTouch set heater temp highlightline='%s'\n", onetouch_menu_line(onetouch_menu_hlightindex()));
-  logMessage(LOG_DEBUG, "** OneTouch set heater temp highlightchars='%s'\n", onetouch_menu_hlight());
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp line='%s'\n", onetouch_menu_line(line));
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp highlight='%d'\n", onetouch_menu_hlightindex());
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp highlightline='%s'\n", onetouch_menu_line(onetouch_menu_hlightindex()));
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set heater temp highlightchars='%s'\n", onetouch_menu_hlight());
 */
   //onetouch_menu_line(line)
   //onetouch_menu_hlightindex
@@ -648,7 +680,7 @@ void *set_aqualink_onetouch_pool_heater_temp( void *ptr )
   int val = atoi((char*)threadCtrl->thread_args);
   val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
 
-  logMessage(LOG_DEBUG, "OneTouch set pool heater temp to %d\n", val);
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch set pool heater temp to %d\n", val);
   set_aqualink_onetouch_heater_setpoint(aq_data, true, val);
 
   cleanAndTerminateThread(threadCtrl);
@@ -668,7 +700,7 @@ void *set_aqualink_onetouch_spa_heater_temp( void *ptr )
   int val = atoi((char*)threadCtrl->thread_args);
   val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
 
-  logMessage(LOG_DEBUG, "OneTouch set spa heater temp to %d\n", val);
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch set spa heater temp to %d\n", val);
   set_aqualink_onetouch_heater_setpoint(aq_data, false, val);
 
   cleanAndTerminateThread(threadCtrl);
@@ -687,39 +719,37 @@ void *set_aqualink_onetouch_boost( void *ptr )
   
   int val = atoi((char*)threadCtrl->thread_args);
 
-  logMessage(LOG_DEBUG, "OneTouch request set Boost to '%d'\n",val==true?"On":"Off");
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch request set Boost to '%d'\n",val==true?"On":"Off");
 
   if ( !goto_onetouch_menu(aq_data, OTM_BOOST) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get BOOST menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get BOOST menu\n");
   } else { 
-    if ( ot_strcmp(onetouch_menu_hlight(), "Start") == 0 ) {
+    if ( rsm_strcmp(onetouch_menu_hlight(), "Start") == 0 ) {
       if (val) {
-        logMessage(LOG_DEBUG, "OneTouch Boost is Off, turning On\n");
+        LOG(ONET_LOG,LOG_DEBUG, "OneTouch Boost is Off, turning On\n");
         send_ot_cmd(KEY_ONET_SELECT);
         waitfor_ot_queue2empty();
       } else {
-        logMessage(LOG_INFO, "OneTouch Boost is Off, ignore request\n");
+        LOG(ONET_LOG,LOG_INFO, "OneTouch Boost is Off, ignore request\n");
       }
-    } else if ( ot_strcmp(onetouch_menu_hlight(), "Pause") == 0 ) {
+    } else if ( rsm_strcmp(onetouch_menu_hlight(), "Pause") == 0 ) {
       if (! val) {
-        logMessage(LOG_DEBUG, "OneTouch set Boost is ON, turning Off\n");
+        LOG(ONET_LOG,LOG_DEBUG, "OneTouch set Boost is ON, turning Off\n");
         highlight_onetouch_menu_item(aq_data, "Stop");
         send_ot_cmd(KEY_ONET_SELECT);
         waitfor_ot_queue2empty();
         // Takes ages to see bost is off from menu, to set it here.
-        aq_data->boost = false;
-        aq_data->boost_msg[0] = '\0';
-        aq_data->swg_percent = 0;
+        setSWGboost(aq_data, false);
       } else {
-        logMessage(LOG_INFO, "OneTouch Boost is On, ignore request\n");
+        LOG(ONET_LOG,LOG_INFO, "OneTouch Boost is On, ignore request\n");
       }
     } else {
-      logMessage(LOG_ERR, "OneTouch Boost unknown menu\n");
+      LOG(ONET_LOG,LOG_ERR, "OneTouch Boost unknown menu\n");
     } 
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);
@@ -733,19 +763,91 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  int cval;
+  int diff;
+  int i;
+  int len;
+  unsigned char direction;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_SWG_PERCENT);
-  
-  logMessage(LOG_DEBUG, "OneTouch set SWG Percent\n");
+  int val = atoi((char*)threadCtrl->thread_args);
+  val = setpoint_check(SWG_SETPOINT, val, aq_data);
+
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch set SWG Percent to %d\n",val);
 
   if ( !goto_onetouch_menu(aq_data, OTM_SET_AQUAPURE) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get Aquapure menu\n");
-  } else {
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Aquapure menu\n");
+    goto f_end;
+  }
     
+  //OneTouch Menu Line 3 = Set Pool to: 50%
+  //OneTouch Menu Line 4 =  Set Spa to:  0%
+
+  // Only have option for both on ComboPanel, and us
+  if (isCOMBO_PANEL) {
+    if (aq_data->aqbuttons[SPA_INDEX].led->state == OFF) {
+      if (!highlight_onetouch_menu_item(aq_data, "Set Pool")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Pool swg percent\n");
+        goto f_end;
+      }
+    } else {
+      if (!highlight_onetouch_menu_item(aq_data, "Set Spa")) {
+        LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Spa swg percent\n");
+        goto f_end;
+      }
+    }
+  } else {
+    // NSF Need to check text for congle panel.
   }
 
+  send_ot_cmd(KEY_ONET_SELECT);
+  waitfor_ot_queue2empty();
+  waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+ 
+  {
+    i=0;
+    char *st = onetouch_menu_hlightchars(&len);
+    LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent highlighted='%.*s'  len=%d  st=%s\n", len, st, len, st);
+    while (len > 5 || len < 0 && i < 5) {
+      LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent highlighted waiting again\n");
+      delay(50);
+      waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,5); // CMD_PDA_0x04 is just a packer.
+      st = onetouch_menu_hlightchars(&len);
+      LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent highlighted='%.*s'  len=%d  st=%s\n", len, st, len, st);
+      i++;
+    }
+  }
+  
+  cval = atoi(onetouch_menu_hlightchars(&len));
+  diff = (val - cval) / 5;
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent val=%d cval=%d diff=%d \n", val,cval,diff);
+  if (diff > 0) {
+    direction = KEY_ONET_UP;
+  } else if (diff < 0) {
+    direction = KEY_ONET_DOWN;
+    diff=-diff;
+  }
+
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent diff='%d'\n", diff);
+
+  for (i=0; i < diff; i++) {
+    send_ot_cmd(direction);
+    waitfor_ot_queue2empty();
+  }
+  
+  /*
+  waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+  setSWGpercent(aq_data,atoi(onetouch_menu_hlightchars(&len)));
+  */
+ 
+  send_ot_cmd(KEY_ONET_SELECT);
+  waitfor_ot_queue2empty();
+  send_ot_cmd(KEY_ONET_BACK);
+  waitfor_ot_queue2empty();
+
+  f_end:
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);
@@ -767,18 +869,18 @@ void *set_aqualink_onetouch_time( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_TIME);
   
-  logMessage(LOG_ERR, "OneTouch set time not implimented\n");
+  LOG(ONET_LOG,LOG_ERR, "OneTouch set time not implimented\n");
 
-  logMessage(LOG_DEBUG, "OneTouch set time\n");
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch set time\n");
 
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TIME) ){
-    logMessage(LOG_ERR, "OneTouch device programmer failed to get time menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get time menu\n");
   } else {
     
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    logMessage(LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);

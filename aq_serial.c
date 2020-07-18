@@ -33,6 +33,8 @@
 
 //#define USE_AQ_SERIAL_OLD
 
+
+
 #ifndef USE_AQ_SERIAL_OLD  // Substansial changes to core component, make sure we can role back easily
 
 static struct termios _oldtio;
@@ -46,7 +48,7 @@ bool _onetouch_mode = false;
 void set_onetouch_mode(bool mode)
 {
   if (mode)
-    logMessage(LOG_NOTICE, "AqualinkD is using Onetouch mode\n");
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using Onetouch mode\n");
 
   _onetouch_mode = mode;
 }
@@ -57,13 +59,14 @@ bool onetouch_mode()
 #endif
 */
 
+/*
 #ifdef AQ_PDA
 bool _pda_mode = false;
 
 void set_pda_mode(bool mode)
 {
   if (mode)
-    logMessage(LOG_NOTICE, "AqualinkD is using PDA mode\n");
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using PDA mode\n");
 
   _pda_mode = mode;
 }
@@ -72,32 +75,63 @@ bool pda_mode()
   return _pda_mode;
 }
 #endif
-
+*/
+/*
 bool _onetouch_enabled = false;
+bool _iaqtouch_enabled = false;
 bool _extended_device_id_programming = false;
 
 
 void set_onetouch_enabled(bool mode)
 {
-  if (mode)
-    logMessage(LOG_NOTICE, "AqualinkD is using use ONETOUCH mode for VSP programming\n");
+  if (mode) {
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using use ONETOUCH mode for VSP programming\n");
+    _iaqtouch_enabled = false;
+  }
   _onetouch_enabled = mode;
 }
 
 bool onetouch_enabled()
 {
+#ifdef AQ_ONETOUCH
   return _onetouch_enabled;
+#else
+  return false;
+#endif
 }
+
+void set_iaqtouch_enabled(bool mode)
+{
+  if (mode) {
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using use IAQ TOUCH mode for VSP programming\n");
+    _onetouch_enabled = false;
+  }
+  _iaqtouch_enabled = mode;
+}
+
+bool iaqtouch_enabled()
+{
+#ifdef AQ_IAQTOUCH
+  return _iaqtouch_enabled;
+#else
+  return false;
+#endif
+}
+
 bool VSP_enabled()
 {
   // At present this is dependant on onetouch.
-  return onetouch_enabled();
+  //return onetouch_enabled();
+  if (onetouch_enabled() || iaqtouch_enabled())
+    return true;
+  
+  return false;
 }
 
 void set_extended_device_id_programming(bool mode)
 {
   if (mode)
-    logMessage(LOG_NOTICE, "AqualinkD is using use ONETOUCH mode for programming (where supported)\n");
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using use %s mode for programming (where supported)\n",onetouch_enabled()?"ONETOUCH":"IAQ TOUCH");
   _extended_device_id_programming = mode;
 }
 
@@ -105,6 +139,7 @@ bool extended_device_id_programming()
 {
   return _extended_device_id_programming;
 }
+*/
 
 const char* get_packet_type(unsigned char* packet , int length)
 {
@@ -156,11 +191,23 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_PDA_HIGHLIGHTCHARS:
       return "PDA HlightChars";
     break;
-    case CMD_IAQ_MSG:
-      return "iAq Message";
+    case CMD_IAQ_PAGE_MSG:
+      if (packet[4] == 0x31)
+        return "iAq setDevice";
+      else
+        return "iAq pMessage";
     break;
-    case CMD_IAQ_MENU_MSG:
-      return "iAq Menu";
+    case CMD_IAQ_PAGE_BUTTON:
+        return "iAq pButton";
+    break;
+    case CMD_IAQ_POLL:
+      return "iAq Poll";
+    break;
+    case CMD_IAQ_PAGE_END:
+      return "iAq PageEnd";
+    break;
+    case CMD_IAQ_PAGE_START:
+      return "iAq PageStart";
     break;
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
@@ -210,7 +257,7 @@ bool check_pentair_checksum(unsigned char* packet, int length)
 
   // Check against actual # length
   if (sum == (packet[n] * 256 + packet[n+1])) {
-    logMessage(LOG_ERR, "Pentair checksum is accurate but length is not\n");
+    LOG(RSSD_LOG,LOG_ERR, "Pentair checksum is accurate but length is not\n");
     return true;
   }
   
@@ -272,17 +319,17 @@ int init_serial_port(const char* tty)
   //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK);
   int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
   if (fd < 0)  {
-    logMessage(LOG_ERR, "Unable to open port: %s\n", tty);
+    LOG(RSSD_LOG,LOG_ERR, "Unable to open port: %s\n", tty);
     return -1;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
   
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
   newtio.c_cc[VMIN]= 0;
   newtio.c_cc[VTIME]= 1;
-  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
 
   tcgetattr(fd, &_oldtio); // save current port settings
     // set new port settings for canonical input processing
@@ -294,7 +341,7 @@ int init_serial_port(const char* tty)
   tcflush(fd, TCIFLUSH);
   tcsetattr(fd, TCSANOW, &newtio);
   
-  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
 
   return fd;
 }
@@ -304,7 +351,7 @@ void close_serial_port(int fd)
 {
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
-  logMessage(LOG_DEBUG_SERIAL, "Closed serial port\n");
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Closed serial port\n");
 }
 
 
@@ -377,11 +424,11 @@ void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, ackPacket + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
-  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
   log_packet("Sent ", ackPacket, length);
@@ -469,30 +516,52 @@ void send_command(int fd, unsigned char *packet_buffer, int size)
   //int i=0;
   
   if (packet_buffer[0] == PCOL_JANDY) {
-    //logMessage(LOG_ERR, "Only Jandy protocol supported at present!\n");
+    //LOG(RSSD_LOG,LOG_ERR, "Only Jandy protocol supported at present!\n");
     send_jandy_command(fd, &packet_buffer[1], size-1);
     return;
   }
   if (packet_buffer[0] == PCOL_PENTAIR) {
-    //logMessage(LOG_ERR, "Only Jandy protocol supported at present!\n");
+    //LOG(RSSD_LOG,LOG_ERR, "Only Jandy protocol supported at present!\n");
     send_pentair_command(fd, &packet_buffer[1], size-1);
     return;
   }
 }
 
+
 void send_packet(int fd, unsigned char *packet, int length)
 {
+  if (_aqconfig_.readahead_b4_write) {
+    unsigned char byte;
+    int r;
+    //int j=0;
+    do {
+      //j++;
+      r = read(fd, &byte, 1);
+      //printf("*** Peek Read %d 0x%02hhx ***\n",r,byte);
+      if (r==1 && byte != 0x00) {
+        LOG(RSSD_LOG,LOG_ERR, "SERIOUS ERROR on RS485, AqualinkD was too slow in replying to message! (please check OS for performance issues)\n");
+        return;
+      }
+    } while (r==1 && byte==0x00);
+  }
 
   int nwrite, i;
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, packet + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-
-  if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
+/*
+#ifdef AQ_DEBUG
+  // Need to take this out for release
+  if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
+    debuglogPacket(&packet[1], length-2);
+  }
+#endif
+*/
+  if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL) {
     // Packet is padded with 0x00, so discard for logging
-    logMessage(LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
+    LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
     logPacket(&packet[1], length-2);
   }
 }
@@ -575,7 +644,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
       if (retry > 20) {
-        logMessage(LOG_WARNING, "Serial read timeout\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read timeout\n");
         //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
         logPacketError(packet, index);
         return 0;
@@ -672,7 +741,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     } else if(bytesRead < 0) {
       // Got a read error. Wait one millisecond for the next byte to
       // arrive.
-      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
       if(errno == 9) {
         // Bad file descriptor. Port has been disconnected for some reason.
         // Return a -1.
@@ -685,42 +754,63 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     // length.
     if (index >= AQ_MAXPKTLEN) {
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial packet too large\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
       break;
     }
   }
-
-  //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
+  
+  // Clean out rest of buffer, make sure their is nothing else
+/*  Doesn't work for shit due to probe message speed, need to come back and re-think
+  if (_aqconfig_.readahead_b4_write) {
+    if (endOfPacket == true) {
+      do {
+        bytesRead = read(fd, &byte, 1);
+        //if (bytesRead==1) { LOG(RSSD_LOG,LOG_ERR, "Cleanout buffer read 0x%02hhx\n",byte); }
+        if (bytesRead==1 && byte != 0x00) {
+          LOG(RSSD_LOG,LOG_ERR, "SERIOUS ERROR on RS485, AqualinkD caught packet collision on bus, ignoring!\n");
+          LOG(RSSD_LOG,LOG_ERR, "Error Cleanout read 0x%02hhx\n",byte); 
+          // Run the buffer out
+          do { 
+            bytesRead = read(fd, &byte, 1);
+            if (bytesRead==1) { LOG(RSSD_LOG,LOG_ERR, "Error Cleanout read 0x%02hhx\n",byte); }
+          } while (bytesRead==1);
+          return 0;
+        }
+      } while (bytesRead==1);
+    }
+  }
+ */ 
+  //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
     if (check_jandy_checksum(packet, index) != true){
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   } else if (pentairPacketStarted) {
     if (check_pentair_checksum(packet, index) != true){
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   }
 /* 
   if (generate_checksum(packet, index) != packet[index-3]){
-    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else*/ if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
     logPacketError(packet, index);
-    logMessage(LOG_WARNING, "Serial read too small\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read too small\n");
     //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   logPacket(packet, index);
   // Return the packet length.
   return index;
@@ -804,7 +894,7 @@ bool _pda_mode = false;
 void set_pda_mode(bool mode)
 {
   if (mode)
-    logMessage(LOG_NOTICE, "AqualinkD is using PDA mode\n");
+    LOG(RSSD_LOG,LOG_NOTICE, "AqualinkD is using PDA mode\n");
 
   _pda_mode = mode;
 }
@@ -818,7 +908,7 @@ void log_packet(int level, char *init_str, unsigned char* packet, int length)
 {
   
   if ( getLogLevel() < level) {
-    //logMessage(LOG_INFO, "Send '0x%02hhx'|'0x%02hhx' to controller\n", packet[5] ,packet[6]);
+    //LOG(RSSD_LOG,LOG_INFO, "Send '0x%02hhx'|'0x%02hhx' to controller\n", packet[5] ,packet[6]);
     return;
   }
   
@@ -834,8 +924,8 @@ void log_packet(int level, char *init_str, unsigned char* packet, int length)
     cnt += sprintf(buff+cnt, "0x%02hhx|",packet[i]);
 
   cnt += sprintf(buff+cnt, "\n");
-  logMessage(level, buff);
-  //logMessage(LOG_DEBUG_SERIAL, buff);
+  LOG(RSSD_LOG,level, buff);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, buff);
 }
 
 const char* get_packet_type(unsigned char* packet , int length)
@@ -991,23 +1081,23 @@ int init_serial_port(char* tty)
   //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK);
   int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
   if (fd < 0)  {
-    logMessage(LOG_ERR, "Unable to open port: %s\n", tty);
+    LOG(RSSD_LOG,LOG_ERR, "Unable to open port: %s\n", tty);
     return -1;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
   
 #ifdef BLOCKING_MODE
   fcntl(fd, F_SETFL, 0);
   newtio.c_cc[VMIN]= 1;
   newtio.c_cc[VTIME]= 0;
-  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to blocking mode\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s to blocking mode\n",tty);
 #else
   int flags = fcntl(fd, F_GETFL, 0);
   fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
   newtio.c_cc[VMIN]= 0;
   newtio.c_cc[VTIME]= 1;
-  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
 #endif
 /*
 // Need to change this to flock, but that depends on good exit.
@@ -1043,7 +1133,7 @@ int init_serial_port(char* tty)
   tcflush(fd, TCIFLUSH);
   tcsetattr(fd, TCSANOW, &newtio);
   
-  logMessage(LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
 
   return fd;
 }
@@ -1053,7 +1143,7 @@ void close_serial_port(int fd)
 {
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
-  logMessage(LOG_DEBUG_SERIAL, "Closed serial port\n");
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Closed serial port\n");
 }
 
 void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned char b2, unsigned char b3)
@@ -1076,11 +1166,11 @@ void send_test_cmd(int fd, unsigned char destination, unsigned char b1, unsigned
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, ackPacket + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
-  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
   log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
@@ -1106,11 +1196,11 @@ void send_command(int fd, unsigned char destination, unsigned char b1, unsigned 
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, ackPacket + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
-  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
   if ( getLogLevel() >= LOG_DEBUG_SERIAL) {
@@ -1142,11 +1232,11 @@ void send_messaged(int fd, unsigned char destination, char *message)
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, msgPacket + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-  //logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
-  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Send '0x%02hhx' to '0x%02hhx'\n", command, destination);
 #endif  
 
   log_packet(LOG_DEBUG_SERIAL, "Sent ", msgPacket, length);
@@ -1196,7 +1286,7 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
 
   // Send the packet to the master device.
   //write(fd, ackPacket, length);
-  //logMessage(LOG_DEBUG, "Send '0x%02hhx' to controller\n", command);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Send '0x%02hhx' to controller\n", command);
 
 #ifdef BLOCKING_MODE
   write(fd, ackPacket, length);
@@ -1205,16 +1295,16 @@ void _send_ack(int fd, unsigned char ack_type, unsigned char command)
   for (i=0; i<length; i += nwrite) {        
     nwrite = write(fd, ackPacket + i, length - i);
     if (nwrite < 0) 
-      logMessage(LOG_ERR, "write to serial port failed\n");
+      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
   }
-  logMessage(LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Send %d bytes to serial\n",length);
   //tcdrain(fd);
 #endif  
   
-  //logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller\n", command);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Sent '0x%02hhx' to controller\n", command);
   log_packet(LOG_DEBUG_SERIAL, "Sent ", ackPacket, length);
 
-  //logMessage(LOG_DEBUG, "Sent '0x%02hhx' to controller \n", command);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Sent '0x%02hhx' to controller \n", command);
 }
 
 
@@ -1240,7 +1330,7 @@ int get_packet(int fd, unsigned char* packet)
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
       if (retry > 20) {
-        logMessage(LOG_WARNING, "Serial read timeout\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read timeout\n");
         log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
         return 0;
       }
@@ -1282,7 +1372,7 @@ int get_packet(int fd, unsigned char* packet)
     } else if(bytesRead < 0) {
       // Got a read error. Wait one millisecond for the next byte to
       // arrive.
-      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
       if(errno == 9) {
         // Bad file descriptor. Port has been disconnected for some reason.
         // Return a -1.
@@ -1294,27 +1384,27 @@ int get_packet(int fd, unsigned char* packet)
     // Break out of the loop if we exceed maximum packet
     // length.
     if (index >= AQ_MAXPKTLEN) {
-      logMessage(LOG_WARNING, "Serial packet too large\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large\n");
       log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
       break;
     }
   }
 
-  //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
+  //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
 
   if (generate_checksum(packet, index) != packet[index-3]){
-    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else if (index < AQ_MINPKTLEN && packetStarted) { //NSF. Sometimes we get END sequence only, so just ignore.
   //} else if (index < AQ_MINPKTLEN) { //NSF. Sometimes we get END sequence only, so just ignore.
-    logMessage(LOG_WARNING, "Serial read too small\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read too small\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   // Return the packet length.
   return index;
 }
@@ -1352,7 +1442,7 @@ bool check_pentair_checksum(unsigned char* packet, int length)
 
   // Check against actual # length
   if (sum == (packet[n] * 256 + packet[n+1])) {
-    //logMessage(LOG_ERR, "Pentair checksum is accurate but length is not\n");
+    //LOG(RSSD_LOG,LOG_ERR, "Pentair checksum is accurate but length is not\n");
     return true;
   }
   
@@ -1415,7 +1505,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
       if (retry > 20) {
-        logMessage(LOG_WARNING, "Serial read timeout\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read timeout\n");
         log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
         return 0;
       }
@@ -1506,7 +1596,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     } else if(bytesRead < 0) {
       // Got a read error. Wait one millisecond for the next byte to
       // arrive.
-      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
       if(errno == 9) {
         // Bad file descriptor. Port has been disconnected for some reason.
         // Return a -1.
@@ -1519,42 +1609,42 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
     // length.
     if (index >= AQ_MAXPKTLEN) {
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial packet too large\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
       break;
     }
   }
 
-  //logMessage(LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
+  //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
     if (check_jandy_checksum(packet, index) != true){
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   } else if (pentairPacketStarted) {
     if (check_pentair_checksum(packet, index) != true){
       logPacketError(packet, index);
-      logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return 0;
     }
   }
 /* 
   if (generate_checksum(packet, index) != packet[index-3]){
-    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else*/ if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
     logPacketError(packet, index);
-    logMessage(LOG_WARNING, "Serial read too small\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read too small\n");
     //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
-  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   logPacket(packet, index);
   // Return the packet length.
   return index;
@@ -1626,14 +1716,14 @@ int get_packet(int fd, unsigned char* packet_buffer)
     }
     packet_length--;
 
-    logMessage(LOG_DEBUG_SERIAL, "PLAYBACK read %d bytes\n",packet_length);
+    LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "PLAYBACK read %d bytes\n",packet_length);
     //printf("To 0x%02hhx, type %15.15s, length %2.2d ", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length),packet_length);
     //fputs ( line, stdout ); 
 
     if (getProtocolType(packet_buffer)==JANDY) {
       if (generate_checksum(packet_buffer, packet_length) != packet_buffer[packet_length-3]) {
         logPacketError(packet_buffer, packet_length);
-        logMessage(LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Jandy checksum, ignoring\n");
       } else
         logPacket(packet_buffer, packet_length);
     } else {
@@ -1642,7 +1732,7 @@ int get_packet(int fd, unsigned char* packet_buffer)
       //check_pentair_checksum(packet_buffer, packet_length+1);
       if (check_pentair_checksum(packet_buffer, packet_length-1) != true) {
         logPacketError(packet_buffer, packet_length);
-        logMessage(LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read bad Pentair checksum, ignoring\n");
       } else
         logPacket(packet_buffer, packet_length);
     }
@@ -1693,7 +1783,7 @@ int get_packet_old(int fd, unsigned char* packet)
     } else if (bytesRead < 0 && errno == EAGAIN) {
       // If we are in the middle of reading a packet, keep going
       if (retry > 20) {
-        logMessage(LOG_WARNING, "Serial read timeout\n");
+        LOG(RSSD_LOG,LOG_WARNING, "Serial read timeout\n");
         log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
         return 0;
       }
@@ -1758,7 +1848,7 @@ int get_packet_old(int fd, unsigned char* packet)
     else if(bytesRead < 0) {
       // Got a read error. Wait one millisecond for the next byte to
       // arrive.
-      logMessage(LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+      LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
       if(errno == 9) {
         // Bad file descriptor. Port has been disconnected for some reason.
         // Return a -1.
@@ -1769,18 +1859,18 @@ int get_packet_old(int fd, unsigned char* packet)
   }
 
   if (generate_checksum(packet, index) != packet[index-3]){
-    logMessage(LOG_WARNING, "Serial read bad checksum, ignoring\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   } else if (index < AQ_MINPKTLEN) {
-    logMessage(LOG_WARNING, "Serial read too small\n");
+    LOG(RSSD_LOG,LOG_WARNING, "Serial read too small\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
   }
 
   //if (_config_parameters.debug_RSProtocol_packets || getLogLevel() >= LOG_DEBUG_SERIAL) 
   //      logPacket(packet_buffer, packet_length);
-  logMessage(LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
 
   // Return the packet length.
   return index;

@@ -27,7 +27,7 @@
         "SWG",
         //"SWG/Percent",
         "SWG/PPM", 
-        "SWG/Boost",
+        //"SWG/Boost",
         "Temperature/Air",
         "Temperature/Pool",
         "Temperature/Spa",

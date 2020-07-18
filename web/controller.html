@@ -829,7 +829,7 @@
             setTileOn(id, 'on');
         }
       } catch (e) {
-          console.log('ERROR id=' + id + ' Line 829 | element = '+document.getElementById(id));
+          console.log('ERROR id=' + id + ' Line 832 | element = '+document.getElementById(id));
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
       var tile;
@@ -1006,8 +1006,11 @@
           }
           // Other switch_program types (other than light_type) GO HERE 
         } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
-          if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {    
-            if (object.Pump_RPM == -2) {
+          if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {   
+            if (object.Pump_RPM == -3) {
+              setTileOnText(object.id, 'Pump ERROR'); // Small txt
+              document.getElementById(object.id).setAttribute('setpoint', 0);
+            } else if (object.Pump_RPM == -2) {
               setTileOnText(object.id, 'Pump Offline'); // Small txt
               document.getElementById(object.id).setAttribute('setpoint', 0);
             } else if (object.Pump_RPM == -1) {
@@ -1333,12 +1336,17 @@
       // The ID's should ultimatly come from json
       setThermostatTile("Pool_Heater", data.pool_temp, data.pool_htr_set_pnt);
       setThermostatTile("Spa_Heater", data.spa_temp, data.spa_htr_set_pnt);
-      setThermostatTile("SWG", data.swg_percent, data.swg_percent);
       setThermostatTile("Freeze_Protect", data.air_temp, data.frz_protect_set_pnt);
-      setTileValue("SWG/PPM", data.swg_ppm);
+      
       setTileValue("Temperature/Air", data.air_temp);
       setTileValue("Temperature/Pool", data.pool_temp);
       setTileValue("Temperature/Spa", data.spa_temp);
+
+      if (typeof(data.swg_percent) !== 'undefined')
+        setThermostatTile("SWG", data.swg_percent, data.swg_percent);
+
+      if (typeof(data.swg_ppm) !== 'undefined')
+        setTileValue("SWG/PPM", data.swg_ppm);
 
       if (typeof(data.chem_ph) !== 'undefined')
         setTileValue("CHEM/pH", data.chem_ph);
@@ -1382,7 +1390,9 @@
       while (i < 5) {
         //console.log(data["Pump_"+i].RPM);
         if ((typeof data["Pump_"+i] !== 'undefined') && (typeof data["Pump_"+i].RPM !== 'undefined')) {
-          if (data["Pump_"+i].RPM == -2) {
+          if (data["Pump_"+i].RPM == -3) {
+            setTileOnText(data["Pump_"+i].id, 'Pump ERROR');
+          } else if (data["Pump_"+i].RPM == -2) {
             setTileOnText(data["Pump_"+i].id, 'Pump Offline');
           } else if (data["Pump_"+i].RPM == -1) {
             setTileOnText(data["Pump_"+i].id, 'Pump Priming');

@@ -29,11 +29,12 @@
 #include "aq_serial.h"
 #include "utils.h"
 #include "packetLogger.h"
+#include "rs_msg_utils.h"
 
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.2"
+#define VERSION "serial_logger V1.3"
 
 /*
 typedef enum used {
@@ -42,6 +43,17 @@ typedef enum used {
   unknown
 } used;
 */
+
+// Bogus config to keep aq_serial.c happy
+struct aqconfig
+{
+  bool readahead_b4_write;
+};
+struct aqconfig _aqconfig_;
+
+
+char _panelType[AQ_MSGLEN];
+char _panelRev[AQ_MSGLEN];
 
 typedef struct serial_id_log {
   unsigned char ID;
@@ -53,6 +65,7 @@ bool _keepRunning = true;
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
 unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
 unsigned char _goodONETID[] = {0x40, 0x41, 0x42, 0x43};
+unsigned char _goodIAQTID[] = {0x30, 0x31, 0x32, 0x33};
 unsigned char _filter[10];
 int _filters=0;
 bool _rawlog=false;
@@ -158,6 +171,10 @@ bool canUse(unsigned char ID) {
     if (ID == _goodONETID[i])
       return true;
   }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodIAQTID[i])
+      return true;
+  }
   return false;
 }
 char* canUseExtended(unsigned char ID) {
@@ -173,6 +190,10 @@ char* canUseExtended(unsigned char ID) {
   for (i = 0; i < 4; i++) {
     if (ID == _goodONETID[i])
       return " <-- can use for Aqualinkd (Extended Device ID)";
+  }
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodIAQTID[i])
+      return " <-- can use for Aqualinkd (Prefered Extended Device ID)";
   }
   return "";
 }
@@ -250,6 +271,39 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     printf("\n");
 }
 
+void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
+{
+  static unsigned char getPanelRev[] = {0x00,0x14,0x01};
+  static unsigned char getPanelType[] = {0x00,0x14,0x02};
+  static int msgcnt=0;
+  //int i;
+
+  if (packet_buffer[PKT_CMD] == CMD_PROBE) {
+    if (msgcnt == 0)
+      send_ack(rs_fd, 0x00);
+    else if (msgcnt == 1)
+      send_jandy_command(rs_fd, getPanelRev, 3);
+    else if (msgcnt == 2)
+      send_jandy_command(rs_fd, getPanelType, 3);
+    msgcnt++;
+  } else if (packet_buffer[PKT_CMD] == CMD_MSG) {
+    send_ack(rs_fd, 0x00);
+    if (msgcnt == 2)
+      rsm_strncpy(_panelRev, packet_buffer+4, AQ_MSGLEN, packet_length-5);
+    else if (msgcnt == 3)
+      rsm_strncpy(_panelType, packet_buffer+4, AQ_MSGLEN, packet_length-5);
+    /*
+    for(i=4; i < packet_length-3; i++) {
+      if (packet_buffer[i] == 0x00)
+        break;
+      else if (packet_buffer[i] >= 32 && packet_buffer[i] <= 126)
+        printf("%c",packet_buffer[i]);
+    }
+    printf("\n");
+    */
+  }
+}
+
 int main(int argc, char *argv[]) {
   int rs_fd;
   int packet_length;
@@ -265,11 +319,15 @@ int main(int argc, char *argv[]) {
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
   bool rsRawDebug = false;
+  bool panleProbe = true;
   //bool playback_file = false;
-
+  
   //int logLevel; 
   //char buffer[256];
   //bool idMode = true;
+  
+  // Keep bogus crap happy for aq_serial.c
+  _aqconfig_.readahead_b4_write = false;
 
   printf("AqualinkD %s\n",VERSION);
 
@@ -282,6 +340,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
     //fprintf(stderr, "Optional parameters are -d (debug) & -p <number> (log # packets) & -i <ID> & -r (raw) ie:=\n\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08\n\n", argv[0]);
     fprintf(stderr, "Optional parameters are :-\n");
+    fprintf(stderr, "\t-n (Do not probe panel for type/rev info)\n");
     fprintf(stderr, "\t-d (debug)\n");
     fprintf(stderr, "\t-p <number> (log # packets)\n");
     fprintf(stderr, "\t-i <ID> (just log these ID's, can use multiple -i)\n");
@@ -311,6 +370,8 @@ int main(int argc, char *argv[]) {
       _playback_file = true;
     } else if (strcmp(argv[i], "-rsrd") == 0) {
       rsRawDebug = true;
+    } else if (strcmp(argv[i], "-n") == 0) {
+      panleProbe = false;
     }
   }
 
@@ -330,13 +391,13 @@ int main(int argc, char *argv[]) {
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);
 
-  logMessage(LOG_NOTICE, "Logging serial information!\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "Logging serial information!\n");
   if (logLevel < LOG_DEBUG)
     printf("Please wait.");
 
   while (_keepRunning == true) {
     if (rs_fd < 0) {
-      logMessage(LOG_ERR, "ERROR, serial port disconnect\n");
+      LOG(RSSD_LOG, LOG_ERR, "ERROR, serial port disconnect\n");
     }
 
     //packet_length = get_packet(rs_fd, packet_buffer);
@@ -347,7 +408,7 @@ int main(int argc, char *argv[]) {
 
     if (packet_length == -1) {
       // Unrecoverable read error. Force an attempt to reconnect.
-      logMessage(LOG_ERR, "ERROR, on serial port\n");
+      LOG(RSSD_LOG, LOG_ERR, "ERROR, on serial port\n");
       _keepRunning = false;
     } else if (packet_length == 0) {
       // Nothing read
@@ -385,7 +446,7 @@ int main(int argc, char *argv[]) {
             sindex++;
           }
          }
-
+         
          if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
           //logMessage(LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
@@ -394,6 +455,10 @@ int main(int argc, char *argv[]) {
               break;
             }
           }
+         }
+
+         if (panleProbe && packet_buffer[PKT_DEST] == 0x58 ) {
+           getPanelInfo(rs_fd, packet_buffer, packet_length);
          }
   
         lastID = packet_buffer[PKT_DEST];
@@ -423,33 +488,36 @@ int main(int argc, char *argv[]) {
     //sleep(1);
   }
 
-  logMessage(LOG_DEBUG, "\n\n");
+  LOG(RSSD_LOG, LOG_DEBUG, "\n\n");
   if (logLevel < LOG_DEBUG)
     printf("\n\n");
 
   if (sindex >= SLOG_MAX)
-    logMessage(LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
+    LOG(RSSD_LOG, LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
 
-  logMessage(LOG_NOTICE, "Jandy ID's found\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Model   : %s\n", _panelType);
+  LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Version : %s\n", _panelRev);
+
+  LOG(RSSD_LOG, LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
     //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
     if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
-      logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+      LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
                (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
     }
   }
 
   if (pent_sindex > 0) {
-    logMessage(LOG_NOTICE, "\n\n");
-    logMessage(LOG_NOTICE, "Pentair ID's found\n");
+    LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
+    LOG(RSSD_LOG, LOG_NOTICE, "Pentair ID's found\n");
   }
   for (i=0; i < pent_sindex; i++) {
-    logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use" : "not used",
+    LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use" : "not used",
                (pent_slog[i].inuse == false)?canUseExtended(pent_slog[i].ID):getPentairDevice(pent_slog[i].ID));
   }
 
-  logMessage(LOG_NOTICE, "\n\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
 
   return 0;
 }

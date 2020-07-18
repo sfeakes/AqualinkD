@@ -13,4 +13,11 @@ bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length,
 void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status, int *dzalert);
 aqledstate get_swg_led_state(struct aqualinkdata *aqdata);
 
+bool changeSWGpercent(struct aqualinkdata *aqdata, int percent);
+void setSWGpercent(struct aqualinkdata *aqdata, int percent);
+void setSWGoff(struct aqualinkdata *aqdata);
+void setSWGenabled(struct aqualinkdata *aqdata);
+bool setSWGboost(struct aqualinkdata *aqdata, bool on);
+void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, unsigned char status);
+
 #endif // AQUAPURE_H_

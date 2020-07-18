@@ -53,6 +53,8 @@ static bool _cfg_log2file;
 static int _cfg_log_level;
 
 static char *_loq_display_message = NULL;
+int16_t _logforcemask = 0;
+
 //static char _log_filename[256];
 
 void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages)
@@ -73,8 +75,11 @@ void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_mes
   }  
 }
 
-int getLogLevel()
+int getLogLevel(int16_t from)
 {
+  if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+    return LOG_DEBUG;
+  
   return _log_level;
 }
 
@@ -241,6 +246,10 @@ char *stripwhitespace(char *str)
   char *end;
   char *start = str;
 
+  if(*start == 0 || strlen(str) <= 0 )  // All spaces?
+    return str;
+
+
   // Trim leading space
   while(isspace(*start)) start++;
 
@@ -338,9 +347,15 @@ void test(int msg_level, char *msg)
 }
 
 
-void logMessage(int msg_level, char *format, ...)
+void addDebugLogMask(int16_t flag)
 {
-  // Simply return ASAP.
+  _logforcemask |= flag;
+}
+
+void _LOG(int16_t from, int msg_level, char * message);
+
+void logMessage(int msg_level, const char *format, ...)
+{
   if (msg_level > _log_level) {
     return;
   }
@@ -348,53 +363,108 @@ void logMessage(int msg_level, char *format, ...)
   char buffer[1024];
   va_list args;
   va_start(args, format);
-  strncpy(buffer, "         ", 8);
-  vsprintf (&buffer[8], format, args);
+  strncpy(buffer, "         ", 20);
+  vsprintf (&buffer[20], format, args);
   va_end(args);
+
+  _LOG(AQUA_LOG, msg_level, buffer);
+}
+
+void LOG(int16_t from, int msg_level, const char * format, ...)
+{
+
+  if (msg_level > _log_level && ((_logforcemask & from) == 0) ) { // from NOT set in _logforcemask
+    return;
+  }
+
+  char buffer[1024];
+  va_list args;
+  va_start(args, format);
+  strncpy(buffer, "         ", 20);
+  vsprintf (&buffer[20], format, args);
+  va_end(args);
+
+  _LOG(from, msg_level, buffer);
+}
+
+
+void _LOG(int16_t from, int msg_level,  char * message)
+{
   int i;
 
-  //test(msg_level, buffer);
-  //fprintf (stderr, buffer);
-
   // Make all printable chars
-  for(i = 8; i < strlen(buffer); i++) {
-    if ( (buffer[i] < 0 || buffer[i] > 125) && buffer[1] != 10 )
-      buffer[i] = ' ';
+  for(i = 8; i+8 < strlen(&message[8]) && i < 1024; i++) {
+    if ( (message[i] < 32 || message[i] > 125) && message[i] != 10 ) {
+      //printf ("Change %c to %c in %s\n",message[i], ' ', message);
+      message[i] = ' ';
+    }
   }
-  //if ( buffer[i] != '\n' )
-  //  buffer[i+1] = '\n';
+  if (message[i] != '\n') {
+    message[i] = '\n';
+    message[i+1] = '\0';
+  }
 
-
+  switch (from) {
+    case NET_LOG:
+      strncpy(&message[9], "NetService:", 11);
+    break;
+    case AQRS_LOG:
+      strncpy(&message[9], "RS Allbtn: ", 11);
+    break;
+    case ONET_LOG:
+      strncpy(&message[9], "One Touch: ", 11);
+    break;
+    case IAQT_LOG:
+      strncpy(&message[9], "iAQ Touch: ", 11);
+    break;
+    case PDA_LOG:
+      strncpy(&message[9], "PDA:       ", 11);
+    break;
+    case DJAN_LOG:
+      strncpy(&message[9], "JandyDvce: ", 11);
+    break;
+    case DPEN_LOG:
+      strncpy(&message[9], "PentaDvce: ", 11);
+    break;
+    case RSSD_LOG:
+      strncpy(&message[9], "RS Serial: ", 11);
+    break;
+    case AQUA_LOG:
+    default:
+      strncpy(&message[9], "AqualinkD: ", 11);
+    break;
+  }
   // Logging has not been setup yet, so STD error & syslog
   if (_log_level == -1) {
-    fprintf (stderr, buffer);
-    syslog (msg_level, "%s", &buffer[8]);
+    fprintf (stderr, message);
+    syslog (msg_level, "%s", &message[9]);
     closelog ();
   }
   
   if (_daemonise == TRUE)
   {
     if (msg_level > LOG_DEBUG)  // Let's not confuse syslog with custom levels
-      syslog (LOG_DEBUG, "%s", &buffer[8]);
+      syslog (LOG_DEBUG, "%s", &message[9]);
     else
-      syslog (msg_level, "%s", &buffer[8]);
+      syslog (msg_level, "%s", &message[9]);
     closelog ();
     //return;
   }
   
   //int len;
+  message[8] = ' ';
   char *strLevel = elevel2text(msg_level);
-  strncpy(buffer, strLevel, strlen(strLevel));
-  //len = strlen(buffer); 
+  strncpy(message, strLevel, strlen(strLevel));
+  //len = strlen(message); 
   /*
-  if ( buffer[len-1] != '\n') {
-    strcat(buffer, "\n");
+  if ( message[len-1] != '\n') {
+    strcat(message, "\n");
   }
   */
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
-    snprintf(_loq_display_message, 127, buffer);
+    snprintf(_loq_display_message, 127, message);
   } 
 
   if (_log2file == TRUE && _log_filename != NULL) {   
@@ -403,29 +473,29 @@ void logMessage(int msg_level, char *format, ...)
     if (fp != -1) {
       timestamp(time);
       write(fp, time, strlen(time) );
-      write(fp, buffer, strlen(buffer) );
+      write(fp, message, strlen(message) );
       close(fp);
     } else {
       if (_daemonise == TRUE)
-      syslog(LOG_ERR, "Can't open log file\n %s", buffer);
+      syslog(LOG_ERR, "Can't open log file\n %s", message);
       else
-      fprintf (stderr, "Can't open debug log\n %s", buffer);
+      fprintf (stderr, "Can't open debug log\n %s", message);
     }
   }
   
   if (_daemonise == FALSE) {
     if (msg_level == LOG_ERR) {
-      fprintf(stderr, "%s", buffer);
+      fprintf(stderr, "%s", message);
     } else {
 #ifndef AD_DEBUG
-      printf("%s", buffer);
+      printf("%s", message);
 #else
       struct timespec tspec;
       struct tm localtm;
       clock_gettime(CLOCK_REALTIME, &tspec);
       char timeStr[TIMESTAMP_LENGTH];
       strftime(timeStr, sizeof(timeStr), "%H:%M:%S", localtime_r(&tspec.tv_sec, &localtm));
-      printf("%s.%03ld %s", timeStr, tspec.tv_nsec / 1000000L, buffer);
+      printf("%s.%03ld %s", timeStr, tspec.tv_nsec / 1000000L, message);
 #endif
     }
   }
@@ -579,7 +649,7 @@ char* stristr(const char* haystack, const char* needle) {
   } while (*haystack++);
   return 0;
 }
-
+/*
 int ascii(char *destination, char *source) {
   unsigned int i;
   for(i = 0; i < strlen(source); i++) {
@@ -598,7 +668,7 @@ int ascii(char *destination, char *source) {
   destination[i] = '\0';
   return i;
 }
-
+*/
 char *prittyString(char *str)
 {
   char *ptr = str;

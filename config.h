@@ -31,11 +31,12 @@ struct aqconfig
   char *socket_port;
   char *web_directory;
   unsigned char device_id;
-  unsigned char onetouch_device_id;
+  int16_t paneltype_mask;
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  unsigned char extended_device_id;
   bool extended_device_id_programming;
+#endif
   bool deamonize;
-  unsigned short rs_panel_size;
-  //unsigned short rs_panel_size;
   char *log_file;
   char *mqtt_dz_sub_topic;
   char *mqtt_dz_pub_topic;
@@ -53,17 +54,12 @@ struct aqconfig
   float light_programming_mode;
   int light_programming_initial_on;
   int light_programming_initial_off;
-  //int light_programming_button_pool;
-  //int light_programming_button_spa;
   bool override_freeze_protect;
   #ifdef AQ_PDA
-  bool pda_mode;
   bool pda_sleep_mode;
   #endif
-  bool onetouch_mode;
   bool convert_mqtt_temp;
   bool convert_dz_temp;
-  //bool flash_mqtt_buttons;
   bool report_zero_spa_temp;
   bool report_zero_pool_temp;
   bool read_all_devices;
@@ -71,15 +67,12 @@ struct aqconfig
   bool force_swg;
   int swg_zero_ignore;
   bool display_warnings_web;
-  //bool swg_pool_and_spa;
-  //bool use_PDA_auxiliary;
   bool read_pentair_packets;
   bool debug_RSProtocol_packets;
   bool log_raw_RS_bytes;
-  //int dzidx_pool_thermostat; // Domoticz virtual thermostats are crap removed until better
-  //int dzidx_spa_thermostat;  // Domoticz virtual thermostats are crap removed until better
-  //char mqtt_pub_topic[250];
-  //char *mqtt_pub_tp_ptr = mqtt_pub_topic[];
+  bool readahead_b4_write;
+  bool mqtt_timed_update;
+  bool sync_panel_time;
 };
 
 #ifndef CONFIG_C
@@ -87,6 +80,10 @@ extern struct aqconfig _aqconfig_;
 #else
 struct aqconfig _aqconfig_;
 #endif
+
+//#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
+
+
 /*
 #ifndef CONFIG_C
 #ifdef AQUALINKD_C

@@ -26,7 +26,9 @@
 typedef enum emulation_type{
   ALLBUTTON,
   ONETOUCH,
-  AQUAPDA  // AQUAPALM and PDA are taken as specific type.
+  IAQTOUCH,
+  AQUAPDA,  // AQUAPALM and PDA are taken as specific type.
+  JANDY_DEVICE // Very rarley used.
 } emulation_type;
 
 typedef enum {
@@ -49,6 +51,8 @@ typedef enum {
   AQ_GET_AUX_LABELS,
   AQ_PDA_WAKE_INIT,
   AQ_SET_BOOST,
+  AQ_SET_PUMP_RPM,
+  AQ_SET_PUMP_VS_PROGRAM,
   AQ_SET_ONETOUCH_PUMP_RPM,
   AQ_SET_ONETOUCH_MACRO,
   AQ_GET_ONETOUCH_SETPOINTS,
@@ -57,7 +61,17 @@ typedef enum {
   AQ_SET_ONETOUCH_FREEZEPROTECT,
   AQ_SET_ONETOUCH_TIME,
   AQ_SET_ONETOUCH_BOOST,
-  AQ_SET_ONETOUCH_SWG_PERCENT
+  AQ_SET_ONETOUCH_SWG_PERCENT,
+  AQ_SET_IAQTOUCH_PUMP_RPM,
+  AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM,
+  AQ_GET_IAQTOUCH_VSP_ASSIGNMENT,
+  AQ_GET_IAQTOUCH_SETPOINTS,
+  AQ_GET_IAQTOUCH_AUX_LABELS,
+  AQ_SET_IAQTOUCH_SWG_PERCENT,
+  AQ_SET_IAQTOUCH_SWG_BOOST,
+  AQ_SET_IAQTOUCH_POOL_HEATER_TEMP,
+  AQ_SET_IAQTOUCH_SPA_HEATER_TEMP,
+  AQ_SET_IAQTOUCH_SET_TIME
 } program_type;
 
 struct programmingThreadCtrl {
@@ -79,7 +93,10 @@ typedef enum pump_type {
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);
 //void kick_aq_program_thread(struct aqualinkdata *aq_data);
 void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_type);
+bool in_programming_mode(struct aqualinkdata *aq_data);
 bool in_ot_programming_mode(struct aqualinkdata *aq_data);
+bool in_iaqt_programming_mode(struct aqualinkdata *aq_data);
+bool in_swg_programming_mode(struct aqualinkdata *aq_data);
 void aq_send_cmd(unsigned char cmd);
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
 //void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);

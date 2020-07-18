@@ -33,12 +33,12 @@ void print_menu()
   int i;
   for (i=0; i < PDA_LINES; i++) {
     //printf("PDA Line %d = %s\n",i,_menu[i]);
-    logMessage(LOG_DEBUG, "PDA Menu Line %d = %s\n",i,_menu[i]);
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu Line %d = %s\n",i,_menu[i]);
   }
   
   if (_hlightindex > -1) {
     //printf("PDA highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
-    logMessage(LOG_DEBUG, "PDA Menu highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
   } 
 }
 
@@ -203,7 +203,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
         strncpy(_menu[packet[PKT_DATA]], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
         _menu[packet[PKT_DATA]][AQ_MSGLEN] = '\0';
       }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHT:
       // when switching from hlight to hlightchars index 255 is sent to turn off hlight
@@ -212,7 +212,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       } else {
         _hlightindex = -1;
       }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
       if (packet[4] <= PDA_LINES) {
@@ -220,7 +220,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       } else {
         _hlightindex = -1;
       }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
       /// press up from top - shift menu down by 1
@@ -230,17 +230,19 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
        first_line = (signed char)(packet[4]);
        last_line = (signed char)(packet[5]);
        line_shift = (signed char)(packet[6]);
-       logMessage(LOG_DEBUG, "\n");
+       LOG(PDA_LOG,LOG_DEBUG, "\n");
        if (line_shift < 0) {
            for (i = first_line-line_shift; i <= last_line; i++) {
                memcpy(_menu[i+line_shift], _menu[i], AQ_MSGLEN+1);
            }
+           _menu[last_line][0] = '\0';
        } else {
            for (i = last_line; i >= first_line+line_shift; i--) {
                memcpy(_menu[i], _menu[i-line_shift], AQ_MSGLEN+1);
            }
+           _menu[first_line][0] = '\0';
        }
-       if (getLogLevel() >= LOG_DEBUG){print_menu();}
+       if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;   
   }
 
@@ -272,10 +274,10 @@ bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
         _menu[packet[PKT_DATA]][AQ_MSGLEN] = '\0';
       }
       if (packet[PKT_DATA] == _hlightindex) {
-          logMessage(LOG_DEBUG, "process_pda_menu_packet: hlight changed from shift or up/down value\n");
+          LOG(PDA_LOG,LOG_DEBUG, "process_pda_menu_packet: hlight changed from shift or up/down value\n");
           pthread_cond_signal(&_pda_menu_hlight_change_cond);
       }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
       update_pda_menu_type();
     break;
     case CMD_PDA_HIGHLIGHT:
@@ -286,7 +288,7 @@ bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
         _hlightindex = -1;
       }
       pthread_cond_signal(&_pda_menu_hlight_change_cond);
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
       if (packet[4] <= PDA_LINES) {
@@ -295,7 +297,7 @@ bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
         _hlightindex = -1;
       }
       pthread_cond_signal(&_pda_menu_hlight_change_cond);
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
       // press up from top - shift menu down by 1
@@ -305,7 +307,7 @@ bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
       first_line = (signed char)(packet[4]);
       last_line = (signed char)(packet[5]);
       line_shift = (signed char)(packet[6]);
-      logMessage(LOG_DEBUG, "\n");
+      LOG(PDA_LOG,LOG_DEBUG, "\n");
       if (line_shift < 0) {
           for (i = first_line-line_shift; i <= last_line; i++) {
               memcpy(_menu[i+line_shift], _menu[i], AQ_MSGLEN+1);
@@ -315,7 +317,7 @@ bool NEW_process_pda_menu_packet_NEW(unsigned char* packet, int length)
               memcpy(_menu[i], _menu[i-line_shift], AQ_MSGLEN+1);
           }
       }
-      if (getLogLevel() >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     
   }

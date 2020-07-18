@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "aq_serial.h"
 #include "aq_programmer.h"
+#include "aq_panel.h"
 
 #define TIME_CHECK_INTERVAL  3600
 #define ACCEPTABLE_TIME_DIFF 120
@@ -14,11 +15,11 @@
 //#define TIME_CHECK_INTERVAL  100
 //#define ACCEPTABLE_TIME_DIFF 10
 
-#define MAX_ZERO_READ_BEFORE_RECONNECT 500
+#define MAX_ZERO_READ_BEFORE_RECONNECT 2000 // 500
 
 
 //#define TOTAL_BUTTONS     12
-
+/*
 #ifndef AQ_RS16
 #define TOTAL_BUTTONS          12
 #else
@@ -26,7 +27,7 @@
 #define RS16_VBUTTONS_START    13  // RS16 panel has 4 buttons with no LED's, so list them for manual matching to RS messages
 #define RS16_VBUTTONS_END      16  // RS16 panel has 4 buttons with no LED's, so list them for manual matching to RS messages
 #endif
-
+*/
 #define TEMP_UNKNOWN    -999
 //#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
@@ -47,9 +48,9 @@ typedef struct aqualinkkey
   aqled *led;
   char *label;
   char *name;
-#ifdef AQ_PDA
-  char *pda_label;
-#endif
+//#ifdef AQ_PDA
+//  char *pda_label;
+//#endif
   unsigned char code;
   int dz_idx;
 } aqkey;
@@ -72,7 +73,8 @@ typedef enum action_type {
   FREEZE_SETPOINT,
   SWG_SETPOINT,
   SWG_BOOST,
-  PUMP_RPM
+  PUMP_RPM,
+  PUMP_VSPROGRAM
 } action_type;
 
 struct action {
@@ -92,6 +94,13 @@ typedef enum pump_type {
   VFPUMP
 } pump_type;
 */
+
+#define PUMP_PRIMING -1
+#define PUMP_OFFLINE -2
+#define PUMP_ERROR   -3
+#define PUMP_OFF_RPM 0
+#define PUMP_OFF_GPM PUMP_OFF_RPM
+#define PUMP_OFF_WAT PUMP_OFF_RPM
 
 typedef struct pumpd
 {
@@ -125,38 +134,27 @@ typedef struct clightd
 
 struct aqualinkdata
 {
-  //char crap[AQ_MSGLEN];
   char version[AQ_MSGLEN*2];
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
-  //char datestr[DATE_STRING_LEN];
   char last_message[AQ_MSGLONGLEN+1]; // NSF just temp for PDA crap
-  //char *last_message; // Be careful using this, can get core dumps.
   char last_display_message[AQ_MSGLONGLEN+1];
-  //bool display_last_message;  
-  unsigned char raw_status[AQ_PSTLEN];
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
-  unsigned short total_buttons;  // Should probably malloc the above to this in the future
-  //aqkey *aqbuttons;
+  unsigned short total_buttons;
   int air_temp;
   int pool_temp;
   int spa_temp;
   int temp_units;
-  bool single_device; // Pool or Spa only, not Pool & Spa (Thermostat setpoints are different)
+  //bool single_device; // Pool or Spa only, not Pool & Spa (Thermostat setpoints are different)
   int battery;
-  //int freeze_protection;
   int frz_protect_set_point;
   int pool_htr_set_point;
   int spa_htr_set_point;
-  //unsigned char aq_command;
-  struct programmingthread active_thread;
-  struct action unactioned;
   int swg_percent;
   int swg_ppm;
-  unsigned char ar_swg_status;
-  int swg_delayed_percent;
-  bool simulate_panel;
+  unsigned char ar_swg_device_status; // Actual state 
+  aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
   unsigned char last_packet_type;
@@ -164,13 +162,33 @@ struct aqualinkdata
   pump_detail pumps[MAX_PUMPS];
   int num_lights;
   clight_detail lights[MAX_LIGHTS];
-  int open_websockets;
   bool boost;
   char boost_msg[10];
   float ph;
   int orp;
-  //bool last_msg_was_status;
-  //bool ar_swg_connected;
+
+  // Below this line is not state related. (Future just do a mem compare for change)
+  //aqkey *orderedbuttons[TOTAL_BUTTONS]; // Future to reduce RS4,6,8,12,16 & spa buttons
+  //unsigned short total_ordered_buttons;
+  int swg_delayed_percent;
+  bool simulate_panel;
+  int open_websockets;
+  struct programmingthread active_thread;
+  struct action unactioned;
+  unsigned char raw_status[AQ_PSTLEN];
+  // Multiple threads update this value.
+  volatile bool updated;
+
+  #ifdef AQ_RS16
+  int rs16_vbutton_start;
+  int rs16_vbutton_end;
+  #endif
+  #ifdef AQ_PDA
+  int pool_heater_index;
+  int spa_heater_index;
+  int solar_heater_index;
+  #endif
+  // Timing for DEBUG
   #ifdef AQ_DEBUG
   struct timespec last_active_time;
   struct timespec start_active_time;

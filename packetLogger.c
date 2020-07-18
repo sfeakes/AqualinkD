@@ -1,17 +1,19 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "packetLogger.h"
 #include "aq_serial.h"
 #include "utils.h"
+
 
 static FILE *_packetLogFile = NULL;
 static FILE *_byteLogFile = NULL;
 static bool _log2file = false;
 static bool _includePentair = false;
 
-void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, bool force);
+void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force);
 int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error);
 
 void startPacketLogger(bool debug_RSProtocol_packets, bool read_pentair_packets) {
@@ -38,21 +40,22 @@ void writePacketLog(char *buffer) {
 }
 
 void logPacket(unsigned char *packet_buffer, int packet_length) {
-  _logPacket(packet_buffer, packet_length, false, false);
+  _logPacket(RSSD_LOG, packet_buffer, packet_length, false, false);
 }
 
 void logPacketError(unsigned char *packet_buffer, int packet_length) {
-  _logPacket(packet_buffer, packet_length, true, false);
+  _logPacket(RSSD_LOG, packet_buffer, packet_length, true, false);
 }
 
-void debuglogPacket(unsigned char *packet_buffer, int packet_length) {
-  _logPacket(packet_buffer, packet_length, false, true);
+void debuglogPacket(int16_t from, unsigned char *packet_buffer, int packet_length) {
+  if ( getLogLevel(from) >= LOG_DEBUG )
+    _logPacket(from, packet_buffer, packet_length, false, true);
 }
 
-void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, bool force)
+void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force)
 {
   // No point in continuing if loglevel is < debug_serial and not writing to file
-  if ( force == false && error == false && getLogLevel() < LOG_DEBUG_SERIAL && _log2file == false)
+  if ( force == false && error == false && getLogLevel(from) < LOG_DEBUG_SERIAL && _log2file == false)
     return;
 
   char buff[1000];
@@ -76,12 +79,12 @@ void _logPacket(unsigned char *packet_buffer, int packet_length, bool error, boo
     writePacketLog(buff);
   
   if (error == true)
-    logMessage(LOG_WARNING, "%s", buff);
+    LOG(from,LOG_WARNING, "%s", buff);
   else {
     if (force)
-      logMessage(LOG_DEBUG, "%s", buff);
+      LOG(from,LOG_DEBUG, "%s", buff);
     else
-      logMessage(LOG_DEBUG_SERIAL, "%s", buff);
+      LOG(from,LOG_DEBUG_SERIAL, "%s", buff);
   }
 }
 

@@ -295,44 +295,47 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                     aqdata->frz_protect_state==ON?1:0);
   }
 
-  if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
+  if (aqdata->swg_led_state != LED_S_UNKNOWN) {
+    if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_swg\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
                                      SWG_TOPIC,
                                     "Salt Water Generator",
-                                    aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON,
                                     //aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON,
-                                    LED2text(get_swg_led_state(aqdata)),
+                                    aqdata->swg_led_state == OFF?JSON_OFF:JSON_ON,
+                                    //LED2text(get_swg_led_state(aqdata)),
+                                    LED2text(aqdata->swg_led_state),
                                     ((homekit)?2:0),
                                     ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
                                     ((homekit)?2:0),
                                     ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent),
-                                    aqdata->ar_swg_status == SWG_STATUS_OFF?LED2int(OFF):LED2int(ON));
+                                    LED2int(aqdata->swg_led_state) );
+                                    //aqdata->ar_swg_status == SWG_STATUS_OFF?LED2int(OFF):LED2int(ON));
 
     //length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
-    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
+      length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
                                    ((homekit_f)?SWG_PERCENT_F_TOPIC:SWG_PERCENT_TOPIC),
                                    "Salt Water Generator Percent",
                                    "on",
                                    ((homekit_f)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
-    if (!homekit) { // For the moment keep boost off homekit   
-      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
+      if (!homekit) { // For the moment keep boost off homekit   
+        length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
                                      SWG_BOOST_TOPIC, 
                                      "SWG Boost",
                                      aqdata->boost?JSON_ON:JSON_OFF,
                                      aqdata->boost?JSON_ON:JSON_OFF,
                                      aqdata->boost?LED2int(ON):LED2int(OFF));
+      }
     }
-  }
 
-  if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
+    if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
 
-    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
-                                   ((homekit_f)?SWG_PPM_F_TOPIC:SWG_PPM_TOPIC),
-                                   "Salt Level PPM",
-                                   "on",
-                                   ((homekit)?2:0),
-                                   ((homekit_f)?roundf(degFtoC(aqdata->swg_ppm)):aqdata->swg_ppm)); 
+      length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
+                                     ((homekit_f)?SWG_PPM_F_TOPIC:SWG_PPM_TOPIC),
+                                     "Salt Level PPM",
+                                     "on",
+                                     ((homekit)?2:0),
+                                     ((homekit_f)?roundf(degFtoC(aqdata->swg_ppm)):aqdata->swg_ppm)); 
                                    
      /*         
    length += sprintf(buffer+length, "{\"type\": \"value\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%d\" },",
@@ -342,6 +345,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    aqdata->swg_ppm);
    */
                                    
+    }
   }
 
   if ( aqdata->ph != TEMP_UNKNOWN ) {
@@ -390,7 +394,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
 */
   length += sprintf(buffer+length, "]}");
 
-  logMessage(LOG_DEBUG, "WEB: homebridge used %d of %d", length, size);
+  LOG(NET_LOG,LOG_DEBUG, "WEB: homebridge used %d of %d\n", length, size);
 
   buffer[length] = '\0';
 
@@ -440,11 +444,13 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   else
     length += sprintf(buffer+length, ",\"spa_temp\":\"%d\"",aqdata->spa_temp );
 
-  if ( aqdata->swg_percent != TEMP_UNKNOWN )
-    length += sprintf(buffer+length, ",\"swg_percent\":\"%d\"",aqdata->swg_percent );
+  if (aqdata->swg_led_state != LED_S_UNKNOWN) {
+    if ( aqdata->swg_percent != TEMP_UNKNOWN )
+      length += sprintf(buffer+length, ",\"swg_percent\":\"%d\"",aqdata->swg_percent );
   
-  if ( aqdata->swg_ppm != TEMP_UNKNOWN )
-    length += sprintf(buffer+length, ",\"swg_ppm\":\"%d\"",aqdata->swg_ppm );
+    if ( aqdata->swg_ppm != TEMP_UNKNOWN )
+      length += sprintf(buffer+length, ",\"swg_ppm\":\"%d\"",aqdata->swg_ppm );
+  }
 
   if ( aqdata->temp_units == FAHRENHEIT )
     length += sprintf(buffer+length, ",\"temp_units\":\"%s\"",JSON_FAHRENHEIT );
@@ -477,9 +483,9 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
       length += sprintf(buffer+length, "," );
   }
 
-  if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
-    
-    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, LED2text(get_swg_led_state(aqdata)));
+  if ( aqdata->swg_percent != TEMP_UNKNOWN && aqdata->swg_led_state != LED_S_UNKNOWN ) {
+    //length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, LED2text(get_swg_led_state(aqdata)));
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, LED2text(aqdata->swg_led_state));
     //length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_TOPIC, aqdata->ar_swg_status == SWG_STATUS_OFF?JSON_OFF:JSON_ON);
     length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_BOOST_TOPIC, aqdata->boost?JSON_ON:JSON_OFF);
   }
@@ -493,6 +499,15 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
 
   // NSF Check below needs to be for VSP Pump (any state), not just known state
   for (i=0; i < aqdata->num_pumps; i++) {
+    /*  NSF There is a problem here that needs to be fixed.
+printf("Loop %d Message '%s'\n",i,buffer);
+printf("Pump Label %s\n",aqdata->pumps[i].button->label);
+printf("Pump Name %s\n",aqdata->pumps[i].button->name);
+printf("Pump RPM %d\n",aqdata->pumps[i].rpm);
+printf("Pump GPM %d\n",aqdata->pumps[i].gpm);
+printf("Pump GPM %d\n",aqdata->pumps[i].watts);
+printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
+    */
     if (aqdata->pumps[i].pumpType != PT_UNKNOWN && (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gpm != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN)) {
       length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPM\":\"%d\",\"Watts\":\"%d\",\"Pump_Type\":\"%s\"},",
                         i+1,aqdata->pumps[i].button->label,aqdata->pumps[i].button->name,aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,

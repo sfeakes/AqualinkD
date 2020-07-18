@@ -3,6 +3,7 @@
 #define AQ_SERIAL_H_
 
 #include <termios.h>
+#include <stdbool.h>
 
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
 
@@ -62,7 +63,8 @@
 // END Pentair
 
 #define AQ_MINPKTLEN    5
-#define AQ_MAXPKTLEN   64
+//#define AQ_MAXPKTLEN   64
+#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
 #define AQ_PSTLEN       5
 #define AQ_MSGLEN      16
 #define AQ_MSGLONGLEN 128
@@ -74,7 +76,7 @@
 #define CMD_STATUS      0x02
 #define CMD_MSG         0x03
 #define CMD_MSG_LONG    0x04
-#define CMD_RS_UNKNOWN  0x08
+#define CMD_MSG_LOOP_ST 0x08
 
 /* ACK RETURN COMMANDS */
 /*
@@ -83,14 +85,17 @@
 #define ACK_SCREEN_BUSY_BLOCK    0x03 // Seems to be don't send me any more shit.
 */
 // Some keypads use 0x00 some 0x80 (think it's something to do with version, but need to figure it out)
+// But if you use 0x80 for ack then you get a start loop cycle CMD_MSG_LOOP_ST
 #define ACK_NORMAL               0x80
 #define ACK_SCREEN_BUSY_SCROLL   0x81 // Seems to be busy displaying last message, but can cache next message,
 #define ACK_SCREEN_BUSY_BLOCK    0x83 // Seems to be don't send me any more shit.
 
 
+
 // Remove this and fix all compile errors when get time.
 #define ACK_SCREEN_BUSY ACK_SCREEN_BUSY_SCROLL
 
+#define ACK_IAQ_TOUCH            0x00
 #define ACK_PDA                  0x40
 #define ACK_ONETOUCH             0x80
 #define ACK_ALLB_SIM             0x80 // Jandy's Allbutton simulator uses this and not ACK_NORMAL
@@ -257,6 +262,11 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define MSG_SWG_PCT_LEN  8
 #define MSG_SWG_PPM_LEN  4
 
+#define MSG_SWG_NO_FLOW   "Check AQUAPURE No Flow"
+#define MSG_SWG_LOW_SALT  "Check AQUAPURE Low Salt"
+#define MSG_SWG_HIGH_SALT "Check AQUAPURE High Salt"
+#define MSG_SWG_FAULT     "Check AQUAPURE General Fault"
+
 #define MSG_PMP_RPM   "RPM:" 
 #define MSG_PMP_WAT   "Watts:"  
 #define MSG_PMP_GPM   "GPM:" 
@@ -268,8 +278,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 //#define SWG_STATUS_OFF     0xFF
 //#define SWG_STATUS_OFFLINE 0xFE
 
-#define SWG_STATUS_OFF     0xFF
-#define SWG_STATUS_UNKNOWN -128
+//#define SWG_STATUS_UNKNOWN -128 // Idiot.  unsigned char....Derr.
+#define SWG_STATUS_OFF     0xFF // Documented this as off in API, so don't change.
+#define SWG_STATUS_UNKNOWN 0xFE 
 // These are actual from RS485
 
 #define SWG_STATUS_ON           0x00
@@ -297,32 +308,84 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 //#define CMD_PDA_0x04           0x04 // No idea, might be building menu
 
 /* iAqualink */
-/* None of these are used, just here to gather data for the moment */
-#define CMD_IAQ_MSG           0x25  // Equiptment status message??
-#define CMD_IAQ_MENU_MSG      0x24
 
-#define CMD_IAQ_MSG_LONG      0x2c  // Long status message??
+#define CMD_IAQ_PAGE_MSG      0x25
+#define CMD_IAQ_TABLE_MSG     0x26  // ??? Some form of table populate
+#define CMD_IAQ_PAGE_BUTTON   0x24
+#define CMD_IAQ_PAGE_START    0x23  // Start a new menu // wait for 0x28 before sending anything
+#define CMD_IAQ_PAGE_END      0x28  // Some kind a finished
+#define CMD_IAQ_STARTUP       0x29  //  Startup message
+#define CMD_IAQ_POLL          0x30  // Poll message or ready to receive command
+#define CMD_IAQ_CTRL_READY    0x31  // Get this when we can send big control command
+#define CMD_IAQ_PAGE_CONTINUE 0x40  // Seems we get this on AUX device page when there is another page, keeps circuling through pages.
+
+//#define CMD_IAQ_VSP_ERROR     0x2c  // Error when setting speed too high
+#define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
+/*
 #define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??
-#define CMD_IAQ_0x30          0x30
-#define CMD_IAQ_0x23          0x23
-#define CMD_IAQ_0x24          0x24 // Text for labels or maybe buttons (looks like next BIT is placment)
-#define CMD_IAQ_0x25          0x25 // Status for labels
 #define CMD_IAQ_0x31          0x31 // Some pump speed info
+*/
+#define ACK_CMD_READY_CTRL      0x80 // Send this before sending big control command
 
-#define IAQ_KEY_PUMP          0x11
-#define IAQ_KEY_SPA           0x12
-#define IAQ_KEY_POOL_HEAT     0x13
-#define IAQ_KEY_SPA_HEAT      0x14
-#define IAQ_KEY_CUST_1        0x15
-#define IAQ_KEY_CUST_2        0x16
-#define IAQ_KEY_CUST_3        0x17
-#define IAQ_KEY_AUX1          0x19 // Depending on page this is 0x15
-#define IAQ_KEY_AUX2          0x1a
-#define IAQ_KEY_AUX3          0x1b
-#define IAQ_KEY_AUX4          0x1c
-#define IAQ_KEY_AUX5          0x1d
-#define IAQ_KEY_AUX6          0x1e
-#define IAQ_KEY_AUX7          0x1f
+
+#define KEY_IAQTCH_HOME          0x01
+#define KEY_IAQTCH_MENU          0x02
+#define KEY_IAQTCH_ONETOUCH      0x03
+#define KEY_IAQTCH_HELP          0x04
+#define KEY_IAQTCH_BACK          0x05
+#define KEY_IAQTCH_STATUS        0x06
+#define KEY_IAQTCH_PREV_PAGE     0x20
+#define KEY_IAQTCH_NEXT_PAGE     0x21
+
+// PAGE1 (Horosontal keys) (These are duplicate so probable delete)
+#define KEY_IAQTCH_HOMEP_KEY01   0x11
+#define KEY_IAQTCH_HOMEP_KEY02   0x12
+#define KEY_IAQTCH_HOMEP_KEY03   0x13
+#define KEY_IAQTCH_HOMEP_KEY04   0x14
+#define KEY_IAQTCH_HOMEP_KEY05   0x15
+#define KEY_IAQTCH_HOMEP_KEY06   0x16
+#define KEY_IAQTCH_HOMEP_KEY07   0x17
+#define KEY_IAQTCH_HOMEP_KEY08   0x18 // Other Devices (may not be able to change)
+
+// Numbering is colum then row.
+#define KEY_IAQTCH_KEY01         0x11  // Column 1 row 1
+#define KEY_IAQTCH_KEY02         0x12  // column 1 row 2
+#define KEY_IAQTCH_KEY03         0x13  // column 1 row 3
+#define KEY_IAQTCH_KEY04         0x14  // column 1 row 4
+#define KEY_IAQTCH_KEY05         0x15  // column 1 row 5
+
+#define KEY_IAQTCH_KEY06         0x16  // column 2 row 1
+#define KEY_IAQTCH_KEY07         0x17  // column 2 row 2
+#define KEY_IAQTCH_KEY08         0x18  // column 2 row 3
+#define KEY_IAQTCH_KEY09         0x19  // column 2 row 4
+#define KEY_IAQTCH_KEY10         0x1a  // column 2 row 5
+
+#define KEY_IAQTCH_KEY11         0x1b  // column 3 row 1
+#define KEY_IAQTCH_KEY12         0x1c  // column 3 row 2
+#define KEY_IAQTCH_KEY13         0x1d  // column 3 row 3
+#define KEY_IAQTCH_KEY14         0x1e  // column 3 row 4
+#define KEY_IAQTCH_KEY15         0x1f  // column 3 row 5
+
+#define IAQ_PAGE_HOME            0x01
+#define IAQ_PAGE_STATUS          0x5b
+#define IAQ_PAGE_STATUS2         0x2a // Something get this for Status rather than 0x5b
+#define IAQ_PAGE_DEVICES         0x36
+#define IAQ_PAGE_DEVICES2        0x35
+#define IAQ_PAGE_SET_TEMP        0x39
+#define IAQ_PAGE_MENU            0x0f
+#define IAQ_PAGE_SET_VSP         0x1e
+#define IAQ_PAGE_SET_TIME        0x4b
+#define IAQ_PAGE_SET_DATE        0x4e
+#define IAQ_PAGE_SET_SWG         0x30
+#define IAQ_PAGE_SET_BOOST       0x1d
+#define IAQ_PAGE_SET_QBOOST      0x3f
+#define IAQ_PAGE_ONETOUCH        0x4d
+#define IAQ_PAGE_COLOR_LIGHT     0x48
+#define IAQ_PAGE_SYSTEM_SETUP    0x14
+#define IAQ_PAGE_VSP_SETUP       0x2d
+#define IAQ_PAGE_FREEZE_PROTECT  0x11
+#define IAQ_PAGE_LABEL_AUX       0x32
+//#define IAQ_PAGE_START_BOOST     0x3f
 
 // At the moment just used for next ack
 typedef enum {
@@ -360,10 +423,10 @@ typedef enum {
 
 int init_serial_port(const char* tty);
 void close_serial_port(int file_descriptor);
-#ifdef AQ_PDA
-void set_pda_mode(bool mode);
-bool pda_mode();
-#endif
+//#ifdef AQ_PDA
+//void set_pda_mode(bool mode);
+//bool pda_mode();
+//#endif
 int generate_checksum(unsigned char* packet, int length);
 protocolType getProtocolType(unsigned char* packet);
 bool check_jandy_checksum(unsigned char* packet, int length);
@@ -380,13 +443,16 @@ int get_packet_lograw(int fd, unsigned char* packet);
 //void process_status(void const * const ptr);
 void process_status(unsigned char* ptr);
 const char* get_packet_type(unsigned char* packet , int length);
-
+/*
 void set_onetouch_enabled(bool mode);
 bool onetouch_enabled();
+void set_iaqtouch_enabled(bool mode);
+bool iaqtouch_enabled();
 bool VSP_enabled();
 
 void set_extended_device_id_programming(bool mode);
 bool extended_device_id_programming();
+*/
 
 void send_jandy_command(int fd, unsigned char *packet_buffer, int size);
 void send_pentair_command(int fd, unsigned char *packet_buffer, int size);

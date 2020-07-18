@@ -63,13 +63,15 @@ Button style taken from https://github.com/ubuwaits/css3-buttons */
     } else if (element.id == "clean") {
       document.getElementById('messages').innerHTML = "Cleaning Debug File!"
     } else if (element.id == "download") {
-      window.location = location.href + '?command=debug&value=download';
+      //window.location = location.href + '?command=debug&value=download';
+      window.location = '/api/debug/download';
     } else {
       return;
     }
 
     var http = new XMLHttpRequest();
-    http.open('GET', location.href + '?command=debug&value='+element.id);
+    //http.open('GET', location.href + '?command=debug&value='+element.id);
+    http.open('GET', '/api/debug/'+element.id);
     http.send(null);
     
     setTimeout(function () {
@@ -123,7 +125,8 @@ Button style taken from https://github.com/ubuwaits/css3-buttons */
       }
     };
 
-    http.open('GET', location.href + '?command=debug&value=status');
+    //http.open('GET', location.href + '?command=debug&value=status');
+    http.open('GET', '/api/debug/status');
     http.send(null);
     _poller = setTimeout(update, 5000);
   }

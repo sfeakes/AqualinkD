@@ -2,9 +2,12 @@
 # Options
 
 # Valid flags for AQ_FLAGS
-# AQ_DEBUG = true
+#AQ_DEBUG = true
 AQ_RS16 = true
 AQ_PDA  = true
+AQ_ONETOUCH = true
+AQ_IAQTOUCH = true
+#AQ_MEMCMP = true // Not implimented correctly yet.
 
 
 # make EXFLAGS="-D BETA_PDA_AUTOLABEL"        // Add compile flags
@@ -19,7 +22,7 @@ LIBS := -l pthread -l m
 
 # debug of not
 #DBG = -g -O0 -fsanitize=address 
-
+#GCCFLAGS = -Wall -O3
 
 # USe below to remove unused functions and global variables.
 #LFLAGS = -Wl,--gc-sections,--print-gc-sections
@@ -27,7 +30,7 @@ LIBS := -l pthread -l m
 
 # define any compile-time flags
 #GCCFLAGS = -Wall -O3 -Wextra
-GCCFLAGS = -Wall -O3 $(EXFLAGS)
+#GCCFLAGS = -Wall -O3 
 #GCCFLAGS = -Wall
 
 #CFLAGS = -Wall -g $(LIBS)
@@ -42,8 +45,8 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 #SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \
 #       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
 
-SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c \
-       devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
+SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
+       devices_jandy.c packetLogger.c devices_pentair.c color_lights.c mongoose.c 
 DBG_SRC = timespec_subtract.c
 
 ifeq ($(AQ_PDA), true)
@@ -51,8 +54,22 @@ ifeq ($(AQ_PDA), true)
   CFLAGS := $(CFLAGS) -D AQ_PDA
 endif
 
+ifeq ($(AQ_ONETOUCH), true)
+  SRCS := $(SRCS) onetouch.c onetouch_aq_programmer.c
+  CFLAGS := $(CFLAGS) -D AQ_ONETOUCH
+endif
+
+ifeq ($(AQ_IAQTOUCH), true)
+  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c
+  CFLAGS := $(CFLAGS) -D AQ_IAQTOUCH
+endif
+
 ifeq ($(AQ_RS16), true)
   CFLAGS := $(CFLAGS) -D AQ_RS16
+endif
+
+ifeq ($(AQ_MEMCMP), true)
+  CFLAGS := $(CFLAGS) -D AQ_MEMCMP
 endif
 
 ifeq ($(AQ_DEBUG), true)
@@ -65,7 +82,7 @@ ifeq ($(DEBUG), true)
   CFLAGS := -g -O0 $(CFLAGS) -D AQ_DEBUG 
 endif
 
-SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c
+SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c
 LR_SRC = log_reader.c aq_serial.c utils.c packetLogger.c
 PL_EXSRC = aq_serial.c
 PL_EXOBJ = aq_serial_player.o
@@ -93,7 +110,7 @@ slog:	$(SLOG)
   @echo: $(SLOG) have been compiled
 
 $(SLOG): $(SL_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS) -D SERIAL_LOGGER
 
 logr:	$(LOGR)
   @echo: $(LOGR) have been compiled

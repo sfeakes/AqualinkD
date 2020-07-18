@@ -72,6 +72,30 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
+# ToDo (future release)
+* Allow selecting of pre-defined VSP programs
+* Timed based actions (undecided on cron & AqualinkD or use Jandy programs )
+* Put back some form of Jandy panel simulator. (existing was removed in V2.2.0)
+* RS Serial protocol. AqualinkD has all Jandy control protocols except RS Serial.
+* Update homekit-aqualinkd to use new API & features.
+
+# Update in (Pre) Release 2.2.0
+* This release WILL require you to make aqualinkd.conf changes. <b>Make sure to read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
+* Extensive work to reduce CPU cycles and unnesessary logic.
+* iAqualink Touch protocol supported for VSP & extended programming.
+  * This protocol is a lot faster for programming, ID's are between 0x38 & 0x3B `extended_device_id`, use Serial_logger to find valid ID.
+  * If your panel supports this it's strongly recomended to use it and also set `extended_device_id_programming=yes`
+* New panel config procedure VERY dependant on panel type, you must change config, must set `panel_type` in config.
+  * Buttons (specifically) heaters will be different from previous versions. (all info in wiki link above) 
+* Simulator support removed for the moment.
+* Few changes in RS protocol and timings.
+* Fixed bug with Watts display for VSP.
+* Fixed bug with colored lights.
+* RS16 panels no longer require `extended_device_id` to be set
+* More compile flags. See notes in wiki on compiling.
+* Extensive SWG logic changes.
+* AqualinkD startup changed to fix some 'systemctl restart' issues.
+* More detailed API replys.
 # Update in Release 2.1.0
 * Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
 * Full Variable Speed Pump support. (Can read,set & change RPM,GPM)
