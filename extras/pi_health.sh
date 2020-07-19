@@ -19,6 +19,14 @@
 MAX_TEMP=78
 WARNING_TEMP=72
 
+#Flag Bits
+UNDERVOLTED=0x1
+CAPPED=0x2
+THROTTLED=0x4
+HAS_UNDERVOLTED=0x10000
+HAS_CAPPED=0x20000
+HAS_THROTTLED=0x40000
+
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 
    exit 1
