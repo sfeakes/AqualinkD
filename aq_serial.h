@@ -177,6 +177,9 @@
 #define BTN_SPA_HTR   "Spa_Heater"
 #define BTN_SOLAR_HTR "Solar_Heater"
 
+#define BTN_TEMP1_HTR  "Temp1_Heater"
+#define BTN_TEMP2_HTR  "Temp2_Heater"
+
 #ifdef AQ_RS16
 #define BTN_AUXB1      "Aux_B1"
 #define BTN_AUXB2      "Aux_B2"

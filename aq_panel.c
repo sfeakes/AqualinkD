@@ -400,7 +400,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
 
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[15-1];
   aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
-  aqdata->aqbuttons[index].label = rs?name2label(BTN_POOL_HTR):BTN_PDA_POOL_HTR;
+  aqdata->aqbuttons[index].label = rs?name2label(combo?BTN_POOL_HTR:BTN_TEMP1_HTR):BTN_PDA_POOL_HTR;
   aqdata->aqbuttons[index].name = BTN_POOL_HTR;
   aqdata->aqbuttons[index].code = KEY_POOL_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
@@ -408,7 +408,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[17-1];
   aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
-  aqdata->aqbuttons[index].label = rs?name2label(BTN_SPA_HTR):BTN_PDA_SPA_HTR;
+  aqdata->aqbuttons[index].label = rs?name2label(combo?BTN_SPA_HTR:BTN_TEMP2_HTR):BTN_PDA_SPA_HTR;
   aqdata->aqbuttons[index].name = BTN_SPA_HTR;
   aqdata->aqbuttons[index].code = KEY_SPA_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;

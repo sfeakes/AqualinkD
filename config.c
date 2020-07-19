@@ -38,6 +38,7 @@
 #include "utils.h"
 #include "aq_serial.h"
 #include "aq_panel.h"
+#include "aqualink.h"
 
 #define MAXCFGLINE 256
 
@@ -122,7 +123,8 @@ void init_parameters (struct aqconfig * parms)
   parms->log_raw_RS_bytes = false;
   parms->readahead_b4_write = false;
   parms->sync_panel_time = true;
- 
+  parms->net_poll_wait = DEFAULT_MG_NET_WAIT;
+
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
 
@@ -513,6 +515,9 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp (param, "keep_paneltime_synced", 21) == 0) {
     _aqconfig_.sync_panel_time = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "network_poll_speed", 18) == 0) {
+    _aqconfig_.net_poll_wait = strtoul(value, NULL, 10);
     rtn=true;
   }
   

@@ -387,7 +387,8 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
   }
 
   #ifdef AQ_RS16
-  else if (PANEL_SIZE >= 16 ) { // Run over devices that have no status LED's on RS12&16 panels.
+  //else if (PANEL_SIZE >= 16 ) { // This fails on RS4, comeback and find out why. // Run over devices that have no status LED's on RS12&16 panels.
+  else if ( 16 <= (int)PANEL_SIZE  ) {
     int j;
     for (i=2; i <= ONETOUCH_LINES; i++) {
       for (j = aq_data->rs16_vbutton_start; j <= aq_data->rs16_vbutton_end; j++) {

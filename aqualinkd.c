@@ -360,7 +360,9 @@ void _processMessage(char *message, bool reset)
 
 #ifdef AQ_RS16
     //if ( _aqconfig_.rs_panel_size >= 16) {
-    if (PANEL_SIZE >= 16) {
+    //if ( (int)PANEL_SIZE >= 16) { // NSF No idea why this fails on RS-4, but it does.  Come back and find out why
+    if ( 16 <= (int)PANEL_SIZE  ) {
+      printf("Panel size %d What the fuck am I doing here\n",PANEL_SIZE);
       if ((msg_loop & MSG_RS13BUTTON) != MSG_RS13BUTTON)
         _aqualink_data.aqbuttons[13].led->state = OFF;
       if ((msg_loop & MSG_RS14BUTTON) != MSG_RS14BUTTON)
@@ -1042,7 +1044,7 @@ int main(int argc, char *argv[])
       PANEL_SIZE,
       isCOMBO_PANEL?"Combo Pool/Spa":"",
       isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
-      isDUAL_EQPT_PANEL?"Dual Equiptment":"");
+      isDUAL_EQPT_PANEL?"Dual Equipment":"");
 
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_level         = %d\n", _aqconfig_.log_level);
   LOG(AQUA_LOG,LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _aqconfig_.device_id);
@@ -1098,6 +1100,8 @@ int main(int argc, char *argv[])
   if (_aqconfig_.readahead_b4_write == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial Read Ahead Write  = %s\n", bool2text(_aqconfig_.readahead_b4_write));
 
+  if (_aqconfig_.net_poll_wait != DEFAULT_MG_NET_WAIT)
+    LOG(AQUA_LOG,LOG_NOTICE, "Network Poll Speed       = %d\n", _aqconfig_.net_poll_wait);
 
   //for (i = 0; i < TOTAL_BUTONS; i++)
   for (i = 0; i < _aqualink_data.total_buttons; i++)
@@ -1484,7 +1488,7 @@ void main_loop()
     }
     else if (packet_length > 0) {
       blank_read = 0;
-      if (i++ > 500) { // 200 packets without a probe to BOTH ID's, give up config is wrong
+      if (i++ > 1000) { // 1000 packets without a probe to BOTH ID's, give up config is wrong
         if(!got_probe) {
           LOG(AQUA_LOG,LOG_ERR, "No probe on '0x%02hhx', giving up! (please check config)\n",_aqconfig_.device_id);    
         }
@@ -1515,11 +1519,17 @@ void main_loop()
 
   LOG(AQUA_LOG,LOG_NOTICE, "Starting communication with Control Panel\n");
 
+  int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT;
+  // Not the best way to do this, but ok for moment
+  if (_aqconfig_.net_poll_wait <= 1)
+    blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT * 10;
+
   blank_read = 0;
   // OK, Now go into infinate loop
   while (_keepRunning == true)
   {
-    while ((rs_fd < 0 || blank_read >= MAX_ZERO_READ_BEFORE_RECONNECT) && _keepRunning == true)
+    //printf("%d ",blank_read);
+    while ((rs_fd < 0 || blank_read >= blank_read_reconnect) && _keepRunning == true)
     {
       if (rs_fd < 0)
       {
@@ -1549,7 +1559,7 @@ void main_loop()
     {
       // Unrecoverable read error. Force an attempt to reconnect.
       LOG(AQUA_LOG,LOG_ERR, "Bad packet length, reconnecting\n");
-      blank_read = MAX_ZERO_READ_BEFORE_RECONNECT;
+      blank_read = blank_read_reconnect;
     }
     else if (packet_length == 0)
     {
@@ -1645,7 +1655,7 @@ void main_loop()
 
     //mg_mgr_poll(&mgr, 10);
     //mg_mgr_poll(&mgr, 5);
-    mg_mgr_poll(&mgr, packet_length>0?0:2); // Don;t wait if we read something.
+    mg_mgr_poll(&mgr, packet_length>0?0:_aqconfig_.net_poll_wait); // Don;t wait if we read something.
     //tcdrain(rs_fd); // Make sure buffer has been sent.
     //mg_mgr_poll(&mgr, 0);
 

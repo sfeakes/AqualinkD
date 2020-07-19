@@ -549,7 +549,8 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     // if we get a button with 0x00 state on Light Page, that's the end of page.
     if (_currentPageLoading == IAQ_PAGE_COLOR_LIGHT) {
       if (packet[7] == 0x00) {
-        printf("** MANUAL PAGE END\n");
+        //printf("** MANUAL PAGE END\n");
+        LOG(IAQT_LOG,LOG_DEBUG, "MANUAL PAGE END\n");
         _currentPage = _currentPageLoading;
         _currentPageLoading = NUL;
         processPage(aq_data);
@@ -561,8 +562,8 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   } 
   
   if (packet[3] == 0x29) {
-    printf("*****  iAqualink Touch STARTUP Message ******* \n");
-
+    //printf("*****  iAqualink Touch STARTUP Message ******* \n");
+    LOG(IAQT_LOG,LOG_DEBUG, "STARTUP Message\n");
     queueGetProgramData(IAQTOUCH, aq_data);
 
     //aq_programmer(AQ_SET_IAQTOUCH_SET_TIME, NULL, aq_data);
