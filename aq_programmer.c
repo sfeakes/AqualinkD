@@ -333,7 +333,8 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
   } else if ( source_type == IAQTOUCH) {
     aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data);
     if (_aqconfig_.use_panel_aux_labels)
-      aq_programmer(AQ_GET_IAQTOUCH_AUX_LABELS, NULL, aq_data);
+      aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+      //aq_programmer(AQ_GET_IAQTOUCH_AUX_LABELS, NULL, aq_data);
 #endif
 #ifdef AQ_PDA
   } else if ( source_type == AQUAPDA) {

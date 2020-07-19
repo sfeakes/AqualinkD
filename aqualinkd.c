@@ -204,7 +204,7 @@ int16_t  RS16_endswithLEDstate(char *msg)
   aqledstate state = LED_S_UNKNOWN;
 
   //if (_aqconfig_.rs_panel_size < 16)
-  if (PANEL_SIZE < 16)
+  if (PANEL_SIZE() < 16)
     return false;
 
   sp = strrchr(msg, ' ');
@@ -361,8 +361,8 @@ void _processMessage(char *message, bool reset)
 #ifdef AQ_RS16
     //if ( _aqconfig_.rs_panel_size >= 16) {
     //if ( (int)PANEL_SIZE >= 16) { // NSF No idea why this fails on RS-4, but it does.  Come back and find out why
-    if ( 16 <= (int)PANEL_SIZE  ) {
-      printf("Panel size %d What the fuck am I doing here\n",PANEL_SIZE);
+    if ( PANEL_SIZE() >= 16 ) {
+      printf("Panel size %d What the fuck am I doing here\n",PANEL_SIZE());
       if ((msg_loop & MSG_RS13BUTTON) != MSG_RS13BUTTON)
         _aqualink_data.aqbuttons[13].led->state = OFF;
       if ((msg_loop & MSG_RS14BUTTON) != MSG_RS14BUTTON)
@@ -575,7 +575,7 @@ void _processMessage(char *message, bool reset)
   
 #ifdef AQ_RS16
   //else if ( _aqconfig_.rs_panel_size >= 16 && (rs16 = RS16_endswithLEDstate(msg)) != 0 )
-  else if (PANEL_SIZE >= 16 && (rs16 = RS16_endswithLEDstate(msg)) != 0 )
+  else if (PANEL_SIZE() >= 16 && (rs16 = RS16_endswithLEDstate(msg)) != 0 )
   {
     msg_loop |= rs16;
     // Do nothing, just stop other else if statments executing
@@ -1041,7 +1041,7 @@ int main(int argc, char *argv[])
   LOG(AQUA_LOG,LOG_NOTICE, "Panel set to %s%s-%d %s%s %s\n",
       isRS_PANEL?"RS":"",
       isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
-      PANEL_SIZE,
+      PANEL_SIZE(),
       isCOMBO_PANEL?"Combo Pool/Spa":"",
       isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
       isDUAL_EQPT_PANEL?"Dual Equipment":"");

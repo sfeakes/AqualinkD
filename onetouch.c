@@ -387,8 +387,8 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
   }
 
   #ifdef AQ_RS16
-  //else if (PANEL_SIZE >= 16 ) { // This fails on RS4, comeback and find out why. // Run over devices that have no status LED's on RS12&16 panels.
-  else if ( 16 <= (int)PANEL_SIZE  ) {
+  else if (PANEL_SIZE() >= 16 ) { // This fails on RS4, comeback and find out why. // Run over devices that have no status LED's on RS12&16 panels.
+  //else if ( 16 <= (int)PANEL_SIZE  ) {
     int j;
     for (i=2; i <= ONETOUCH_LINES; i++) {
       for (j = aq_data->rs16_vbutton_start; j <= aq_data->rs16_vbutton_end; j++) {
@@ -464,7 +464,7 @@ void rs16led_update(struct aqualinkdata *aq_data, int updated) {
   static unsigned char updates = '\0';
   int i;
 
-  if (PANEL_SIZE < 16)
+  if (PANEL_SIZE() < 16)
     return;
 
   if (updated == -1) {
@@ -529,7 +529,7 @@ bool new_menu(struct aqualinkdata *aq_data)
     // End of equiptment status chain of menus, reset any pump that wasn't listed in menus
     pump_update(aq_data, -1);
 #ifdef AQ_RS16
-    if (PANEL_SIZE >= 16)
+    if (PANEL_SIZE() >= 16)
       rs16led_update(aq_data, -1);
 #endif
   }

@@ -79,7 +79,8 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * RS Serial protocol. AqualinkD has all Jandy control protocols except RS Serial.
 * Update homekit-aqualinkd to use new API & features.
 
-# Update in (Pre) Release 2.2.0a
+# Update in (Pre) Release 2.2.0b
+* 2.2.0a (had some issues with compiler optimisation), please don't use or compile yourself.
 * Fixed RS-4 bug.
 * Increased timeout for startup probe
 * This release WILL require you to make aqualinkd.conf changes. <b>Make sure to read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>

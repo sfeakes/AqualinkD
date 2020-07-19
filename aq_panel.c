@@ -59,6 +59,25 @@ void addPanelIAQTouchInterface() {
   _aqconfig_.paneltype_mask &= ~RSP_ONET;
 }
 
+int PANEL_SIZE() {
+  if ((_aqconfig_.paneltype_mask & RSP_4) == RSP_4)
+    return 4;
+  else if ((_aqconfig_.paneltype_mask & RSP_6) == RSP_6)
+    return 6;
+  else if ((_aqconfig_.paneltype_mask & RSP_8) == RSP_8)
+    return 8;
+  else if ((_aqconfig_.paneltype_mask & RSP_12) == RSP_12)
+    return 10;
+  else if ((_aqconfig_.paneltype_mask & RSP_10) == RSP_10)
+    return 12;
+  else if ((_aqconfig_.paneltype_mask & RSP_14) == RSP_14)
+    return 14;
+  else if ((_aqconfig_.paneltype_mask & RSP_16) == RSP_16)
+    return 16;
+  
+  LOG(AQUA_LOG,LOG_ERR, "Internal error, panel size not set, using 8\n");
+  return 8;
+}
 //bool setPanel(const char *str);
 /*
 void panneltest() {

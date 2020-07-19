@@ -619,7 +619,9 @@ void *get_aqualink_iaqtouch_aux_labels( void *ptr )
    */
   const char *buf;
   int aux;
-  for(i=1; i < 18; i++) // NSF Need to take out hard code of 18
+  // Loop over panel buttons or lines which ever is lowest.
+  //for(i=1; i < 18; i++) // NSF Need to take out hard code of 18
+  for(i=1; i < PANEL_SIZE(); i++)
   {
     buf = iaqtGetTableInfoLine(i);
     //printf("**** BUF '%s'\n",aux,buf);

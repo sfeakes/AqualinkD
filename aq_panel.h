@@ -46,8 +46,10 @@ void changePanelToExtendedIDProgramming();
 #define isONET_ENABLED ((_aqconfig_.paneltype_mask & RSP_ONET) == RSP_ONET)
 #define isIAQT_ENABLED ((_aqconfig_.paneltype_mask & RSP_IAQT) == RSP_IAQT)
 #define isEXTP_ENABLED ((_aqconfig_.paneltype_mask & RSP_EXT_PROG) == RSP_EXT_PROG)
-//int PANEL_SIZE(); 
+int PANEL_SIZE(); 
 //
+//#define PANEL_SIZE PANEL_SIZE()
+/*
 #define PANEL_SIZE ((_aqconfig_.paneltype_mask & RSP_4) == RSP_4)?4:(\
                       ((_aqconfig_.paneltype_mask & RSP_6) == RSP_6)?6:(\
                        ((_aqconfig_.paneltype_mask & RSP_8) == RSP_8)?8:(\
@@ -55,7 +57,7 @@ void changePanelToExtendedIDProgramming();
                          ((_aqconfig_.paneltype_mask & RSP_12) == RSP_12)?12:(\
                           ((_aqconfig_.paneltype_mask & RSP_14) == RSP_14)?14:(\
                            ((_aqconfig_.paneltype_mask & RSP_16) == RSP_16)?16:0))))))
-
+*/
 
 
 #ifndef AQ_RS16
