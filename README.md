@@ -76,13 +76,18 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Allow selecting of pre-defined VSP programs
 * Timed based actions (undecided on cron & AqualinkD or use Jandy programs )
 * Put back some form of Jandy panel simulator. (existing was removed in V2.2.0)
-* RS Serial protocol. AqualinkD has all Jandy control protocols except RS Serial.
+* Add RS Serial protocol. AqualinkD has all Jandy control protocols except RS Serial.
 * Update homekit-aqualinkd to use new API & features.
+* Add light programming to Aqualink Touch protocol.
 
-# Update in (Pre) Release 2.2.0b
+# Update in (Pre) Release 2.2.0c
+* Cleaned up Makefile (and adding debug timings).
+* Changed loggin infrastructure.
+* Added expermental options for Pi4.
 * 2.2.0a (had some issues with compiler optimisation), please don't use or compile yourself.
-* Fixed RS-4 bug.
-* Increased timeout for startup probe
+* Fixed RS-4 panel bug.
+* Fixed some AqualinkTouch programming issues.
+* Increased timeout for startup probe.
 * This release WILL require you to make aqualinkd.conf changes. <b>Make sure to read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
 * Extensive work to reduce CPU cycles and unnesessary logic.
 * iAqualink Touch protocol supported for VSP & extended programming.

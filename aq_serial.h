@@ -425,7 +425,9 @@ typedef enum {
 
 
 int init_serial_port(const char* tty);
+int init_blocking_serial_port(const char* tty);
 void close_serial_port(int file_descriptor);
+void close_blocking_serial_port();
 //#ifdef AQ_PDA
 //void set_pda_mode(bool mode);
 //bool pda_mode();

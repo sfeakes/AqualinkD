@@ -74,6 +74,7 @@ typedef enum {
   AQ_SET_IAQTOUCH_SET_TIME
 } program_type;
 
+
 struct programmingThreadCtrl {
   pthread_t thread_id;
   //void *thread_args;

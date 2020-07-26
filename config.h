@@ -73,7 +73,8 @@ struct aqconfig
   bool readahead_b4_write;
   bool mqtt_timed_update;
   bool sync_panel_time;
-  int net_poll_wait;
+  int rs_poll_speed;
+  bool thread_netservices;
 };
 
 #ifndef CONFIG_C

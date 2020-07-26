@@ -123,7 +123,8 @@ void init_parameters (struct aqconfig * parms)
   parms->log_raw_RS_bytes = false;
   parms->readahead_b4_write = false;
   parms->sync_panel_time = true;
-  parms->net_poll_wait = DEFAULT_MG_NET_WAIT;
+  parms->rs_poll_speed = DEFAULT_POLL_SPEED;
+  parms->thread_netservices = false;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -517,7 +518,14 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.sync_panel_time = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "network_poll_speed", 18) == 0) {
-    _aqconfig_.net_poll_wait = strtoul(value, NULL, 10);
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'network_poll_speed' is no longer supported, using value for 'rs_poll_speed'\n");
+    _aqconfig_.rs_poll_speed = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp (param, "rs_poll_speed", 13) == 0) {
+    _aqconfig_.rs_poll_speed = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp (param, "thread_netservices", 18) == 0) {
+    _aqconfig_.thread_netservices = text2bool(value);
     rtn=true;
   }
   

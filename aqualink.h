@@ -8,7 +8,7 @@
 #include "aq_programmer.h"
 #include "aq_panel.h"
 
-#define DEFAULT_MG_NET_WAIT 2
+#define DEFAULT_POLL_SPEED 2
 
 #define TIME_CHECK_INTERVAL  3600
 #define ACCEPTABLE_TIME_DIFF 120
@@ -19,6 +19,10 @@
 
 #define MAX_ZERO_READ_BEFORE_RECONNECT 10000 // 2k normally
 
+void intHandler(int dummy);
+
+// There are cases where SWG will read 80% in allbutton and 0% in onetouch/aqualinktouch, this will compile that in or our
+//#define READ_SWG_FROM_EXTENDED_ID
 
 //#define TOTAL_BUTTONS     12
 /*

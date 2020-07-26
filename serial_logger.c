@@ -73,7 +73,7 @@ bool _playback_file = false;
 
 void intHandler(int dummy) {
   _keepRunning = false;
-  logMessage(LOG_NOTICE, "Stopping!");
+  LOG(RSSD_LOG, LOG_NOTICE, "Stopping!");
   if (_playback_file)  // If we are reading file, loop is irevelent
     exit(0);
 }
@@ -320,6 +320,7 @@ int main(int argc, char *argv[]) {
   int logLevel = LOG_NOTICE;
   bool rsRawDebug = false;
   bool panleProbe = true;
+  bool rsSerialSpeedTest = false;
   //bool playback_file = false;
   
   //int logLevel; 
@@ -345,6 +346,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\t-p <number> (log # packets)\n");
     fprintf(stderr, "\t-i <ID> (just log these ID's, can use multiple -i)\n");
     fprintf(stderr, "\t-r (raw)\n");
+    fprintf(stderr, "\t-s (Serial Speed Test)\n");
     fprintf(stderr, "\t-rsrd (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
     fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
@@ -372,6 +374,8 @@ int main(int argc, char *argv[]) {
       rsRawDebug = true;
     } else if (strcmp(argv[i], "-n") == 0) {
       panleProbe = false;
+    } else if (strcmp(argv[i], "-s") == 0) {
+      rsSerialSpeedTest = true;
     }
   }
 
@@ -380,7 +384,7 @@ int main(int argc, char *argv[]) {
   if (_playback_file) {
     rs_fd = open(argv[1], O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NDELAY);
     if (rs_fd < 0)  {
-      logMessage(LOG_ERR, "Unable to open file: %s\n", argv[1]);
+      LOG(RSSD_LOG, LOG_ERR, "Unable to open file: %s\n", argv[1]);
       displayLastSystemError(argv[1]);
       return -1;
     }
@@ -414,7 +418,7 @@ int main(int argc, char *argv[]) {
       // Nothing read
     } else if (packet_length > 0) {
 
-        //logMessage(LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
+        //LOG(RSSD_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
         if (logLevel > LOG_NOTICE)
           printPacket(lastID, packet_buffer, packet_length);
 
@@ -448,7 +452,7 @@ int main(int argc, char *argv[]) {
          }
          
          if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
-          //logMessage(LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
+          //LOG(RSSD_LOG, LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == lastID) {
               slog[i].inuse = true;
@@ -477,6 +481,18 @@ int main(int argc, char *argv[]) {
          
         }*/
 // NSF
+      // Test Serial speed & caching
+      if (rsSerialSpeedTest) {
+        if (rsRawDebug)
+          packet_length = get_packet_lograw(rs_fd, packet_buffer);
+        else
+          packet_length = get_packet(rs_fd, packet_buffer);
+
+        if (packet_length > 0)  {
+          LOG(RSSD_LOG, LOG_ERR, "SERIOUS RS485 ERROR, Slow serial port read detected, (check RS485 adapteer / os performance / USB serial speed\n");
+        }
+      }
+
     }
 
     if (logPackets != 0 && received_packets >= logPackets) {
@@ -500,7 +516,7 @@ int main(int argc, char *argv[]) {
 
   LOG(RSSD_LOG, LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
-    //logMessage(LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+    //LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
     if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
       LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",

@@ -124,6 +124,9 @@ void log_programming_information(struct aqualinkdata *aq_data)
     case OTM_SET_TEMP:
       log_heater_setpoints(aq_data);
     break;
+    default:
+      // No need to do anything yet
+    break;
   }
 }
 
@@ -346,6 +349,7 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
         //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
       }
     }
+#ifdef READ_SWG_FROM_EXTENDED_ID
   } else if (rsm_strcmp(_menu[2],"AQUAPURE") == 0) {
     /* Info:   OneTouch Menu Line 0 = Equipment Status
        Info:   OneTouch Menu Line 1 = 
@@ -367,7 +371,7 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
       }
       LOG(ONET_LOG,LOG_INFO, "OneTouch PPM = %d\n",ppm);
     }
-
+#endif
   } else if (rsm_strcmp(_menu[2],"Chemlink") == 0) {
     /*   Info:   OneTouch Menu Line 0 = Equipment Status
          Info:   OneTouch Menu Line 1 = 

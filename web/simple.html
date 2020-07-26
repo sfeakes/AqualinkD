@@ -278,7 +278,7 @@
       for (var obj in data['devices']) {
         if (document.getElementById(data['devices'][obj].id) == null) {
           _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
-          //console.log("Create " + data['devices'][obj].id);
+          console.log("Create " + data['devices'][obj].id);
           createTile(data['devices'][obj]);
         }
       }
@@ -321,6 +321,10 @@
     function createTile(object) {
       if (object.name == 'NONE')
         return;
+      
+      if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
+        return;
+      }
       //if (ignore_devices.indexOf(object.id) >= 0)
       //  return;
       var table = document.getElementById("deviceList");
@@ -339,13 +343,14 @@
       cell3.setAttribute('align', 'right');
       //cell3.setAttribute('cellpadding', '0');
       cell4.setAttribute('align', 'right');
-      if (object.type == 'switch') {
+      if (object.type == 'switch' /*&& object.type_ext != "switch_program"*/) {
         row.deleteCell(2);
         row.deleteCell(1);
         cell1.setAttribute('colspan', '3');
         cell4.innerHTML = "<div id='"+object.id+"'><input id='switch-"+object.id+"' name='"+object.id+"' class='switch switch-btn' type='checkbox' onclick='update(this);'><label for='switch-"+object.id+"'></label></div>";
         setButton(object.id, object.state);
-      } else if (object.type == 'switch_program') {
+        /* //Removing light program, too much for simple interface
+      } else if (object.type == 'switch' && object.type_ext == 'switch_program') {
         row.deleteCell(2);
         cell2.setAttribute('colspan', '2');
         //cell2.setAttribute('width', '100%');
@@ -364,6 +369,7 @@
         }
         } catch (e) {}
         setButton(object.id, object.state);
+        */
       } else if (object.type == 'value') {
         row.deleteCell(2);
         row.deleteCell(1);
@@ -414,19 +420,29 @@
       
       switch (source.getAttribute("type")) {
         case "range":
-          cmd.parameter = source.id.substr(7); // remove 'slider_'
-          cmd.value = source.value;
+          if ( source.id.includes("SWG") ) {
+            cmd.uri = source.id.substr(7)+"/percent/set";
+            cmd.value = source.value;
+          } else {
+            cmd.uri = source.id.substr(7)+"/setpoint/set";
+            //cmd.parameter = source.id.substr(7); // remove 'slider_'
+            cmd.value = source.value;
+          }
         break;
         case "checkbox":
+          cmd.uri = source.id.substr(7)+"/set";
+          cmd.value = source.checked?"1":"0";
           //name = source.id.substr(11); //remove 'btn-toggle-''
           //state = source.checked?"on":"off";
-          cmd.command = source.id.substr(7);
+          //cmd.command = source.id.substr(7);
         break;
         default:  // type is null because it's a selector
+          cmd.uri = source.id.substr(9)+"/program/set";
+          cmd.button = source.id.substr(9);
           //name = source.id.substr(9); //remove 'selector_''
-          cmd.parameter = 'LIGHT_MODE';
+          //cmd.parameter = 'LIGHT_MODE';
           cmd.value = source.value;
-          cmd.button = source.id.substr(9); // remove 'selector_'
+          //cmd.button = source.id.substr(9); // remove 'selector_'
         break;
       }
       //console.log(source);
@@ -564,7 +580,8 @@
 
     function get_devices() {
       var msg = {
-        command: "GET_DEVICES"
+        //command: "GET_DEVICES"
+        uri: "devices"
       };
       socket_di.send(JSON.stringify(msg));
     }

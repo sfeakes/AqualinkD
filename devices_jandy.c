@@ -173,6 +173,8 @@ bool setSWGboost(struct aqualinkdata *aqdata, bool on) {
     aqdata->boost = true;
     aqdata->swg_percent = 101;
   }
+
+  return true;
 }
 
 // Only change SWG percent if we are not in SWG programming

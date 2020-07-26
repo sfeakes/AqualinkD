@@ -1,45 +1,51 @@
 #
 # Options
+#
+# make          // standard everything
+# make debug    // Give standard binary just with debugging
+# make aqdebug  // Compile with extra aqualink debug information like timings
+# make slog     // Serial logger
+# make <other>  // not documenting 
+#
 
 # Valid flags for AQ_FLAGS
-#AQ_DEBUG = true
 AQ_RS16 = true
 AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
+# Get some system information
+PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
+$(info OS: $(PI_OS_VERSION) )
+GLIBC_VERSION = $(shell ldd --version | grep ldd)
+$(info GLIBC: $(GLIBC_VERSION) )
 
-# make EXFLAGS="-D BETA_PDA_AUTOLABEL"        // Add compile flags
-#
 
 # define the C compiler to use
 CC = gcc
 
 #LIBS := -lpthread -lm
 LIBS := -l pthread -l m
-#LIBS := -lpthread -lwebsockets
+#LIBS := -l pthread -l m -static # Take out -static, just for dev
 
-# debug of not
-#DBG = -g -O0 -fsanitize=address 
-#GCCFLAGS = -Wall -O3
-
-# USe below to remove unused functions and global variables.
-#LFLAGS = -Wl,--gc-sections,--print-gc-sections
-#GCCFLAGS = -Wall -ffunction-sections -fdata-sections
-
-# define any compile-time flags
+# Standard compile flags
+GCCFLAGS = -Wall -O3
+#GCCFLAGS = -O3
 #GCCFLAGS = -Wall -O3 -Wextra
-#GCCFLAGS = -Wall -O3 
-#GCCFLAGS = -Wall
+#GCCFLAGS = -Wl,--gc-sections,--print-gc-sections
+#GCCFLAGS = -Wall -O3 -ffunction-sections -fdata-sections
 
-#CFLAGS = -Wall -g $(LIBS)
-#CFLAGS = -Wall -g $(LIBS) -std=gnu11
-#CFLAGS = $(GCCFLAGS) $(DBG) $(AQ_FLAGS) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
-CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
+# Standard debug flags
+DGCCFLAGS = -Wall -O0 -g
 
+# Aqualink Debug flags
+#DBGFLAGS = -g -O0 -Wall -fsanitize=address -D AQ_DEBUG -D AQ_TM_DEBUG
+DBGFLAGS = -g -O0 -Wall -D AQ_DEBUG -D AQ_TM_DEBUG
 
-# Add inputs and outputs from these tool invocations to the build variables 
+# Mongoose flags
+MGFLAGS = -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
+
 
 # define the C source files
 #SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \
@@ -47,41 +53,41 @@ CFLAGS = $(GCCFLAGS) $(DBG) $(LIBS) -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_
 
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c mongoose.c 
-DBG_SRC = timespec_subtract.c
 
+
+AQ_FLAGS = 
+# Add source and flags depending on protocols to support.
 ifeq ($(AQ_PDA), true)
   SRCS := $(SRCS) pda.c pda_menu.c pda_aq_programmer.c
-  CFLAGS := $(CFLAGS) -D AQ_PDA
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_PDA
 endif
 
 ifeq ($(AQ_ONETOUCH), true)
   SRCS := $(SRCS) onetouch.c onetouch_aq_programmer.c
-  CFLAGS := $(CFLAGS) -D AQ_ONETOUCH
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_ONETOUCH
 endif
 
 ifeq ($(AQ_IAQTOUCH), true)
   SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c
-  CFLAGS := $(CFLAGS) -D AQ_IAQTOUCH
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_IAQTOUCH
 endif
 
 ifeq ($(AQ_RS16), true)
-  CFLAGS := $(CFLAGS) -D AQ_RS16
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_RS16
 endif
 
 ifeq ($(AQ_MEMCMP), true)
-  CFLAGS := $(CFLAGS) -D AQ_MEMCMP
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_MEMCMP
 endif
 
-ifeq ($(AQ_DEBUG), true)
-  DEBUG=true
-endif
+# Put all flags together.
+CFLAGS = $(GCCFLAGS) $(AQ_FLAGS) $(MGFLAGS)
+DFLAGS = $(DGCCFLAGS) $(AQ_FLAGS) $(MGFLAGS)
+DBG_CFLAGS = $(DBGFLAGS) $(AQ_FLAGS) $(MGFLAGS)
 
-# If run with `make DEBUG=true` add debug files and pass parameter for compile
-ifeq ($(DEBUG), true)
-  SRCS := $(SRCS) $(DBG_SRC)
-  CFLAGS := -g -O0 $(CFLAGS) -D AQ_DEBUG 
-endif
-
+# Other sources.
+#DBG_SRC = timespec_subtract.c debug_timer.c
+DBG_SRC = debug_timer.c
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c
 LR_SRC = log_reader.c aq_serial.c utils.c packetLogger.c
 PL_EXSRC = aq_serial.c
@@ -89,6 +95,7 @@ PL_EXOBJ = aq_serial_player.o
 PL_SRC := $(filter-out aq_serial.c, $(SRCS))
 
 OBJS = $(SRCS:.c=.o)
+DBG_OBJS = $(DBG_SRC:.c=.o)
 
 SL_OBJS = $(SL_SRC:.c=.o)
 LR_OBJS = $(LR_SRC:.c=.o)
@@ -99,27 +106,45 @@ MAIN = ./release/aqualinkd
 SLOG = ./release/serial_logger
 LOGR = ./release/log_reader
 PLAY = ./release/aqualinkd-player
+DEBG = ./release/aqualinkd-debug
 
-all:    $(MAIN) 
-  @echo: $(MAIN) have been compiled
+all:    $(MAIN)
+	$(info $(MAIN) has been compiled)
+
+# debug, Just change compile flags and call MAIN
+debug: CFLAGS = $(DFLAGS)
+debug: $(MAIN)
+	$(info $(MAIN) has been compiled)
 
 $(MAIN): $(OBJS) 
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LFLAGS) $(LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(MAIN) $(OBJS) $(LIBS)
+	$(info $(MAIN) has been compiled)
 
 slog:	$(SLOG)
-  @echo: $(SLOG) have been compiled
+	$(info $(SLOG) has been compiled)
 
+$(SLOG): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
 $(SLOG): $(SL_OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS) -D SERIAL_LOGGER
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS) 
+
+
+# Shouldn't need to use any of these options unless you're developing.
+
+aqdebug: $(DEBG)
+	$(info $(DEBG) has been compiled)
+
+$(DEBG): CFLAGS = $(DBG_CFLAGS)
+$(DEBG): $(OBJS) $(DBG_OBJS)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $(DEBG) $(OBJS) $(DBG_OBJS) $(DBGFLAGS) $(LIBS)
 
 logr:	$(LOGR)
-  @echo: $(LOGR) have been compiled
+	$(info $(LOGR) has been compiled)
 
 $(LOGR): $(LR_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(LOGR) $(LR_OBJS)
 
 player:	$(PLAY)
-  @echo: $(PLAY) have been compiled
+	$(info $(PLAY) has been compiled)
 
 $(PL_EXOBJ): $(PL_EXSRC)
 	$(CC) $(CFLAGS) -D PLAYBACK_MODE $(INCLUDES) -c $(PL_EXSRC) -o $(PL_EXOBJ)
@@ -127,6 +152,7 @@ $(PL_EXOBJ): $(PL_EXSRC)
 $(PLAY): $(PL_OBJS) $(PL_EXOBJ)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(PLAY) $(PL_OBJS) $(PL_EXOBJ)
 
+# Fog github publishing
 .PHONY: git
 git: clean $(MAIN) $(SLOG)
 	./release/git_version.sh
@@ -141,8 +167,8 @@ git: clean $(MAIN) $(SLOG)
 
 .PHONY: clean
 clean:
-	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ)
-	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY)
+	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(DEBG)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY) $(DEBG)
 
 depend: $(SRCS)
 	makedepend $(INCLUDES) $^

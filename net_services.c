@@ -35,19 +35,21 @@
 #include "aq_mqtt.h"
 #include "devices_jandy.h"
 #include "color_lights.h"
+#include "debug_timer.h"
 
 #ifdef AQ_PDA
 #include "pda.h"
 #endif
-#ifdef AQ_DEBUG
+/*
+#if defined AQ_DEBUG || defined AQ_TM_DEBUG
   #include "timespec_subtract.h"
-  //#define AQ_NET_TIMER
+  //#define AQ_TM_DEBUG
 #endif
-
+*/
 
 //static struct aqconfig *_aqconfig_;
 static struct aqualinkdata *_aqualink_data;
-static char *_web_root;
+//static char *_web_root;
 
 static int _mqtt_exit_flag = false;
 
@@ -64,49 +66,21 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc);
 
 void reset_last_mqtt_status();
 
-#ifdef AQ_NET_TIMER
-static struct timespec _start_time[5];
-static int _timeid=0;
 
-void start_net_timer(int *timeid)
-{
-  if (_timeid >= 5)
-    _timeid = 0;
-
-  clock_gettime(CLOCK_REALTIME, &_start_time[_timeid++]);
-
-  *timeid = _timeid-1;
-  //return _timeid-1;
-}
-
-void stop_net_timer(int timeid, char *message)
-{
-  if (timeid < 0 || timeid >= 5) {
-    LOG(NET_LOG,LOG_ERR,"Invalid timeid '%d' for message '%s'\n", timeid, message);
-    return;
-  }
-  static struct timespec now;
-  static struct timespec elapsed;
-  clock_gettime(CLOCK_REALTIME, &now);
-  timespec_subtract(&elapsed, &now, &_start_time[timeid]);
-  LOG(NET_LOG,LOG_NOTICE, "%s %d.%02ld sec (%08ld ns)\n", message, elapsed.tv_sec, elapsed.tv_nsec / 1000000L, elapsed.tv_nsec);
-}
-
-#define DEBUG_TIMER_START(x) start_net_timer(x)
-#define DEBUG_TIMER_STOP(x, y) stop_net_timer(x, y)
-#else
-#define DEBUG_TIMER_START(x)
-#define DEBUG_TIMER_STOP(x, y)
-#endif
 
 
 static sig_atomic_t s_signal_received = 0;
 //static const char *s_http_port = "8080";
 static struct mg_serve_http_opts _http_server_opts;
 
-static void signal_handler(int sig_num) {
-  signal(sig_num, signal_handler);  // Reinstantiate signal handler
-  s_signal_received = sig_num;
+static void net_signal_handler(int sig_num) {
+
+  if (!_aqconfig_.thread_netservices) {
+    signal(sig_num, net_signal_handler);  // Reinstantiate signal handler to aqualinkd.c
+    s_signal_received = sig_num;
+  } else {  
+    intHandler(sig_num); // Force signal handler to aqualinkd.c
+  }
 }
 
 
@@ -116,9 +90,11 @@ static int is_websocket(const struct mg_connection *nc) {
 static void set_websocket_RSraw(struct mg_connection *nc) {
   nc->flags |= MG_F_USER_2; 
 }
+/*
 static int is_websocket_RSraw(const struct mg_connection *nc) {
   return nc->flags & MG_F_USER_2;
 }
+*/
 static int is_mqtt(const struct mg_connection *nc) {
   return nc->flags & MG_F_USER_1;
 }
@@ -135,7 +111,7 @@ static void ws_send(struct mg_connection *nc, char *msg)
   //LOG(NET_LOG,LOG_DEBUG, "WS: Sent %d characters '%s'\n",size, msg);
 }
 
-void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg) 
+void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg) 
 {
   struct mg_connection *c;
   char data[JSON_STATUS_SIZE];
@@ -148,16 +124,22 @@ void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
   // Maybe enhacment in future to sent error messages to MQTT
 }
 
-void broadcast_aqualinkstate(struct mg_connection *nc) 
+void _broadcast_aqualinkstate(struct mg_connection *nc) 
 {
   static int mqtt_count=0;
   struct mg_connection *c;
   char data[JSON_STATUS_SIZE];
+#ifdef AQ_TM_DEBUG
+  int tid;
+#endif
+  DEBUG_TIMER_START(&tid);
+
   build_aqualink_status_JSON(_aqualink_data, data, JSON_STATUS_SIZE);
   
   #ifdef AQ_MEMCMP
     if ( memcmp(_aqualink_data, &_last_mqtt_aqualinkdata, sizeof(struct aqualinkdata) ) == 0) {
       LOG(NET_LOG,LOG_NOTICE, "**********Structure buffs the same, ignoring request************\n");
+      DEBUG_TIMER_CLEAR(&tid);
       return;
     }
   #endif
@@ -184,6 +166,8 @@ void broadcast_aqualinkstate(struct mg_connection *nc)
   #ifdef AQ_MEMCMP
     memcpy(&_last_mqtt_aqualinkdata, _aqualink_data, sizeof(struct aqualinkdata));
   #endif
+
+  DEBUG_TIMER_STOP(tid, NET_LOG, "broadcast_aqualinkstate() completed, took ");
 
   return;
 }
@@ -678,7 +662,7 @@ void create_program_request(netRequest requester, action_type type, int value, i
   _aqualink_data->unactioned.type = type;
   _aqualink_data->unactioned.id = id; // This is only valid for pump.
 
-  if (requester = NET_MQTT) // We can get multiple MQTT requests from some, so this will wait for last one to come in.
+  if (requester == NET_MQTT) // We can get multiple MQTT requests from some, so this will wait for last one to come in.
     time(&_aqualink_data->unactioned.requested);
   else
     _aqualink_data->unactioned.requested = 0;
@@ -771,7 +755,7 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
       return uBad;
     }
     rtn = uActioned;
-    if (from = NET_MQTT) // We can get multiple MQTT requests for
+    if (from == NET_MQTT) // We can get multiple MQTT requests for
       time(&_aqualink_data->unactioned.requested);
     else
       _aqualink_data->unactioned.requested = 0;
@@ -938,8 +922,12 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
   return rtn;
 }
 
+
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
   char *rtnmsg;
+#ifdef AQ_TM_DEBUG
+  int tid;
+#endif
   //unsigned int i;
   //LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   // If message doesn't end in set we don't care about it.
@@ -949,6 +937,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   }
   LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
 
+  DEBUG_TIMER_START(&tid);
   //Need to do this in a better manor, but for present it's ok.
   static char tmp[20];
   strncpy(tmp, msg->payload.p, msg->payload.len);
@@ -959,7 +948,12 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   bool convert = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp)?true:false;
   int offset = strlen(_aqconfig_.mqtt_aq_topic)+1;
   action_URI(NET_MQTT, &msg->topic.p[offset], msg->topic.len - offset, value, convert, &rtnmsg);
+
+  DEBUG_TIMER_STOP(tid, NET_LOG, "action_mqtt_message() completed, took ");
 }
+
+
+
 
 float pass_mg_body(struct mg_str *body) {
   LOG(NET_LOG,LOG_INFO, "Message body:\n'%.*s'\n", body->len, body->p);
@@ -985,13 +979,12 @@ float pass_mg_body(struct mg_str *body) {
 void action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
   char *msg = NULL;
   // struct http_message *http_msg = (struct http_message *)ev_data;
-#ifdef AQ_NET_TIMER
+#ifdef AQ_TM_DEBUG
   int tid;
   int tid2;
 #endif
 
-  DEBUG_TIMER_START(&tid);
-
+  //DEBUG_TIMER_START(&tid);
   if (getLogLevel(NET_LOG) >= LOG_INFO) { // Simply for log message, check we are at
                                    // this log level before running all this
                                    // junk
@@ -1001,7 +994,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     LOG(NET_LOG,LOG_INFO, "URI request: '%s'\n", uri);
     free(uri);
   }
-  DEBUG_TIMER_STOP(tid, "action_web_request debug print crap took"); 
+  //DEBUG_TIMER_STOP(tid, NET_LOG, "action_web_request debug print crap took"); 
 
   //LOG(NET_LOG,LOG_INFO, "Message request:\n'%.*s'\n", http_msg->message.len, http_msg->message.p);
 
@@ -1009,16 +1002,18 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
   if (strncmp(http_msg->uri.p, "/api", 4 ) != 0) {
     if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
       LOG(NET_LOG,LOG_WARNING, "WEB: Old stanza, using old method to action\n");
+      DEBUG_TIMER_START(&tid);
       OLD_action_web_request(nc, http_msg);
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_web_request() serve Old stanza took");
     } else {
       DEBUG_TIMER_START(&tid);
       mg_serve_http(nc, http_msg, _http_server_opts);
-      DEBUG_TIMER_STOP(tid, "action_web_request serve file took");
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_web_request() serve file took");
     }
   //} else if (strstr(http_msg->method.p, "PUT")) {
   } else {
     char buf[50];
-    float value;
+    float value = 0;
     DEBUG_TIMER_START(&tid);
 
     // If query string.
@@ -1041,35 +1036,36 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
         {
           char message[JSON_BUFFER_SIZE];
           DEBUG_TIMER_START(&tid2);
-          build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
-          DEBUG_TIMER_STOP(tid2, "action_web_request build_device_JSON took");
-          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
-          mg_send(nc, message, strlen(message));
+          int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
+          DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() build_device_JSON took");
+          mg_send_head(nc, 200, size, CONTENT_JSON);
+          mg_send(nc, message, size);
         }
         break;
         case uHomebridge:
         {
           char message[JSON_BUFFER_SIZE];
-          build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
-          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
-          mg_send(nc, message, strlen(message));
+          int size = build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, true);
+          mg_send_head(nc, 200, size, CONTENT_JSON);
+          mg_send(nc, message, size);
         }
         break;
         case uStatus:
         {
           char message[JSON_BUFFER_SIZE];
           DEBUG_TIMER_START(&tid2);
-          build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
-          DEBUG_TIMER_STOP(tid2, "action_web_request build_aqualink_status_JSON took");
-          mg_send_head(nc, 200, strlen(message), CONTENT_JSON);
-          mg_send(nc, message, strlen(message));
+          int size = build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
+          DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() build_aqualink_status_JSON took");
+          mg_send_head(nc, 200, size, CONTENT_JSON);
+          mg_send(nc, message, size);
         }
+        break;
         case uDynamicconf:
         {
           char message[JSON_BUFFER_SIZE];
           DEBUG_TIMER_START(&tid2);
           int size = build_color_lights_js(_aqualink_data, message, JSON_BUFFER_SIZE);
-          DEBUG_TIMER_STOP(tid2, "action_web_request build_color_lights_js took");
+          DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() build_color_lights_js took");
           mg_send_head(nc, 200, size, CONTENT_JS);
           mg_send(nc, message, size); 
         }
@@ -1101,12 +1097,10 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
     }
 
-    sprintf(buf, "action_web_request serve api request '%.*s' took",http_msg->uri.len, http_msg->uri.p);
+    sprintf(buf, "action_web_request() request '%.*s' took",http_msg->uri.len, http_msg->uri.p);
 
-    DEBUG_TIMER_STOP(tid, buf);
-
+    DEBUG_TIMER_STOP(tid, NET_LOG, buf);
   }
-
 }
 
 
@@ -1117,7 +1111,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
   char *uri = NULL;
   char *value = NULL;
   char *msg = NULL;
-#ifdef AQ_NET_TIMER
+#ifdef AQ_TM_DEBUG
   int tid;
 #endif
 #ifdef AQ_PDA
@@ -1156,7 +1150,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];
       build_device_JSON(_aqualink_data, message, JSON_BUFFER_SIZE, false);
-      DEBUG_TIMER_STOP(tid, "action_websocket_request build_device_JSON took");
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() build_device_JSON took");
       ws_send(nc, message);
     }
     break;
@@ -1165,7 +1159,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];
       build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
-      DEBUG_TIMER_STOP(tid, "action_websocket_request build_aqualink_status_JSON took");
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() build_aqualink_status_JSON took");
       ws_send(nc, message);
     }
     break;
@@ -1231,7 +1225,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct http_message *http_msg;
   struct websocket_message *ws_msg;
   char aq_topic[30];
-  #ifdef AQ_NET_TIMER 
+  #ifdef AQ_TM_DEBUG 
     int tid; 
   #endif
   //static double last_control_time;
@@ -1243,7 +1237,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     http_msg = (struct http_message *)ev_data;
     DEBUG_TIMER_START(&tid); 
     action_web_request(nc, http_msg);
-    DEBUG_TIMER_STOP(tid, "WEB Request took"); 
+    DEBUG_TIMER_STOP(tid, NET_LOG, "WEB Request action_web_request() took"); 
     LOG(NET_LOG,LOG_DEBUG, "Served WEB request\n");
     break;
   
@@ -1257,7 +1251,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     ws_msg = (struct websocket_message *)ev_data;
     DEBUG_TIMER_START(&tid); 
     action_websocket_request(nc, ws_msg);
-    DEBUG_TIMER_STOP(tid, "Websocket Request took"); 
+    DEBUG_TIMER_STOP(tid, NET_LOG, "Websocket Request action_websocket_request() took"); 
     break;
   
   case MG_EV_CLOSE: 
@@ -1350,7 +1344,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     {
       DEBUG_TIMER_START(&tid); 
       action_mqtt_message(nc, mqtt_msg);
-      DEBUG_TIMER_STOP(tid, "MQTT Request took"); 
+      DEBUG_TIMER_STOP(tid, NET_LOG, "MQTT Request action_mqtt_message() took"); 
     }
     if (_aqconfig_.mqtt_dz_sub_topic != NULL && strncmp(mqtt_msg->topic.p, _aqconfig_.mqtt_dz_sub_topic, strlen(_aqconfig_.mqtt_dz_sub_topic)) == 0) {
       action_domoticz_mqtt_message(nc, mqtt_msg);
@@ -1386,7 +1380,7 @@ void start_mqtt(struct mg_mgr *mgr) {
   if (mg_connect(mgr, _aqconfig_.mqtt_server, ev_handler) == NULL) {
       LOG(NET_LOG,LOG_ERR, "Failed to create MQTT listener to %s\n", _aqconfig_.mqtt_server);
   } else {
-    int i;
+    //int i;
 #ifdef AQ_MEMCMP
     memset(&_last_mqtt_aqualinkdata, 0, sizeof (struct aqualinkdata));
 #endif
@@ -1397,13 +1391,13 @@ void start_mqtt(struct mg_mgr *mgr) {
 
 //bool start_web_server(struct mg_mgr *mgr, struct aqualinkdata *aqdata, char *port, char* web_root) {
 //bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata, struct aqconfig *aqconfig) {
-bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
+bool _start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
   struct mg_connection *nc;
   _aqualink_data = aqdata;
   //_aqconfig_ = aqconfig;
  
-  signal(SIGTERM, signal_handler);
-  signal(SIGINT, signal_handler);
+  signal(SIGTERM, net_signal_handler);
+  signal(SIGINT, net_signal_handler);
   setvbuf(stdout, NULL, _IOLBF, 0);
   setvbuf(stderr, NULL, _IOLBF, 0);
   
@@ -1438,6 +1432,119 @@ bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
 
   return true;
 }
+
+
+/**********************************************************************************************
+ * Thread Net Services
+ * 
+*/
+
+
+pthread_t _net_thread_id;
+bool _keepNetServicesRunning = true;
+//volatile bool _broadcast = false; // This is redundent when most the fully threadded rather than option.
+
+void *net_services_thread( void *ptr )
+{
+  struct aqualinkdata *aqdata = (struct aqualinkdata *) ptr;
+  struct mg_mgr mgr;
+
+  _start_net_services(&mgr, aqdata);
+
+  while (_keepNetServicesRunning == true)
+  {
+    //poll_net_services(&mgr, 10);
+    mg_mgr_poll(&mgr, 100);
+
+    if (aqdata->updated == true /*|| _broadcast == true*/) {
+      LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
+      _broadcast_aqualinkstate(mgr.active_connections);
+      aqdata->updated = false;
+      //_broadcast = false;
+    }
+  }
+
+  LOG(NET_LOG,LOG_NOTICE, "Stopping network services thread\n");
+  mg_mgr_free(&mgr);
+
+  pthread_exit(0);
+}
+
+bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) 
+{
+  if ( ! _aqconfig_.thread_netservices) {
+    return _start_net_services(mgr, aqdata);
+  }
+  
+  LOG(NET_LOG,LOG_NOTICE, "Starting network services thread\n");
+
+  if( pthread_create( &_net_thread_id , NULL ,  net_services_thread, (void*)aqdata) < 0) {
+    LOG(NET_LOG, LOG_ERR, "could not create network thread\n");
+    return false;
+  }
+
+  pthread_detach(_net_thread_id);
+
+  return true;
+}
+
+time_t poll_net_services(struct mg_mgr *mgr, int timeout_ms) 
+{
+  if (timeout_ms < 0)
+    timeout_ms = 0;
+
+  if ( ! _aqconfig_.thread_netservices) {
+    return mg_mgr_poll(mgr, timeout_ms);
+  }
+  
+  if (timeout_ms > 5)
+    delay(5);
+  else if (timeout_ms > 0)
+    delay(timeout_ms);
+
+  //LOG(NET_LOG,LOG_NOTICE, "Poll network services\n");
+
+  return 0;
+}
+
+void broadcast_aqualinkstate(struct mg_connection *nc)
+{
+  if ( ! _aqconfig_.thread_netservices) {
+    _broadcast_aqualinkstate(nc);
+    _aqualink_data->updated = false;
+    return;
+  }
+  //_broadcast = true;
+  //LOG(NET_LOG,LOG_NOTICE, "Broadcast status to network\n");
+}
+
+void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
+{
+  if ( ! _aqconfig_.thread_netservices) {
+    return _broadcast_aqualinkstate_error(nc, msg);
+  }
+  
+  LOG(NET_LOG,LOG_NOTICE, "Broadcast error to network\n");
+}
+
+void stop_net_services(struct mg_mgr *mgr) {
+
+  if ( ! _aqconfig_.thread_netservices) {
+    mg_mgr_free(mgr);
+    return;
+  }
+
+  _keepNetServicesRunning = false;
+
+  return;
+}
+
+
+
+
+
+
+
 
 
 
@@ -1713,7 +1820,7 @@ LOG(NET_LOG,LOG_ERR, "WEB: spalightmode taken out for update (forgot to put it b
     mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
 
   } else {
-    struct mg_serve_http_opts opts;
+    //struct mg_serve_http_opts opts;
     //memset(&opts, 0, sizeof(opts)); // Reset all options to defaults
     //opts.document_root = _web_root; // Serve files from the current directory
     // LOG(NET_LOG,LOG_DEBUG, "Doc root=%s\n",opts.document_root);

@@ -33,7 +33,10 @@
 
 //#define USE_AQ_SERIAL_OLD
 
+//#define BLOCKING_MODE
 
+static bool _blocking_mode = false;
+int _blocking_fds = -1;
 
 #ifndef USE_AQ_SERIAL_OLD  // Substansial changes to core component, make sure we can role back easily
 
@@ -306,8 +309,75 @@ Open and Initialize the serial communications port to the Aqualink RS8 device.
 Arg is tty or port designation string
 returns the file descriptor
 */
+//#define TXDEN_DUMMY_RS485_MODE
+
+#ifdef TXDEN_DUMMY_RS485_MODE
+
+#include <linux/serial.h>
+/* RS485 ioctls: */
+#define TIOCGRS485      0x542E
+#define TIOCSRS485      0x542F
+
+int init_serial_port_Pi(const char* tty)
+{
+  struct serial_rs485 rs485conf = {0};
+
+  //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK);
+  int fd = open(tty, O_RDWR);
+  if (fd < 0)  {
+    LOG(RSSD_LOG,LOG_ERR, "Unable to open port: %s\n", tty);
+    return -1;
+  }
+
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
+
+  if (ioctl (fd, TIOCGRS485, &rs485conf) < 0) {
+    LOG(RSSD_LOG,LOG_ERR, "Error reading ioctl port (%d): %s\n",  errno, strerror( errno ));
+    return -1;
+  }
+
+  LOG(RSSD_LOG,LOG_DEBUG, "Port currently RS485 mode is %s\n", (rs485conf.flags & SER_RS485_ENABLED) ? "set" : "NOT set");
+
+  /* Enable RS485 mode: */
+	rs485conf.flags |= SER_RS485_ENABLED;
+
+	/* Set logical level for RTS pin equal to 1 when sending: */
+	rs485conf.flags |= SER_RS485_RTS_ON_SEND;
+	/* or, set logical level for RTS pin equal to 0 when sending: */
+	//rs485conf.flags &= ~(SER_RS485_RTS_ON_SEND);
+
+	/* Set logical level for RTS pin equal to 1 after sending: */
+	rs485conf.flags |= SER_RS485_RTS_AFTER_SEND;
+	/* or, set logical level for RTS pin equal to 0 after sending: */
+	//rs485conf.flags &= ~(SER_RS485_RTS_AFTER_SEND);
+
+  /* Set this flag if you want to receive data even whilst sending data */
+	//rs485conf.flags |= SER_RS485_RX_DURING_TX;
+
+	if (ioctl (fd, TIOCSRS485, &rs485conf) < 0) {
+		LOG(RSSD_LOG,LOG_ERR, "Unable to set port to RS485 %s (%d): %s\n", tty, errno, strerror( errno ));
+    return -1;
+	}
+
+  return fd;
+}
+#endif
+
+int _init_serial_port(const char* tty, bool blocking);
+
 int init_serial_port(const char* tty)
 {
+  return _init_serial_port(tty, false);
+}
+int init_blocking_serial_port(const char* tty)
+{
+  _blocking_fds = _init_serial_port(tty, true);
+  return _blocking_fds;
+}
+
+int _init_serial_port(const char* tty, bool blocking)
+{
+
   long BAUD = B9600;
   long DATABITS = CS8;
   long STOPBITS = 0;
@@ -316,6 +386,8 @@ int init_serial_port(const char* tty)
 
   struct termios newtio;       //place for old and new port settings for serial port
 
+  _blocking_mode = blocking;
+
   //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK);
   int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
   if (fd < 0)  {
@@ -323,13 +395,22 @@ int init_serial_port(const char* tty)
     return -1;
   }
 
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Openeded serial port %s\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG, "Openeded serial port %s\n",tty);
   
-  int flags = fcntl(fd, F_GETFL, 0);
-  fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
-  newtio.c_cc[VMIN]= 0;
-  newtio.c_cc[VTIME]= 1;
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s to non blocking mode\n",tty);
+  if (_blocking_mode) {
+    // http://unixwiz.net/techtips/termios-vmin-vtime.html
+    // Not designed behaviour, but it's what we need.
+    fcntl(fd, F_SETFL, 0);
+    newtio.c_cc[VMIN]= 1;
+    newtio.c_cc[VTIME]= 0;
+    LOG(RSSD_LOG,LOG_DEBUG, "Set serial port %s to blocking mode\n",tty);
+  } else {
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
+    newtio.c_cc[VMIN]= 0;
+    newtio.c_cc[VTIME]= 1;
+    LOG(RSSD_LOG,LOG_DEBUG, "Set serial port %s to non blocking mode\n",tty);
+  }
 
   tcgetattr(fd, &_oldtio); // save current port settings
     // set new port settings for canonical input processing
@@ -341,11 +422,20 @@ int init_serial_port(const char* tty)
   tcflush(fd, TCIFLUSH);
   tcsetattr(fd, TCSANOW, &newtio);
   
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Set serial port %s io attributes\n",tty);
+  LOG(RSSD_LOG,LOG_DEBUG, "Set serial port %s io attributes\n",tty);
 
   return fd;
 }
 
+void close_blocking_serial_port()
+{
+  if (_blocking_fds > 0) {
+    LOG(RSSD_LOG,LOG_INFO, "Forcing close of blocking serial port, ignore following read errors\n");
+    close_serial_port(_blocking_fds);
+  } else {
+    LOG(RSSD_LOG,LOG_ERR, "Didn't find valid blocking serial port file descripter\n");
+  }
+}
 /* close tty port */
 void close_serial_port(int fd)
 {
@@ -353,11 +443,6 @@ void close_serial_port(int fd)
   close(fd);
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Closed serial port\n");
 }
-
-
-
-
-
 
 
 // Send an ack packet to the Aqualink RS8 master device.
@@ -530,35 +615,45 @@ void send_command(int fd, unsigned char *packet_buffer, int size)
 
 void send_packet(int fd, unsigned char *packet, int length)
 {
-  if (_aqconfig_.readahead_b4_write) {
-    unsigned char byte;
-    int r;
-    //int j=0;
-    do {
-      //j++;
-      r = read(fd, &byte, 1);
-      //printf("*** Peek Read %d 0x%02hhx ***\n",r,byte);
-      if (r==1 && byte != 0x00) {
-        LOG(RSSD_LOG,LOG_ERR, "SERIOUS ERROR on RS485, AqualinkD was too slow in replying to message! (please check OS for performance issues)\n");
-        return;
-      }
-    } while (r==1 && byte==0x00);
-  }
+  if (_blocking_mode) {
+    write(fd, packet, length);
+  } else {
+    if (_aqconfig_.readahead_b4_write) {
+      unsigned char byte;
+      int bytesRead;
+      // int j=0;
+      do {
+        // j++;
+        bytesRead = read(fd, &byte, 1);
+        // printf("*** Peek Read %d 0x%02hhx ***\n",r,byte);
+        if (bytesRead == 1 && byte != 0x00) {
+          LOG(RSSD_LOG, LOG_ERR, "ERROR on RS485, AqualinkD was too slow in replying to message! (please check for performance issues)\n");
+          do { // Just play catchup
+            bytesRead = read(fd, &byte, 1);
+            // if (bytesRead==1) { LOG(RSSD_LOG,LOG_ERR, "Error Cleanout read 0x%02hhx\n",byte); }
+          } while (bytesRead == 1);
 
-  int nwrite, i;
-  for (i=0; i<length; i += nwrite) {        
-    nwrite = write(fd, packet + i, length - i);
-    if (nwrite < 0) 
-      LOG(RSSD_LOG,LOG_ERR, "write to serial port failed\n");
-  }
-/*
-#ifdef AQ_DEBUG
-  // Need to take this out for release
-  if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
-    debuglogPacket(&packet[1], length-2);
-  }
-#endif
-*/
+          return;
+        }
+      } while (bytesRead == 1 && byte == 0x00);
+    }
+
+    int nwrite, i;
+    for (i = 0; i < length; i += nwrite) {
+      nwrite = write(fd, packet + i, length - i);
+      if (nwrite < 0)
+        LOG(RSSD_LOG, LOG_ERR, "write to serial port failed\n");
+    }
+  } // _blockine_mode
+
+  /*
+  #ifdef AQ_DEBUG
+    // Need to take this out for release
+    if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
+      debuglogPacket(&packet[1], length-2);
+    }
+  #endif
+  */
   if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL) {
     // Packet is padded with 0x00, so discard for logging
     LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
@@ -634,6 +729,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
 
   while (!endOfPacket) {
     bytesRead = read(fd, &byte, 1);
+//printf("Read %d 0x%02hhx err=%d\n",bytesRead,byte,errno);
     //if (bytesRead < 0 && errno == EAGAIN && packetStarted == FALSE && lastByteDLE == FALSE) {
     if (bytesRead < 0 && errno == EAGAIN && 
         jandyPacketStarted == false && 

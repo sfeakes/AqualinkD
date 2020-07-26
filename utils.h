@@ -35,6 +35,8 @@
 #define DPEN_LOG (1 << 7) // Pentair Device
 // misc
 #define RSSD_LOG (1 << 8) // Serial
+#define PROG_LOG (1 << 9) // Programmer
+#define DBGT_LOG (1 << 10) // Debug Timer
 /*
 typedef enum
 {
@@ -51,7 +53,11 @@ void displayLastSystemError (const char *on_what);
 
 void addDebugLogMask(int16_t flag);
 //#define logMessage(msg_level, format, ...) LOG (1, msg_level, format, ##__VA_ARGS__)
-void logMessage(int level, const char *format, ...);
+
+
+//void logMessage(int level, const char *format, ...);
+
+
 //void LOG(int from, int level, char *format, ...);
 void LOG(int16_t from, int msg_level, const char *format, ...);
 
@@ -82,6 +88,7 @@ void stopInlineDebug();
 void cleanInlineDebug();
 char *getInlineLogFName();
 bool islogFileReady();
+const char *logmask2name(int16_t from);
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

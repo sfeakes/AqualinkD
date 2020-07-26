@@ -31,6 +31,7 @@
 #include "aq_panel.h"
 #include "config.h"
 #include "devices_jandy.h"
+#include "packetLogger.h"
 
 // System Page is obfiously fixed and not dynamic loaded, so set buttons to stop confustion.
 
@@ -131,6 +132,14 @@ int ref_iaqt_control_cmd(unsigned char **cmd)
 {
   //printf("*********** GET READY SENDING CONTROL ****************\n");
   *cmd = _iaqt_control_cmd;
+
+  if ( getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
+    char buff[1000];
+    //sprintf("Sending control command:")
+    beautifyPacket(buff, _iaqt_control_cmd, _iaqt_control_cmd_len);
+    LOG(IAQT_LOG,LOG_DEBUG, "iAQ Touch sending commandsed : %s\n", buff);
+  }
+
   return _iaqt_control_cmd_len;
 }
 
@@ -145,8 +154,11 @@ bool waitfor_iaqt_ctrl_queue2empty()
   int i=0;
 
   while ( (_iaqt_control_cmd_len >0 ) && ( i++ < 20) ) {
+    LOG(IAQT_LOG,LOG_DEBUG, "Waiting for commandset to send\n");
     delay(50);
   }
+
+  LOG(IAQT_LOG,LOG_DEBUG, "Wait for commandset over!\n");
 
   if (_iaqt_control_cmd_len > 0 ) {
     LOG(IAQT_LOG,LOG_WARNING, "iAQ Touch Send control command Queue did not empty, timeout\n");
@@ -167,10 +179,12 @@ unsigned const char waitfor_iaqt_nextPage(struct aqualinkdata *aq_data) {
 
   while( ++i <= numMessageReceived)
   {
-    LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage (%d of %d)\n",i,numMessageReceived);
+    //LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage (%d of %d)\n",i,numMessageReceived);
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
     if(wasiaqtThreadKickTypePage()) break;
   }
+
+  LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage finished in (%d of %d)\n",i,numMessageReceived);
 
   pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
 
@@ -225,30 +239,32 @@ void queue_iaqt_control_command(iaqtControlCmdYype type, int num) {
 
   // Tell the control panel we are ready to send this shit.
   send_aqt_cmd(ACK_CMD_READY_CTRL);
-
+  
+  LOG(IAQT_LOG,LOG_DEBUG, "Queued extended commandsed of length %d\n",_iaqt_control_cmd_len);
   //printHex(packets, 19);
   //printf("\n");
 
   //send_jandy_command(NULL, packets, cnt);
 }
 
-void queue_iaqt_control_command_str(iaqtControlCmdYype type, char *str) {
+bool queue_iaqt_control_command_str(iaqtControlCmdYype type, char *str) {
   if (waitfor_iaqt_ctrl_queue2empty() == false)
-    return;
+    return false;
 
   _iaqt_control_cmd[0] = DEV_MASTER;
   _iaqt_control_cmd[1] = 0x24;
   _iaqt_control_cmd[2] = 0x31;
 
   _iaqt_control_cmd_len = char2iaqtRSset(&_iaqt_control_cmd[3], str, strlen(str));
-  
+
   // Need to bad time for some reason not yet known
   if (type == icct_settime) {
     //Debug:   RS Serial: To 0x00 of type iAq pBut | HEX: 0x10|0x02|0x00|0x24|0x31|0x30|0x31|0x3a|0x30|0x31|0x00|0x30|0x32|0x00|0xcd|0xcd|0xcd|0xcd|0xcd|0xcd|0xcd|0x60|0x10|0x03|
     // From position 11 (8 without pre) add 0x30|0x32|0x00
-    _iaqt_control_cmd[++_iaqt_control_cmd_len] = 0x30;
-    _iaqt_control_cmd[++_iaqt_control_cmd_len] = 0x32;
-    _iaqt_control_cmd[++_iaqt_control_cmd_len] = 0x00;
+    _iaqt_control_cmd_len += 3;
+    _iaqt_control_cmd[9] = 0x30;
+    _iaqt_control_cmd[10] = 0x32;
+    _iaqt_control_cmd[11] = 0x00;
   }
   // Pad with 0xcd for some reason.
   for(_iaqt_control_cmd_len = _iaqt_control_cmd_len+3; _iaqt_control_cmd_len <= 18; _iaqt_control_cmd_len++)
@@ -256,6 +272,9 @@ void queue_iaqt_control_command_str(iaqtControlCmdYype type, char *str) {
 
   // Tell the control panel we are ready to send this shit.
   send_aqt_cmd(ACK_CMD_READY_CTRL);
+
+  return true;
+  //debuglogPacket()
 }
 
 
@@ -464,9 +483,11 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
 */
   //send_aqt_cmd(0x80);
 
-  f_end:
-  //goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  // Go to status page on startup to read devices
   goto_iaqt_page(IAQ_PAGE_STATUS, aq_data);
+
+  f_end:
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
   cleanAndTerminateThread(threadCtrl);
 
   // just stop compiler error, ptr is not valid as it's just been freed
@@ -594,6 +615,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
   return ptr;
 }
 
+// THIS IS NOT FINISHED.   
 void *get_aqualink_iaqtouch_aux_labels( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -616,6 +638,8 @@ void *get_aqualink_iaqtouch_aux_labels( void *ptr )
    * Info:   Table Messages 05| Aux5 Aux5    No 
    * Info:   Table Messages 06| Aux6 Aux6    No 
    * Info:   Table Messages 07| Aux7 Aux7    No 
+   * 
+   * Info:   Table Messages ??| Aux B7 Aux B7    No 
    */
   const char *buf;
   int aux;
@@ -624,9 +648,10 @@ void *get_aqualink_iaqtouch_aux_labels( void *ptr )
   for(i=1; i < PANEL_SIZE(); i++)
   {
     buf = iaqtGetTableInfoLine(i);
+    LOG(IAQT_LOG,LOG_INFO, "From Messages %.2d| %s\n",i,buf);
     //printf("**** BUF '%s'\n",aux,buf);
     aux = rsm_atoi(buf + 3);
-    printf("**** AUX %d = '%s'\n",aux,buf + 5);
+    LOG(IAQT_LOG,LOG_INFO, "**** AUX %d = '%s'\n",aux,buf + 5);
   }
 
   f_end:
@@ -915,9 +940,9 @@ void *set_aqualink_iaqtouch_time( void *ptr )
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   struct iaqt_page_button *button;
   char buf[20];
-  int len;
+  //int len;
   int i;
-  bool AM;
+  //bool AM;
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_SET_TIME);
 
@@ -945,9 +970,13 @@ void *set_aqualink_iaqtouch_time( void *ptr )
     send_aqt_cmd(button->keycode);
     waitfor_iaqt_queue2empty();
     // Queue the date string
-    queue_iaqt_control_command_str(icct_setdate, buf);
-    LOG(IAQT_LOG,LOG_DEBUG, "Set date to %s\n",buf);
-    waitfor_iaqt_ctrl_queue2empty();
+    if ( queue_iaqt_control_command_str(icct_setdate, buf)) {
+      LOG(IAQT_LOG,LOG_NOTICE, "Set date to %s\n",buf);
+      waitfor_iaqt_ctrl_queue2empty();
+    } else {
+      LOG(IAQT_LOG,LOG_ERR, "Failed to queue commandset for setting date\n");
+    }
+    
   } else {
     LOG(IAQT_LOG,LOG_DEBUG, "Date %s is accurate, not changing\n",button->name);
   }
@@ -977,9 +1006,12 @@ void *set_aqualink_iaqtouch_time( void *ptr )
 
   // Print HH:MM into string
   strftime(buf, 20, "%I:%M", result);
-  queue_iaqt_control_command_str(icct_settime, buf);
-  LOG(IAQT_LOG,LOG_DEBUG, "Set time to %s\n",buf);
-  waitfor_iaqt_ctrl_queue2empty();
+  if (queue_iaqt_control_command_str(icct_settime, buf)) {
+    LOG(IAQT_LOG,LOG_NOTICE, "Set time to %s\n",buf);
+    waitfor_iaqt_ctrl_queue2empty();
+  } else {
+    LOG(IAQT_LOG,LOG_ERR, "Failed to queue commandset for setting time\n");
+  }
 
 
   f_end:

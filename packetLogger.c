@@ -98,7 +98,7 @@ int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length,
   int cnt = 0;
 
   if (_includePentair) {
-    cnt = sprintf(buff, "%s%8.8s Packet | HEX: ",(error?"BAD PACKET ":""),getProtocolType(packet_buffer)==JANDY?"Jandy":"Pentair");
+    cnt = sprintf(buff, "%s%8.8s Packet | HEX: ",(error?"BAD PACKET ":""),getProtocolType(packet_buffer)==PENTAIR?"Pentair":"Jandy");
   } else {
     cnt = sprintf(buff, "%sTo 0x%02hhx of type %8.8s | HEX: ",(error?"BAD PACKET ":""), packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
   }

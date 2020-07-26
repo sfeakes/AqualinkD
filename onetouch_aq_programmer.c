@@ -767,7 +767,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   int diff;
   int i;
   int len;
-  unsigned char direction;
+  unsigned char direction = KEY_ONET_UP;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_SWG_PERCENT);
   int val = atoi((char*)threadCtrl->thread_args);
@@ -808,7 +808,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
     i=0;
     char *st = onetouch_menu_hlightchars(&len);
     LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent highlighted='%.*s'  len=%d  st=%s\n", len, st, len, st);
-    while (len > 5 || len < 0 && i < 5) {
+    while (len > 5 || (len < 0 && i < 5)) {
       LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent highlighted waiting again\n");
       delay(50);
       waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,5); // CMD_PDA_0x04 is just a packer.

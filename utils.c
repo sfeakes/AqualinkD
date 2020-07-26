@@ -143,7 +143,8 @@ void displayLastSystemError (const char *on_what)
 
   if (_daemonise == TRUE)
   {
-    logMessage (LOG_ERR, "%d : %s", errno, on_what);
+    //logMessage (LOG_ERR, "%d : %s", errno, on_what);
+    LOG(AQUA_LOG, LOG_ERR, "%d : %s", errno, on_what);
     closelog ();
   }
 }
@@ -206,6 +207,43 @@ int text2elevel(char* level)
   }
   
  return  LOG_ERR; 
+}
+
+const char* logmask2name(int16_t from)
+{
+  switch (from) {
+    case NET_LOG:
+      return "NetService:";
+    break;
+    case AQRS_LOG:
+      return "RS Allbtn: ";
+    break;
+    case ONET_LOG:
+      return "One Touch: ";
+    break;
+    case IAQT_LOG:
+      return "iAQ Touch: ";
+    break;
+    case PDA_LOG:
+      return "PDA:       ";
+    break;
+    case DJAN_LOG:
+      return "JandyDvce: ";
+    break;
+    case DPEN_LOG:
+      return "PentaDvce: ";
+    break;
+    case RSSD_LOG:
+      return "RS Serial: ";
+    break;
+    case DBGT_LOG:
+      return "AQ Timing: ";
+    break;
+    case AQUA_LOG:
+    default:
+      return "AqualinkD: ";
+    break;
+  }
 }
 
 void timestamp(char* time_string)
@@ -354,6 +392,7 @@ void addDebugLogMask(int16_t flag)
 
 void _LOG(int16_t from, int msg_level, char * message);
 
+/*
 void logMessage(int msg_level, const char *format, ...)
 {
   if (msg_level > _log_level) {
@@ -369,7 +408,7 @@ void logMessage(int msg_level, const char *format, ...)
 
   _LOG(AQUA_LOG, msg_level, buffer);
 }
-
+*/
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
 
@@ -388,7 +427,7 @@ void LOG(int16_t from, int msg_level, const char * format, ...)
 }
 
 
-void _LOG(int16_t from, int msg_level,  char * message)
+void _LOG(int16_t from, int msg_level,  char *message)
 {
   int i;
 
@@ -404,36 +443,9 @@ void _LOG(int16_t from, int msg_level,  char * message)
     message[i+1] = '\0';
   }
 
-  switch (from) {
-    case NET_LOG:
-      strncpy(&message[9], "NetService:", 11);
-    break;
-    case AQRS_LOG:
-      strncpy(&message[9], "RS Allbtn: ", 11);
-    break;
-    case ONET_LOG:
-      strncpy(&message[9], "One Touch: ", 11);
-    break;
-    case IAQT_LOG:
-      strncpy(&message[9], "iAQ Touch: ", 11);
-    break;
-    case PDA_LOG:
-      strncpy(&message[9], "PDA:       ", 11);
-    break;
-    case DJAN_LOG:
-      strncpy(&message[9], "JandyDvce: ", 11);
-    break;
-    case DPEN_LOG:
-      strncpy(&message[9], "PentaDvce: ", 11);
-    break;
-    case RSSD_LOG:
-      strncpy(&message[9], "RS Serial: ", 11);
-    break;
-    case AQUA_LOG:
-    default:
-      strncpy(&message[9], "AqualinkD: ", 11);
-    break;
-  }
+  //strncpy(&message[9], logmask2name(from), 11); // Will give compiller warning as doesn;t realise we are copying into middle of string.
+  memcpy(&message[9], logmask2name(from), 11);
+
   // Logging has not been setup yet, so STD error & syslog
   if (_log_level == -1) {
     fprintf (stderr, message);
@@ -512,7 +524,7 @@ void daemonise (char *pidFile, void (*main_function) (void))
   /* Check we are root */
   if (getuid() != 0)
   {
-    logMessage(LOG_ERR,"Can only be run as root\n");
+    LOG(AQUA_LOG, LOG_ERR,"Can only be run as root\n");
     exit(EXIT_FAILURE);
   }
 
@@ -523,7 +535,7 @@ void daemonise (char *pidFile, void (*main_function) (void))
     //if (EWOULDBLOCK == errno)
     //; // another instance is running
     //fputs ("\nAnother instance is already running\n", stderr);
-    logMessage(LOG_ERR,"\nAnother instance is already running\n");
+    LOG(AQUA_LOG, LOG_ERR,"\nAnother instance is already running\n");
     exit (EXIT_FAILURE);
   }
 
@@ -541,12 +553,12 @@ void daemonise (char *pidFile, void (*main_function) (void))
     fp = fopen (pidFile, "w");
 
     if (fp == NULL)
-    logMessage(LOG_ERR,"can't write to PID file %s",pidFile);
+    LOG(AQUA_LOG, LOG_ERR,"can't write to PID file %s",pidFile);
     else
     fprintf(fp, "%d", process_id);
 
     fclose (fp);
-    logMessage (LOG_DEBUG, "process_id of child process %d \n", process_id);
+    LOG(AQUA_LOG, LOG_DEBUG, "process_id of child process %d \n", process_id);
     // return success in exit status
     exit (EXIT_SUCCESS);
   }

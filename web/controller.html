@@ -1485,6 +1485,8 @@
           get_devices();
           // Set another load 1 minute from now just incase the server hasn't got all the devices yet
           window.setTimeout(get_devices, (60 * 1000));
+          // Get Status just incase control panel hasn't connected yet
+          get_status();
         }
         socket_di.onmessage = function got_packet(msg) {
           document.getElementById("header").classList.remove("error");
@@ -1519,6 +1521,17 @@
       };*/
       var msg = {
         uri: "devices"
+      };
+      socket_di.send(JSON.stringify(msg));
+    }
+
+    function get_status() {
+      /*
+      var msg = {
+        command: "GET_DEVICES"
+      };*/
+      var msg = {
+        uri: "status"
       };
       socket_di.send(JSON.stringify(msg));
     }

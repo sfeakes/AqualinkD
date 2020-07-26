@@ -120,7 +120,7 @@ const char *iaqtGetTableInfoLine(int index) {
 }
 
 struct iaqt_page_button *iaqtFindButtonByIndex(int index) {
-  int i;
+  //int i;
   struct iaqt_page_button *buttons;
 
   // NSF Need to merge this from iaqtFindButtonByLabel function
@@ -398,17 +398,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
       pump = NULL;
     }
 
-    if (rsm_strcmp(_deviceStatus[i],"AQUAPURE") == 0) {
-      //aq_data->swg_percent = rsm_atoi(&_deviceStatus[i][9]);
-      if (changeSWGpercent(aq_data, rsm_atoi(&_deviceStatus[i][9])))
-        LOG(IAQT_LOG,LOG_DEBUG, "Set swg %% to %d from message'%s'\n",aq_data->swg_percent,_deviceStatus[i]);
-    } else if (rsm_strcmp(_deviceStatus[i],"salt") == 0) {
-      aq_data->swg_ppm = rsm_atoi(&_deviceStatus[i][5]);
-      LOG(IAQT_LOG,LOG_DEBUG, "Set swg PPM to %d from message'%s'\n",aq_data->swg_ppm,_deviceStatus[i]);
-    } else if (rsm_strcmp(_deviceStatus[i],"Boost Pool") == 0) {
-      aq_data->boost = true;
-      // Let RS pickup time remaing message.
-    } else if (rsm_strcmp(_deviceStatus[i],"Chemlink") == 0) {
+    if (rsm_strcmp(_deviceStatus[i],"Chemlink") == 0) {
       /*   Info:  =    Chemlink 1   
            Info:  =  ORP 750/PH 7.0  */
       i++;
@@ -423,6 +413,19 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_INFO, "Set Cemlink ORP = %d PH = %f from message '%s'\n",orp,ph,_deviceStatus[i]);
       }
     }
+#ifdef READ_SWG_FROM_EXTENDED_ID
+    else if (rsm_strcmp(_deviceStatus[i],"AQUAPURE") == 0) {
+      //aq_data->swg_percent = rsm_atoi(&_deviceStatus[i][9]);
+      if (changeSWGpercent(aq_data, rsm_atoi(&_deviceStatus[i][9])))
+        LOG(IAQT_LOG,LOG_DEBUG, "Set swg %% to %d from message'%s'\n",aq_data->swg_percent,_deviceStatus[i]);
+    } else if (rsm_strcmp(_deviceStatus[i],"salt") == 0) {
+      aq_data->swg_ppm = rsm_atoi(&_deviceStatus[i][5]);
+      LOG(IAQT_LOG,LOG_DEBUG, "Set swg PPM to %d from message'%s'\n",aq_data->swg_ppm,_deviceStatus[i]);
+    } else if (rsm_strcmp(_deviceStatus[i],"Boost Pool") == 0) {
+      aq_data->boost = true;
+      // Let RS pickup time remaing message.
+    }  
+#endif
 
   } // for
 }
@@ -502,12 +505,12 @@ void processPage(struct aqualinkdata *aq_data)
   }
 }
 
-
+#define REQUEST_STATUS_POLL_COUNT 50
 
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
   static int cnt = 0;
-  char buff[1024];
+  //char buff[1024];
   
   if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND off\n");
@@ -571,20 +574,17 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   // Standard ack/poll not interested in printing or kicking threads
   if (packet[3] == 0x30) {
     // Load status page every 1000 messages
-    //if (cnt++ > 50 && in_iaqt_programming_mode(aq_data) == false ) {
-    // Let's not confuse any message data, only grab status if not in any from of programming mode
-    /*
-    if (cnt++ == 50 && in_programming_mode(aq_data) == false ) {
-      //iaqt_queue_cmd(KEY_IAQTCH_STATUS);
-      //aq_programmer(AQ_GET_IAQTOUCH_VSP_ASSIGNMENT, NULL, aq_data);
-      //cnt = 0;
-      queueGetProgramData(IAQTOUCH, aq_data);
-    }
-    else*/ if (cnt++ > 100 && in_programming_mode(aq_data) == false ) {
+    if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
       iaqt_queue_cmd(KEY_IAQTCH_STATUS);
       //aq_programmer(AQ_GET_IAQTOUCH_VSP_ASSIGNMENT, NULL, aq_data);
       cnt = 0;
+    } else if (in_programming_mode(aq_data) == true) {
+      // Set count to something close to above, so we will pull latest info once programming has finished.
+      // This is goot for VSP GPM programming as it takes number of seconds to register once finished programming.
+      // -5 seems to be too quick for VSP/GPM so using 10
+      cnt = REQUEST_STATUS_POLL_COUNT - 10; 
     }
+    
     return false;
   }
 
@@ -592,7 +592,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
   _lastMsgType = packet[PKT_CMD];
 
-  debuglogPacket(IAQT_LOG ,packet, length);
+  //debuglogPacket(IAQT_LOG ,packet, length);
   //beautifyPacket(buff, packet, length);
   //LOG(IAQT_LOG,LOG_DEBUG, "%s", buff);
 

@@ -200,7 +200,7 @@ void pass_pda_equiptment_status_item(char *msg)
   }
   else
   {
-    char labelBuff[AQ_MSGLEN + 1];
+    char labelBuff[AQ_MSGLEN + 2];
     strncpy(labelBuff, msg, AQ_MSGLEN + 1);
     msg = stripwhitespace(labelBuff);
 
