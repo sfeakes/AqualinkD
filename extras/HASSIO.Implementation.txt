@@ -15,7 +15,7 @@ climate:
     power_command_topic: "aqualinkd/Pool_Heater/set"
     payload_on: "1"
     payload_off: "0"
-    current_temperature_topic: "aquallinkd/Temperature/Pool"
+    current_temperature_topic: "aqualinkd/Temperature/Pool"
     min_temp: 70
     max_temp: 90
     mode_command_topic: "aqualinkd/Pool_Heater/set"
