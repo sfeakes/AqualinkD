@@ -81,7 +81,7 @@ switch:
     unique_id: aqualink_freeze_protect
     name: "Freeze Protection"
     state_topic: "aqualinkd/Freeze_Protect/enabled"
-    command_topic: "aqualinkd/Freeze_Protect/set" #NOTE: aqualinkd does not support toggling Freeze Protect due to being a menu option rather than a simple command; use RS4 controller
+    command_topic: "aqualinkd/Freeze_Protect/set" #NOTE: aqualinkd does not support toggling Freeze Protect due to being a menu option rather than a simple command. Use your RS controller to change the setting. This should be configured as a binary_sensor instead of a switch to make it more obvious but I kept it a switch in case the limitation changes in the future.
     json_attributes_topic: "aqualinkd/Freeze_Protect"
     json_attributes_template: "{{ {'active': value|int} | tojson }}"
     qos: 1
