@@ -41,7 +41,8 @@
 
 //SPA WILL TURN OFF AFTER COOL DOWN CYCLE
 #include "aq_programmer.h"
-const char* getStatus(struct aqualinkdata *aqdata)
+
+const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
 {
   if (aqdata->active_thread.thread_id != 0 && !aqdata->simulate_panel) {
     //return JSON_PROGRAMMING;
@@ -82,7 +83,15 @@ const char* getStatus(struct aqualinkdata *aqdata)
     return aqdata->last_message;
   }
 */
-  return JSON_READY; 
+  return blankmsg; 
+}
+
+const char* getStatus(struct aqualinkdata *aqdata) {
+  return _getStatus(aqdata, JSON_READY);
+}
+/* External version of above */
+const char* getAqualinkDStatusMessage(struct aqualinkdata *aqdata) {
+  return _getStatus(aqdata, " ");
 }
 
 
@@ -172,20 +181,27 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
   int length = 0;
   buffer[0] = '\0';
 
-  for (i=0; i < aqdata->num_pumps; i++) {
-    if (button == aqdata->pumps[i].button) {       
-        length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\"", 
+  if ((button->special_mask & VS_PUMP) == VS_PUMP)
+  {
+    for (i=0; i < aqdata->num_pumps; i++) {
+      if (button == aqdata->pumps[i].button) {       
+          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\"", 
                   aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,
                   (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
 
-        return buffer;
+          return buffer;
+      }
     }
   }
 
-  for (i=0; i < aqdata->num_lights; i++) {
-    if (button == aqdata->lights[i].button) {
-      length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\"", aqdata->lights[i].lightType);
-      return buffer;
+  
+  if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+  {
+    for (i=0; i < aqdata->num_lights; i++) {
+      if (button == aqdata->lights[i].button) {
+        length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\"", aqdata->lights[i].lightType);
+        return buffer;
+      }
     }
   }
 
@@ -394,7 +410,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
 */
   length += sprintf(buffer+length, "]}");
 
-  LOG(NET_LOG,LOG_DEBUG, "WEB: homebridge used %d of %d\n", length, size);
+  LOG(NET_LOG,LOG_DEBUG, "JSON: %s used %d of %d\n", homekit?"homebridge":"web", length, size);
 
   buffer[length] = '\0';
 

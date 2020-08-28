@@ -10,6 +10,7 @@
 //#define SPA_SETPT_TOPIC "Spa_Heater/setpoint"
 
 #define SERVICE_MODE_TOPIC "Service_Mode"
+#define DISPLAY_MSG_TOPIC "Display_Message"
 
 #define ENABELED_SUBT "/enabled"
 

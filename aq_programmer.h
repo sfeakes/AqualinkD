@@ -5,6 +5,9 @@
 #include <pthread.h>
 //#include "aqualink.h"
 
+#define PROGRAMMING_POLL_DELAY_TIME 10
+#define PROGRAMMING_POLL_COUNTER 200
+
 // need to get the C values from aqualink manual and add those just incase
 // someone has the controller set to C.
 #define HEATER_MAX_F 104
@@ -25,6 +28,7 @@
 
 typedef enum emulation_type{
   ALLBUTTON,
+  RSSADAPTER,
   ONETOUCH,
   IAQTOUCH,
   AQUAPDA,  // AQUAPALM and PDA are taken as specific type.
@@ -71,7 +75,12 @@ typedef enum {
   AQ_SET_IAQTOUCH_SWG_BOOST,
   AQ_SET_IAQTOUCH_POOL_HEATER_TEMP,
   AQ_SET_IAQTOUCH_SPA_HEATER_TEMP,
-  AQ_SET_IAQTOUCH_SET_TIME
+  AQ_SET_IAQTOUCH_SET_TIME,
+  AQ_GET_RSSADAPTER_SETPOINTS,
+  AQ_SET_RSSADAPTER_POOL_HEATER_TEMP,
+  AQ_SET_RSSADAPTER_SPA_HEATER_TEMP,
+  AQ_ADD_RSSADAPTER_POOL_HEATER_TEMP,
+  AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP
 } program_type;
 
 

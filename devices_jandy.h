@@ -9,6 +9,8 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
 bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata);
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
+void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata);
+void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata);
 
 void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status, int *dzalert);
 aqledstate get_swg_led_state(struct aqualinkdata *aqdata);

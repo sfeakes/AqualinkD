@@ -77,6 +77,7 @@ void init_parameters (struct aqconfig * parms)
   parms->web_directory = DEFAULT_WEBROOT;
   //parms->device_id = strtoul(DEFAULT_DEVICE_ID, &p, 16);
   parms->device_id = strtoul(DEFAULT_DEVICE_ID, NULL, 16);
+  parms->rssa_device_id = NUL;
   parms->paneltype_mask = 0;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   parms->extended_device_id = NUL;
@@ -112,19 +113,22 @@ void init_parameters (struct aqconfig * parms)
   parms->convert_dz_temp = true;
   parms->report_zero_pool_temp = false;
   parms->report_zero_spa_temp = false;
-  parms->read_all_devices = true;
+  //parms->read_all_devices = true;
+  //parms->read_pentair_packets = false;
+  parms->read_RS485_devmask = 0;
   parms->use_panel_aux_labels = false;
   parms->debug_RSProtocol_packets = false;
   parms->force_swg = false;
   //parms->swg_pool_and_spa = false;
-  parms->read_pentair_packets = false;
-  parms->swg_zero_ignore = DEFAILT_SWG_ZERO_IGNORE_COUNT;
+  parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
   parms->log_raw_RS_bytes = false;
-  parms->readahead_b4_write = false;
   parms->sync_panel_time = true;
+
+  // Default parameters for threading and USB blocking 
+  parms->readahead_b4_write = false;
   parms->rs_poll_speed = DEFAULT_POLL_SPEED;
-  parms->thread_netservices = false;
+  parms->thread_netservices = true;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -363,6 +367,9 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "device_id", 9) == 0) {
     _aqconfig_.device_id = strtoul(cleanalloc(value), NULL, 16);
     rtn=true;
+  } else if (strncasecmp(param, "rssa_device_id", 14) == 0) {
+    _aqconfig_.rssa_device_id = strtoul(cleanalloc(value), NULL, 16);
+    rtn=true;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   } else if (strncasecmp (param, "extended_device_id_programming", 30) == 0) {
     // Has to be before the below.
@@ -486,7 +493,39 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.report_zero_pool_temp = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "read_all_devices", 16) == 0) {
-    _aqconfig_.read_all_devices = text2bool(value);
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_all_devices' is no longer supported, please using one or all of 'read_RS485_swg','read_RS485_ePump','read_RS485_vsfPump'\n");
+    if (text2bool(value)) {
+      _aqconfig_.read_RS485_devmask |= READ_RS485_SWG;
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_PUMP;
+    } else {
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_SWG;
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_PUMP;
+    }
+    rtn=true;
+  } else if (strncasecmp (param, "read_pentair_packets", 17) == 0) {
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_all_devices' is no longer supported, please using 'read_pentair_pump'\n");
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_PEN_PUMP;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
+    rtn=true;
+  } else if (strncasecmp (param, "read_RS485_swg", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_SWG;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_SWG;
+    rtn=true;
+  } else if (strncasecmp (param, "read_RS485_ePump", 16) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_PUMP;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_PUMP;
+    rtn=true;
+  } else if (strncasecmp (param, "read_RS485_vsfPump", 16) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_PEN_PUMP;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
@@ -496,11 +535,6 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
     _aqconfig_.debug_RSProtocol_packets = text2bool(value);
-    rtn=true;
-  } else if (strncasecmp (param, "read_pentair_packets", 17) == 0) {
-    _aqconfig_.read_pentair_packets = text2bool(value);
-    if (_aqconfig_.read_pentair_packets)
-      _aqconfig_.read_all_devices = true;
     rtn=true;
   } else if (strncasecmp (param, "swg_zero_ignore_count", 21) == 0) {
     _aqconfig_.swg_zero_ignore = strtoul(value, NULL, 10);
@@ -560,6 +594,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
           aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
           aqdata->lights[aqdata->num_lights].lightType = type;
           aqdata->num_lights++;
+          aqdata->aqbuttons[num].special_mask |= PROGRAM_LIGHT;
         }
       } else {
         LOG(AQUA_LOG,LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
@@ -569,7 +604,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       pump_detail *pump = getpump(aqdata, num);
       if (pump != NULL) {
         pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
-        if (pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
+        if ( (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
           pump->prclType = PENTAIR;
         } else {
           pump->prclType = JANDY;
@@ -633,6 +668,7 @@ pump_detail *getpump(struct aqualinkdata *aqdata, int button)
   // Create new entry
   if (aqdata->num_pumps < MAX_PUMPS) {
     //printf ("Creating pump %d\n",button);
+    aqdata->aqbuttons[button].special_mask |= VS_PUMP;
     aqdata->pumps[aqdata->num_pumps].button = &aqdata->aqbuttons[button];
     aqdata->pumps[aqdata->num_pumps].pumpType = PT_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].rpm = TEMP_UNKNOWN;

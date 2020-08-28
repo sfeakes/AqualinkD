@@ -477,6 +477,11 @@
     else
       var _show_vsp_gpm=true;
 
+    if (typeof link_spa_and_spa_heater !== 'undefined' && link_spa_and_spa_heater == true)
+      var _link_spa_and_heater=true;
+    else
+      var _link_spa_and_heater=false;
+
     //init();
     function init() {
       setSizeSpecifics();
@@ -823,13 +828,19 @@
         }
 
         if ((type == 'temperature' || type == 'value') && turn_on_sensortiles == true) {
-          if (value == 0 || value == '--')
+          // Anything specific (SWG PPM should be off if SWG is off)
+          // This needs a try catch, or is above try block good enough?
+          if (id == 'SWG/PPM' && document.getElementById('SWG').getAttribute('status') != 'on' )
+            setTileOn(id, 'off');
+          // Generic for all.
+          else if (value == 0 || value == '--')
             setTileOn(id, 'off');
           else
             setTileOn(id, 'on');
         }
       } catch (e) {
-          console.log('ERROR id=' + id + ' Line 832 | element = '+document.getElementById(id));
+          // NSF Do we need to create the device?
+          console.log('ERROR id=' + id + ' Line 837 | element = '+document.getElementById(id));
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
       var tile;
@@ -898,8 +909,12 @@
       }
       // Display is a special status to "brighten up" sensor values. 
       if (status != "on" && status != "off" && status != "enabled" && status != "flash") {
-        console.log("Error unknown status '" + status + "' for '" + id + "'");
-        return;
+        if (status == "unknown") {
+          status = "off"; // Just set it off for the moment
+        } else {
+          console.log("Error unknown status '" + status + "' for '" + id + "'");
+          return;
+        }
       }
       tile.setAttribute('status', status);
       if (status != 'off') {
@@ -1440,11 +1455,19 @@
           _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
           createTile(data['devices'][obj]);
         } else {
-          //console.log("old type "+document.getElementById(data['devices'][obj].id).getAttribute('type')+" | new "+data['devices'][obj].type);
-          var element_type = document.getElementById(data['devices'][obj].id).getAttribute('type');
+          //console.log("CHECK "+document.getElementById(data['devices'][obj].id).getAttribute('type')+" | against "+data['devices'][obj].type+" | and "+data['devices'][obj].type_ext+" | for "+data['devices'][obj].id);
+          //CHECK switch | against setpoint_thermo | and undefined | for Pool_Heater
 
-          if ( (element_type != data['devices'][obj].type) &&
-               (typeof data['devices'][obj].type_ext !== 'undefined' && element_type != data['devices'][obj].type_ext ) ) {
+          var element_type = document.getElementById(data['devices'][obj].id).getAttribute('type');
+          var ext_type;
+          if (typeof data['devices'][obj].type_ext !== 'undefined')
+            ext_type = data['devices'][obj].type_ext;
+          else
+            ext_type = element_type; // Just force next if to match.
+
+          //if ( (element_type != data['devices'][obj].type) &&
+          //     (typeof data['devices'][obj].type_ext !== 'undefined' && (element_type != data['devices'][obj].type_ext) ) ) {
+          if ( (element_type != data['devices'][obj].type) && (ext_type != data['devices'][obj].type_ext) ) {
             console.log("Remove and create "+data['devices'][obj].id);
             console.log("Old type "+element_type+" | new type "+data['devices'][obj].type+" sub "+data['devices'][obj].type_ext);
             var element = document.getElementById(data['devices'][obj].id);
@@ -1544,6 +1567,16 @@
         _cmd.value = value;
       }
       socket_di.send(JSON.stringify(_cmd));
+
+      if ( _link_spa_and_heater && cmd == "Spa_Mode" ) {
+        var ncmd = {};
+        ncmd.command = "Spa_Heater";
+        ncmd.uri = "Spa_Heater/set";
+        if (value != null) {
+          ncmd.value = value;
+        }
+        socket_di.send(JSON.stringify(ncmd));
+      }
     }
 
     function send_setpoint(id) {

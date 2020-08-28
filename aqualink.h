@@ -8,7 +8,8 @@
 #include "aq_programmer.h"
 #include "aq_panel.h"
 
-#define DEFAULT_POLL_SPEED 2
+#define DEFAULT_POLL_SPEED -1
+#define DEFAULT_POLL_SPEED_NON_THREADDED 2
 
 #define TIME_CHECK_INTERVAL  3600
 #define ACCEPTABLE_TIME_DIFF 120
@@ -59,8 +60,13 @@ typedef struct aqualinkkey
 //#endif
   unsigned char code;
   int dz_idx;
+  uint8_t special_mask;
 } aqkey;
 
+// special_mask
+#define VS_PUMP        (1 << 0)
+#define PROGRAM_LIGHT  (1 << 1)
+#define TIMER_ACTIVE   (1 << 2) // Not used yet, but will need to timer
 
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
@@ -80,7 +86,9 @@ typedef enum action_type {
   SWG_SETPOINT,
   SWG_BOOST,
   PUMP_RPM,
-  PUMP_VSPROGRAM
+  PUMP_VSPROGRAM,
+  POOL_HTR_INCREMENT,   // Setpoint add value (can be negative)
+  SPA_HTR_INCREMENT    // Setpoint add value
 } action_type;
 
 struct action {
@@ -163,7 +171,6 @@ struct aqualinkdata
   aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
-  unsigned char last_packet_type;
   int num_pumps;
   pump_detail pumps[MAX_PUMPS];
   int num_lights;
@@ -176,6 +183,7 @@ struct aqualinkdata
   // Below this line is not state related. (Future just do a mem compare for change)
   //aqkey *orderedbuttons[TOTAL_BUTTONS]; // Future to reduce RS4,6,8,12,16 & spa buttons
   //unsigned short total_ordered_buttons;
+  unsigned char last_packet_type;
   int swg_delayed_percent;
   bool simulate_panel;
   int open_websockets;

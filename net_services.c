@@ -36,6 +36,7 @@
 #include "devices_jandy.h"
 #include "color_lights.h"
 #include "debug_timer.h"
+#include "serialadapter.h"
 
 #ifdef AQ_PDA
 #include "pda.h"
@@ -173,7 +174,7 @@ void _broadcast_aqualinkstate(struct mg_connection *nc)
 }
 
 
-void send_mqtt(struct mg_connection *nc, char *toppic, char *message)
+void send_mqtt(struct mg_connection *nc, const char *toppic, const char *message)
 {
   static uint16_t msg_id = 0;
 
@@ -356,7 +357,7 @@ void send_mqtt_int_msg(struct mg_connection *nc, char *dev_name, int value) {
   */
 }
 
-void send_mqtt_string_msg(struct mg_connection *nc, char *dev_name, char *msg) {
+void send_mqtt_string_msg(struct mg_connection *nc, const char *dev_name, const char *msg) {
   static char mqtt_pub_topic[250];
 
   sprintf(mqtt_pub_topic, "%s/%s", _aqconfig_.mqtt_aq_topic, dev_name);
@@ -384,6 +385,13 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   if (_aqualink_data->service_mode_state != _last_mqtt_aqualinkdata.service_mode_state) {
      _last_mqtt_aqualinkdata.service_mode_state = _aqualink_data->service_mode_state;
      send_mqtt_string_msg(nc, SERVICE_MODE_TOPIC, _aqualink_data->service_mode_state==OFF?MQTT_OFF:(_aqualink_data->service_mode_state==FLASH?MQTT_FLASH:MQTT_ON));
+  }
+
+  const char *status = getAqualinkDStatusMessage(_aqualink_data);
+
+  if (strcmp(status, _last_mqtt_aqualinkdata.last_display_message) != 0) {
+    strcpy(_last_mqtt_aqualinkdata.last_display_message, status);
+    send_mqtt_string_msg(nc, DISPLAY_MSG_TOPIC, status);
   }
 
   if (_aqualink_data->air_temp != TEMP_UNKNOWN && _aqualink_data->air_temp != _last_mqtt_aqualinkdata.air_temp) {
@@ -616,12 +624,6 @@ void set_light_mode(char *value, int button)
 }
 
 
-
-
-
-
-
-
 typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload} uriAtype;
 typedef enum {NET_MQTT=0, NET_API, NET_WS} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS"};
@@ -695,7 +697,7 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
   char *ri2 = NULL;
   char *ri3 = NULL;
 
-  LOG(NET_LOG,LOG_DEBUG, "%s: URI Request '%.*s'\n", actionName[from], uri_length, URI);
+  LOG(NET_LOG,LOG_DEBUG, "%s: URI Request '%.*s': value %.2f\n", actionName[from], uri_length, URI, value);
 
   // Split up the URI into parts.
   for (i=1; i < uri_length; i++) {
@@ -735,7 +737,48 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
     } else if (ri2 != NULL && strncmp(ri2, "stop", 4) == 0) {
     }
     return uDebugStatus;
-  // Action a setpoint message
+// couple of debug items for testing 
+  } else if (strncmp(ri1, "set_date_time", 13) == 0) {
+    aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
+    return uActioned;
+  } else if (strncmp(ri1, "startup_program", 15) == 0) {
+    if(isRS_PANEL)
+      queueGetProgramData(ALLBUTTON, _aqualink_data);
+    if(isRSSA_ENABLED)
+      queueGetProgramData(RSSADAPTER, _aqualink_data);
+#ifdef AQ_ONETOUCH
+    if(isONET_ENABLED)
+      queueGetProgramData(ONETOUCH, _aqualink_data);
+#endif
+#ifdef AQ_IAQTOUCH
+    if(isIAQT_ENABLED)
+      queueGetProgramData(IAQTOUCH, _aqualink_data);
+#endif
+#ifdef AQ_PDA
+    if(isPDA_PANEL)
+      queueGetProgramData(AQUAPDA, _aqualink_data);
+#endif
+    return uActioned;
+// Action a setpoint message
+  } else if (ri3 != NULL && (strncasecmp(ri2, "setpoint", 8) == 0) && (strncasecmp(ri3, "increment", 9) == 0)) {
+    if (!isRSSA_ENABLED) {
+      LOG(NET_LOG,LOG_WARNING, "%s: ignoring %.*s setpoint increment only valid when RS Serial adapter protocol is enabeled\n", actionName[from], uri_length, URI);
+      *rtnmsg = BAD_SETPOINT;
+      return uBad;
+    }
+
+    int val = round(value);
+
+    if (strncmp(ri1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
+      create_program_request(from, POOL_HTR_INCREMENT, val, 0);
+    } else if (strncmp(ri1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
+      create_program_request(from, SPA_HTR_INCREMENT, val, 0);
+    } else {
+      LOG(NET_LOG,LOG_WARNING, "%s: ignoring %.*s setpoint add only valid for pool & spa\n", actionName[from], uri_length, URI);
+      *rtnmsg = BAD_SETPOINT;
+      return uBad;
+    }
+    rtn = uActioned;
   } else if (ri3 != NULL && (strncasecmp(ri2, "setpoint", 8) == 0) && (strncasecmp(ri3, "set", 3) == 0)) {
     int val =  convertTemp? round(degCtoF(value)) : round(value);
     if (strncmp(ri1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
@@ -755,10 +798,12 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
       return uBad;
     }
     rtn = uActioned;
+    /* Moved into create_program_request()
     if (from == NET_MQTT) // We can get multiple MQTT requests for
       time(&_aqualink_data->unactioned.requested);
     else
       _aqualink_data->unactioned.requested = 0;
+      */
   // Action a SWG Percent message
   } else if ((ri3 != NULL && (strncmp(ri1, "SWG", 3) == 0) && (strncasecmp(ri2, "Percent", 7) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
     int val;
@@ -897,7 +942,15 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
           } else
 #endif
           {
-            aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+            // Check for panel programmable light. if so simple ON isn't going to work well
+            // Could also add "light mode" check, as this is only valid for panel configured light not aqualinkd configured light.
+            if (isRSSA_ENABLED &&
+                (_aqualink_data->aqbuttons[i].special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT &&
+                 _aqualink_data->aqbuttons[i].led->state == OFF ) {
+              set_aqualink_rssadapter_aux_state(i, true);
+            } else {
+              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
+            }
           }
           // Some circumstances these are ignored by control panel, so furce the MQTT state to be sent again on next poll just ncase it doesn't change
           // This causes a good MQTT button to flash on/off once before getting the latest update.  Need to find a better way
@@ -930,8 +983,8 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
 #endif
   //unsigned int i;
   //LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
-  // If message doesn't end in set we don't care about it.
-  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0) {
+  // If message doesn't end in set or increment we don't care about it.
+  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0 && strncmp(&msg->topic.p[msg->topic.len -4], "/increment", 10) != 0) {
     LOG(NET_LOG,LOG_DEBUG, "MQTT: Ignore %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
     return;
   }
@@ -961,17 +1014,23 @@ float pass_mg_body(struct mg_str *body) {
   // value=1.5&arg2=val2
   // {"value":"1.5"}
   int i;
+  char buf[10];
   
   // NSF Really need to come back and clean this up
 
   for (i=0; i < body->len; i++) {
     if ( body->p[i] == '=' || body->p[i] == ':' ) {
-      while (!isdigit((unsigned char) body->p[i]) && i < body->len) {i++;}
-      if(i < body->len)
-        return atof(&body->p[i]);
+      while (!isdigit((unsigned char) body->p[i]) && body->p[i] != '-' && i < body->len) {i++;}
+      if(i < body->len) {
+        // Need to copy to buffer so we can terminate correctly.
+        strncpy(buf, &body->p[i], body->len - i);
+        buf[body->len - i] = '\0';
+        //return atof(&body->p[i]);
+        return atof(buf);
+      }
     }
   }
-  return -1;
+  return TEMP_UNKNOWN;
 }
 
 
@@ -1140,7 +1199,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     return OLD_action_websocket_request(nc, wm);
   }
 
-  switch ( action_URI(NET_WS, uri, strlen(uri), (value!=NULL?atof(value):-1), false, &msg)) {
+  switch ( action_URI(NET_WS, uri, strlen(uri), (value!=NULL?atof(value):TEMP_UNKNOWN), false, &msg)) {
     case uActioned:
       sprintf(buffer, "{\"message\":\"ok\"}");
       ws_send(nc, buffer);
@@ -1180,10 +1239,10 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
   int i;
   char svalue[DZ_SVALUE_LEN+1];
 
-  if (parseJSONmqttrequest(msg->payload.p, msg->payload.len, &idx, &nvalue, svalue)) {
-    LOG(NET_LOG,LOG_DEBUG, "MQTT: DZ: Received message IDX=%d nValue=%d sValue=%s\n", idx, nvalue, svalue);
+  if (parseJSONmqttrequest(msg->payload.p, msg->payload.len, &idx, &nvalue, svalue) && idx > 0) {
     for (i=0; i < _aqualink_data->total_buttons; i++) {
       if (_aqualink_data->aqbuttons[i].dz_idx == idx){
+        LOG(NET_LOG,LOG_DEBUG, "MQTT: DZ: Received message IDX=%d nValue=%d sValue=%s\n", idx, nvalue, svalue);
         //NSF, should try to simplify this if statment, but not easy since AQ ON and DZ ON are different, and AQ has other states.
         if ( (_aqualink_data->aqbuttons[i].led->state == OFF && nvalue==DZ_OFF) ||
            (nvalue == DZ_ON && (_aqualink_data->aqbuttons[i].led->state == ON || 
@@ -1457,7 +1516,7 @@ void *net_services_thread( void *ptr )
     mg_mgr_poll(&mgr, 100);
 
     if (aqdata->updated == true /*|| _broadcast == true*/) {
-      LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
+      //LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
       _broadcast_aqualinkstate(mgr.active_connections);
       aqdata->updated = false;
       //_broadcast = false;

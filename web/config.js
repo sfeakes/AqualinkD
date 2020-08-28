@@ -80,6 +80,9 @@
       // this will turn them on
       var turn_on_sensortiles = true;
 
+      // This will turn on/off the Spa Heater when you turn on/off Spa Mode.
+      //var link_spa_and_spa_heater = true;
+
       var body_background = "#EBEBEA";
       var body_text = "#000000";
       

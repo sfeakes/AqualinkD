@@ -19,9 +19,14 @@
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
-#define DEFAILT_SWG_ZERO_IGNORE_COUNT 20
+#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
+
+// For aqconfig.read_RS485_devmask
+#define READ_RS485_SWG      (1 << 0) // 1   SWG
+#define READ_RS485_JAN_PUMP (1 << 1) // 2   Jandy Pump
+#define READ_RS485_PEN_PUMP (1 << 2) // 4   Pentair Pump
 
 struct aqconfig
 {
@@ -31,6 +36,7 @@ struct aqconfig
   char *socket_port;
   char *web_directory;
   unsigned char device_id;
+  unsigned char rssa_device_id;
   int16_t paneltype_mask;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   unsigned char extended_device_id;
@@ -62,7 +68,9 @@ struct aqconfig
   bool convert_dz_temp;
   bool report_zero_spa_temp;
   bool report_zero_pool_temp;
-  bool read_all_devices;
+  //bool read_all_devices;
+  //bool read_pentair_packets;
+  uint8_t read_RS485_devmask;
   bool use_panel_aux_labels;
   bool force_swg;
   int swg_zero_ignore;
@@ -82,6 +90,11 @@ extern struct aqconfig _aqconfig_;
 #else
 struct aqconfig _aqconfig_;
 #endif
+
+
+#define READ_RSDEV_SWG ((_aqconfig_.read_RS485_devmask & READ_RS485_SWG) == READ_RS485_SWG)
+#define READ_RSDEV_ePUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_PUMP) == READ_RS485_JAN_PUMP)
+#define READ_RSDEV_vsfPUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_PEN_PUMP) == READ_RS485_PEN_PUMP)
 
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
 

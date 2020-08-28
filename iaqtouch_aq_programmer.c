@@ -85,27 +85,28 @@ unsigned char pop_iaqt_cmd(unsigned char receive_type)
   } 
 
   if (cmd != NUL)
-    LOG(IAQT_LOG,LOG_DEBUG, "IAQ Touch Sending '0x%02hhx' to controller\n", cmd);
+    LOG(IAQT_LOG,LOG_DEBUG, "Sending '0x%02hhx' to controller\n", cmd);
   return cmd;
 }
+
 
 void waitfor_iaqt_queue2empty()
 {
   int i=0;
 
-  while ( (_iaqt_pgm_command != NUL) && ( i++ < 20) ) {
-    delay(50);
+  while ( (_iaqt_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER) ) {
+    delay(PROGRAMMING_POLL_DELAY_TIME);
   }
 
   if (_iaqt_pgm_command != NUL) {
       // Wait for longer interval
-      while ( (_iaqt_pgm_command != NUL) && ( i++ < 100) ) {
-        delay(100);
+      while ( (_iaqt_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER * 2 ) ) {
+        delay(PROGRAMMING_POLL_DELAY_TIME * 2);
       }
   }
 
   if (_iaqt_pgm_command != NUL) {
-    LOG(IAQT_LOG,LOG_WARNING, "iAQ Touch Send command Queue did not empty, timeout\n");
+    LOG(IAQT_LOG,LOG_WARNING, "Send command Queue did not empty, timeout\n");
   }
 }
 
@@ -115,7 +116,7 @@ void send_aqt_cmd(unsigned char cmd)
   
   iaqt_queue_cmd(cmd);
 
-  LOG(IAQT_LOG,LOG_DEBUG, "iAQ Touch Queue send '0x%02hhx' to controller (programming)\n", _iaqt_pgm_command);
+  LOG(IAQT_LOG,LOG_DEBUG, "Queue send '0x%02hhx' to controller (programming)\n", _iaqt_pgm_command);
 }
 
 /**************
@@ -137,7 +138,7 @@ int ref_iaqt_control_cmd(unsigned char **cmd)
     char buff[1000];
     //sprintf("Sending control command:")
     beautifyPacket(buff, _iaqt_control_cmd, _iaqt_control_cmd_len);
-    LOG(IAQT_LOG,LOG_DEBUG, "iAQ Touch sending commandsed : %s\n", buff);
+    LOG(IAQT_LOG,LOG_DEBUG, "Sending commandsed : %s\n", buff);
   }
 
   return _iaqt_control_cmd_len;
@@ -153,7 +154,7 @@ bool waitfor_iaqt_ctrl_queue2empty()
 {
   int i=0;
 
-  while ( (_iaqt_control_cmd_len >0 ) && ( i++ < 20) ) {
+  while ( (_iaqt_control_cmd_len >0 ) && ( i++ < 100) ) {
     LOG(IAQT_LOG,LOG_DEBUG, "Waiting for commandset to send\n");
     delay(50);
   }
@@ -161,7 +162,7 @@ bool waitfor_iaqt_ctrl_queue2empty()
   LOG(IAQT_LOG,LOG_DEBUG, "Wait for commandset over!\n");
 
   if (_iaqt_control_cmd_len > 0 ) {
-    LOG(IAQT_LOG,LOG_WARNING, "iAQ Touch Send control command Queue did not empty, timeout\n");
+    LOG(IAQT_LOG,LOG_WARNING, "Send control command Queue did not empty, timeout\n");
     return false;
   }
   return true;
@@ -299,7 +300,8 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     if (iaqtCurrentPage() != IAQ_PAGE_HOME) {
       send_aqt_cmd(KEY_IAQTCH_HOME);
       if (waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_HOME) {
-        LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find Home page\n");
+        //LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find Home page\n");
+        // We reset to home page after every programming cycle and error really don't care, so don't throw the error.
         return false;
       }
       LOG(IAQT_LOG, LOG_DEBUG, "IAQ Touch got to Home page\n");

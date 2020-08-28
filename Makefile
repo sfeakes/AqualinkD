@@ -52,7 +52,7 @@ MGFLAGS = -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D 
 #       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
 
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
-       devices_jandy.c packetLogger.c devices_pentair.c color_lights.c mongoose.c 
+       devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c mongoose.c 
 
 
 AQ_FLAGS = 
@@ -108,7 +108,10 @@ LOGR = ./release/log_reader
 PLAY = ./release/aqualinkd-player
 DEBG = ./release/aqualinkd-debug
 
-all:    $(MAIN)
+#aqualinkd:    $(MAIN)
+#	$(info $(MAIN) has been compiled)
+
+all:	$(MAIN)
 	$(info $(MAIN) has been compiled)
 
 # debug, Just change compile flags and call MAIN
@@ -152,7 +155,7 @@ $(PL_EXOBJ): $(PL_EXSRC)
 $(PLAY): $(PL_OBJS) $(PL_EXOBJ)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(PLAY) $(PL_OBJS) $(PL_EXOBJ)
 
-# Fog github publishing
+# Fof github publishing
 .PHONY: git
 git: clean $(MAIN) $(SLOG)
 	./release/git_version.sh

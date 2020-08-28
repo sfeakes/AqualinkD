@@ -47,7 +47,8 @@
 
 static bool _daemonise = false;
 static bool _log2file = false;
-static int _log_level = LOG_ERR;
+//static int _log_level = LOG_ERR;
+static int _log_level = LOG_WARNING;
 static char *_log_filename = NULL;
 static bool _cfg_log2file;
 static int _cfg_log_level;
@@ -77,6 +78,10 @@ void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_mes
 
 int getLogLevel(int16_t from)
 {
+
+  // RSSD_LOG should default to INFO unless the mask is explicitly set.
+  // IE Even if DEBUG is set, (Note ignored for the moment)
+
   if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
     return LOG_DEBUG;
   
@@ -202,11 +207,8 @@ int text2elevel(char* level)
   else if (strcmp(level, "NOTICE") == 0) {
     return LOG_NOTICE;
   }
-  else if (strcmp(level, "INFO") == 0) {
-    return LOG_INFO;
-  }
   
- return  LOG_ERR; 
+  return  LOG_ERR; 
 }
 
 const char* logmask2name(int16_t from)
@@ -217,6 +219,9 @@ const char* logmask2name(int16_t from)
     break;
     case AQRS_LOG:
       return "RS Allbtn: ";
+    break;
+    case RSSA_LOG:
+      return "RS SAdptr: ";
     break;
     case ONET_LOG:
       return "One Touch: ";
@@ -235,6 +240,9 @@ const char* logmask2name(int16_t from)
     break;
     case RSSD_LOG:
       return "RS Serial: ";
+    break;
+    case PROG_LOG:
+      return "Panl Prog: ";
     break;
     case DBGT_LOG:
       return "AQ Timing: ";
@@ -366,6 +374,7 @@ int cleanint(char*str)
   return atoi(str);
 }
 
+/*
 void test(int msg_level, char *msg)
 {
   char buffer[256];
@@ -380,14 +389,19 @@ void test(int msg_level, char *msg)
     write(fp, buffer, strlen(buffer) );
     close(fp);  
   } else {
-    syslog(LOG_ERR, "Can't open file /var/log/aqualink.log");
+    syslog(LOG_ERR, "Can't open file /var/log/aqualink.log/n");
   }
 }
-
+*/
 
 void addDebugLogMask(int16_t flag)
 {
   _logforcemask |= flag;
+}
+
+void removeDebugLogMask(int16_t flag)
+{
+  _logforcemask &= ~flag;
 }
 
 void _LOG(int16_t from, int msg_level, char * message);
@@ -411,10 +425,14 @@ void logMessage(int msg_level, const char *format, ...)
 */
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
-
+  //printf("msg_level=%d _log_level=%d mask=%d\n",msg_level,_log_level,(_logforcemask & from));
+  /*
   if (msg_level > _log_level && ((_logforcemask & from) == 0) ) { // from NOT set in _logforcemask
     return;
   }
+  */
+  if ( msg_level > getLogLevel(from))
+    return;
 
   char buffer[1024];
   va_list args;
@@ -637,7 +655,7 @@ float degCtoF(float degC)
 
 #include <time.h>
 
-void delay (unsigned int howLong) // Microseconds (1000000 = 1 second)
+void delay (unsigned int howLong) // Microseconds (1000000 = 1 second) miliseconds
 {
   struct timespec sleeper, dummy ;
 
@@ -646,7 +664,18 @@ void delay (unsigned int howLong) // Microseconds (1000000 = 1 second)
 
   nanosleep (&sleeper, &dummy) ;
 }
+/*
+// Same as above but can pass 0.5
+void ndelay (float howLong) // Microseconds (1000000 = 1 second) 
+{
+  struct timespec sleeper, dummy ;
 
+  sleeper.tv_sec  = (time_t)((howLong*10) / 10000) ;
+  sleeper.tv_nsec = (long)( ((int)(howLong*10)) % 10000) * 1000000 ;
+
+  nanosleep (&sleeper, &dummy) ;
+}
+*/
 char* stristr(const char* haystack, const char* needle) {
   do {
     const char* h = haystack;

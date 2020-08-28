@@ -112,7 +112,7 @@ One Touch: OneTouch Menu Line 4 =  Set Spa to:100%
 */
 void log_programming_information(struct aqualinkdata *aq_data)
 {
-  switch(get_onetouch_memu_type()){
+  switch(get_onetouch_menu_type()){
     case OTM_SET_AQUAPURE:
       if (isCOMBO_PANEL && aq_data->aqbuttons[SPA_INDEX].led->state == ON)
         setSWGpercent(aq_data, rsm_atoi(&_menu[4][13])); // use spa
@@ -152,6 +152,13 @@ bool process_onetouch_menu_packet(struct aqualinkdata *aq_data, unsigned char* p
         strncpy(_menu[(int)packet[PKT_DATA]], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
         _menu[packet[PKT_DATA]][AQ_MSGLEN] = '\0';
       }
+      // Trying to debug serial problem
+      /*
+      if (packet[PKT_CMD+1] == 0x03) {
+        static char buf[1000];
+        beautifyPacket(buf,packet,length);
+        LOG(ONET_LOG,LOG_DEBUG, "Good %s\n",buf);
+      }*/
       //if (getLogLevel() >= LOG_DEBUG){print_onetouch_menu();}
     break;
     case CMD_PDA_HIGHLIGHT:
@@ -297,7 +304,6 @@ bool log_freeze_setpoints(struct aqualinkdata *aq_data)
 }
 
 
-
 bool log_qeuiptment_status(struct aqualinkdata *aq_data)
 {
   int i;
@@ -305,12 +311,15 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
 
   if (rsm_strcmp(_menu[2],"Intelliflo VS") == 0 ||
       rsm_strcmp(_menu[2],"Intelliflo VF") == 0 ||
-      rsm_strcmp(_menu[2],"Jandy ePUMP") == 0) {
+      rsm_strcmp(_menu[2],"Jandy ePUMP") == 0 ||
+      rsm_strcmp(_menu[2],"ePump AC") == 0) {
     rtn = true;
     int rpm = 0;
     int watts = 0;
     int gpm = 0;
     int pump_index = rsm_atoi(&_menu[2][14]);
+    if (pump_index <= 0)
+      pump_index = rsm_atoi(&_menu[2][12]); // Pump inxed is in different position on line `  ePump AC  4`
     // RPM displays differently depending on 3 or 4 digit rpm.
     if (rsm_strcmp(_menu[3],"RPM:") == 0){
       rpm = rsm_atoi(&_menu[3][10]);
@@ -343,7 +352,8 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
             aq_data->pumps[i].pumpType = VSPUMP;
           else if (rsm_strcmp(_menu[2],"Intelliflo VF") == 0)
             aq_data->pumps[i].pumpType = VFPUMP;
-          else if (rsm_strcmp(_menu[2],"Jandy ePUMP") == 0)
+          else if (rsm_strcmp(_menu[2],"Jandy ePUMP") == 0 ||
+                   rsm_strcmp(_menu[2],"ePump AC") == 0)
             aq_data->pumps[i].pumpType = EPUMP;
         }
         //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
@@ -412,11 +422,11 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
   return rtn;
 }
 
-ot_menu_type get_onetouch_memu_type()
+ot_menu_type get_onetouch_menu_type()
 {
   if (rsm_strcmp(_menu[11],"SYSTEM") == 0)
     return OTM_ONETOUCH;
-  else if (rsm_strcmp(_menu[0],"Jandy AquaLinkRS") == 0)
+  else if (rsm_strcmp(_menu[0],"Jandy AquaLinkRS") == 0 || rsm_strcmp(_menu[11],"MENU / HELP") == 0 ) // Odd, sometimes this has Jandy sometimes it doesn't
     return OTM_SYSTEM;
   else if (rsm_strcmp(_menu[0],"EQUIPMENT STATUS") == 0)
     return OTM_EQUIPTMENT_STATUS;
@@ -492,7 +502,7 @@ bool new_menu(struct aqualinkdata *aq_data)
   static bool initRS = false;
   bool rtn = false;
   static ot_menu_type last_menu_type = OTM_UNKNOWN;
-  ot_menu_type menu_type = get_onetouch_memu_type();
+  ot_menu_type menu_type = get_onetouch_menu_type();
 
   print_onetouch_menu();
 
@@ -529,8 +539,8 @@ bool new_menu(struct aqualinkdata *aq_data)
       break;
   }
 
-  if (last_menu_type == OTM_EQUIPTMENT_STATUS && menu_type != OTM_EQUIPTMENT_STATUS ) {
-    // End of equiptment status chain of menus, reset any pump that wasn't listed in menus
+  if (last_menu_type == OTM_EQUIPTMENT_STATUS && menu_type != OTM_EQUIPTMENT_STATUS && !in_ot_programming_mode(aq_data) ) {
+    // End of equiptment status chain of menus, reset any pump that wasn't listed in menus as long as we are not in programming mode
     pump_update(aq_data, -1);
 #ifdef AQ_RS16
     if (PANEL_SIZE() >= 16)
@@ -548,7 +558,7 @@ void set_macro_status()
   // OneTouch Menu Line 2 = SPA MODE     OFF
   // OneTouch Menu Line 5 = CLEAN MODE    ON
   // OneTouch Menu Line 8 = ONETOUCH 3   OFF
-  if (get_onetouch_memu_type() == OTM_ONETOUCH) {
+  if (get_onetouch_menu_type() == OTM_ONETOUCH) {
     strncpy(_macros[0].name, _menu[2], 13);
     chopwhitespace(_macros[0].name);
     _macros[0].ison = (_menu[2][15] == 'N'?true:false);

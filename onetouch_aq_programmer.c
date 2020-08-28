@@ -56,14 +56,14 @@ void waitfor_ot_queue2empty()
 {
   int i=0;
 
-  while ( (_ot_pgm_command != NUL) && ( i++ < 20) ) {
-    delay(50);
+  while ( (_ot_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER) ) {
+    delay(PROGRAMMING_POLL_DELAY_TIME);
   }
 
   if (_ot_pgm_command != NUL) {
       // Wait for longer interval
-      while ( (_ot_pgm_command != NUL) && ( i++ < 100) ) {
-        delay(100);
+      while ( (_ot_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER * 2) ) {
+        delay(PROGRAMMING_POLL_COUNTER * 2);
       }
   }
 
@@ -221,21 +221,21 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
 {
   int i=0;
 
-  if (get_onetouch_memu_type() == OTM_SYSTEM)
+  if (get_onetouch_menu_type() == OTM_SYSTEM)
     return true;
 
   // Get back to a known point, the system menu
-  while (get_onetouch_memu_type() != OTM_SYSTEM && get_onetouch_memu_type() != OTM_ONETOUCH && i < 5 ) {
+  while (get_onetouch_menu_type() != OTM_SYSTEM && get_onetouch_menu_type() != OTM_ONETOUCH && i < 5 ) {
     send_ot_cmd(KEY_ONET_BACK);
     waitfor_ot_queue2empty();
     waitForNextOT_Menu(aq_data);
     i++;
   }
 
-  if (get_onetouch_memu_type() == OTM_SYSTEM) {
+  if (get_onetouch_menu_type() == OTM_SYSTEM) {
     //printf("*** SYSTEM MENU ***\n");
     //return false;
-  } else if (get_onetouch_memu_type() == OTM_ONETOUCH) {
+  } else if (get_onetouch_menu_type() == OTM_ONETOUCH) {
     //printf("*** ONE TOUCH MENU ***\n");
     // Can only be one of 2 options in this menu, so if it's not the one we want, hit down first
     if ( rsm_strcmp(onetouch_menu_hlight(), "System") != 0) {
@@ -251,12 +251,13 @@ bool goto_onetouch_system_menu(struct aqualinkdata *aq_data)
     return false;
   }
 
-  if (get_onetouch_memu_type() != OTM_SYSTEM) {
+  if (get_onetouch_menu_type() != OTM_SYSTEM) {
     LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer couldn't get to System menu\n");
     return false;
   }
 
   
+  LOG(ONET_LOG,LOG_DEBUG, "Got to System menu\n");
 
   return true;
 }
@@ -338,17 +339,17 @@ bool goto_onetouch_menu(struct aqualinkdata *aq_data, ot_menu_type menu)
     break;
   }
 
-  // We can't detect Equiptment menu yet, so use the find test above not get_onetouch_memu_type() below
+  // We can't detect Equiptment menu yet, so use the find test above not get_onetouch_menu_type() below
   if (menu == OTM_EQUIPTMENT_ONOFF ) {
     return !equErr;
   }
 
   // Need to wait a bit longer for set temp menu if single device (nag screen temp1 higher than temp2)
-  if ( menu == OTM_SET_TEMP && get_onetouch_memu_type() != menu) {
+  if ( menu == OTM_SET_TEMP && get_onetouch_menu_type() != menu) {
     waitForNextOT_Menu(aq_data);
   }
 
-  if (get_onetouch_memu_type() != menu)
+  if (get_onetouch_menu_type() != menu)
     return false;
 
   return true;
@@ -442,7 +443,7 @@ void *set_aqualink_onetouch_pump_rpm( void *ptr )
     waitForNextOT_Menu(aq_data);
 */
   if ( select_onetouch_menu_item(aq_data, VSPstr) ) {
-    if ( get_onetouch_memu_type() == OTM_SELECT_SPEED) {
+    if ( get_onetouch_menu_type() == OTM_SELECT_SPEED) {
       // Now fine menu item with X as last digit, and select that menu.
       //Pool           X
       for (i=0; i < 12; i++) {
@@ -460,9 +461,11 @@ void *set_aqualink_onetouch_pump_rpm( void *ptr )
       //OneTouch Menu Line 3 =  set to  50 GPM 
       //OneTouch Menu Line 3 =  set to  50 GPM
       //OneTouch Menu Line 3 = set to 1750 RPM
-      if ( strstr(onetouch_menu_hlight(), "set to") != NULL ) {
+      //if ( strstr(onetouch_menu_hlight(), "set to") != NULL ) {
+      if ( rsm_strstr(onetouch_menu_hlight(), "set to") != NULL ) {
         //printf("FOUND MENU")
-        if (strstr(onetouch_menu_hlight(), "RPM") != NULL ) {
+        //if (strstr(onetouch_menu_hlight(), "RPM") != NULL ) {
+        if (rsm_strstr(onetouch_menu_hlight(), "RPM") != NULL ) {
           // RPM 3450 & 600 max & min
           // Panel will change 2nd,3rd & 4th digits depending on previos digit
           // so reget the RPM after every change.
@@ -485,7 +488,8 @@ void *set_aqualink_onetouch_pump_rpm( void *ptr )
           send_ot_cmd(KEY_ONET_SELECT);
           waitfor_ot_queue2empty();
           waitForOT_MessageTypes(aq_data,CMD_MSG_LONG,CMD_PDA_HIGHLIGHTCHARS,5);
-        } else if (strstr(onetouch_menu_hlight(), "GPM") != NULL ) {
+        //} else if (strstr(onetouch_menu_hlight(), "GPM") != NULL ) {
+        } else if (rsm_strstr(onetouch_menu_hlight(), "GPM") != NULL ) {
           // GPM 130 max, GPM 15 min
           for (i=0; i < 24 ; i++) { // Max of 23 key presses to get from max to min
             int GPM = rsm_atoi(&onetouch_menu_hlight()[8]);
@@ -526,7 +530,7 @@ void *set_aqualink_onetouch_pump_rpm( void *ptr )
   //printf("**** GOT THIS FAR, NOW LET'S GO BACK ****\n");
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   //printf("**** CLEAN EXIT ****\n");
@@ -749,7 +753,7 @@ void *set_aqualink_onetouch_boost( void *ptr )
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);
@@ -847,7 +851,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
 
   f_end:
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);
@@ -876,11 +880,35 @@ void *set_aqualink_onetouch_time( void *ptr )
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TIME) ){
     LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get time menu\n");
   } else {
-    
+    /*
+    // MM/DD/YY   MON   Just change MM/DD/YY
+    //  H:MM  AM        Have to cycle H to get AM/PM, just one digit
+    time_t now = time(0);   // get time now
+    struct tm *result = localtime(&now);
+    int hour;
+    char ap;
+
+    result->tm_mday // day of month starts at 1
+    result->tm_mon // Month started at 0
+    result->tm_min // Min 
+
+    if (result->tm_hour == 0) //12 AM ie midnight
+      hour = 12
+      ap = 'A';
+    else if (result->tm_hour == 12) // 12 PM
+      hour = 12
+      ap = 'P';
+    else if (result->tm_hour <= 11)
+      hour = result->tm_hour
+      ap = 'A';
+    else // Must be 13 or more
+      hour = result->tm_hour - 12;
+      ap = 'P';
+    */
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
-    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch device programmer didn't get back to System menu\n");
   }
 
   cleanAndTerminateThread(threadCtrl);

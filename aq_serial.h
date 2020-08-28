@@ -390,6 +390,21 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_LABEL_AUX       0x32
 //#define IAQ_PAGE_START_BOOST     0x3f
 
+
+
+#define RSSA_DEV_STATUS 0x13
+#define RSSA_DEV_READY  0x07  // Ready to receive change command
+// For the moment, rest of RS_RA are in serialadapter.h
+
+
+// Errors from get_packet
+#define AQSERR_READ     -1 // General fileIO read error
+#define AQSERR_TIMEOUT  -2 // Timeout
+#define AQSERR_CHKSUM   -3 // Checksum failed
+#define AQSERR_2LARGE   -4 // Buffer Overflow
+#define AQSERR_2SMALL   -5 // Not enough read
+
+
 // At the moment just used for next ack
 typedef enum {
   DRS_NONE,
@@ -426,6 +441,8 @@ typedef enum {
 
 int init_serial_port(const char* tty);
 int init_blocking_serial_port(const char* tty);
+int init_readahead_serial_port(const char* tty);
+
 void close_serial_port(int file_descriptor);
 void close_blocking_serial_port();
 //#ifdef AQ_PDA

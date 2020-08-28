@@ -286,8 +286,9 @@ bool select_pda_menu_item_loose(struct aqualinkdata *aq_data, char *menuText, bo
 }
 bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu, bool loose) {
 
-  //int matchType = loose?-1:0;
-  int matchType = loose?-1:1;
+  //int matchType = loose?-1:0; // NSF release 2.1.0 was this and it worked.  Need to re-check why I did this.
+  //int matchType = loose?-1:1;
+  int matchType = loose?-1:strlen(menuText); // NSF Not way to check this. (release 2.2.0 introduced this with the line above)
   if ( find_pda_menu_item(aq_data, menuText, matchType) ) {
     send_cmd(KEY_PDA_SELECT);
 
@@ -310,6 +311,7 @@ bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wa
 // https://www.jandy.com/-/media/zodiac/global/downloads/0748-91071/6594.pdf
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
   bool ret = true;
+  int cnt = 0;
 
   LOG(PDA_LOG,LOG_DEBUG, "PDA Device programmer request for menu %d\n",menu);
 
@@ -325,7 +327,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
   }
   
 
-  while (ret && (pda_m_type() != menu)) {
+  while (ret && (pda_m_type() != menu) && cnt <= 5) {
     switch (menu) {
       case PM_HOME:
          send_cmd(KEY_PDA_BACK);
@@ -452,6 +454,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
         break;
     }
     LOG(PDA_LOG,LOG_DEBUG, "PDA Device programmer request for menu %d, current %d\n", menu, pda_m_type());
+    cnt++;
   }
   if (pda_m_type() != menu) {
     LOG(PDA_LOG,LOG_ERR, "PDA Device programmer didn't find a requested menu %d, current %d\n", menu, pda_m_type());

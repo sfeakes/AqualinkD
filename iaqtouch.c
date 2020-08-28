@@ -332,9 +332,12 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
     //LOG(IAQT_LOG,LOG_NOTICE, "Passing message %.2d| %s\n",i,_deviceStatus[i]);
     if (rsm_strcmp(_deviceStatus[i],"Intelliflo VS") == 0 ||
         rsm_strcmp(_deviceStatus[i],"Intelliflo VF") == 0 ||
-        rsm_strcmp(_deviceStatus[i],"Jandy ePUMP") == 0) 
+        rsm_strcmp(_deviceStatus[i],"Jandy ePUMP") == 0 ||
+        rsm_strcmp(_deviceStatus[i],"ePump AC") == 0)
     {
       int pump_index = rsm_atoi(&_deviceStatus[i][14]);
+      if (pump_index <= 0)
+        pump_index = rsm_atoi(&_deviceStatus[i][10]);  // ePump AC seems to display index in different position 
       for (pi=0; pi < aq_data->num_pumps; pi++) {
         if (aq_data->pumps[pi].pumpIndex == pump_index) {
           iaqt_pump_update(aq_data, pi); // Log that we saw a pump
@@ -345,50 +348,54 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
               pump->pumpType = VSPUMP;
             else if (rsm_strcmp(_deviceStatus[i],"Intelliflo VF") == 0)
               pump->pumpType = VFPUMP;
-            else if (rsm_strcmp(_deviceStatus[i],"Jandy ePUMP") == 0)
+            else if (rsm_strcmp(_deviceStatus[i],"Jandy ePUMP") == 0 ||
+                     rsm_strcmp(_deviceStatus[i],"ePump AC") == 0)
               pump->pumpType = EPUMP;
+
+            LOG(IAQT_LOG,LOG_DEBUG, "Pump %d set to type %s\n",pump->pumpIndex, (pump->pumpType==EPUMP?"Jandy ePUMP":(pump->pumpType==VFPUMP?"Intelliflo VF":"Intelliflo VS")) );
           }
         }
       }
       if (pump == NULL)
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump at index %d\n",_deviceStatus[i],pump_index);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump at index %d\n",_deviceStatus[i],pump_index);
         
       continue;
+
     } else if (rsm_strcmp(_deviceStatus[i],"RPM:") == 0) {
       if (pump != NULL)
         pump->rpm = rsm_atoi(&_deviceStatus[i][9]);
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"GPM:") == 0) {
       if (pump != NULL)
         pump->gpm = rsm_atoi(&_deviceStatus[i][9]);
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"Watts:") == 0) {
       if (pump != NULL)
         pump->watts = rsm_atoi(&_deviceStatus[i][9]);
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"*** Priming ***") == 0) {
       if (pump != NULL)
         pump->rpm = PUMP_PRIMING;
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Offline)") == 0) {
       if (pump != NULL)
         pump->rpm = PUMP_OFFLINE;
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Priming Error)") == 0) {
       if (pump != NULL)
         pump->rpm = PUMP_ERROR;
       else
-        LOG(IAQT_LOG,LOG_ERR, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
       // Need to catch messages like 
       // *** Priming ***

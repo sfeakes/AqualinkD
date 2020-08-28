@@ -49,6 +49,7 @@
 #include "iaqtouch_aq_programmer.h"
 #include "version.h"
 #include "rs_msg_utils.h"
+#include "serialadapter.h"
 #include "debug_timer.h"
 
 /*
@@ -135,7 +136,7 @@ bool checkAqualinkTime()
   time_difference = (int)difftime(now, last_checked);
   if (time_difference < TIME_CHECK_INTERVAL)
   {
-    LOG(AQUA_LOG,LOG_DEBUG, "time not checked, will check in %d seconds", TIME_CHECK_INTERVAL - time_difference);
+    LOG(AQUA_LOG,LOG_DEBUG, "time not checked, will check in %d seconds\n", TIME_CHECK_INTERVAL - time_difference);
     return true;
   }
   else
@@ -342,7 +343,7 @@ void _processMessage(char *message, bool reset)
           LOG(AQRS_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is on so setting SWG to 0%%\n");
           changeSWGpercent(&_aqualink_data, 0);
         }
-      } else if (isIAQT_ENABLED == false && isONET_ENABLED == false && _aqconfig_.read_all_devices == false ) {
+      } else if (isIAQT_ENABLED == false && isONET_ENABLED == false && READ_RSDEV_SWG == false ) {
         //We have no other way to read SWG %=0, so turn SWG on with pump
         if ( _aqualink_data.aqbuttons[PUMP_INDEX].led->state == ON) {
            LOG(AQRS_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is off so setting SWG to off\n");
@@ -678,12 +679,15 @@ void _processMessage(char *message, bool reset)
 bool process_packet(unsigned char *packet, int length)
 {
   bool rtn = false;
-  static unsigned char last_packet[AQ_MAXPKTLEN];
+  //static unsigned char last_packet[AQ_MAXPKTLEN];
+  static unsigned char last_checksum;
   static char message[AQ_MSGLONGLEN + 1];
   static int processing_long_msg = 0;
 
   // Check packet against last check if different.
-  if (memcmp(packet, last_packet, length) == 0)
+  // Should only use the checksum, not whole packet since it's status messages.
+  /*
+  if ( packet[PKT_CMD] == CMD_STATUS && (memcmp(packet, last_packet, length) == 0))
   {
     LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
     return rtn;
@@ -694,12 +698,28 @@ bool process_packet(unsigned char *packet, int length)
     _aqualink_data.last_packet_type = packet[PKT_CMD];
     rtn = true;
   }
+  */
+
+  _aqualink_data.last_packet_type = packet[PKT_CMD];
+
 #ifdef AQ_PDA
   if (isPDA_PANEL)
   {
     return process_pda_packet(packet, length);
   }
 #endif
+
+  if ( packet[PKT_CMD] == CMD_STATUS && packet[length-3] == last_checksum)
+  {
+    LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
+    return false;
+  }
+  else
+  {
+    last_checksum = packet[length-3];
+    rtn = true;
+  }
+
   if (processing_long_msg > 0 && packet[PKT_CMD] != CMD_MSG_LONG)
   {
     processing_long_msg = 0;
@@ -708,13 +728,15 @@ bool process_packet(unsigned char *packet, int length)
     processMessage(message);
   }
 
+  LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received packet type 0x%02hhx length %d.\n", packet[PKT_CMD], length);
+
   switch (packet[PKT_CMD])
   {
   case CMD_ACK:
-    //LOG(AQUA_LOG,LOG_DEBUG, "RS Received ACK length %d.\n", length);
+    //LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received ACK length %d.\n", length);
     break;
   case CMD_STATUS:
-    //LOG(AQUA_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    //LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
     memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
     processLEDstate();
     if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
@@ -890,6 +912,20 @@ void action_delayed_request()
     //printf("**** program string '%s'\n",sval);
     aq_programmer(AQ_SET_PUMP_VS_PROGRAM, sval, &_aqualink_data);
   }
+  else if (_aqualink_data.unactioned.type == POOL_HTR_INCREMENT && isRSSA_ENABLED) // RSSA for this to work
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Changing pool heater setpoint by %d | %s\n", _aqualink_data.unactioned.value, sval);
+    aq_programmer(AQ_ADD_RSSADAPTER_POOL_HEATER_TEMP, sval, &_aqualink_data);
+  }
+  else if (_aqualink_data.unactioned.type == SPA_HTR_INCREMENT && isRSSA_ENABLED)  // RSSA for this to work
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Changing spa heater setpoint by %d\n", _aqualink_data.unactioned.value);
+    aq_programmer(AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP, sval, &_aqualink_data); 
+  } 
+  else 
+  {
+    LOG(AQUA_LOG,LOG_ERR, "Unknown request of type %d\n", _aqualink_data.unactioned.type);
+  }
 
   _aqualink_data.unactioned.type = NO_ACTION;
   _aqualink_data.unactioned.value = -1;
@@ -1020,6 +1056,15 @@ int main(int argc, char *argv[])
     return EXIT_FAILURE;
   }
 
+  if (_aqconfig_.rssa_device_id != 0x00) {
+    if (_aqconfig_.rssa_device_id >= 0x48 && _aqconfig_.rssa_device_id <= 0x4B ) {
+      // We are good
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "RSSA Device ID 0x%02hhx does not match RS panel, please check config!\n", _aqconfig_.rssa_device_id);
+      return EXIT_FAILURE;
+    }
+  }
+
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   if (_aqconfig_.extended_device_id != 0x00) {
     if ( (_aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33) || 
@@ -1068,6 +1113,7 @@ int main(int argc, char *argv[])
 
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_level         = %d\n", _aqconfig_.log_level);
   LOG(AQUA_LOG,LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _aqconfig_.device_id);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config rssa_device_id    = 0x%02hhx\n", _aqconfig_.rssa_device_id);
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_id   = 0x%02hhx\n", _aqconfig_.extended_device_id);
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_prog = %s\n", bool2text(_aqconfig_.extended_device_id_programming));
@@ -1076,7 +1122,7 @@ int main(int argc, char *argv[])
   //LOG(AQUA_LOG,LOG_NOTICE, "Config rs_panel_size     = %d\n", _aqconfig_.rs_panel_size);
   LOG(AQUA_LOG,LOG_NOTICE, "Config socket_port       = %s\n", _aqconfig_.socket_port);
   LOG(AQUA_LOG,LOG_NOTICE, "Config web_directory     = %s\n", _aqconfig_.web_directory);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config read_all_devices  = %s\n", bool2text(_aqconfig_.read_all_devices));
+  //LOG(AQUA_LOG,LOG_NOTICE, "Config read_all_devices  = %s\n", bool2text(_aqconfig_.read_all_devices));
   LOG(AQUA_LOG,LOG_NOTICE, "Config use_aux_labels    = %s\n", bool2text(_aqconfig_.use_panel_aux_labels));
   LOG(AQUA_LOG,LOG_NOTICE, "Config override frz prot = %s\n", bool2text(_aqconfig_.override_freeze_protect));
 #ifndef MG_DISABLE_MQTT
@@ -1109,38 +1155,34 @@ int main(int argc, char *argv[])
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_aqconfig_.debug_RSProtocol_packets));
   //LOG(AQUA_LOG,LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_aqconfig_.use_PDA_auxiliary));
-  LOG(AQUA_LOG,LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_aqconfig_.read_pentair_packets));
+  //LOG(AQUA_LOG,LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_aqconfig_.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
   LOG(AQUA_LOG,LOG_NOTICE, "Display warnings in web  = %s\n", bool2text(_aqconfig_.display_warnings_web));
-  LOG(AQUA_LOG,LOG_NOTICE, "Keep panle time in sync  = %s\n", bool2text(_aqconfig_.sync_panel_time));
+  LOG(AQUA_LOG,LOG_NOTICE, "Keep panel time in sync  = %s\n", bool2text(_aqconfig_.sync_panel_time));
   
-  if (_aqconfig_.swg_zero_ignore > 0)
+  LOG(AQUA_LOG,LOG_NOTICE, "Read SWG direct          = %s\n", bool2text(READ_RSDEV_SWG));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read ePump direct        = %s\n", bool2text(READ_RSDEV_ePUMP));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read vsfPump direct      = %s\n", bool2text(READ_RSDEV_vsfPUMP));
+
+  if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
 
   if (_aqconfig_.readahead_b4_write == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial Read Ahead Write  = %s\n", bool2text(_aqconfig_.readahead_b4_write));
 
-  if (_aqconfig_.rs_poll_speed != DEFAULT_POLL_SPEED)
-    LOG(AQUA_LOG,LOG_NOTICE, "RS Poll Speed            = %d\n", _aqconfig_.rs_poll_speed);
-
   if (_aqconfig_.thread_netservices)
     LOG(AQUA_LOG,LOG_NOTICE, "Thread Network Services  = %s\n", bool2text(_aqconfig_.thread_netservices));
 
   if (_aqconfig_.rs_poll_speed < 0 && !_aqconfig_.thread_netservices) {
-    LOG(AQUA_LOG,LOG_WARNING, "Negative RS Poll Speed is only valid when using Thread Network Services, resetting to %d\n",DEFAULT_POLL_SPEED);
-    _aqconfig_.rs_poll_speed = DEFAULT_POLL_SPEED;
+    LOG(AQUA_LOG,LOG_WARNING, "Negative RS Poll Speed is only valid when using Thread Network Services, resetting to %d\n",DEFAULT_POLL_SPEED_NON_THREADDED);
+    _aqconfig_.rs_poll_speed = DEFAULT_POLL_SPEED_NON_THREADDED;
   }
+  if (_aqconfig_.rs_poll_speed != DEFAULT_POLL_SPEED)
+    LOG(AQUA_LOG,LOG_NOTICE, "RS Poll Speed            = %d\n", _aqconfig_.rs_poll_speed);
+
   if (_aqconfig_.rs_poll_speed < 0 && _aqconfig_.readahead_b4_write) {
     LOG(AQUA_LOG,LOG_WARNING, "Serial Read Ahead Write is not valid when using Negative RS Poll Speed, turning Serial Read Ahead Write off\n");
     _aqconfig_.readahead_b4_write = false;
-  }
-
-  if (_aqconfig_.rs_poll_speed < 0) {
-    LOG(AQUA_LOG,LOG_WARNING, "**************************************************************************************************\n");
-    LOG(AQUA_LOG,LOG_WARNING, "*  RS Poll Speed of %d is expermental, this put's USB in complete blocking mode                  *\n",_aqconfig_.rs_poll_speed);
-    LOG(AQUA_LOG,LOG_WARNING, "*  if USB becomes unstable / connection to panel lost, AqualinkD may need to be killed manually  *\n");
-    LOG(AQUA_LOG,LOG_WARNING, "*    eg:-   sudo kill -9 <list of aqualinkd process ID's>                                        *\n");
-    LOG(AQUA_LOG,LOG_WARNING, "**************************************************************************************************\n");
   }
 
   //for (i = 0; i < TOTAL_BUTONS; i++)
@@ -1151,7 +1193,7 @@ int main(int argc, char *argv[])
     ext[0] = '\0';
     for (j = 0; j < _aqualink_data.num_pumps; j++) {
       if (_aqualink_data.pumps[j].button == &_aqualink_data.aqbuttons[i]) {
-        sprintf(ext, "VSP ID 0x%02hhx | PMP ID %-1d |",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].pumpIndex);
+        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d |",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].pumpIndex);
       }
     }
     for (j = 0; j < _aqualink_data.num_lights; j++) {
@@ -1203,6 +1245,15 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
     case ALLBUTTON:
       send_extended_ack(rs_fd, (packet_buffer[PKT_CMD]==CMD_MSG_LONG?ACK_SCREEN_BUSY_SCROLL:ACK_NORMAL), pop_aq_cmd(&_aqualink_data));
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AllButton Emulation type Processed packet in");
+    break;
+    case RSSADAPTER:
+      send_jandy_command(rs_fd, get_rssa_cmd(packet_buffer[PKT_CMD]), 4);
+      remove_rssa_cmd();
+    /*
+      if (packet_buffer[PKT_CMD] == CMD_PROBE)
+        send_extended_ack(rs_fd, 0x00, 0x05);
+      else
+        send_extended_ack(rs_fd, 0x00, 0x00);*/
     break;
 #ifdef AQ_ONETOUCH
     case ONETOUCH:
@@ -1352,12 +1403,13 @@ void main_loop()
   rsDeviceType interestedInNextAck = DRS_NONE;
   //bool changed = false;
   //int swg_zero_cnt = 0;
-  int swg_noreply_cnt = 0;
   int i;
   //int delayAckCnt = 0;
   bool got_probe = false;
   bool got_probe_extended = false;
+  bool got_probe_rssa = false;
   bool print_once = false;
+  unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
 
   // NSF need to find a better place to init this.
   //_aqualink_data.aq_command = 0x00;
@@ -1416,6 +1468,8 @@ void main_loop()
   int blank_read = 0;
   if (_aqconfig_.rs_poll_speed < 0)
     rs_fd = init_blocking_serial_port(_aqconfig_.serial_port);
+  else if (_aqconfig_.readahead_b4_write)
+    rs_fd = init_readahead_serial_port(_aqconfig_.serial_port);
   else
     rs_fd = init_serial_port(_aqconfig_.serial_port);
 
@@ -1475,7 +1529,12 @@ void main_loop()
   got_probe_extended = true;
 #endif 
 
-
+  // Enable or disable rs serial adapter interface.
+  if (_aqconfig_.rssa_device_id != 0x00)
+    addPanelRSserialAdapterInterface();
+  else
+    got_probe_rssa = true;
+  
   if (_aqconfig_.device_id == 0x00) {
     LOG(AQUA_LOG,LOG_NOTICE, "Searching for valid ID, please configure one for faster startup\n");
   }
@@ -1488,7 +1547,7 @@ void main_loop()
   _aqconfig_.readahead_b4_write = false;
 
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
-  while ( (got_probe == false || got_probe_extended == false ) && _keepRunning == true)
+  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
   {
     if (blank_read == MAX_ZERO_READ_BEFORE_RECONNECT) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
@@ -1522,6 +1581,19 @@ void main_loop()
       }
       // NSF Should put some form of timeout here and exit.
     }
+    else if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && got_probe_rssa == false) {
+      blank_read = 0;
+      if (packet_buffer[PKT_CMD] == CMD_PROBE) {
+         got_probe_rssa = true;
+         LOG(AQUA_LOG,LOG_DEBUG, "Got probe on '0x%02hhx'\n",_aqconfig_.rssa_device_id);
+      } else {
+        if(!print_once) {
+          LOG(AQUA_LOG,LOG_NOTICE, "Got message but no probe on '0x%02hhx', did we start too soon? (waiting for probe)\n",_aqconfig_.rssa_device_id);
+          print_once=true;
+        } 
+      }
+      // NSF Should put some form of timeout here and exit.
+    }
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
     else if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && got_probe_extended == false) {
       blank_read = 0;
@@ -1540,13 +1612,19 @@ void main_loop()
     else if (packet_length <= 0) {
       blank_read++;
       //printf("Blank Reads %d\n",blank_read);
-      delay(2);
+      if (_aqconfig_.rs_poll_speed < 0)
+        LOG(AQUA_LOG,LOG_DEBUG, "Blank RS485 read\n");
+      else
+        delay(2);
     }
     else if (packet_length > 0) {
       blank_read = 0;
       if (i++ > 1000) {
         if(!got_probe) {
           LOG(AQUA_LOG,LOG_ERR, "No probe on '0x%02hhx', giving up! (please check config)\n",_aqconfig_.device_id);    
+        }
+        if(!got_probe_rssa) {
+          LOG(AQUA_LOG,LOG_ERR, "No probe on '0x%02hhx', giving up! (please check config)\n",_aqconfig_.rssa_device_id);    
         }
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
         if(!got_probe_extended) {
@@ -1580,8 +1658,8 @@ void main_loop()
 
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT;
   // Not the best way to do this, but ok for moment
-  //if (_aqconfig_.net_poll_wait <= 1)
-  //  blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT;
+  if (_aqconfig_.rs_poll_speed == 0)
+    blank_read_reconnect = blank_read_reconnect * 50;
 
   blank_read = 0;
   // OK, Now go into infinate loop
@@ -1590,15 +1668,17 @@ void main_loop()
     //printf("%d ",blank_read);
     while ((rs_fd < 0 || blank_read >= blank_read_reconnect) && _keepRunning == true)
     {
-      printf("rs_fd  =% d\n",rs_fd);
+      //printf("rs_fd  =% d\n",rs_fd);
       if (rs_fd < 0)
       {
         // sleep(1);
         sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
-        LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon attempting to connect to master device...\n");
+        LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon waiting to connect to master device...\n");
         broadcast_aqualinkstate_error(mgr.active_connections, CONNECTION_ERROR);
-        mg_mgr_poll(&mgr, 1000); // Sevice messages
-        mg_mgr_poll(&mgr, 3000); // should donothing for 3 seconds.
+        //mg_mgr_poll(&mgr, 1000); // Sevice messages
+        //mg_mgr_poll(&mgr, 3000); // should do nothing for 3 seconds.
+        poll_net_services(&mgr, 1000);
+        poll_net_services(&mgr, 3000);
         // broadcast_aqualinkstate_error(mgr.active_connections, "No connection to RS control panel");
       }
       else
@@ -1608,6 +1688,8 @@ void main_loop()
 
         if (_aqconfig_.rs_poll_speed < 0)
           rs_fd = init_blocking_serial_port(_aqconfig_.serial_port);
+        else if (_aqconfig_.readahead_b4_write)
+          rs_fd = init_readahead_serial_port(_aqconfig_.serial_port);
         else
           rs_fd = init_serial_port(_aqconfig_.serial_port);
       }
@@ -1619,15 +1701,24 @@ void main_loop()
       packet_length = get_packet_lograw(rs_fd, packet_buffer);
     else
       packet_length = get_packet(rs_fd, packet_buffer);
-    
-    if (packet_length == -1)
+    /*
+    if (packet_length == AQSERR_READ || packet_length == AQSERR_TIMEOUT)
     {
       // Unrecoverable read error. Force an attempt to reconnect.
-      LOG(AQUA_LOG,LOG_ERR, "Bad packet length, reconnecting\n");
-      blank_read = blank_read_reconnect;
+      if (_aqconfig_.rs_poll_speed < 0) {
+        LOG(AQUA_LOG,LOG_ERR, "Bad serial read or connection\n");
+        blank_read = blank_read_reconnect;
+      } else {
+        blank_read++;
+      }
     }
-    else if (packet_length == 0)
+    else*/ if (packet_length <= 0)
     {
+      if (_aqconfig_.rs_poll_speed < 0) {
+        LOG(AQUA_LOG,LOG_ERR, "Nothing read on blocking serial port\n");
+        blank_read = blank_read_reconnect;
+      } else if (packet_length == AQSERR_READ)
+        blank_read = blank_read_reconnect;
       //if (blank_read > max_blank_read) {
       //  LOG(AQUA_LOG,LOG_NOTICE, "Nothing read on serial %d\n",blank_read);
       //  max_blank_read = blank_read;
@@ -1656,6 +1747,11 @@ void main_loop()
 
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AllButton Emulation Processed packet in");
       }
+      else if (packet_length > 0 && isRSSA_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && getProtocolType(packet_buffer) == JANDY) {
+        _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
+        caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
+        DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"SerialAdapter Emulation Processed packet in");
+      }
 #ifdef AQ_ONETOUCH
       else if (packet_length > 0 && isONET_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
         _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
@@ -1670,51 +1766,61 @@ void main_loop()
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation Processed packet in");
       }
 #endif
-      else if (packet_length > 0 && _aqconfig_.read_all_devices == true)
+      //else if (packet_length > 0 && _aqconfig_.read_all_devices == true)
+      else if (packet_length > 0 && _aqconfig_.read_RS485_devmask > 0)
       {
-        //logPacket(packet_buffer, packet_length);
-        if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
+        if (getProtocolType(packet_buffer) == JANDY)
         {
-          if (interestedInNextAck == DRS_SWG) {
-            swg_noreply_cnt = 0;
-            _aqualink_data.updated = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
-          } else if (interestedInNextAck == DRS_EPUMP) {
-            _aqualink_data.updated = processPacketFromJandyPump(packet_buffer, packet_length, &_aqualink_data);
-          }
-          interestedInNextAck = DRS_NONE;
-        }
-        // SWG_STATUS_UNKNOWN means we have never seen anything from SWG, so leave as is. IAQTOUCH & ONETOUCH give us AQUAPURE=0 but ALLBUTTON doesn't, so only turn off if we are not in extra device mode.
-        else if ( _aqualink_data.ar_swg_device_status != SWG_STATUS_UNKNOWN && isIAQT_ENABLED == false && isONET_ENABLED == false && packet_buffer[PKT_DEST] != DEV_MASTER && interestedInNextAck != DRS_NONE )
-        { // We were expecting an ack from device as next message but didn;t get it, device must be off
-          if (interestedInNextAck == DRS_SWG && _aqualink_data.ar_swg_device_status != SWG_STATUS_OFF) {
-            if ( ++swg_noreply_cnt < 3 ) {
-              //_aqualink_data.ar_swg_device_status = SWG_STATUS_OFF;
-              //_aqualink_data.updated = true;
-              setSWGoff(&_aqualink_data);
+          // We received the ack from a Jandy device we are interested in
+          if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
+          {
+            if (interestedInNextAck == DRS_SWG)
+            {
+              _aqualink_data.updated = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
             }
+            else if (interestedInNextAck == DRS_EPUMP)
+            {
+              _aqualink_data.updated = processPacketFromJandyPump(packet_buffer, packet_length, &_aqualink_data);
+            }
+            interestedInNextAck = DRS_NONE;
+            previous_packet_to = NUL;
           }
-          interestedInNextAck = DRS_NONE;
-        }
-        else if (packet_buffer[PKT_DEST] == SWG_DEV_ID)
-        {
-          interestedInNextAck = DRS_SWG;
-          _aqualink_data.updated = processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _aqconfig_.swg_zero_ignore);
-        }
-        else if (packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
-        {
-          interestedInNextAck = DRS_EPUMP;
-          _aqualink_data.updated = processPacketToJandyPump(packet_buffer, packet_length, &_aqualink_data);
-        }
-        else
-        {
-          interestedInNextAck = DRS_NONE;
-        }
-
-        if (_aqconfig_.read_pentair_packets && getProtocolType(packet_buffer) == PENTAIR) {
-          if (processPentairPacket(packet_buffer, packet_length, &_aqualink_data)) {
-             //broadcast_aqualinkstate(mgr.active_connections);
-             _aqualink_data.updated = true;
+          // We were expecting an ack from Jandy device but didn't receive it.
+          else if (packet_buffer[PKT_DEST] != DEV_MASTER && interestedInNextAck != DRS_NONE )
+          {
+            if (interestedInNextAck == DRS_SWG && _aqualink_data.ar_swg_device_status != SWG_STATUS_OFF)
+            { // SWG Offline
+              processMissingAckPacketFromSWG(previous_packet_to, &_aqualink_data);
+            }
+            else if (interestedInNextAck == DRS_EPUMP)
+            { // ePump offline
+              processMissingAckPacketFromJandyPump(previous_packet_to, &_aqualink_data);
+            }
+            interestedInNextAck = DRS_NONE;
+            previous_packet_to = NUL;
           }
+          else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] == SWG_DEV_ID)
+          {
+            interestedInNextAck = DRS_SWG;
+            _aqualink_data.updated = processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _aqconfig_.swg_zero_ignore);
+            previous_packet_to = packet_buffer[PKT_DEST];
+          }
+          else if (READ_RSDEV_ePUMP && packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
+          {
+            interestedInNextAck = DRS_EPUMP;
+            _aqualink_data.updated = processPacketToJandyPump(packet_buffer, packet_length, &_aqualink_data);
+            previous_packet_to = packet_buffer[PKT_DEST];
+          }
+          else
+          {
+            interestedInNextAck = DRS_NONE;
+            previous_packet_to = NUL;
+          }
+        }
+        // Process Pentair Device Packed (pentair have to & from in message, so no need to)
+        else if (getProtocolType(packet_buffer) == PENTAIR && READ_RSDEV_vsfPUMP) {
+          _aqualink_data.updated = processPentairPacket(packet_buffer, packet_length, &_aqualink_data);
+          // In the future probably add code to catch device offline (ie missing reply message)
         }
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Processed (readonly) packet in");
       } else {
@@ -1731,8 +1837,8 @@ void main_loop()
     //mg_mgr_poll(&mgr, 5);
     //mg_mgr_poll(&mgr, packet_length>0?0:_aqconfig_.net_poll_wait); // Don;t wait if we read something.
     poll_net_services(&mgr, packet_length>0?0:_aqconfig_.rs_poll_speed); // Don;t wait if we read something.
-  
-    tcdrain(rs_fd); // Make sure buffer has been sent.
+
+    //tcdrain(rs_fd); // Make sure buffer has been sent.
     //mg_mgr_poll(&mgr, 0);
 
     // Any unactioned commands

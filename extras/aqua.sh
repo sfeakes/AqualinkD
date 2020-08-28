@@ -28,7 +28,7 @@ function print_usage {
   echoerr "$0 release      <- Download & install latest $NAME stable release."
   echoerr "$0 latest       <- Download & install latest $NAME version. (development release)"
   echoerr "$0 force_latest <- Force latest option (don't run any version checks)"
-  echoerr "$0 install      <- Install to local filesystem, (config files will no be overwritten)"
+  echoerr "$0 install      <- Install to local filesystem, (config files will not be overwritten)"
   echoerr "$0 clean        <- Remove everything, including configuration files"
   echoerr "$0 <option> downloadonly  <- Download using one of above options, but don't unstall"
   echoerr ""

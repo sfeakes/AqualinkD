@@ -14,6 +14,8 @@
  *  https://github.com/sfeakes/aqualinkd
  */
 
+#define _GNU_SOURCE 1 // for strcasestr
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -42,11 +44,26 @@ int check_panel_conf(char *panel)
 "RS-8 Combo"
 }
 */
-// Check s2 exists in s1
-int rsm_strcmp(const char *s1, const char *s2)
+char *rsm_strstr(const char *haystack, const char *needle)
 {
-  char *sp1 = (char *)s1;
-  char *sp2 = (char *)s2;
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
+  //int i=0;
+  // Get rid of all padding
+  while(isspace(*sp1)) sp1++;
+  while(isspace(*sp2)) sp2++;
+
+  if (strlen(sp1) == 0 || strlen(sp2) == 0)
+    return NULL;
+  // Need to write this myself for speed
+  //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
+  return strcasestr(sp1, sp2);
+}
+// Check s2 exists in s1
+int rsm_strcmp(const char *haystack, const char *needle)
+{
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
   //int i=0;
   // Get rid of all padding
   while(isspace(*sp1)) sp1++;

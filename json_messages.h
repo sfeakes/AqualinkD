@@ -42,6 +42,8 @@ struct JSONkvptr {
   struct JSONkeyvalue kv[4];
 };
 
+const char* getAqualinkDStatusMessage(struct aqualinkdata *aqdata);
+
 int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request);

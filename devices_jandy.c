@@ -31,6 +31,7 @@
   'Check AQUAPURE General Fault'
 */
 
+static int _swg_noreply_cnt = 0;
 
 bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore) {
   static int swg_zero_cnt = 0;
@@ -76,6 +77,7 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
 
 bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) {
   bool changedAnything = false;
+  _swg_noreply_cnt = 0;
 
   if (packet[PKT_CMD] == CMD_PPM) {
     //aqdata->ar_swg_device_status = packet[5];
@@ -100,6 +102,22 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
   return changedAnything;
 }
 
+void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata)
+{
+  // SWG_STATUS_UNKNOWN means we have never seen anything from SWG, so leave as is. 
+  // IAQTOUCH & ONETOUCH give us AQUAPURE=0 but ALLBUTTON doesn't, so only turn off if we are not in extra device mode.
+  // NSF Need to check that we actually use 0 from IAQTOUCH & ONETOUCH
+  if ( aqdata->ar_swg_device_status != SWG_STATUS_UNKNOWN && isIAQT_ENABLED == false && isONET_ENABLED == false )
+  { 
+    if ( _swg_noreply_cnt < 3 ) {
+              //_aqualink_data.ar_swg_device_status = SWG_STATUS_OFF;
+              //_aqualink_data.updated = true;
+      setSWGoff(aqdata);
+      _swg_noreply_cnt++; // Don't put in if, as it'll go past size limit
+    }
+  }     
+}
+
 bool isSWGDeviceErrorState(unsigned char status)
 {
   if (status == SWG_STATUS_NO_FLOW ||
@@ -115,6 +133,17 @@ bool isSWGDeviceErrorState(unsigned char status)
 void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, unsigned char status) {
   if (aqdata->ar_swg_device_status == status)
     return;
+
+  // If we get (ALLBUTTON, SWG_STATUS_CHECK_PCB), it sends this for many status, like clean cell.
+  // So if we are in one of those states, don't use it.
+
+  if (requester == ALLBUTTON && status == SWG_STATUS_CHECK_PCB ) {
+    if (aqdata->ar_swg_device_status > SWG_STATUS_ON && 
+        aqdata->ar_swg_device_status < SWG_STATUS_TURNING_OFF) {
+          LOG(DJAN_LOG, LOG_DEBUG, "Ignoreing set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
+          return;
+        }
+  }
 
   // Check validity of status and set as appropiate
   switch (status) {
@@ -357,6 +386,11 @@ bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length,
   beautifyPacket(msg, packet_buffer, packet_length);
   LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
   return false;
+}
+void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata)
+{
+  // Do nothing for the moment.
+  return;
 }
 
 /*

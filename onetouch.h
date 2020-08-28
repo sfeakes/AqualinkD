@@ -60,7 +60,7 @@ Ack | HEX: 0x10|0x02|0x00|0x01|0x80|0x05|0x98|0x10|0x03|
 */
 
 bool process_onetouch_packet(unsigned char *packet, int length,struct aqualinkdata *aq_data);
-ot_menu_type get_onetouch_memu_type();
+ot_menu_type get_onetouch_menu_type();
 unsigned char *last_onetouch_packet();
 int thread_kick_type();
 

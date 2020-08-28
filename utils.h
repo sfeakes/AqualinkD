@@ -19,7 +19,8 @@
 
 #define MAXLEN 256
 
-#define round(a) (int) (a+0.5) // 0 decimal places
+//#define round(a) (int) (a+0.5) // 0 decimal places (doesn't work for negative numbers)
+#define round(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))  
 #define roundf(a) (float) ((a*100)/100) // 2 decimal places
 
 // Defined as int16_t so 16 bits to mask
@@ -30,13 +31,14 @@
 #define ONET_LOG (1 << 3) // OneTouch
 #define IAQT_LOG (1 << 4) // iAqualinkTouch
 #define PDA_LOG  (1 << 5) // PDA
+#define RSSA_LOG (1 << 6) // Serial Adapter
 // Message PRotocols
-#define DJAN_LOG (1 << 6) // Jange Device
-#define DPEN_LOG (1 << 7) // Pentair Device
+#define DJAN_LOG (1 << 7) // Jange Device
+#define DPEN_LOG (1 << 8) // Pentair Device
 // misc
-#define RSSD_LOG (1 << 8) // Serial
-#define PROG_LOG (1 << 9) // Programmer
-#define DBGT_LOG (1 << 10) // Debug Timer
+#define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB?
+#define PROG_LOG (1 << 10) // Programmer
+#define DBGT_LOG (1 << 11) // Debug Timer
 /*
 typedef enum
 {
@@ -52,6 +54,7 @@ void displayLastSystemError (const char *on_what);
 
 
 void addDebugLogMask(int16_t flag);
+void removeDebugLogMask(int16_t flag);
 //#define logMessage(msg_level, format, ...) LOG (1, msg_level, format, ##__VA_ARGS__)
 
 
@@ -75,6 +78,7 @@ bool text2bool(char *str);
 bool request2bool(char *str);
 char *bool2text(bool val);
 void delay (unsigned int howLong);
+//void ndelay (float howLong) 
 float degFtoC(float degF);
 float degCtoF(float degC);
 char* stristr(const char* haystack, const char* needle);

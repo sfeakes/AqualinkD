@@ -26,7 +26,8 @@
 #define RSP_PDA    (1 << 11) // 128
 #define RSP_ONET   (1 << 12) // 128
 #define RSP_IAQT   (1 << 13) // 128
-#define RSP_EXT_PROG (1 << 14) // 128
+#define RSP_RSSA   (1 << 14) // 128
+#define RSP_EXT_PROG (1 << 15) // 128
 
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
@@ -35,6 +36,7 @@ void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool d
 void changePanelToMode_Only();
 void addPanelOneTouchInterface();
 void addPanelIAQTouchInterface();
+void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
 //void panneltest();
 
@@ -45,6 +47,7 @@ void changePanelToExtendedIDProgramming();
 #define isDUAL_EQPT_PANEL ((_aqconfig_.paneltype_mask & RSP_DUAL_EQPT) == RSP_DUAL_EQPT)
 #define isONET_ENABLED ((_aqconfig_.paneltype_mask & RSP_ONET) == RSP_ONET)
 #define isIAQT_ENABLED ((_aqconfig_.paneltype_mask & RSP_IAQT) == RSP_IAQT)
+#define isRSSA_ENABLED ((_aqconfig_.paneltype_mask & RSP_RSSA) == RSP_RSSA)
 #define isEXTP_ENABLED ((_aqconfig_.paneltype_mask & RSP_EXT_PROG) == RSP_EXT_PROG)
 int PANEL_SIZE(); 
 //

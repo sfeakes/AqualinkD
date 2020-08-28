@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 #include <fcntl.h>
-
+#include <time.h>
 
 #include "aq_serial.h"
 #include "utils.h"
@@ -34,7 +34,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.3"
+#define VERSION "serial_logger V1.4"
 
 /*
 typedef enum used {
@@ -63,17 +63,23 @@ typedef struct serial_id_log {
 bool _keepRunning = true;
 
 unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
-unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63};
+unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63}; // PDA Panel only supports one PDA.
 unsigned char _goodONETID[] = {0x40, 0x41, 0x42, 0x43};
 unsigned char _goodIAQTID[] = {0x30, 0x31, 0x32, 0x33};
+//unsigned char _goodRSSAID[] = {0x48, 0x49, 0x4a, 0x4b};
+unsigned char _goodRSSAID[] = {0x48, 0x49};  // Know there are only 2 good RS SA id's, guess 0x49 is the second.
 unsigned char _filter[10];
 int _filters=0;
 bool _rawlog=false;
 bool _playback_file = false;
 
+
+int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
+
+
 void intHandler(int dummy) {
   _keepRunning = false;
-  LOG(RSSD_LOG, LOG_NOTICE, "Stopping!");
+  LOG(RSSD_LOG, LOG_NOTICE, "Stopping!\n");
   if (_playback_file)  // If we are reading file, loop is irevelent
     exit(0);
 }
@@ -85,6 +91,7 @@ void intHandler(int dummy) {
 #define AQUA " <-- Aqualink (iAqualink / Touch)"
 #define HEATER " <-- LX Heater"
 #define ONE_T " <-- Onetouch device"
+#define RS_SERL " <-- RS Serial Adapter"
 #define PC_DOCK " <-- PC Interface (RS485 to RS232)"
 #define PDA " <-- PDA Remote"
 #define EPUMP " <-- Jandy VSP ePump"
@@ -115,6 +122,8 @@ const char *getDevice(unsigned char ID) {
     return HEATER;
   if (ID >= 0x40 && ID <= 0x43)
     return ONE_T;
+  if (ID >= 0x48 && ID <= 0x4B)
+    return RS_SERL;
   if (ID >= 0x58 && ID <= 0x5B)
     return PC_DOCK;
   if (ID >= 0x60 && ID <= 0x63)
@@ -175,6 +184,10 @@ bool canUse(unsigned char ID) {
     if (ID == _goodIAQTID[i])
       return true;
   }
+  for (i = 0; i < 2; i++) {
+    if (ID == _goodRSSAID[i])
+      return true;
+  }
   return false;
 }
 char* canUseExtended(unsigned char ID) {
@@ -194,6 +207,10 @@ char* canUseExtended(unsigned char ID) {
   for (i = 0; i < 4; i++) {
     if (ID == _goodIAQTID[i])
       return " <-- can use for Aqualinkd (Prefered Extended Device ID)";
+  }
+  for (i = 0; i < 2; i++) {
+    if (ID == _goodRSSAID[i])
+      return " <-- can use for Aqualinkd (RSSA ID)";
   }
   return "";
 }
@@ -248,7 +265,7 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
   if (getProtocolType(packet_buffer)==JANDY) {
     if (packet_buffer[PKT_DEST] != 0x00)
       printf("\n");
-    printf("Jandy   %4.4s 0x%02hhx of type %8.8s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
+    printf("Jandy   %4.4s 0x%02hhx of type %16.16s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
   } else {
     printf("Pentair From 0x%02hhx To 0x%02hhx       ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
   }
@@ -307,7 +324,9 @@ void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
 int main(int argc, char *argv[]) {
   int rs_fd;
   int packet_length;
+  int last_packet_length = 0;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
+  unsigned char last_packet_buffer[AQ_MAXPKTLEN];
   unsigned char lastID = 0x00;
   int i = 0;
   bool found;
@@ -321,6 +340,13 @@ int main(int argc, char *argv[]) {
   bool rsRawDebug = false;
   bool panleProbe = true;
   bool rsSerialSpeedTest = false;
+  bool serialBlocking = true;
+  bool errorMonitor = false;
+  struct timespec start_time;
+  struct timespec end_time;
+  struct timespec elapsed;
+  int blankReads = 0;
+  
   //bool playback_file = false;
   
   //int logLevel; 
@@ -343,11 +369,12 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Optional parameters are :-\n");
     fprintf(stderr, "\t-n (Do not probe panel for type/rev info)\n");
     fprintf(stderr, "\t-d (debug)\n");
-    fprintf(stderr, "\t-p <number> (log # packets)\n");
+    fprintf(stderr, "\t-p <number> (# packets to log, default=%d)\n",PACKET_MAX);
     fprintf(stderr, "\t-i <ID> (just log these ID's, can use multiple -i)\n");
     fprintf(stderr, "\t-r (raw)\n");
-    fprintf(stderr, "\t-s (Serial Speed Test)\n");
+    fprintf(stderr, "\t-s (Serial Speed Test / OS caching issues)\n");
     fprintf(stderr, "\t-rsrd (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
+    fprintf(stderr, "\t-e (monitor errors)\n");
     fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
   }
@@ -376,6 +403,9 @@ int main(int argc, char *argv[]) {
       panleProbe = false;
     } else if (strcmp(argv[i], "-s") == 0) {
       rsSerialSpeedTest = true;
+      serialBlocking = false;
+    } else if (strcmp(argv[i], "-e") == 0) {
+      errorMonitor = true;
     }
   }
 
@@ -389,15 +419,24 @@ int main(int argc, char *argv[]) {
       return -1;
     }
   } else {
-    rs_fd = init_serial_port(argv[1]);
+    if (!serialBlocking)
+      rs_fd = init_serial_port(argv[1]);
+    else
+      rs_fd = init_blocking_serial_port(argv[1]);
   }
 
   signal(SIGINT, intHandler);
   signal(SIGTERM, intHandler);
 
-  LOG(RSSD_LOG, LOG_NOTICE, "Logging serial information!\n");
-  if (logLevel < LOG_DEBUG)
+  if (!errorMonitor) {
+    LOG(RSSD_LOG, LOG_NOTICE, "Logging serial information!\n");
+  } else {
+    LOG(RSSD_LOG, LOG_NOTICE, "Logging serial errors!\n");
+  }
+  if (logLevel < LOG_DEBUG && errorMonitor==false )
     printf("Please wait.");
+
+  clock_gettime(CLOCK_REALTIME, &start_time);
 
   while (_keepRunning == true) {
     if (rs_fd < 0) {
@@ -410,14 +449,33 @@ int main(int argc, char *argv[]) {
     else
       packet_length = get_packet(rs_fd, packet_buffer);
 
-    if (packet_length == -1) {
+    if (packet_length == AQSERR_READ) {
       // Unrecoverable read error. Force an attempt to reconnect.
-      LOG(RSSD_LOG, LOG_ERR, "ERROR, on serial port\n");
+      LOG(RSSD_LOG, LOG_ERR, "ERROR, on serial port! Please check %s\n",argv[1]);
       _keepRunning = false;
+    } else if (packet_length == AQSERR_TIMEOUT) {
+      // Unrecoverable read error. Force an attempt to reconnect.
+      LOG(RSSD_LOG, LOG_ERR, "ERROR, Timeout on serial port, nothing read! Please check %s\n",argv[1]);
+      _keepRunning = false;
+    } else if (packet_length < 0) {
+      // Error condition
+      if (errorMonitor && last_packet_length > 0) { // Error packet wwould have already been printed.
+        char buff[900];
+        beautifyPacket(buff, last_packet_buffer, last_packet_length);
+        LOG(RSSD_LOG, LOG_NOTICE, "Previous packet (before error)\n");
+        LOG(RSSD_LOG, LOG_NOTICE, "%s------------------------------\n",buff);
+        //LOG(RSSD_LOG, LOG_NOTICE, "\n");
+      }
     } else if (packet_length == 0) {
       // Nothing read
+      if (++blankReads > (rsSerialSpeedTest?100000000:1000) ) {
+        LOG(RSSD_LOG, LOG_ERR, "ERROR, too many blank reads! Please check %s\n",argv[1]);
+        _keepRunning = false;
+      }
+      //if (!rsSerialSpeedTest)
+        delay(1);
     } else if (packet_length > 0) {
-
+        blankReads = 0;
         //LOG(RSSD_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
         if (logLevel > LOG_NOTICE)
           printPacket(lastID, packet_buffer, packet_length);
@@ -488,7 +546,8 @@ int main(int argc, char *argv[]) {
         else
           packet_length = get_packet(rs_fd, packet_buffer);
 
-        if (packet_length > 0)  {
+        if (packet_length > 0 && packet_buffer[PKT_DEST] != 0x00)  {
+          // Only test for packets from panel, when you test to panel you are timing reply.
           LOG(RSSD_LOG, LOG_ERR, "SERIOUS RS485 ERROR, Slow serial port read detected, (check RS485 adapteer / os performance / USB serial speed\n");
         }
       }
@@ -498,11 +557,27 @@ int main(int argc, char *argv[]) {
     if (logPackets != 0 && received_packets >= logPackets) {
       _keepRunning = false;
     }
-    if (logLevel < LOG_DEBUG)
+  
+    if (errorMonitor) {
+      if (packet_length > 0) {
+        memcpy(last_packet_buffer, packet_buffer, packet_length);
+        last_packet_length = packet_length;
+        received_packets = 0;
+      }
+    } else if (logLevel < LOG_DEBUG) {
       advance_cursor();
+    }
 
     //sleep(1);
   }
+
+  clock_gettime(CLOCK_REALTIME, &end_time);
+
+  if (errorMonitor) {
+    return 0;
+  }
+
+  timespec_subtract(&elapsed, &end_time, &start_time);
 
   LOG(RSSD_LOG, LOG_DEBUG, "\n\n");
   if (logLevel < LOG_DEBUG)
@@ -511,8 +586,13 @@ int main(int argc, char *argv[]) {
   if (sindex >= SLOG_MAX)
     LOG(RSSD_LOG, LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
 
+  if (elapsed.tv_sec > 0) {
+    LOG(RSSD_LOG, LOG_NOTICE, "RS485 interface received %d packets in %d seconds (~%.2f Msg/Sec)\n", received_packets, elapsed.tv_sec, (received_packets / (float)elapsed.tv_sec) );
+  }
+
   LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Model   : %s\n", _panelType);
   LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Version : %s\n", _panelRev);
+  
 
   LOG(RSSD_LOG, LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
@@ -536,4 +616,36 @@ int main(int argc, char *argv[]) {
   LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
 
   return 0;
+}
+
+
+
+
+
+int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y)
+{
+  struct timespec tmp;
+
+  memcpy (&tmp, y, sizeof(struct timespec));
+  /* Perform the carry for the later subtraction by updating y. */
+  if (x->tv_nsec < tmp.tv_nsec)
+    {
+      int nsec = (tmp.tv_nsec - x->tv_nsec) / 1000000000 + 1;
+      tmp.tv_nsec -= 1000000000 * nsec;
+      tmp.tv_sec += nsec;
+    }
+  if (x->tv_nsec - tmp.tv_nsec > 1000000000)
+    {
+      int nsec = (x->tv_nsec - tmp.tv_nsec) / 1000000000;
+      tmp.tv_nsec += 1000000000 * nsec;
+      tmp.tv_sec -= nsec;
+    }
+
+  /* Compute the time remaining to wait.
+   tv_nsec is certainly positive. */
+  result->tv_sec = x->tv_sec - tmp.tv_sec;
+  result->tv_nsec = x->tv_nsec - tmp.tv_nsec;
+
+  /* Return 1 if result is negative. */
+  return x->tv_sec < tmp.tv_sec;
 }
