@@ -81,6 +81,9 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Update homekit-aqualinkd to use new API & features.
 * Add light programming to Aqualink Touch protocol.
 
+# Update in Release 2.2.2
+* Fixed some Web UI bugs
+* Color lights now quicker when selecting existing comor mode.
 # Update in Release 2.2.1
 * Supports serial adapter protocol `rssa_device_id`, (provides instant heater setpoint changes & setpoint increment)
 * Can use seperate threads for network & RS485 interface. (optimisation for busy RS485 bus implimentations)
