@@ -1331,6 +1331,7 @@ void *set_aqualink_light_colormode( void *ptr )
   int val = atoi(&buf[0]);
   int btn = atoi(&buf[5]);
   int typ = atoi(&buf[10]);
+  bool use_current_mode = false;
 
   if (btn < 0 || btn >= aq_data->total_buttons ) {
     LOG(PROG_LOG, LOG_ERR, "Can't program light mode on button %d\n", btn);
@@ -1343,16 +1344,21 @@ void *set_aqualink_light_colormode( void *ptr )
 
   //LOG(PROG_LOG, LOG_NOTICE, "Light Programming #: %d, on button: %s, color light type: %d\n", val, button->label, typ);
   
-  mode_name = light_mode_name(typ, val-1);
-
-  if (mode_name == NULL) {
-    LOG(PROG_LOG, LOG_ERR, "Light Programming #: %d, on button: %s, color light type: %d, couldn't find mode name '%s'\n", val, button->label, typ, mode_name);
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
+  if (val <= 0) {
+    use_current_mode = true;
+    LOG(PROG_LOG, LOG_INFO, "Light Programming #: %d, on button: %s, color light type: %d, using current mode\n", val, button->label, typ);
   } else {
-    LOG(PROG_LOG, LOG_INFO, "Light Programming #: %d, on button: %s, color light type: %d, name '%s'\n", val, button->label, typ, mode_name);
+    mode_name = light_mode_name(typ, val-1);
+    use_current_mode = false;
+    if (mode_name == NULL) {
+      LOG(PROG_LOG, LOG_ERR, "Light Programming #: %d, on button: %s, color light type: %d, couldn't find mode name '%s'\n", val, button->label, typ, mode_name);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    } else {
+      LOG(PROG_LOG, LOG_INFO, "Light Programming #: %d, on button: %s, color light type: %d, name '%s'\n", val, button->label, typ, mode_name);
+    }
   }
-
+/*
   // Simply turn the light off if value is 0
   if (val <= 0) {
     if ( button->led->state == ON ) {
@@ -1361,7 +1367,7 @@ void *set_aqualink_light_colormode( void *ptr )
     cleanAndTerminateThread(threadCtrl);
     return ptr;
   }
-
+*/
   // Needs to start programming sequence with light off
   if ( button->led->state == ON ) {
     LOG(PROG_LOG, LOG_INFO, "Light Programming Initial state on, turning off\n");
@@ -1380,7 +1386,12 @@ void *set_aqualink_light_colormode( void *ptr )
     if ( !waitForMessage(threadCtrl->aq_data, "~*", 3))
       LOG(PROG_LOG, LOG_ERR, "Light Programming didn't receive color light mode message\n");
 
-    if (strncasecmp(aq_data->last_message, mode_name, strlen(mode_name)) == 0) {
+    if (use_current_mode) {
+      LOG(PROG_LOG, LOG_INFO, "Light Programming using color mode %s\n",aq_data->last_message);
+      send_cmd(KEY_ENTER);
+      waitfor_queue2empty();
+      break;
+    } else if (strncasecmp(aq_data->last_message, mode_name, strlen(mode_name)) == 0) {
       LOG(PROG_LOG, LOG_INFO, "Light Programming found color mode %s\n",mode_name);
       send_cmd(KEY_ENTER);
       waitfor_queue2empty();
@@ -1397,7 +1408,7 @@ void *set_aqualink_light_colormode( void *ptr )
   } while (i <= LIGHT_COLOR_OPTIONS);
 
   if (i == LIGHT_COLOR_OPTIONS) {
-    LOG(PROG_LOG, LOG_ERR, "Light Programming didn't receive color light mode message for '%s'\n",mode_name);
+    LOG(PROG_LOG, LOG_ERR, "Light Programming didn't receive color light mode message for '%s'\n",use_current_mode?"light program":mode_name);
   }
 
   cleanAndTerminateThread(threadCtrl);

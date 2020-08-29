@@ -944,10 +944,14 @@ uriAtype action_URI(netRequest from, const char *URI, int uri_length, float valu
           {
             // Check for panel programmable light. if so simple ON isn't going to work well
             // Could also add "light mode" check, as this is only valid for panel configured light not aqualinkd configured light.
-            if (isRSSA_ENABLED &&
-                (_aqualink_data->aqbuttons[i].special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT &&
+            if ((_aqualink_data->aqbuttons[i].special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT &&
                  _aqualink_data->aqbuttons[i].led->state == OFF ) {
-              set_aqualink_rssadapter_aux_state(i, true);
+              // OK Programable light, and no light mode selected. Now let's work out best way to turn it on. serial_adapter protocol will to it without questions, all other will require programmig.
+              if (isRSSA_ENABLED) {
+                set_aqualink_rssadapter_aux_state(i, true);
+              } else {
+                set_light_mode("0", i); // 0 means use current light mode
+              }           
             } else {
               aq_send_cmd(_aqualink_data->aqbuttons[i].code);
             }

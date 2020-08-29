@@ -183,6 +183,7 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 
   if ((button->special_mask & VS_PUMP) == VS_PUMP)
   {
+//printf("Button %s is VSP\n", button->name);
     for (i=0; i < aqdata->num_pumps; i++) {
       if (button == aqdata->pumps[i].button) {       
           length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\"", 
@@ -192,19 +193,19 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
           return buffer;
       }
     }
-  }
-
-  
-  if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+  } 
+  else if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
   {
+//printf("Button %s is ProgramableLight\n", button->name);
     for (i=0; i < aqdata->num_lights; i++) {
       if (button == aqdata->lights[i].button) {
         length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\"", aqdata->lights[i].lightType);
         return buffer;
       }
     }
-  }
+  } 
 
+//printf("Button %s is Switch\n", button->name);
   length += sprintf(buffer, ",\"type_ext\": \"switch\"");
   return buffer;
 }
@@ -258,7 +259,8 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                      LED2int(aqdata->aqbuttons[i].led->state));
     } else {
       get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info);
-      length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch_vsp\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
+      //length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch_vsp\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
+      length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
