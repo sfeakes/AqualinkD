@@ -1468,7 +1468,7 @@ bool _start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
   LOG(NET_LOG,LOG_NOTICE, "Starting web server on port %s\n", _aqconfig_.socket_port);
   nc = mg_bind(mgr, _aqconfig_.socket_port, ev_handler);
   if (nc == NULL) {
-    LOG(NET_LOG,LOG_ERR, "Failed to create listener\n");
+    LOG(NET_LOG,LOG_ERR, "Failed to create listener on port %s\n",_aqconfig_.socket_port);
     return false;
   }
 
@@ -1512,7 +1512,14 @@ void *net_services_thread( void *ptr )
   struct aqualinkdata *aqdata = (struct aqualinkdata *) ptr;
   struct mg_mgr mgr;
 
-  _start_net_services(&mgr, aqdata);
+  if (!_start_net_services(&mgr, aqdata)) {
+    //LOG(NET_LOG,LOG_ERR, "Failed to start network services\n");
+    // Not the best way to do this (have thread exit process), but forks for the moment.
+    _keepNetServicesRunning = false;
+    LOG(AQUA_LOG,LOG_ERR, "Can not start webserver on port %s.\n", _aqconfig_.socket_port);
+    exit(EXIT_FAILURE);
+    goto f_end;
+  }
 
   while (_keepNetServicesRunning == true)
   {
@@ -1527,6 +1534,7 @@ void *net_services_thread( void *ptr )
     }
   }
 
+f_end:
   LOG(NET_LOG,LOG_NOTICE, "Stopping network services thread\n");
   mg_mgr_free(&mgr);
 

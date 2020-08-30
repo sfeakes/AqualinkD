@@ -108,10 +108,7 @@ LOGR = ./release/log_reader
 PLAY = ./release/aqualinkd-player
 DEBG = ./release/aqualinkd-debug
 
-#aqualinkd:    $(MAIN)
-#	$(info $(MAIN) has been compiled)
-
-all:	$(MAIN)
+all:    $(MAIN)
 	$(info $(MAIN) has been compiled)
 
 # debug, Just change compile flags and call MAIN
@@ -130,6 +127,15 @@ $(SLOG): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
 $(SLOG): $(SL_OBJS)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $(SLOG) $(SL_OBJS) 
 
+
+#.PHONY: clean_slog_o
+#clean_slog_o:
+#	$(RM) $(SL_OBJS)
+#
+#.PHONY: test
+#test:	$(SLOG)
+#test:	clean_slog_o
+#test:	$(MAIN)
 
 # Shouldn't need to use any of these options unless you're developing.
 

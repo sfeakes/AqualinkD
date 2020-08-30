@@ -620,6 +620,9 @@
       image.onload = function() {
         document.getElementById("body_wrap").style.backgroundImage = "url('" + this.src + "')";
       };
+      image.onerror = function() {
+        image.src = "hk/background.jpg"; // Use default if image fails.
+      };
       if (typeof background_reload !== 'undefined' && background_reload > 0) {
         image.src = background_url + '?' + new Date().getTime();
         setTimeout(load_background, (background_reload * 1000));
