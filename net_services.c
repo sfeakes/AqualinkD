@@ -988,7 +988,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //unsigned int i;
   //LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   // If message doesn't end in set or increment we don't care about it.
-  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0 && strncmp(&msg->topic.p[msg->topic.len -4], "/increment", 10) != 0) {
+  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0 && strncmp(&msg->topic.p[msg->topic.len -10], "/increment", 10) != 0) {
     LOG(NET_LOG,LOG_DEBUG, "MQTT: Ignore %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
     return;
   }
