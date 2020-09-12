@@ -240,7 +240,6 @@ void process_pda_packet_msg_long_temp(const char *msg)
   //           'AIR             '
   //           ' 86`            '
   //           'AIR        WATER'  // In case of single device.
-  _aqualink_data->temp_units = FAHRENHEIT; // Force FAHRENHEIT
   if (stristr(pda_m_line(1), "AIR") != NULL)
     _aqualink_data->air_temp = atoi(msg);
 
@@ -372,29 +371,39 @@ void setSingleDeviceMode()
 
 void process_pda_packet_msg_long_set_temp(const char *msg)
 {
+  //   message 'TEMP1       26`C   '
+  //           'TEMP2       15`C   '
   LOG(PDA_LOG,LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
 
   if (stristr(msg, "POOL HEAT") != NULL)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    if (_aqualink_data->temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if (stristr(msg, "SPA HEAT") != NULL)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    if (_aqualink_data->temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if (stristr(msg, "TEMP1") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    if (_aqualink_data->temp_units == UNKNOWN)
+      setUnits(msg);
   }
   else if (stristr(msg, "TEMP2") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    if (_aqualink_data->temp_units == UNKNOWN)
+      setUnits(msg);
   }
 
  
@@ -428,10 +437,13 @@ void process_pda_packet_msg_long_pool_heat(const char *msg)
 
 void process_pda_packet_msg_long_freeze_protect(const char *msg)
 {
+  //   message 'TEMP         3`C   '
   if (strncasecmp(msg, "TEMP      ", 10) == 0)
   {
     _aqualink_data->frz_protect_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "frz_protect_set_point = %d\n", _aqualink_data->frz_protect_set_point);
+    if (_aqualink_data->temp_units == UNKNOWN)
+      setUnits(msg);
   }
 }
 

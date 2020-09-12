@@ -21,6 +21,7 @@
 #define MAX_ZERO_READ_BEFORE_RECONNECT 10000 // 2k normally
 
 void intHandler(int dummy);
+void setUnits(const char *msg);
 
 // There are cases where SWG will read 80% in allbutton and 0% in onetouch/aqualinktouch, this will compile that in or our
 //#define READ_SWG_FROM_EXTENDED_ID
