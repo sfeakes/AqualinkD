@@ -174,18 +174,26 @@ bool checkAqualinkTime()
 }
 
 
-void setUnits(char *msg)
+void setUnits(const char *msg)
 {
   char buf[AQ_MSGLEN*3];
 
   rsm_strncpy(buf, (unsigned char *)msg, AQ_MSGLEN*3, AQ_MSGLONGLEN);
 
-  //ascii(buf, msg);
-  LOG(AQUA_LOG,LOG_DEBUG, "Getting temp units from message '%s', looking at '%c'\n", buf, buf[strlen(buf) - 1]);
+  // Back up until we find a non space character.
+  int l = strlen(buf);
+  while (l > 0) {
+    if (!isspace(buf[l-1]))
+      break;
+    l--;
+  }
 
-  if (msg[strlen(msg) - 1] == 'F')
+  //ascii(buf, msg);
+  LOG(AQUA_LOG,LOG_DEBUG, "Getting temp units from message '%s', looking at '%c'\n", buf, buf[l - 1]);
+
+  if (msg[l - 1] == 'F')
     _aqualink_data.temp_units = FAHRENHEIT;
-  else if (msg[strlen(msg) - 1] == 'C')
+  else if (msg[l - 1] == 'C')
     _aqualink_data.temp_units = CELSIUS;
   else
     _aqualink_data.temp_units = UNKNOWN;
