@@ -988,8 +988,9 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   //unsigned int i;
   //LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.2f\n",msg->topic.len, msg->topic.p, atof(msg->payload.p));
   // If message doesn't end in set or increment we don't care about it.
-  if (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0 && strncmp(&msg->topic.p[msg->topic.len -10], "/increment", 10) != 0) {
-    LOG(NET_LOG,LOG_DEBUG, "MQTT: Ignore %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
+  if (((msg->topic.len < 4)  || (strncmp(&msg->topic.p[msg->topic.len -4], "/set", 4) != 0)) &&
+      ((msg->topic.len < 10) || (strncmp(&msg->topic.p[msg->topic.len -10], "/increment", 10) != 0))) {
+    LOG(NET_LOG,LOG_DEBUG, "MQTT: Ignore %.*s %.*s\n", msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
     return;
   }
   LOG(NET_LOG,LOG_DEBUG, "MQTT: topic %.*s %.*s\n",msg->topic.len, msg->topic.p, msg->payload.len, msg->payload.p);
@@ -1062,8 +1063,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
   //LOG(NET_LOG,LOG_INFO, "Message request:\n'%.*s'\n", http_msg->message.len, http_msg->message.p);
 
   // If we have a get request, pass it
-  if (strncmp(http_msg->uri.p, "/api", 4 ) != 0) {
-    if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
+  if ((http_msg->uri.len < 4) || (strncmp(http_msg->uri.p, "/api", 4 ) != 0)) {
+    if ((mg_vcasecmp(&http_msg->method, "GET")==0) && http_msg->query_string.len > 0) {
       LOG(NET_LOG,LOG_WARNING, "WEB: Old stanza, using old method to action\n");
       DEBUG_TIMER_START(&tid);
       OLD_action_web_request(nc, http_msg);
@@ -1089,7 +1090,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     
     int len = mg_url_decode(http_msg->uri.p, http_msg->uri.len, buf, 50, 0);
     
-    if (strncmp(http_msg->uri.p, "/api/",4) == 0) {
+    if ((http_msg->uri.len >= 5) && (strncmp(http_msg->uri.p, "/api/", 5) == 0)) {
       switch (action_URI(NET_API, &buf[5], len-5, value, false, &msg)) {
         case uActioned:
           mg_send_head(nc, 200, strlen(GET_RTN_OK), CONTENT_TEXT);
@@ -1159,7 +1160,6 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), CONTENT_TEXT);
       mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
     }
-
     sprintf(buf, "action_web_request() request '%.*s' took",http_msg->uri.len, http_msg->uri.p);
 
     DEBUG_TIMER_STOP(tid, NET_LOG, buf);
@@ -1403,13 +1403,18 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       LOG(NET_LOG,LOG_DEBUG, "MQTT: received (msg_id: %d), looks like my own message, ignoring\n", mqtt_msg->message_id);
     }
 // NSF Need to change strlen to a global so it's not executed every time we check a topic
-    if (_aqconfig_.mqtt_aq_topic != NULL && strncmp(mqtt_msg->topic.p, _aqconfig_.mqtt_aq_topic, strlen(_aqconfig_.mqtt_aq_topic)) == 0) 
+    if ((_aqconfig_.mqtt_aq_topic != NULL) &&
+        (mqtt_msg->topic.len >= strlen(_aqconfig_.mqtt_aq_topic)) &&
+        (strncmp(mqtt_msg->topic.p, _aqconfig_.mqtt_aq_topic,
+                strlen(_aqconfig_.mqtt_aq_topic)) == 0))
     {
       DEBUG_TIMER_START(&tid); 
       action_mqtt_message(nc, mqtt_msg);
       DEBUG_TIMER_STOP(tid, NET_LOG, "MQTT Request action_mqtt_message() took"); 
     }
-    if (_aqconfig_.mqtt_dz_sub_topic != NULL && strncmp(mqtt_msg->topic.p, _aqconfig_.mqtt_dz_sub_topic, strlen(_aqconfig_.mqtt_dz_sub_topic)) == 0) {
+    if ((_aqconfig_.mqtt_dz_sub_topic != NULL) &&
+        (mqtt_msg->topic.len >= strlen(_aqconfig_.mqtt_dz_sub_topic)) &&
+        (strncmp(mqtt_msg->topic.p, _aqconfig_.mqtt_dz_sub_topic, strlen(_aqconfig_.mqtt_dz_sub_topic)) == 0)) {
       action_domoticz_mqtt_message(nc, mqtt_msg);
     }
     break;
