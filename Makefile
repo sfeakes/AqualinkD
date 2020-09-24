@@ -19,11 +19,13 @@ AQ_IAQTOUCH = true
 AQ_NO_THREAD_NETSERVICE = false
 
 # Get some system information
+ifneq ($(OS),Windows_NT)
 PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
 $(info OS: $(PI_OS_VERSION) )
 GLIBC_VERSION = $(shell ldd --version | grep ldd)
 $(info GLIBC build with: $(GLIBC_VERSION) )
 $(info GLIBC Prefered  : 2.24-11+deb9u1 2.24 )
+endif
 
 
 # define the C compiler to use
