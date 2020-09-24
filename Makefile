@@ -5,7 +5,7 @@
 # make debug    // Give standard binary just with debugging
 # make aqdebug  // Compile with extra aqualink debug information like timings
 # make slog     // Serial logger
-# make <other>  // not documenting 
+# make <other>  // not documenting
 #
 
 # Valid flags for AQ_FLAGS
@@ -43,19 +43,19 @@ DBGFLAGS = -g -O0 -Wall -D AQ_DEBUG -D AQ_TM_DEBUG
 #MGFLAGS = -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
 # Mongoose 6.18 flags
 MGFLAGS = -D MG_ENABLE_HTTP_SSI=0 -D MG_ENABLE_DIRECTORY_LISTING=0 -D MG_ENABLE_HTTP_CGI=0
-#MGFLAGS = 
+#MGFLAGS =
 
 # Detect OS and set some specifics
 ifeq ($(OS),Windows_NT)
    # Windows Make.
    MKDIR = mkdir
-   #FixPath = $(subst /,\,$1)
+   FixPath = $(subst /,\,$1)
 else
    UNAME_S := $(shell uname -s)
    # Linux
    ifeq ($(UNAME_S),Linux)
 	  MKDIR = mkdir -p
-      #FixPath = $1
+      FixPath = $1
 	  # Get some system information
       PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
       $(info OS: $(PI_OS_VERSION) )
@@ -72,10 +72,10 @@ endif
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-	   serial_logger.c mongoose.c 
+       serial_logger.c mongoose.c
 
 
-AQ_FLAGS = 
+AQ_FLAGS =
 # Add source and flags depending on protocols to support.
 ifeq ($(AQ_PDA), true)
   SRCS := $(SRCS) pda.c pda_menu.c pda_aq_programmer.c
@@ -165,10 +165,10 @@ $(SL_OBJ_DIR)/%.o: %.c | $(SL_OBJ_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 # Rules to link
-$(MAIN): $(OBJ_FILES) 
+$(MAIN): $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
-$(DEBG): $(DBG_OBJ_FILES) 
+$(DEBG): $(DBG_OBJ_FILES)
 	$(CC) $(DBG_CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 $(SLOG): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
@@ -177,13 +177,13 @@ $(SLOG): $(SL_OBJ_FILES)
 
 # Rules to make object directories.
 $(OBJ_DIR):
-	$(MKDIR) $@ 
+	$(MKDIR) $(call FixPath,$@)
 
 $(SL_OBJ_DIR):
-	$(MKDIR) $@
+	$(MKDIR) $(call FixPath,$@)
 
 $(DBG_OBJ_DIR):
-	$(MKDIR) $@
+	$(MKDIR) $(call FixPath,$@)
 
 
 # Clean rules
@@ -211,7 +211,7 @@ PLAY = ./release/aqualinkd-player
 # make debug    // Give standard binary just with debugging
 # make aqdebug  // Compile with extra aqualink debug information like timings
 # make slog     // Serial logger
-# make <other>  // not documenting 
+# make <other>  // not documenting
 #
 
 # Valid flags for AQ_FLAGS
@@ -388,7 +388,7 @@ $(PLAY): $(PL_OBJS) $(PL_EXOBJ)
 git: clean $(MAIN) $(SLOG)
 	./release/git_version.sh
 
-	
+
 # this is a suffix replacement rule for building .o's from .c's
 # it uses automatic variables $<: the name of the prerequisite of
 # the rule(a .c file) and $@: the name of the target of the rule (a .o file) 
@@ -407,8 +407,6 @@ depend: $(SRCS)
 
 install: $(MAIN)
 	./release/install.sh
-
-
 
 endef
 
