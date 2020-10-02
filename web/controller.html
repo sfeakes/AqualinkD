@@ -624,7 +624,8 @@
         image.src = "hk/background.jpg"; // Use default if image fails.
       };
       if (typeof background_reload !== 'undefined' && background_reload > 0) {
-        image.src = background_url + '?' + new Date().getTime();
+        var op = background_url.indexOf('?') > 0 ? '&' : '?';
+        image.src = background_url + op + new Date().getTime();
         setTimeout(load_background, (background_reload * 1000));
       } else {
         image.src = background_url;
