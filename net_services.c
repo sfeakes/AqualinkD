@@ -1399,8 +1399,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
       mg_send_head(nc, 200, strlen(GET_RTN_UNKNOWN), CONTENT_TEXT);
       mg_send(nc, GET_RTN_UNKNOWN, strlen(GET_RTN_UNKNOWN));
     }
-
-    sprintf(buf, "action_web_request() request '%.*s' took",(int)http_msg->uri.len, http_msg->uri.p);
+    snprintf(buf, sizeof(buf), "action_web_request() request '%.*s' took",
+             (int)http_msg->uri.len, http_msg->uri.p);
 
     DEBUG_TIMER_STOP(tid, NET_LOG, buf);
   }
