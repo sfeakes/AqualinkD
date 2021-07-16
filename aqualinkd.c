@@ -750,7 +750,10 @@ bool process_packet(unsigned char *packet, int length)
     if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
     {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
-      _aqualink_data.spa_temp = TEMP_UNKNOWN;
+      if(isSINGLE_DEV_PANEL == true)
+      {
+        _aqualink_data.spa_temp = TEMP_UNKNOWN;
+      }
       //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
     }
     else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF && isSINGLE_DEV_PANEL != true)
@@ -758,7 +761,7 @@ bool process_packet(unsigned char *packet, int length)
       //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
       _aqualink_data.spa_temp = TEMP_UNKNOWN;
     }
-    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON && isSINGLE_DEV_PANEL != true)
+    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON && isSINGLE_DEV_PANEL == true)
     {
       _aqualink_data.pool_temp = TEMP_UNKNOWN;
     }
