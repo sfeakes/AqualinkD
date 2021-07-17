@@ -246,10 +246,10 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       type_msg = (isSINGLE_DEV_PANEL?"Temp1":"Pool");
       if ( aqdata->temp_units == CELSIUS ) {
         max = HEATER_MAX_C;
-        min = (isSINGLE_DEV_PANEL?HEATER_MIN_C:HEATER_MIN_C-1);
+        min = (isSINGLE_DEV_PANEL?HEATER_MIN_C+1:HEATER_MIN_C);
       } else {
         max = HEATER_MAX_F;
-        min = (isSINGLE_DEV_PANEL?HEATER_MIN_F:HEATER_MIN_F-1);
+        min = (isSINGLE_DEV_PANEL?HEATER_MIN_F+1:HEATER_MIN_F);
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP1 must be set higher than TEMP2
       if (isSINGLE_DEV_PANEL && 
@@ -262,10 +262,10 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
     case SPA_HTR_SETOINT:
       type_msg = (isSINGLE_DEV_PANEL?"Temp2":"Spa");
       if ( aqdata->temp_units == CELSIUS ) {
-        max = (isSINGLE_DEV_PANEL?HEATER_MAX_C:HEATER_MAX_C-1);
+        max = (isSINGLE_DEV_PANEL?HEATER_MAX_C-1:HEATER_MAX_C);
         min = HEATER_MIN_C;
       } else {
-        max = (isSINGLE_DEV_PANEL?HEATER_MAX_F:HEATER_MAX_F-1);
+        max = (isSINGLE_DEV_PANEL?HEATER_MAX_F-1:HEATER_MAX_F);
         min = HEATER_MIN_F;
       }
       // if single device then TEMP1 & 2 (not pool & spa), TEMP2 must be set lower than TEMP1
