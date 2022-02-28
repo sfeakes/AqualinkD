@@ -25,8 +25,8 @@
 #include "aq_serial.h"
 #include "utils.h"
 
-int _hlightindex = -1;
-char _menu[PDA_LINES][AQ_MSGLEN+1];
+static int _hlightindex = -1;
+static char _menu[PDA_LINES][AQ_MSGLEN+1];
 
 void print_menu()
 {

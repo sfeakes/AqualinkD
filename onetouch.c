@@ -35,11 +35,11 @@
 //#include "pda_menu.h"
 
 
-int _ot_hlightindex = -1;
-int _ot_hlightcharindexstart = -1;
-int _ot_hlightcharindexstop = -1;
-char _menu[ONETOUCH_LINES][AQ_MSGLEN+1];
-struct ot_macro _macros[3];
+static int _ot_hlightindex = -1;
+static int _ot_hlightcharindexstart = -1;
+static int _ot_hlightcharindexstop = -1;
+static char _menu[ONETOUCH_LINES][AQ_MSGLEN+1];
+static struct ot_macro _macros[3];
 
 void set_macro_status();
 void pump_update(struct aqualinkdata *aq_data, int updated);
