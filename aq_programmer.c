@@ -1027,6 +1027,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
         LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
         return;
       }
+      break;
 #endif
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
@@ -1381,10 +1382,9 @@ void *set_aqualink_SWG( void *ptr )
 
 #ifdef AQ_PDA
   if (isPDA_PANEL) {
-      if (set_PDA_aqualink_SWG_setpoint(aq_data, val))
-        setSWGpercent(aq_data, val); // Don't use chageSWGpercent as we are in programming mode.
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
+    set_PDA_aqualink_SWG_setpoint(aq_data, val);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
   }
 #endif 
 

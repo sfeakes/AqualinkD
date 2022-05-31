@@ -109,6 +109,13 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
   static int swg_zero_cnt = 0;
   bool changedAnything = false;
 
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
+    char buff[1024];
+    beautifyPacket(buff, packet, packet_length, false);
+    LOG(DJAN_LOG,LOG_DEBUG, "%s", buff);
+  }
+
+
   // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
   if (packet[3] == CMD_PERCENT && aqdata->active_thread.thread_id == 0 && packet[4] != 0xFF) {
     // In service or timeout mode SWG set % message is very strange. AR %% | HEX: 0x10|0x02|0x50|0x11|0xff|0x72|0x10|0x03|
@@ -153,6 +160,12 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
 bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) {
   bool changedAnything = false;
   _swg_noreply_cnt = 0;
+
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
+    char buff[1024];
+    beautifyPacket(buff, packet, packet_length, true);
+    LOG(DJAN_LOG,LOG_DEBUG, "%s", buff);
+  }
 
   if (packet[PKT_CMD] == CMD_PPM) {
     //aqdata->ar_swg_device_status = packet[5];
@@ -278,6 +291,7 @@ bool setSWGboost(struct aqualinkdata *aqdata, bool on) {
   } else {
     aqdata->boost = true;
     aqdata->swg_percent = 101;
+    aqdata->swg_led_state = ON;
   }
 
   return true;
