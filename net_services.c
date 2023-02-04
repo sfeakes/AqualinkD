@@ -1076,7 +1076,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
     }
   //} else if (strstr(http_msg->method.p, "PUT")) {
   } else {
-    char buf[50];
+    char buf[100];
     float value = 0;
     DEBUG_TIMER_START(&tid);
 
