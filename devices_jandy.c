@@ -219,10 +219,13 @@ bool isSWGDeviceErrorState(unsigned char status)
 }
 
 void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, unsigned char status) {
-  if (aqdata->ar_swg_device_status == status) {
+  static unsigned char last_status = SWG_STATUS_UNKNOWN;
+
+  if ((aqdata->ar_swg_device_status == status) || (last_status == status)) {
     //LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
     return;
   }
+  last_status = status;
 
   // If we get (ALLBUTTON, SWG_STATUS_CHECK_PCB), it sends this for many status, like clean cell.
   // So if we are in one of those states, don't use it.
