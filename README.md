@@ -11,11 +11,12 @@ If you like this project, you can buy me a cup of coffee :)
 <br>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
-## AqualinkD forum now open
-http://aqualinkd.freeforums.net
-(Please use this for questions / issues / problems).
+## AqualinkD discussions
 
-For Bugs, please use issues link on top of page.
+* Please use github Discussions for for questions / issues / problems (Link at top of page).
+https://github.com/sfeakes/AqualinkD/discussions
+* For Bugs, please use issues link on top of page. ( please add AqualinkD version to posts )
+https://github.com/sfeakes/AqualinkD/issues
 
 ## Please see Wiki for installation instructions
 https://github.com/sfeakes/AqualinkD/wiki
