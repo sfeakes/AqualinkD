@@ -1,0 +1,55 @@
+{
+  "type": "schedules",
+  "schedules": [
+    {
+      "min": "0",
+      "hour": "10",
+      "daym": "*",
+      "month": "*",
+      "dayw": "*",
+      "id": "Filter_Pump",
+      "url": "/api/Filter_Pump/set",
+      "value": "1"
+    },
+    {
+      "min": "0",
+      "hour": "16",
+      "daym": "*",
+      "month": "*",
+      "dayw": "*",
+      "id": "Filter_Pump",
+      "url": "/api/Filter_Pump/RPM/set",
+      "value": "3000"
+    },
+    {
+      "min": "0",
+      "hour": "16",
+      "daym": "*",
+      "month": "*",
+      "dayw": "*",
+      "id": "Filter_Pump",
+      "url": "/api/Filter_Pump/GPM/set",
+      "value": "24"
+    },
+    {
+      "min": "0",
+      "hour": "11",
+      "daym": "*",
+      "month": "*",
+      "dayw": "*",
+      "id": "Pool_Heater",
+      "url": "/api/Pool_Heater/setpoint/set",
+      "value": "98"
+    },
+    {
+      "min": "0",
+      "hour": "4",
+      "daym": "*",
+      "month": "*",
+      "dayw": "*",
+      "id": "Aux_2",
+      "url": "/api/Aux_2/set",
+      "value": "0"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+Notice:  AqualinkD: Aqualink Daemon v2.2.1
+Notice:  AqualinkD: Panel set to RS-8 Combo Pool/Spa 
+Notice:  AqualinkD: Config log_level         = 5
+Notice:  AqualinkD: Config device_id         = 0x0a
+Notice:  AqualinkD: Config rssa_device_id    = 0x00
+Notice:  AqualinkD: Config extra_device_id   = 0x00
+Notice:  AqualinkD: Config extra_device_prog = YES
+Notice:  AqualinkD: Config serial_port       = /dev/ttyUSB0
+Notice:  AqualinkD: Config socket_port       = 88
+Notice:  AqualinkD: Config web_directory     = /nas/data/Development/Raspberry/AqualinkD/web
+Notice:  AqualinkD: Config read_all_devices  = NO
+Notice:  AqualinkD: Config use_aux_labels    = NO
+Notice:  AqualinkD: Config override frz prot = NO
+Notice:  AqualinkD: Config mqtt_server       = trident:1883
+Notice:  AqualinkD: Config mqtt_dz_sub_topic = (null)
+Notice:  AqualinkD: Config mqtt_dz_pub_topic = (null)
+Notice:  AqualinkD: Config mqtt_aq_topic     = aqualinkd-test
+Notice:  AqualinkD: Config mqtt_user         = (null)
+Notice:  AqualinkD: Config mqtt_passwd       = (null)
+Notice:  AqualinkD: Config mqtt_ID           = aqualinkd_b827ebba
+Notice:  AqualinkD: Config idx water temp    = -999
+Notice:  AqualinkD: Config idx pool temp     = -999
+Notice:  AqualinkD: Config idx spa temp      = -999
+Notice:  AqualinkD: Config idx SWG Percent   = 0
+Notice:  AqualinkD: Config idx SWG PPM       = 0
+Notice:  AqualinkD: Config force SWG         = YES
+Notice:  AqualinkD: Config deamonize         = NO
+Notice:  AqualinkD: Config log_file          = (null)
+Notice:  AqualinkD: Config light_pgm_mode    = 0.00
+Notice:  AqualinkD: Debug RS485 protocol     = NO
+Notice:  AqualinkD: Read Pentair Packets     = NO
+Notice:  AqualinkD: Display warnings in web  = YES
+Notice:  AqualinkD: Keep panle time in sync  = YES
+Notice:  AqualinkD: Ignore SWG 0 msg count   = 20
+Notice:  AqualinkD: Serial Read Ahead Write  = YES
+Notice:  AqualinkD: RS Poll Speed            = -1
+Notice:  AqualinkD: Thread Network Services  = YES
+Warning: AqualinkD: Serial Read Ahead Write is not valid when using Negative RS Poll Speed, turning Serial Read Ahead Write off
+Warning: AqualinkD: **************************************************************************************************
+Warning: AqualinkD: *  RS Poll Speed of -1 is expermental, this put's USB in complete blocking mode                  *
+Warning: AqualinkD: *  if USB becomes unstable / connection to panel lost, AqualinkD may need to be killed manually  *
+Warning: AqualinkD: *    eg:-   sudo kill -9 <list of aqualinkd process ID's>                                        *
+Warning: AqualinkD: **************************************************************************************************
+Notice:  AqualinkD: Config BTN Filter_Pump   = label Filter Pump     | VSP ID 0x78 | PMP ID 1 |
+Notice:  AqualinkD: Config BTN Spa_Mode      = label Spa Mode        | 
+Notice:  AqualinkD: Config BTN Aux_1         = label Aux 1           | VSP ID 0x61 | PMP ID 3 |
+Notice:  AqualinkD: Config BTN Aux_2         = label Aux 2           | VSP ID 0x60 | PMP ID 2 |
+Notice:  AqualinkD: Config BTN Aux_3         = label Aux 3           | 
+Notice:  AqualinkD: Config BTN Aux_4         = label Aux 4           | Light Progm | CTYPE 1  |
+Notice:  AqualinkD: Config BTN Aux_5         = label Aux 5           | 
+Notice:  AqualinkD: Config BTN Aux_6         = label Aux 6           | 
+Notice:  AqualinkD: Config BTN Aux_7         = label Aux 7           | 
+Notice:  AqualinkD: Config BTN Pool_Heater   = label Pool Heater     | 
+Notice:  AqualinkD: Config BTN Spa_Heater    = label Spa Heater      | 
+Notice:  AqualinkD: Config BTN Solar_Heater  = label Solar Heater    | 
+Notice:  NetService:Starting network services thread
+Notice:  NetService:Starting web server on port 88
+Notice:  NetService:Starting MQTT client to trident:1883
+Notice:  AqualinkD: Listening to Aqualink RS8 on serial port: /dev/ttyUSB0
+Notice:  AqualinkD: Waiting for Control Panel probe
+Notice:  AqualinkD: Stopping!
+Warning: RS Serial: Read error: 9 - Bad file descriptor
+Notice:  AqualinkD: Starting communication with Control Panel
+Notice:  AqualinkD: Exit!

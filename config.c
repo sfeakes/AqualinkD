@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 #include <libgen.h>
 
@@ -96,6 +97,8 @@ void init_parameters (struct aqconfig * parms)
   parms->dzidx_air_temp = TEMP_UNKNOWN;
   parms->dzidx_pool_water_temp = TEMP_UNKNOWN;
   parms->dzidx_spa_water_temp = TEMP_UNKNOWN;
+  parms->dzidx_swg_percent = TEMP_UNKNOWN;
+  parms->dzidx_swg_ppm = TEMP_UNKNOWN;
   //parms->dzidx_pool_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   //parms->dzidx_spa_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   parms->light_programming_mode = 0;
@@ -117,12 +120,15 @@ void init_parameters (struct aqconfig * parms)
   //parms->read_pentair_packets = false;
   parms->read_RS485_devmask = 0;
   parms->use_panel_aux_labels = false;
-  parms->debug_RSProtocol_packets = false;
+  
   parms->force_swg = false;
   //parms->swg_pool_and_spa = false;
   parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
-  parms->log_raw_RS_bytes = false;
+
+  parms->log_protocol_packets = false; // Read & Write as packets write to file
+  parms->log_raw_bytes = false; // bytes read and write to file
+  
   parms->sync_panel_time = true;
 
   // Default parameters for threading and USB blocking 
@@ -130,11 +136,16 @@ void init_parameters (struct aqconfig * parms)
   parms->rs_poll_speed = DEFAULT_POLL_SPEED;
   parms->thread_netservices = true;
 
+  parms->enable_scheduler = true;
+
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
 
 char *cleanalloc(char*str)
 {
+  if (str == NULL)
+    return str;
+
   char *result;
   str = cleanwhitespace(str);
   
@@ -533,8 +544,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     } else if (strncasecmp (param, "force_SWG", 9) == 0) {
     _aqconfig_.force_swg = text2bool(value);
     rtn=true;
+  } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
+    _aqconfig_.log_raw_bytes = text2bool(value);
+    rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
-    _aqconfig_.debug_RSProtocol_packets = text2bool(value);
+    _aqconfig_.log_protocol_packets = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "swg_zero_ignore_count", 21) == 0) {
     _aqconfig_.swg_zero_ignore = strtoul(value, NULL, 10);
@@ -561,7 +575,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "thread_netservices", 18) == 0) {
     _aqconfig_.thread_netservices = text2bool(value);
     rtn=true;
+  } else if (strncasecmp (param, "enable_scheduler", 16) == 0) {
+    _aqconfig_.enable_scheduler = text2bool(value);
+    rtn=true;
   }
+  
   
   else if (strncasecmp(param, "button_", 7) == 0) {
     // Check we have inichalized panel information, if not use any settings we may have
@@ -725,7 +743,8 @@ void read_config (struct aqualinkdata *aqdata, char *cfgFile)
   } else {
     /* error processing, couldn't open file */
     LOG(AQUA_LOG,LOG_ERR, "Error reading config file '%s'\n",cfgFile);
-    displayLastSystemError(cfgFile);
+    errno = EBADF;
+    displayLastSystemError("Error reading config file");
     exit (EXIT_FAILURE);
   }
 
@@ -765,10 +784,11 @@ char *errorlevel2text(int level)
   return "";
 }
 
+/*
 bool remount_root_ro(bool readonly) {
   // NSF Check if config is RO_ROOT set
   if (readonly) {} // Dummy to stop compile warnings.
-/*
+
   if (readonly) {
     LOG(AQUA_LOG,LOG_INFO, "reMounting root RO\n");
     mount (NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL);
@@ -783,10 +803,10 @@ bool remount_root_ro(bool readonly) {
     mount (NULL, "/", NULL, MS_REMOUNT, NULL);
     return true;
   }
-*/  
+  
  return true;
 }
-
+*/
 void writeCharValue (FILE *fp, char *msg, char *value)
 {
   if (value == NULL)

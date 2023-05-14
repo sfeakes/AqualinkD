@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+  <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+  <title>AqualinkD DEBUG</title>
+  <meta name='viewport' content='width=device-width'>
+  <meta name='mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-capable' content='yes'>
+  <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+  <link href='aqualinkd.png' rel='apple-touch-icon'>
+  <link href='aqualinkd.png' rel='icon'>
+</head>
+<style>
+/* 
+******************************************************************************
+Button style taken from https://github.com/ubuwaits/css3-buttons */
+  button::-moz-focus-inner {
+    border: 0; 
+  }
+
+  button.blue-pill {
+    background-color: #a5b8da;
+    background-image: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #a5b8da), color-stop(100%, #7089b3));
+    background-image: -webkit-linear-gradient(top, #a5b8da, #7089b3);
+    background-image: -moz-linear-gradient(top, #a5b8da, #7089b3);
+    background-image: -ms-linear-gradient(top, #a5b8da, #7089b3);
+    background-image: -o-linear-gradient(top, #a5b8da, #7089b3);
+    background-image: linear-gradient(top, #a5b8da, #7089b3);
+    border-top: 1px solid #758fba;
+    border-right: 1px solid #6c84ab;
+    border-bottom: 1px solid #5c6f91;
+    border-left: 1px solid #6c84ab;
+    border-radius: 18px;
+    -webkit-box-shadow: inset 0 1px 0 0 #aec3e5;
+    box-shadow: inset 0 1px 0 0 #aec3e5;
+    color: #fff;
+    font: bold 11px/1 "Lucida Grande", "Lucida Sans Unicode", "Lucida Sans", Geneva, Verdana, sans-serif;
+    padding: 8px 0;
+    text-align: center;
+    text-shadow: 0 -1px 1px #64799e;
+    text-transform: uppercase;
+    width: 150px; 
+  }
+
+  button.blue-pill:disabled {
+    opacity: 0.5; 
+  }
+  </style>
+
+<script type='text/javascript'>
+  var _poller;
+
+  function action(element) {
+    var query;
+
+    if (element.id == "start") { 
+      document.getElementById('messages').innerHTML = "Debug Starting!"
+    } else if (element.id == "serialstart") { 
+      document.getElementById('messages').innerHTML = "Serial Debug Starting!"
+    } else if (element.id == "stop") {
+      document.getElementById('messages').innerHTML = "Debug Stopping!"
+    } else if (element.id == "clean") {
+      document.getElementById('messages').innerHTML = "Cleaning Debug File!"
+    } else if (element.id == "download") {
+      //window.location = location.href + '?command=debug&value=download';
+      window.location = '/api/debug/download';
+    } else {
+      return;
+    }
+
+    var http = new XMLHttpRequest();
+    //http.open('GET', location.href + '?command=debug&value='+element.id);
+    http.open('GET', '/api/debug/'+element.id);
+    http.send(null);
+    
+    setTimeout(function () {
+      forceupdate();
+    }, 1000);
+  }
+
+  function forceupdate() {
+    clearTimeout(_poller);
+    update();
+  }
+
+  function update() {
+    var http = new XMLHttpRequest();
+    if (http) {
+      http.onreadystatechange = function () {
+        if (http.readyState === 4) {
+          if (http.status == 200 && http.status < 300) {
+            var data = JSON.parse(http.responseText);
+            //console.log(data.iLevel + " : " + data.sLevel);
+            if ( data.iLevel >= 7 ) {
+              document.getElementById('start').disabled = true;
+              document.getElementById('serialstart').disabled = true;
+              document.getElementById('stop').disabled = false;
+              if ( data.iLevel >= 8 )
+                document.getElementById('messages').innerHTML = "Serial debug Running!"
+              else
+                document.getElementById('messages').innerHTML = "Debug Running!"
+            } else if ( data.iLevel < 7 ) {
+              document.getElementById('start').disabled = false;
+              document.getElementById('serialstart').disabled = false;
+              document.getElementById('stop').disabled = true;
+              document.getElementById('messages').innerHTML = "Not debugging, Log level = "+data.sLevel;
+            }
+            if (data.logReady == "true") {
+              document.getElementById('download').disabled = false;
+              if (document.getElementById('stop').disabled == true) {
+                document.getElementById('clean').disabled = false;
+              } else {
+                document.getElementById('clean').disabled = true;
+              }
+            } else {
+              document.getElementById('download').disabled = true;
+              document.getElementById('clean').disabled = true;
+            }
+          }
+          else if (http.status >= 400 || http.status == 0) {
+            document.getElementById('messages').innerHTML = 'Error connecting to AqualinkD';
+          }
+        }
+      }
+    };
+
+    //http.open('GET', location.href + '?command=debug&value=status');
+    http.open('GET', '/api/debug/status');
+    http.send(null);
+    _poller = setTimeout(update, 5000);
+  }
+
+</script>
+
+<body onload="update();">
+  <table cellpadding="10" border="0" align="center">
+    <tr><td colspan="3" align="center">
+      <div id="messages">&nbsp</div>
+    </td></tr>
+    <tr><td align="center">
+      <button class="blue-pill" id="start" type="button" onclick='action(this);'>Start Debug</button>
+    </td><td align="center">
+      <button class="blue-pill" id="serialstart" type="button" onclick='action(this);'>Start Serial Debug</button>
+    </td><td align="center">
+      <button class="blue-pill" id="stop" type="button" onclick='action(this);'>Stop Debug</button>
+    </td></tr>
+    <tr><td colspan="3" align="center">
+      <table cellpadding="10" border="0" align="center">
+        <tr><td>
+          <button class="blue-pill" id="download" type="button" onclick='action(this);'>Download Debug File</button>
+        </td><td>
+          <button class="blue-pill" id="clean" type="button" onclick='action(this);'>Clean Debug File</button>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+
+</html>

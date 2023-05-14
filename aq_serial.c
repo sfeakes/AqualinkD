@@ -163,7 +163,7 @@ bool check_jandy_checksum(unsigned char* packet, int length)
     LOG(RSSD_LOG,LOG_INFO, "Ignoring bad checksum, seems to be bug in Jandy protocol\n");
     if (getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
       static char buf[1000];
-      beautifyPacket(buf,packet,length);
+      beautifyPacket(buf,packet,length,true);
       LOG(RSSD_LOG,LOG_DEBUG, "Packetin question %s\n",buf);
     }
     return true;
@@ -646,11 +646,15 @@ void send_packet(int fd, unsigned char *packet, int length)
     }
   #endif
   */
-  if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL) {
+
+  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
+  logPacketWrite(&packet[1], length-2);
+/*
+  if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL || ) {
     // Packet is padded with 0x00, so discard for logging
     LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
     logPacket(&packet[1], length-2);
-  } /*else if (getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
+  }*/ /*else if (getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
     static char buf[1000];
     beautifyPacket(buf,&packet[1],length-2);
     LOG(RSSD_LOG,LOG_DEBUG, "Serial write %s\n",buf);
@@ -695,7 +699,7 @@ void send_extended_ack(int fd, unsigned char ack_type, unsigned char command)
 {
   _send_ack(fd, ack_type, command);
 }
-
+/*
 int _get_packet(int fd, unsigned char* packet, bool rawlog);
 
 int get_packet(int fd, unsigned char* packet)
@@ -707,6 +711,8 @@ int get_packet_lograw(int fd, unsigned char* packet)
   return _get_packet(fd, packet, true);
 }
 int _get_packet(int fd, unsigned char* packet, bool rawlog)
+*/
+int get_packet(int fd, unsigned char* packet)
 {
   unsigned char byte = 0x00;
   int bytesRead;
@@ -751,7 +757,7 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
       delay(1);
     } else if (bytesRead == 1) {
       retry = 0;
-      if (rawlog)
+      if (_aqconfig_.log_raw_bytes)
         logPacketByte(&byte);
 
       if (lastByteDLE == true && byte == NUL)
@@ -904,7 +910,8 @@ int _get_packet(int fd, unsigned char* packet, bool rawlog)
   }
 
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
-  logPacket(packet, index);
+  if (_aqconfig_.log_protocol_packets)
+    logPacketRead(packet, index);
   // Return the packet length.
   return index;
 }

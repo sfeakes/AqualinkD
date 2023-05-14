@@ -865,6 +865,42 @@ void *set_aqualink_onetouch_freezeprotect( void *ptr )
   return ptr;
 }
 
+bool set_numeric_value(struct aqualinkdata *aq_data, int val) {
+  int len;
+  int cval;
+  int diff;
+  int i;
+  unsigned char direction = KEY_ONET_UP;
+
+  cval = atoi(onetouch_menu_hlightchars(&len));
+  diff = val - cval;
+
+  LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set value val=%d cval=%d diff=%d \n", val,cval,diff);
+
+  if (diff > 0) {
+    direction = KEY_ONET_UP;
+  } else if (diff < 0) {
+    direction = KEY_ONET_DOWN;
+    diff=-diff;
+  }
+
+  if (diff > 0) {
+    for (i=0; i < diff; i++) {
+      send_ot_cmd(direction);
+      waitfor_ot_queue2empty();
+    }
+
+    waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,5); // CMD_PDA_0x04 is just a packer.
+    cval = atoi(onetouch_menu_hlightchars(&len));
+    if ( val != cval ) {
+      LOG(ONET_LOG,LOG_ERR, "** OneTouch set value failed, val=%d cval=%d\n", val,cval);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void *set_aqualink_onetouch_time( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -880,7 +916,7 @@ void *set_aqualink_onetouch_time( void *ptr )
   if ( !goto_onetouch_menu(aq_data, OTM_SET_TIME) ){
     LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get time menu\n");
   } else {
-    /*
+    
     // MM/DD/YY   MON   Just change MM/DD/YY
     //  H:MM  AM        Have to cycle H to get AM/PM, just one digit
     time_t now = time(0);   // get time now
@@ -888,23 +924,72 @@ void *set_aqualink_onetouch_time( void *ptr )
     int hour;
     char ap;
 
-    result->tm_mday // day of month starts at 1
-    result->tm_mon // Month started at 0
-    result->tm_min // Min 
-
-    if (result->tm_hour == 0) //12 AM ie midnight
-      hour = 12
+    if (result->tm_hour == 0) { //12 AM ie midnight
+      hour = 12;
       ap = 'A';
-    else if (result->tm_hour == 12) // 12 PM
-      hour = 12
+    } else if (result->tm_hour == 12) {// 12 PM
+      hour = 12;
       ap = 'P';
-    else if (result->tm_hour <= 11)
-      hour = result->tm_hour
+    } else if (result->tm_hour <= 11) {
+      hour = result->tm_hour;
       ap = 'A';
-    else // Must be 13 or more
+    } else {// Must be 13 or more
       hour = result->tm_hour - 12;
       ap = 'P';
-    */
+    }
+
+    LOG(ONET_LOG,LOG_DEBUG, "OneTouch set time to :-\n");
+    LOG(ONET_LOG,LOG_DEBUG, " %d/%d/%d\n",(result->tm_mon + 1), result->tm_mday, result->tm_year % 100 );
+    LOG(ONET_LOG,LOG_DEBUG, " %d:%d %c\n",hour,result->tm_min, ap);
+
+    //Line 3 startchar 2 for Month
+    //Line 3 startchar 5 for Day
+    //Line 3 startchat 8 for year
+
+    while ( (onetouch_menu_hlightindex() != 3) || (onetouch_menu_hlightcharindex() != 2) )
+      waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+
+    printf("*** Setting month.  line=%d, char=%d\n",onetouch_menu_hlightindex(), onetouch_menu_hlightcharindex());
+    set_numeric_value(aq_data, (result->tm_mon + 1) );
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+    
+    while ( (onetouch_menu_hlightindex() != 3) || (onetouch_menu_hlightcharindex() != 5) )
+      waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+
+    printf("*** Setting day.  line=%d, char=%d\n",onetouch_menu_hlightindex(), onetouch_menu_hlightcharindex());
+    set_numeric_value(aq_data, result->tm_mday );
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+
+    while ( (onetouch_menu_hlightindex() != 3) || (onetouch_menu_hlightcharindex() != 8) )
+      waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+    printf("*** Setting year.  line=%d, char=%d\n",onetouch_menu_hlightindex(), onetouch_menu_hlightcharindex());
+    set_numeric_value(aq_data, result->tm_year % 100 );
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+
+    // highlightline 4 char 3 or 4 for Hour
+    // highlightline 4 char 5 or 6 for Min
+    // highlightline 4 char 9
+    waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+
+    // Need to check AM/PM here
+    set_numeric_value(aq_data, hour );
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+    waitForOT_MessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
+
+    set_numeric_value(aq_data, result->tm_min );
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+
+    
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+    
+    send_ot_cmd(KEY_ONET_BACK);
+    waitfor_ot_queue2empty();
   }
 
   if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){

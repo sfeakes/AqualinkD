@@ -61,6 +61,23 @@ if [ "$1" == "clean" ]; then
   exit
 fi
 
+
+# Check cron.d options
+if [ ! -d "/etc/cron.d" ]; then
+  echo "The version of Cron may not support chron.d, if so AqualinkD Scheduler will not work"
+  echo "Please check before starting"
+else
+  if [ -f "/etc/default/cron" ]; then
+    CD=$(cat /etc/default/cron | grep -v ^# | grep "\-l")
+    if [ -z "$CD" ]; then
+      echo "Please enabled cron.d support, if not AqualinkD Scheduler will not work"
+      echo "Edit /etc/default/cron and look for the -l option, usually in EXTRA_OPTS"
+    fi
+  else
+    echo "Please make sure the version if Cron supports chron.d, if not the AqualinkD Scheduler will not work"
+  fi
+fi
+
 # copy files to locations, but only copy cfg if it doesn;t already exist
 
 cp $BUILD/$BIN $BINLocation/$BIN

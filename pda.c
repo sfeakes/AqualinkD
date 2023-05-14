@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 #include "aqualink.h"
 
@@ -29,6 +30,10 @@
 #include "aq_panel.h"
 #include "packetLogger.h"
 #include "devices_jandy.h"
+
+// This needs to be tested on a real panel.
+#define NEW_UPDATE_METHOD
+
 
 // static struct aqualinkdata _aqualink_data;
 static struct aqualinkdata *_aqualink_data;
@@ -131,7 +136,33 @@ void set_pda_led(struct aqualinkled *led, char state)
   }
 }
 
-void pass_pda_equiptment_status_item(char *msg)
+#ifdef NEW_UPDATE_METHOD
+void equiptment_update_cycle(int eqID) {
+  // If you have a -1, it's a reset to clear / update information.
+  int i;
+  static uint32_t update_equiptment_bitmask = 0;
+
+  if (eqID == -1) {
+    LOG(PDA_LOG,LOG_DEBUG, "(not implimented) Start new equiptment cycle\n");
+   
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
+      if ((update_equiptment_bitmask & (1 << (i+1))) != (1 << (i+1))) {
+        if (_aqualink_data->aqbuttons[i].led->state != OFF) {
+          _aqualink_data->aqbuttons[i].led->state = OFF;
+          _aqualink_data->updated = true;
+          LOG(PDA_LOG,LOG_DEBUG, "(not implimented) Turn off equiptment id %d %s not seen in last cycle\n", i, _aqualink_data->aqbuttons[i].name);
+        }
+      }
+    }
+    update_equiptment_bitmask = 0;
+  } else {
+    update_equiptment_bitmask |= (1 << (eqID+1));
+    LOG(PDA_LOG,LOG_DEBUG, "(not implimented) Added equiptment id %d %s to updated cycle\n", eqID, _aqualink_data->aqbuttons[eqID].name);
+  }
+}
+#endif
+
+void pass_pda_equiptment_status_item_OLD(char *msg)
 {
   static char *index;
   int i;
@@ -218,6 +249,9 @@ void pass_pda_equiptment_status_item(char *msg)
       {
         if (strcasecmp(msg, _aqualink_data->aqbuttons[i].label) == 0)
         {
+#ifdef NEW_UPDATE_METHOD
+          equiptment_update_cycle(i);
+#endif
           LOG(PDA_LOG,LOG_DEBUG, "*** Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
           // It's on (or delayed) if it's listed here.
           if (_aqualink_data->aqbuttons[i].led->state != FLASH)
@@ -240,6 +274,7 @@ void process_pda_packet_msg_long_temp(const char *msg)
   //           'AIR             '
   //           ' 86`            '
   //           'AIR        WATER'  // In case of single device.
+  _aqualink_data->temp_units = FAHRENHEIT; // Force FAHRENHEIT
   if (stristr(pda_m_line(1), "AIR") != NULL)
     _aqualink_data->air_temp = atoi(msg);
 
@@ -282,7 +317,12 @@ void process_pda_packet_msg_long_time(const char *msg)
     strncpy(_aqualink_data->time, msg + 9, 7);
   }
   strncpy(_aqualink_data->date, msg + 5, 3);
-  // :TODO: NSF Come back and change the above to correctly check date and time in future
+  
+  if (checkAqualinkTime() != true)
+  {
+    LOG(AQRS_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data->time, _aqualink_data->date);
+    aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
+  }
 }
 
 void process_pda_packet_msg_long_equipment_control(const char *msg)
@@ -371,39 +411,29 @@ void setSingleDeviceMode()
 
 void process_pda_packet_msg_long_set_temp(const char *msg)
 {
-  //   message 'TEMP1       26`C   '
-  //           'TEMP2       15`C   '
   LOG(PDA_LOG,LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
 
   if (stristr(msg, "POOL HEAT") != NULL)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
-    if (_aqualink_data->temp_units == UNKNOWN)
-      setUnits(msg);
   }
   else if (stristr(msg, "SPA HEAT") != NULL)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
-    if (_aqualink_data->temp_units == UNKNOWN)
-      setUnits(msg);
   }
   else if (stristr(msg, "TEMP1") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
-    if (_aqualink_data->temp_units == UNKNOWN)
-      setUnits(msg);
   }
   else if (stristr(msg, "TEMP2") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
-    if (_aqualink_data->temp_units == UNKNOWN)
-      setUnits(msg);
   }
 
  
@@ -437,13 +467,10 @@ void process_pda_packet_msg_long_pool_heat(const char *msg)
 
 void process_pda_packet_msg_long_freeze_protect(const char *msg)
 {
-  //   message 'TEMP         3`C   '
   if (strncasecmp(msg, "TEMP      ", 10) == 0)
   {
     _aqualink_data->frz_protect_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "frz_protect_set_point = %d\n", _aqualink_data->frz_protect_set_point);
-    if (_aqualink_data->temp_units == UNKNOWN)
-      setUnits(msg);
   }
 }
 
@@ -490,6 +517,124 @@ void process_pda_packet_msg_long_unknown(const char *msg)
       }
     }
   }
+}
+
+void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lineindex, bool reset)
+{
+  //pass_pda_equiptment_status_item(msg);
+
+  if (reset) {
+    equiptment_update_cycle(-1);
+    LOG(PDA_LOG,LOG_DEBUG, "*************** Equiptment reset\n");
+    return;
+  }
+
+  LOG(PDA_LOG,LOG_DEBUG, "*************** Pass Equiptment msg %.16s\n", msg_line);
+
+  static char *index;
+  int i;
+  char *msg = (char *)msg_line;
+
+  while(isspace(*msg)) msg++;
+
+  // EQUIPMENT STATUS
+  //
+  //  AquaPure 100%
+  //  SALT 25500 PPM
+  //   FILTER PUMP
+  //    POOL HEAT
+  //   SPA HEAT ENA
+
+  // EQUIPMENT STATUS
+  //
+  //  FREEZE PROTECT
+  //  AquaPure 100%
+  //  SALT 25500 PPM
+  //  CHECK AquaPure
+  //  GENERAL FAULT
+  //   FILTER PUMP
+  //     CLEANER
+  //
+  // Equipment Status
+  // 
+  // Intelliflo VS 1 
+  //      RPM: 1700  
+  //     Watts: 367  
+  // 
+  // 
+  // 
+  // 
+  // 
+
+  // Check message for status of device
+  // Loop through all buttons and match the PDA text.
+  if ((index = strcasestr(msg, "CHECK AquaPure")) != NULL)
+  {
+    LOG(PDA_LOG,LOG_DEBUG, "CHECK AquaPure\n");
+  }
+  else if ((index = strcasestr(msg, "FREEZE PROTECT")) != NULL)
+  {
+    _aqualink_data->frz_protect_state = ON;
+  }
+  else if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
+  {
+    changeSWGpercent(_aqualink_data, atoi(index + strlen(MSG_SWG_PCT)));
+    //_aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
+    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
+    LOG(PDA_LOG,LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
+  }
+  else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
+  {
+    _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
+    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
+    LOG(PDA_LOG,LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
+  }
+  else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    _aqualink_data->pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
+    LOG(PDA_LOG,LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
+  }
+  else if ((index = strcasestr(msg, MSG_PMP_WAT)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    _aqualink_data->pumps[0].watts = atoi(index + strlen(MSG_PMP_WAT));
+    LOG(PDA_LOG,LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
+  }
+  else
+  {
+    char labelBuff[AQ_MSGLEN + 2];
+    strncpy(labelBuff, msg, AQ_MSGLEN + 1);
+    msg = stripwhitespace(labelBuff);
+
+    if (strcasecmp(msg, "POOL HEAT ENA") == 0)
+    {
+      _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
+    }
+    else if (strcasecmp(msg, "SPA HEAT ENA") == 0)
+    {
+      _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
+    }
+    else
+    {
+      for (i = 0; i < _aqualink_data->total_buttons; i++)
+      {
+        if (strcasecmp(msg, _aqualink_data->aqbuttons[i].label) == 0)
+        {
+#ifdef NEW_UPDATE_METHOD
+          equiptment_update_cycle(i);
+#endif
+          LOG(PDA_LOG,LOG_DEBUG, "*** Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
+          // It's on (or delayed) if it's listed here.
+          if (_aqualink_data->aqbuttons[i].led->state != FLASH)
+          {
+            _aqualink_data->aqbuttons[i].led->state = ON;
+          }
+          break;
+        }
+      }
+    }
+  }
+
+
 }
 
 void process_pda_packet_msg_long_level_aux_device(const char *msg)
@@ -557,13 +702,15 @@ void process_pda_freeze_protect_devices()
 bool process_pda_packet(unsigned char *packet, int length)
 {
   bool rtn = true;
-  int i;
+  //int i;
   char *msg;
+  int index = -1;
+  static bool equiptment_updated = false;
   //static bool init = false;
 
   if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
     char buff[1024];
-    beautifyPacket(buff, packet, length);
+    beautifyPacket(buff, packet, length, true);
     LOG(PDA_LOG,LOG_DEBUG, "%s", buff);
   }
 /*
@@ -599,13 +746,19 @@ bool process_pda_packet(unsigned char *packet, int length)
 
   case CMD_STATUS:
     _aqualink_data->last_display_message[0] = '\0';
-
+    if (equiptment_updated == true && pda_m_type() != PM_EQUIPTMENT_STATUS)
+    {
+      process_pda_packet_msg_long_equiptment_status(NULL, 0, true);
+      equiptment_updated = false;
+    }
+/*
     // If we get a status packet, and we are on the status menu, this is a list of what's on
     // or pending so unless flash turn everything off, and just turn on items that are listed.
     // This is the only way to update a device that's been turned off by a real PDA / keypad.
     // Note: if the last line of the status menu is present it may be cut off
     if (pda_m_type() == PM_EQUIPTMENT_STATUS)
     {
+
       if (_aqualink_data->frz_protect_state == ON)
         _aqualink_data->frz_protect_state = ENABLE;
       
@@ -615,6 +768,8 @@ bool process_pda_packet(unsigned char *packet, int length)
       if (_aqualink_data->swg_led_state == ON)
         setSWGenabled(_aqualink_data);
       
+      // Need to remove this when new way works.
+#ifndef NEW_UPDATE_METHOD
       if (pda_m_line(PDA_LINES - 1)[0] == '\0')
       {
         for (i = 0; i < _aqualink_data->total_buttons; i++)
@@ -629,16 +784,22 @@ bool process_pda_packet(unsigned char *packet, int length)
       {
         LOG(PDA_LOG,LOG_DEBUG, "PDA Equipment status may be truncated.\n");
       }
+
       for (i = 1; i < PDA_LINES; i++)
-      {
         pass_pda_equiptment_status_item(pda_m_line(i));
+#else 
+      if (!equiptment_updated) {
+        equiptment_updated = true;
+        for (i = 1; i < PDA_LINES; i++) {
+          pass_pda_equiptment_status_item(pda_m_line(i));
+        }
       }
-      
+#endif
     }
     if (pda_m_type() == PM_FREEZE_PROTECT_DEVICES)
     {
       process_pda_freeze_protect_devices();
-    }
+    }*/
     break;
   case CMD_MSG_LONG:
   {
@@ -646,12 +807,19 @@ bool process_pda_packet(unsigned char *packet, int length)
     //printf ("menu type %d\n",pda_m_type());
 
     msg = (char *)packet + PKT_DATA + 1;
+    index = packet[PKT_DATA] & 0xF;
 
     //strcpy(_aqualink_data->last_message, msg);
 
     if (packet[PKT_DATA] == 0x82)
     { // Air & Water temp is always this ID
       process_pda_packet_msg_long_temp(msg);
+#ifdef NEW_UPDATE_METHOD
+//      if (!equiptment_updated) {
+//        equiptment_update_cycle(-1); // Reset equiptment cycle
+//        equiptment_updated = false;
+//      }
+#endif
     }
     else if (packet[PKT_DATA] == 0x40)
     { // Time is always on this ID
@@ -668,6 +836,10 @@ bool process_pda_packet(unsigned char *packet, int length)
         case PM_HOME:
         case PM_BUILDING_HOME:
           process_pda_packet_msg_long_home(msg);
+        break;
+        case PM_EQUIPTMENT_STATUS:
+          process_pda_packet_msg_long_equiptment_status(msg, index, false);
+          equiptment_updated = true;
         break;
         case PM_SET_TEMP:
           process_pda_packet_msg_long_set_temp(msg);
@@ -687,6 +859,11 @@ bool process_pda_packet(unsigned char *packet, int length)
         case PM_AUX_LABEL_DEVICE:
           process_pda_packet_msg_long_level_aux_device(msg);
         break;
+        /*
+        case PM_SET_TIME:
+          process_pda_packet_msg_long_set_time(index, msg);
+        break;
+        */
         //case PM_FW_VERSION:
         //  process_pda_packet_msg_long_FW_version(msg);
         //break;

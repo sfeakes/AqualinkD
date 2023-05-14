@@ -297,7 +297,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define SWG_STATUS_LOW_VOLTS    0x20 // low voltage 0x20
 #define SWG_STATUS_LOW_TEMP     0x40 // low watertemp 0x40
 #define SWG_STATUS_CHECK_PCB    0x80 // check PCB 0x80
-
+// Other SWG codes not deciphered yes 0x03 & 0x0b seem to be messages when salt is low and turning on / off
 
 #define CMD_PDA_0x04           0x04 // No idea, might be building menu
 #define CMD_PDA_0x05           0x05 // No idea
@@ -457,7 +457,7 @@ void send_ack(int file_descriptor, unsigned char command);
 void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
-int get_packet_lograw(int fd, unsigned char* packet);
+//int get_packet_lograw(int fd, unsigned char* packet);
 
 //int get_packet_new(int fd, unsigned char* packet);
 //int get_packet_new_lograw(int fd, unsigned char* packet);

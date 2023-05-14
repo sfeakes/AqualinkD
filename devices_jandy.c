@@ -49,19 +49,22 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
       swg_zero_cnt++;
     } else if (swg_zero_cnt > swg_zero_ignore && packet[4] == 0x00) {
       if (aqdata->swg_percent != (int)packet[4]) {
-        aqdata->swg_percent = (int)packet[4];
+        //aqdata->swg_percent = (int)packet[4];
+        setSWGpercent(aqdata, (int)packet[4]);
         changedAnything = true;
         aqdata->updated = true;
-        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from control panel packet to SWG\n", aqdata->swg_percent);
+        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from reading control panel packet sent to SWG (received %d messages)\n", aqdata->swg_percent, swg_zero_cnt);
       }
       // LOG(DJAN_LOG, LOG_DEBUG, "SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // (int)packet[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet[4],packet[5]);  swg_zero_cnt++;
     } else {
       swg_zero_cnt = 0;
       if (aqdata->swg_percent != (int)packet[4]) {
-        aqdata->swg_percent = (int)packet[4];
+        //aqdata->swg_percent = (int)packet[4];
+        setSWGpercent(aqdata, (int)packet[4]);
         changedAnything = true;
         aqdata->updated = true;
+        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from control panel packet to SWG\n", aqdata->swg_percent);
       }
       // LOG(DJAN_LOG, LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // aqdata.swg_percent,packet[4],packet[5]);
@@ -166,12 +169,12 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
     aqdata->swg_led_state = OFF;
     break;
   default:
-    LOG(DJAN_LOG, LOG_ERR, "Ignoring set SWG device to state '0x%02hhx', state is unknown\n", status);
+    LOG(DJAN_LOG, LOG_WARNING, "Ignoring set SWG device to state '0x%02hhx', state is unknown\n", status);
     return;
     break;
   }
 
-  LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
+  LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d, LED state = %d\n", aqdata->ar_swg_device_status, requester, aqdata->swg_led_state);
 }
 
 
@@ -243,6 +246,7 @@ void setSWGpercent(struct aqualinkdata *aqdata, int percent) {
   aqdata->updated = true;
 
   if (aqdata->swg_percent > 0) {
+    //LOG(DJAN_LOG, LOG_DEBUG, "swg_led_state=%d, swg_led_state=%d, isSWGDeviceErrorState=%d, ar_swg_device_status=%d\n",aqdata->swg_led_state, aqdata->swg_led_state, isSWGDeviceErrorState(aqdata->ar_swg_device_status),aqdata->ar_swg_device_status);
     if (aqdata->swg_led_state == OFF || (aqdata->swg_led_state == ENABLE && ! isSWGDeviceErrorState(aqdata->ar_swg_device_status)) ) // Don't change ENABLE / FLASH
       aqdata->swg_led_state = ON;
     
@@ -302,6 +306,14 @@ aqledstate get_swg_led_state(struct aqualinkdata *aqdata)
     return (aqdata->swg_percent > 0?ON:ENABLE);
     break;
   }
+}
+
+void get_swg_status_msg(struct aqualinkdata *aqdata, char *message)
+{
+  int tmp1;
+  int tmp2;
+
+  return get_swg_status_mqtt(aqdata, message, &tmp1, &tmp2);
 }
 
 void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status, int *dzalert) 
@@ -375,15 +387,27 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
 {
   char msg[1000];
   //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-  beautifyPacket(msg, packet_buffer, packet_length);
+  beautifyPacket(msg, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
+
+  //find pump for message
+  if ( 1 == 0 /*SOME_DEBUG_TEST*/) {
+    int i;
+    for (i=0; i < aqdata->num_pumps; i++) {
+      if (aqdata->pumps[i].pumpID == packet_buffer[PKT_DEST]) {
+        LOG(DJAN_LOG, LOG_DEBUG, "Last panel info RPM:%d GPM:%d WATTS:%d\n", aqdata->pumps[i].rpm, aqdata->pumps[i].gpm, aqdata->pumps[i].watts);
+        break;
+      }
+    }
+  }
+
   return false;
 }
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
   char msg[1000];
   //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-  beautifyPacket(msg, packet_buffer, packet_length);
+  beautifyPacket(msg, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
   return false;
 }

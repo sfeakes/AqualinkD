@@ -75,14 +75,15 @@ struct aqconfig
   bool force_swg;
   int swg_zero_ignore;
   bool display_warnings_web;
-  bool read_pentair_packets;
-  bool debug_RSProtocol_packets;
-  bool log_raw_RS_bytes;
+  bool log_protocol_packets; // Read & Write as packets
+  bool log_raw_bytes; // Read as bytes
+  //bool log_raw_RS_bytes;
   bool readahead_b4_write;
   bool mqtt_timed_update;
   bool sync_panel_time;
   int rs_poll_speed;
   bool thread_netservices;
+  bool enable_scheduler;
 };
 
 #ifndef CONFIG_C

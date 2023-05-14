@@ -1,8 +1,9 @@
 
-#ifndef INIT_BUTTONS_H_
-#define INIT_BUTTONS_H_
+#ifndef AQ_PANEL_H_
+#define AQ_PANEL_H_
 
 #include "config.h"
+#include "aqualink.h"
 
 #define PUMP_INDEX      0
 #define SPA_INDEX       1
@@ -32,6 +33,8 @@
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
+
+bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
 void changePanelToMode_Only();
 void addPanelOneTouchInterface();

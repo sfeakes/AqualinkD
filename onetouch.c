@@ -60,7 +60,8 @@ void print_onetouch_menu()
   if (_ot_hlightcharindexstart > -1) {
     LOG(ONET_LOG,LOG_INFO, "OneTouch Menu highlighted line = %d, '%s' hligh-char(s) '%.*s'\n",
                  _ot_hlightindex,_menu[_ot_hlightindex],
-                 (_ot_hlightcharindexstart - _ot_hlightcharindexstop + 1), &_menu[_ot_hlightindex][_ot_hlightcharindexstart]);
+                 (_ot_hlightcharindexstop - _ot_hlightcharindexstart + 1), 
+                 &_menu[_ot_hlightindex][_ot_hlightcharindexstart]);
   } else if (_ot_hlightindex > -1) {
     LOG(ONET_LOG,LOG_INFO, "OneTouch Menu highlighted line = %d = %s\n",_ot_hlightindex,_menu[_ot_hlightindex]);
   } 
@@ -69,6 +70,11 @@ void print_onetouch_menu()
 int onetouch_menu_hlightindex()
 {
   return _ot_hlightindex;
+}
+
+int onetouch_menu_hlightcharindex()
+{
+  return _ot_hlightcharindexstart;
 }
 
 char *onetouch_menu_hlight()
@@ -180,14 +186,18 @@ bool process_onetouch_menu_packet(struct aqualinkdata *aq_data, unsigned char* p
         _ot_hlightindex = packet[4];
         _ot_hlightcharindexstart = packet[5];
         _ot_hlightcharindexstop = packet[6];
+        //printf("**** hlight Line %d, start %d, stop %d\n",_ot_hlightindex, _ot_hlightcharindexstart, _ot_hlightcharindexstop);
       } else {
+        //printf("**** hlight Packet 4 = %d\n", packet[4]);
         _ot_hlightindex = -1;
         _ot_hlightcharindexstart = -1;
         _ot_hlightcharindexstart = -1;
       }
       LOG(ONET_LOG,LOG_DEBUG, "OneTouch Menu highlighted line = %d, '%s' chars '%.*s'\n",
-                 _ot_hlightindex,_menu[_ot_hlightindex],
-                 (_ot_hlightcharindexstart - _ot_hlightcharindexstop + 1), &_menu[_ot_hlightindex][_ot_hlightcharindexstart]);
+                 _ot_hlightindex,
+                 _menu[_ot_hlightindex],
+                 (_ot_hlightcharindexstop - _ot_hlightcharindexstart) + 1, 
+                 &_menu[_ot_hlightindex][_ot_hlightcharindexstart]);
       //if (getLogLevel() >= LOG_DEBUG){print_onetouch_menu();}
     break;
     case CMD_PDA_SHIFTLINES:

@@ -1,0 +1,3589 @@
+Notice: Aqualink Daemon v1.3.5c
+Notice: Config log_level         = 7
+Notice: Config socket_port       = 80
+Notice: Config serial_port       = /dev/ttyUSB0
+Notice: Config web_directory     = /var/www/aqualinkd/
+Notice: Config device_id         = 0x0a
+Notice: Config read_all_devices  = YES
+Notice: Config use_aux_labels    = NO
+Notice: Config override frz prot = NO
+Notice: Config mqtt_server       = trident:1883
+Notice: Config mqtt_dz_sub_topic = domoticz/out
+Notice: Config mqtt_dz_pub_topic = domoticz/in
+Notice: Config mqtt_aq_topic     = aqualinkd
+Notice: Config mqtt_user         = (null)
+Notice: Config mqtt_passwd       = (null)
+Notice: Config mqtt_ID           = aqualinkd_b827eb68
+Notice: Config idx water temp    = 13
+Notice: Config idx pool temp     = 14
+Notice: Config idx spa temp      = 15
+Notice: Config idx SWG Percent   = 153
+Notice: Config idx SWG PPM       = 152
+Notice: Config PDA Mode          = NO
+Notice: Config PDA Sleep Mode    = NO
+Notice: Config force SWG         = YES
+Notice: Config deamonize         = NO
+Notice: Config log_file          = (null)
+Notice: Config light_pgm_mode    = 0.00
+Notice: Debug RS485 protocol     = NO
+Notice: Read Pentair Packets     = NO
+Notice: Display warnings in web  = YES
+Notice: Config BTN Filter_Pump   = label Filter Pump     | VSP ID None  | dzidx 37 | 
+Notice: Config BTN Spa_Mode      = label Spa Mode        | VSP ID None  | dzidx 38 | 
+Notice: Config BTN Aux_1         = label Cleaner         | VSP ID None  | dzidx 39 | 
+Notice: Config BTN Aux_2         = label Waterfall       | VSP ID None  | dzidx 40 | 
+Notice: Config BTN Aux_3         = label Spa Blower      | VSP ID None  | dzidx 41 | 
+Notice: Config BTN Aux_4         = label Pool Light      | VSP ID None  | dzidx 42 | Programable
+Notice: Config BTN Aux_5         = label NONE            | VSP ID None  | dzidx 43 | 
+Notice: Config BTN Aux_6         = label NONE            | VSP ID None  | dzidx 0 | 
+Notice: Config BTN Aux_7         = label NONE            | VSP ID None  | dzidx 0 | 
+Notice: Config BTN Pool_Heater   = label Pool Heater     | VSP ID None  | dzidx 44 | 
+Notice: Config BTN Spa_Heater    = label Spa Heater      | VSP ID None  | dzidx 56 | 
+Notice: Config BTN Solar_Heater  = label NONE            | VSP ID None  | dzidx 0 | 
+Notice: Starting web server on port 80
+Notice: Starting MQTT client to trident:1883
+Notice: Listening to Aqualink RS8 on serial port: /dev/ttyUSB0
+Info:   MQTT: Subscribing mqtt with id of: aqualinkd_b827eb68
+Info:   MQTT: Connection acknowledged
+Info:   MQTT: Subscribing to 'aqualinkd/#'
+Info:   MQTT: Subscribing to 'domoticz/out'
+Info:   MQTT: Subscription(s) acknowledged
+Info:   MQTT: Published id=1: aqualinkd/Alive 1
+Info:   MQTT: Published id=2: aqualinkd/Service_Mode 0
+Info:   MQTT: Published id=3: aqualinkd/Freeze_Protect 0
+Info:   MQTT: Published id=4: aqualinkd/Battery 1
+Info:   MQTT: Published id=5: aqualinkd/SWG/fullstatus 255
+Info:   MQTT: Published id=6: aqualinkd/SWG/enabled 0
+Info:   MQTT: Published id=7: domoticz/in {"idx":157,"nvalue":0,"svalue":"OFF"}
+Info:   MQTT: Published id=8: aqualinkd/SWG 0
+Info:   MQTT: Published id=9: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=10: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=11: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=12: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=13: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=14: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=15: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Published id=16: aqualinkd/SWG/fullstatus 0
+Info:   MQTT: Published id=17: aqualinkd/SWG/enabled 2
+Info:   MQTT: Published id=18: domoticz/in {"idx":157,"nvalue":1,"svalue":"GENERATING CHLORINE"}
+Info:   MQTT: Published id=19: aqualinkd/SWG 2
+Debug:  MQTT: Ignore aqualinkd/Alive 1
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect 0
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect/setpoint 1.11
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect/enabled 1
+Debug:  MQTT: Ignore aqualinkd/Battery 1
+Debug:  MQTT: Ignore aqualinkd/SWG 2
+Debug:  MQTT: Ignore aqualinkd/SWG/enabled 2
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Debug:  MQTT: Ignore aqualinkd/SWG/fullstatus 0
+Debug:  MQTT: Ignore aqualinkd/Filter_Pump 1
+Debug:  MQTT: Ignore aqualinkd/Filter_Pump/delay 0
+Debug:  MQTT: Ignore aqualinkd/Spa_Mode 0
+Debug:  MQTT: Ignore aqualinkd/Spa_Mode/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_1 0
+Debug:  MQTT: Ignore aqualinkd/Aux_1/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_2 0
+Debug:  MQTT: Ignore aqualinkd/Aux_2/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_3 0
+Debug:  MQTT: Ignore aqualinkd/Aux_3/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_4 0
+Debug:  MQTT: Ignore aqualinkd/Aux_4/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_5 0
+Debug:  MQTT: Ignore aqualinkd/Aux_5/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_6 0
+Debug:  MQTT: Ignore aqualinkd/Aux_6/delay 0
+Debug:  MQTT: Ignore aqualinkd/Aux_7 0
+Debug:  MQTT: Ignore aqualinkd/Aux_7/delay 0
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater 0
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater/enabled 0
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater/setpoint 21.11
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater 0
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater/enabled 0
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater/setpoint 35.56
+Debug:  MQTT: Ignore aqualinkd/Solar_Heater 0
+Debug:  MQTT: Ignore aqualinkd/Solar_Heater/delay 0
+Debug:  MQTT: Ignore aqualinkd/Temperature/Air 32.78
+Debug:  MQTT: Ignore aqualinkd/Temperature/Pool 31.11
+Debug:  MQTT: Ignore aqualinkd/Temperature/Spa 31.67
+Debug:  MQTT: Ignore aqualinkd/Service_Mode 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 1)
+Info:   MQTT: received (msg_id: 1), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Alive 1
+Info:   MQTT: Message publishing acknowledged (msg_id: 2)
+Info:   MQTT: received (msg_id: 2), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Service_Mode 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 3)
+Info:   MQTT: received (msg_id: 3), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 4)
+Info:   MQTT: received (msg_id: 4), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Battery 1
+Info:   MQTT: Message publishing acknowledged (msg_id: 5)
+Info:   MQTT: received (msg_id: 5), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/fullstatus 255
+Info:   MQTT: Message publishing acknowledged (msg_id: 6)
+Info:   MQTT: received (msg_id: 6), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/enabled 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 7)
+Info:   MQTT: Message publishing acknowledged (msg_id: 8)
+Info:   MQTT: received (msg_id: 8), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 9)
+Info:   MQTT: received (msg_id: 9), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 10)
+Info:   MQTT: received (msg_id: 10), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 11)
+Info:   MQTT: received (msg_id: 11), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 12)
+Info:   MQTT: Message publishing acknowledged (msg_id: 13)
+Info:   MQTT: received (msg_id: 13), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 14)
+Info:   MQTT: received (msg_id: 14), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 15)
+Info:   MQTT: Message publishing acknowledged (msg_id: 16)
+Info:   MQTT: received (msg_id: 16), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/fullstatus 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 17)
+Info:   MQTT: received (msg_id: 17), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/enabled 2
+Info:   MQTT: Message publishing acknowledged (msg_id: 18)
+Info:   MQTT: Message publishing acknowledged (msg_id: 19)
+Info:   MQTT: received (msg_id: 19), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG 2
+Debug:  MQTT: DZ: Received message IDX=157 nValue=0 sValue=OFF
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  MQTT: DZ: Received message IDX=157 nValue=1 sValue=GENERATING CHLORINE
+Debug:  ++ Websocket joined
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2136 of 3000
+Debug:  RS received packet of type Probe length 7
+Debug:  RS Received PROBE length 7.
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   MQTT: Published id=20: aqualinkd/Filter_Pump/delay 0
+Info:   MQTT: Published id=21: aqualinkd/Filter_Pump 1
+Info:   MQTT: Published id=22: domoticz/in {"idx":37,"nvalue":1,"svalue":""}
+Info:   MQTT: Published id=23: aqualinkd/Spa_Mode/delay 0
+Info:   MQTT: Published id=24: aqualinkd/Spa_Mode 0
+Info:   MQTT: Published id=25: domoticz/in {"idx":38,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=26: aqualinkd/Aux_1/delay 0
+Info:   MQTT: Published id=27: aqualinkd/Aux_1 0
+Info:   MQTT: Published id=28: domoticz/in {"idx":39,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=29: aqualinkd/Aux_2/delay 0
+Info:   MQTT: Published id=30: aqualinkd/Aux_2 0
+Info:   MQTT: Published id=31: domoticz/in {"idx":40,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=32: aqualinkd/Aux_3/delay 0
+Info:   MQTT: Published id=33: aqualinkd/Aux_3 0
+Info:   MQTT: Published id=34: domoticz/in {"idx":41,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=35: aqualinkd/Aux_4/delay 0
+Info:   MQTT: Published id=36: aqualinkd/Aux_4 0
+Info:   MQTT: Published id=37: domoticz/in {"idx":42,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=38: aqualinkd/Aux_5/delay 0
+Info:   MQTT: Published id=39: aqualinkd/Aux_5 0
+Info:   MQTT: Published id=40: domoticz/in {"idx":43,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=41: aqualinkd/Aux_6/delay 0
+Info:   MQTT: Published id=42: aqualinkd/Aux_6 0
+Info:   MQTT: Published id=43: aqualinkd/Aux_7/delay 0
+Info:   MQTT: Published id=44: aqualinkd/Aux_7 0
+Info:   MQTT: Published id=45: aqualinkd/Pool_Heater 0
+Info:   MQTT: Published id=46: aqualinkd/Pool_Heater/enabled 0
+Info:   MQTT: Published id=47: domoticz/in {"idx":44,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=48: aqualinkd/Spa_Heater 0
+Info:   MQTT: Published id=49: aqualinkd/Spa_Heater/enabled 0
+Info:   MQTT: Published id=50: domoticz/in {"idx":56,"nvalue":0,"svalue":""}
+Info:   MQTT: Published id=51: aqualinkd/Solar_Heater/delay 0
+Info:   MQTT: Published id=52: aqualinkd/Solar_Heater 0
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '8157 REV MMM'
+Notice: Control Panel 8157 REV MMM
+Info:   MQTT: Message publishing acknowledged (msg_id: 20)
+Info:   MQTT: received (msg_id: 20), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Filter_Pump/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 21)
+Info:   MQTT: received (msg_id: 21), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Filter_Pump 1
+Info:   MQTT: Message publishing acknowledged (msg_id: 22)
+Info:   MQTT: Message publishing acknowledged (msg_id: 23)
+Info:   MQTT: received (msg_id: 23), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Spa_Mode/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 24)
+Info:   MQTT: received (msg_id: 24), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Spa_Mode 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 25)
+Info:   MQTT: Message publishing acknowledged (msg_id: 26)
+Info:   MQTT: received (msg_id: 26), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_1/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 27)
+Info:   MQTT: received (msg_id: 27), looks like my own message, ignoring
+Debug:  Thread -1227479952 sleeping, waiting for queue to empty
+Debug:  Thread -1235868560 sleeping, waiting for queue to empty
+Debug:  MQTT: Ignore aqualinkd/Aux_1 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 28)
+Info:   MQTT: Message publishing acknowledged (msg_id: 29)
+Info:   MQTT: received (msg_id: 29), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_2/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 30)
+Info:   MQTT: received (msg_id: 30), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_2 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 31)
+Info:   MQTT: Message publishing acknowledged (msg_id: 32)
+Info:   MQTT: received (msg_id: 32), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_3/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 33)
+Info:   MQTT: received (msg_id: 33), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_3 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 34)
+Info:   MQTT: Message publishing acknowledged (msg_id: 35)
+Info:   MQTT: received (msg_id: 35), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_4/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 36)
+Info:   MQTT: received (msg_id: 36), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_4 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 37)
+Info:   MQTT: Message publishing acknowledged (msg_id: 38)
+Info:   MQTT: received (msg_id: 38), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_5/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 39)
+Info:   MQTT: received (msg_id: 39), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_5 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 40)
+Info:   MQTT: Message publishing acknowledged (msg_id: 41)
+Info:   MQTT: received (msg_id: 41), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_6/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 42)
+Info:   MQTT: received (msg_id: 42), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_6 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 43)
+Info:   MQTT: received (msg_id: 43), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_7/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 44)
+Info:   MQTT: received (msg_id: 44), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Aux_7 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 45)
+Info:   MQTT: received (msg_id: 45), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 46)
+Info:   MQTT: received (msg_id: 46), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater/enabled 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 47)
+Info:   MQTT: Message publishing acknowledged (msg_id: 48)
+Info:   MQTT: received (msg_id: 48), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 49)
+Info:   MQTT: received (msg_id: 49), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater/enabled 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 50)
+Info:   MQTT: Message publishing acknowledged (msg_id: 51)
+Info:   MQTT: received (msg_id: 51), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Solar_Heater/delay 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 52)
+Info:   MQTT: received (msg_id: 52), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Solar_Heater 0
+Debug:  MQTT: DZ: Received message IDX=37 nValue=1 sValue=
+Info:   MQTT: DZ: received 'ON' for 'Filter_Pump', already 'ON', Ignoring
+Debug:  MQTT: DZ: Received message IDX=38 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Spa_Mode', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=39 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Aux_1', already 'OFF', Ignoring
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=40 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Aux_2', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=41 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Aux_3', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=42 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Aux_4', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=43 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Aux_5', already 'OFF', Ignoring
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=44 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Pool_Heater', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=56 nValue=0 sValue=
+Info:   MQTT: DZ: received 'OFF' for 'Spa_Heater', already 'OFF', Ignoring
+Debug:  Thread 0,0xcd78c0 is active (Get Heater setpoints)
+Notice: Getting pool & spa heat setpoints from aqualink
+Info:   Queue send '0x09' to controller (programming)
+Debug:  waitForMessage PRESS ENTER* TO SELECT 5
+Debug:  Programming mode: loop 1 of 5 looking for 'PRESS ENTER* TO SELECT' received message '8157 REV MMM'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 2 of 5 looking for 'PRESS ENTER* TO SELECT' received message '8157 REV MMM'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Lng Message length 24
+Debug:  MQTT: DZ: Received message IDX=114 nValue=0 sValue=
+Debug:  RS received packet of type Lng Message length 24
+Info:   RS Message :- 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 3 of 5 looking for 'PRESS ENTER* TO SELECT' received message 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  Programming mode: String MATCH
+Debug:  Programming mode: found message 'PRESS ENTER* TO SELECT' in 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PRESS ~ FOR MOR'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 1 of 25 looking for 'REVIEW' received message 'PRESS ~ FOR MOR'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PRESS ~ FOR MOR'
+Info:   RS Message :- 'PROGRAM      ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 2 of 25 looking for 'REVIEW' received message 'PROGRAM      ~*'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'REVIEW       ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'REVIEW       ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET TEMP     ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 3 of 25 looking for 'REVIEW' received message 'SET TEMP     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET TEMP     ~*'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET TIME     ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 4 of 25 looking for 'REVIEW' received message 'SET TIME     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET TIME     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET AquaPure ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 5 of 25 looking for 'REVIEW' received message 'SET AquaPure ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET AquaPure ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'BOOST POOL   ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 6 of 25 looking for 'REVIEW' received message 'BOOST POOL   ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'BOOST POOL   ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'LOCKOUTS     ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 7 of 25 looking for 'REVIEW' received message 'LOCKOUTS     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'LOCKOUTS     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PGM GROUP    ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 8 of 25 looking for 'REVIEW' received message 'PGM GROUP    ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PGM GROUP    ~*'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'DISPLY LIGHT ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 9 of 25 looking for 'REVIEW' received message 'DISPLY LIGHT ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'DISPLY LIGHT ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SYSTEM SETUP ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 10 of 25 looking for 'REVIEW' received message 'SYSTEM SETUP ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SYSTEM SETUP ~*'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'ALL OFF      ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 11 of 25 looking for 'REVIEW' received message 'ALL OFF      ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'ALL OFF      ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PROGRAM      ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 12 of 25 looking for 'REVIEW' received message 'PROGRAM      ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PROGRAM      ~*'
+Debug:  ++ Websocket joined
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2086 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   URI request: '/hk/Pool_Heater-off.png '
+Debug:  Served WEB request
+Info:   URI request: '/hk/Pool_Heater-on.png '
+Debug:  Served WEB request
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'REVIEW       ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 13 of 25 looking for 'REVIEW' received message 'REVIEW       ~*'
+Debug:  Programming mode: found menu item 'REVIEW'
+Info:   Queue send '0x1d' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'REVIEW       ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PROGRAMS     ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PROGRAMS     ~*'
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'TEMP SET     ~*'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Find item in Menu: loop 1 of 25 looking for 'TEMP SET' received message 'TEMP SET     ~*'
+Debug:  Programming mode: found menu item 'TEMP SET'
+Info:   Queue send '0x1d' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'TEMP SET     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  waitForMessage MAINTAIN TEMP IS 5
+Debug:  Programming mode: loop 1 of 5 looking for 'MAINTAIN TEMP IS' received message 'TEMP SET     ~*'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP IS SET TO 70ßF'
+Debug:  Getting temp units from message POOL TEMP IS SET TO 70ßF, looking at F
+Info:   Temp Units set to 0 (F=0, C=1, Unknown=3)
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 2 of 5 looking for 'MAINTAIN TEMP IS' received message 'POOL TEMP IS SET TO 70ßF'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 3 of 5 looking for 'MAINTAIN TEMP IS' received message 'POOL TEMP IS SET TO 70ßF'
+Info:   MQTT: Published id=53: aqualinkd/Pool_Heater/setpoint 21.11
+Info:   MQTT: Message publishing acknowledged (msg_id: 53)
+Debug:  MQTT: Ignore aqualinkd/Pool_Heater/setpoint 21.11
+Debug:  RS received packet of type Lng Message length 24
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SPA TEMP IS SET TO 96ßF'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 4 of 5 looking for 'MAINTAIN TEMP IS' received message 'SPA TEMP IS SET TO 96ßF'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: loop 5 of 5 looking for 'MAINTAIN TEMP IS' received message 'SPA TEMP IS SET TO 96ßF'
+Info:   MQTT: Published id=54: aqualinkd/Spa_Heater/setpoint 35.56
+Info:   MQTT: Message publishing acknowledged (msg_id: 54)
+Debug:  MQTT: Ignore aqualinkd/Spa_Heater/setpoint 35.56
+Debug:  RS received packet of type Lng Message length 24
+Debug:  Thread 1,0xcd7978 (Get Freeze proctect) sleeping, waiting for thread 0,0xcd78c0 (Get Heater setpoints) to finish
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'MAINTAIN TEMP IS OFF'
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  Programming mode: did not find 'MAINTAIN TEMP IS'
+Debug:  Thread 0,0xb6d62470 (Get Heater setpoints) finished
+Info:   RS Message :- '6:06 PM'
+Debug:  RS time is accurate '6:06 PM '
+Debug:  Kicking thread 0,0xcd78c0
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  Thread 1,0xcd7978 is active (Get Freeze proctect)
+Notice: Getting freeze protection setpoints
+Info:   Queue send '0x09' to controller (programming)
+Debug:  waitForMessage PRESS ENTER* TO SELECT 5
+Debug:  Programming mode: loop 1 of 5 looking for 'PRESS ENTER* TO SELECT' received message '6:06 PM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 2 of 5 looking for 'PRESS ENTER* TO SELECT' received message '6:06 PM'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Lng Message length 24
+Info:   RS Message :- 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 3 of 5 looking for 'PRESS ENTER* TO SELECT' received message 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  Programming mode: String MATCH
+Debug:  Programming mode: found message 'PRESS ENTER* TO SELECT' in 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PRESS ~ FOR MORE OPTIONS... PRESS ENTER* TO SELECT'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PRESS ~ FOR MOR'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 1 of 25 looking for 'REVIEW' received message 'PRESS ~ FOR MOR'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PRESS ~ FOR MOR'
+Info:   RS Message :- 'PROGRAM      ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 2 of 25 looking for 'REVIEW' received message 'PROGRAM      ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'REVIEW       ~*'
+Debug:  Kicking thread 1,0xcd7978
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'REVIEW       ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET TEMP     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 3 of 25 looking for 'REVIEW' received message 'SET TEMP     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET TEMP     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET TIME     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 4 of 25 looking for 'REVIEW' received message 'SET TIME     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET TIME     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SET AquaPure ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 5 of 25 looking for 'REVIEW' received message 'SET AquaPure ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SET AquaPure ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'BOOST POOL   ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 6 of 25 looking for 'REVIEW' received message 'BOOST POOL   ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'BOOST POOL   ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'LOCKOUTS     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 7 of 25 looking for 'REVIEW' received message 'LOCKOUTS     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'LOCKOUTS     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PGM GROUP    ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 8 of 25 looking for 'REVIEW' received message 'PGM GROUP    ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PGM GROUP    ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'DISPLY LIGHT ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 9 of 25 looking for 'REVIEW' received message 'DISPLY LIGHT ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'DISPLY LIGHT ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SYSTEM SETUP ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 10 of 25 looking for 'REVIEW' received message 'SYSTEM SETUP ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SYSTEM SETUP ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'ALL OFF      ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 11 of 25 looking for 'REVIEW' received message 'ALL OFF      ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'ALL OFF      ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PROGRAM      ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 12 of 25 looking for 'REVIEW' received message 'PROGRAM      ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PROGRAM      ~*'
+Debug:  MQTT: DZ: Received message IDX=108 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'REVIEW       ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 13 of 25 looking for 'REVIEW' received message 'REVIEW       ~*'
+Debug:  Programming mode: found menu item 'REVIEW'
+Info:   Queue send '0x1d' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'REVIEW       ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'PROGRAMS     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'PROGRAMS     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'TEMP SET     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 1 of 25 looking for 'FRZ PROTECT' received message 'TEMP SET     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'TEMP SET     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'ALL OFF TIME ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 2 of 25 looking for 'FRZ PROTECT' received message 'ALL OFF TIME ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'ALL OFF TIME ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SPA SWITCH   ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 3 of 25 looking for 'FRZ PROTECT' received message 'SPA SWITCH   ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SPA SWITCH   ~*'
+Debug:  MQTT: DZ: Received message IDX=98 nValue=0 sValue=24.9
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SPA LINK     ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 4 of 25 looking for 'FRZ PROTECT' received message 'SPA LINK     ~*'
+Info:   Queue send '0x18' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'SPA LINK     ~*'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'FRZ PROTECT  ~*'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Find item in Menu: loop 5 of 25 looking for 'FRZ PROTECT' received message 'FRZ PROTECT  ~*'
+Debug:  Programming mode: found menu item 'FRZ PROTECT'
+Info:   Queue send '0x1d' to controller (programming)
+Debug:  waitForMessage (null) 1
+Debug:  Programming mode: loop 1 of 1 waiting for next message, received 'FRZ PROTECT  ~*'
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Message length 24
+Debug:  Kicking thread 1,0xcd7978
+Debug:  waitForMessage FREEZE PROTECTION IS SET TO 6
+Debug:  Programming mode: loop 1 of 6 looking for 'FREEZE PROTECTION IS SET TO' received message 'FRZ PROTECT  ~*'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Lng Message length 24
+Info:   RS Message :- 'ITEMS ASSIGNED TO FREEZE PROTECTION ARE:'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 2 of 6 looking for 'FREEZE PROTECTION IS SET TO' received message 'ITEMS ASSIGNED TO FREEZE PROTECTION ARE:'
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'FILTER PUMP'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 3 of 6 looking for 'FREEZE PROTECTION IS SET TO' received message 'FILTER PUMP'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 4 of 6 looking for 'FREEZE PROTECTION IS SET TO' received message 'FILTER PUMP'
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Lng Message length 24
+Debug:  RS received packet of type Status length 12
+Info:   RS Message :- 'FREEZE PROTECTION IS SET TO 34ßF'
+Debug:  Kicking thread 1,0xcd7978
+Debug:  Programming mode: loop 5 of 6 looking for 'FREEZE PROTECTION IS SET TO' received message 'FREEZE PROTECTION IS SET TO 34ßF'
+Debug:  Programming mode: String MATCH
+Debug:  Programming mode: found message 'FREEZE PROTECTION IS SET TO' in 'FREEZE PROTECTION IS SET TO 34ßF'
+Debug:  Thread 1,0xb6562470 (Get Freeze proctect) finished
+Debug:  RS Received STATUS length 12.
+Info:   MQTT: Published id=55: aqualinkd/Freeze_Protect/setpoint 1.11
+Info:   MQTT: Published id=56: aqualinkd/Freeze_Protect 0
+Info:   MQTT: Published id=57: aqualinkd/Freeze_Protect/enabled 1
+Info:   MQTT: Message publishing acknowledged (msg_id: 55)
+Info:   MQTT: received (msg_id: 55), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect/setpoint 1.11
+Info:   MQTT: Message publishing acknowledged (msg_id: 56)
+Info:   MQTT: received (msg_id: 56), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect 0
+Info:   MQTT: Message publishing acknowledged (msg_id: 57)
+Info:   MQTT: received (msg_id: 57), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Freeze_Protect/enabled 1
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:06 PM'
+Debug:  RS time is accurate '6:06 PM '
+Debug:  Kicking thread 1,0xcd7978
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Info:   MQTT: Published id=58: aqualinkd/Temperature/Air 33.33
+Info:   MQTT: Published id=59: domoticz/in {"idx":13,"nvalue":0,"stype":"SetPoint","svalue":"33.33"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 58)
+Info:   MQTT: received (msg_id: 58), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Temperature/Air 33.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 59)
+Debug:  MQTT: DZ: Received message IDX=13 nValue=0 sValue=33.33
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=50 nValue=0 sValue=28.60
+Debug:  MQTT: DZ: Received message IDX=53 nValue=0 sValue=33.60
+Debug:  MQTT: DZ: Received message IDX=104 nValue=0 sValue=33.60
+Debug:  MQTT: DZ: Received message IDX=51 nValue=66 sValue=1
+Debug:  MQTT: DZ: Received message IDX=47 nValue=0 sValue=33.60
+Debug:  MQTT: DZ: Received message IDX=49 nValue=0 sValue=202
+Debug:  MQTT: DZ: Received message IDX=217 nValue=3 sValue=null value update fo
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Info:   MQTT: Published id=60: aqualinkd/Temperature/Pool 31.11
+Info:   MQTT: Published id=61: domoticz/in {"idx":14,"nvalue":0,"stype":"SetPoint","svalue":"31.11"}
+Info:   MQTT: Published id=62: domoticz/in {"idx":15,"nvalue":0,"stype":"SetPoint","svalue":"31.11"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 60)
+Info:   MQTT: received (msg_id: 60), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/Temperature/Pool 31.11
+Info:   MQTT: Message publishing acknowledged (msg_id: 61)
+Info:   MQTT: Message publishing acknowledged (msg_id: 62)
+Debug:  MQTT: DZ: Received message IDX=14 nValue=0 sValue=31.11
+Debug:  MQTT: DZ: Received message IDX=15 nValue=0 sValue=31.11
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=108 nValue=0 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:06 PM'
+Info:   Aqualink time is off by 89 seconds...
+Debug:  RS time is accurate '6:06 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Info:   MQTT: Published id=63: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=64: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=65: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=66: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=67: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=68: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=69: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 63)
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 64)
+Info:   MQTT: received (msg_id: 64), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 65)
+Info:   MQTT: received (msg_id: 65), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 66)
+Info:   MQTT: Message publishing acknowledged (msg_id: 67)
+Info:   MQTT: received (msg_id: 67), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 68)
+Info:   MQTT: received (msg_id: 68), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 69)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=homebridge'
+Info:   WEB: Message command='homebridge'
+Debug:  WEB: homebridge used 2395 of 3000
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:07 PM'
+Debug:  time not checked, will check in 3588 seconds
+Debug:  RS time is accurate '6:07 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:07 PM'
+Debug:  time not checked, will check in 3574 seconds
+Debug:  RS time is accurate '6:07 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:07 PM'
+Debug:  time not checked, will check in 3562 seconds
+Debug:  RS time is accurate '6:07 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=147 nValue=0 sValue=
+Debug:  MQTT: DZ: Received message IDX=148 nValue=1 sValue=
+Debug:  MQTT: DZ: Received message IDX=149 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:07 PM'
+Debug:  time not checked, will check in 3551 seconds
+Debug:  RS time is accurate '6:07 PM 08/22/19 THU'
+Debug:  MQTT: DZ: Received message IDX=12 nValue=1 sValue=On
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Info:   MQTT: Published id=70: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=71: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=72: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=73: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=74: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=75: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=76: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 70)
+Info:   MQTT: received (msg_id: 70), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 71)
+Info:   MQTT: received (msg_id: 71), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 72)
+Info:   MQTT: received (msg_id: 72), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 73)
+Info:   MQTT: Message publishing acknowledged (msg_id: 74)
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 75)
+Info:   MQTT: received (msg_id: 75), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 76)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:08 PM'
+Debug:  time not checked, will check in 3537 seconds
+Debug:  RS time is accurate '6:08 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:08 PM'
+Debug:  time not checked, will check in 3525 seconds
+Debug:  RS time is accurate '6:08 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:08 PM'
+Debug:  time not checked, will check in 3513 seconds
+Debug:  RS time is accurate '6:08 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:08 PM'
+Debug:  time not checked, will check in 3498 seconds
+Debug:  RS time is accurate '6:08 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Info:   MQTT: Published id=77: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=78: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=79: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=80: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=81: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=82: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=83: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 77)
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 78)
+Info:   MQTT: received (msg_id: 78), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 79)
+Info:   MQTT: received (msg_id: 79), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 80)
+Info:   MQTT: Message publishing acknowledged (msg_id: 81)
+Info:   MQTT: received (msg_id: 81), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 82)
+Info:   MQTT: received (msg_id: 82), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 83)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=50 nValue=0 sValue=28.60
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=53 nValue=0 sValue=33.90
+Debug:  MQTT: DZ: Received message IDX=104 nValue=0 sValue=33.90
+Debug:  MQTT: DZ: Received message IDX=51 nValue=65 sValue=1
+Debug:  MQTT: DZ: Received message IDX=47 nValue=0 sValue=33.90
+Debug:  MQTT: DZ: Received message IDX=49 nValue=0 sValue=45
+Debug:  MQTT: DZ: Received message IDX=217 nValue=3 sValue=null value update fo
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:08 PM'
+Debug:  time not checked, will check in 3486 seconds
+Debug:  RS time is accurate '6:08 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:09 PM'
+Debug:  time not checked, will check in 3474 seconds
+Debug:  RS time is accurate '6:09 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=0 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:09 PM'
+Debug:  time not checked, will check in 3460 seconds
+Debug:  RS time is accurate '6:09 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=108 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=230 nValue=0 sValue=46.00
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=224 nValue=0 sValue=42.20
+Debug:  MQTT: DZ: Received message IDX=233 nValue=0 sValue=48.70
+Debug:  MQTT: DZ: Received message IDX=227 nValue=0 sValue=47.20
+Debug:  MQTT: DZ: Received message IDX=229 nValue=0 sValue=40.10
+Debug:  MQTT: DZ: Received message IDX=226 nValue=0 sValue=47.10
+Debug:  MQTT: DZ: Received message IDX=234 nValue=0 sValue=1.3125
+Debug:  MQTT: DZ: Received message IDX=232 nValue=0 sValue=1.2000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=108 nValue=0 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=0 sValue=
+Debug:  MQTT: DZ: Received message IDX=228 nValue=0 sValue=44.40
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:09 PM'
+Debug:  time not checked, will check in 3448 seconds
+Debug:  RS time is accurate '6:09 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   MQTT: Published id=84: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=85: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=86: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=87: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=88: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=89: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=90: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 84)
+Info:   MQTT: received (msg_id: 84), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 85)
+Info:   MQTT: received (msg_id: 85), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 86)
+Info:   MQTT: received (msg_id: 86), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 87)
+Info:   MQTT: Message publishing acknowledged (msg_id: 88)
+Info:   MQTT: received (msg_id: 88), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 89)
+Info:   MQTT: received (msg_id: 89), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 90)
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:09 PM'
+Debug:  time not checked, will check in 3437 seconds
+Debug:  RS time is accurate '6:09 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=12 nValue=1 sValue=On
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:09 PM'
+Debug:  time not checked, will check in 3423 seconds
+Debug:  RS time is accurate '6:09 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:10 PM'
+Debug:  time not checked, will check in 3411 seconds
+Debug:  RS time is accurate '6:10 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:10 PM'
+Debug:  time not checked, will check in 3398 seconds
+Debug:  RS time is accurate '6:10 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   MQTT: Published id=91: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=92: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=93: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=94: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=95: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=96: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=97: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 91)
+Info:   MQTT: received (msg_id: 91), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 92)
+Info:   MQTT: received (msg_id: 92), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 93)
+Info:   MQTT: received (msg_id: 93), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 94)
+Info:   MQTT: Message publishing acknowledged (msg_id: 95)
+Info:   MQTT: received (msg_id: 95), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 96)
+Info:   MQTT: received (msg_id: 96), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 97)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:10 PM'
+Debug:  time not checked, will check in 3384 seconds
+Debug:  RS time is accurate '6:10 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:10 PM'
+Debug:  time not checked, will check in 3372 seconds
+Debug:  RS time is accurate '6:10 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  MQTT: DZ: Received message IDX=50 nValue=0 sValue=28.60
+Debug:  MQTT: DZ: Received message IDX=53 nValue=0 sValue=34.20
+Debug:  MQTT: DZ: Received message IDX=104 nValue=0 sValue=34.20
+Debug:  MQTT: DZ: Received message IDX=51 nValue=65 sValue=1
+Debug:  MQTT: DZ: Received message IDX=47 nValue=0 sValue=34.20
+Debug:  MQTT: DZ: Received message IDX=49 nValue=0 sValue=202
+Debug:  MQTT: DZ: Received message IDX=217 nValue=3 sValue=null value update fo
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:10 PM'
+Debug:  time not checked, will check in 3360 seconds
+Debug:  RS time is accurate '6:10 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=105 nValue=0 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:11 PM'
+Debug:  time not checked, will check in 3346 seconds
+Debug:  RS time is accurate '6:11 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   MQTT: Published id=98: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=99: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=100: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=101: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=102: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=103: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=104: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 98)
+Info:   MQTT: received (msg_id: 98), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 99)
+Info:   MQTT: received (msg_id: 99), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 100)
+Info:   MQTT: received (msg_id: 100), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 101)
+Info:   MQTT: Message publishing acknowledged (msg_id: 102)
+Info:   MQTT: received (msg_id: 102), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 103)
+Info:   MQTT: received (msg_id: 103), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 104)
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:11 PM'
+Debug:  time not checked, will check in 3334 seconds
+Debug:  RS time is accurate '6:11 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:11 PM'
+Debug:  time not checked, will check in 3322 seconds
+Debug:  RS time is accurate '6:11 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=98 nValue=0 sValue=24.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:11 PM'
+Debug:  time not checked, will check in 3308 seconds
+Debug:  RS time is accurate '6:11 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=12 nValue=1 sValue=On
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:12 PM'
+Debug:  time not checked, will check in 3296 seconds
+Debug:  RS time is accurate '6:12 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   MQTT: Published id=105: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=106: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=107: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=108: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=109: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=110: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=111: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 105)
+Info:   MQTT: received (msg_id: 105), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 106)
+Info:   MQTT: received (msg_id: 106), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 107)
+Info:   MQTT: received (msg_id: 107), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 108)
+Info:   MQTT: Message publishing acknowledged (msg_id: 109)
+Info:   MQTT: received (msg_id: 109), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 110)
+Info:   MQTT: received (msg_id: 110), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 111)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:12 PM'
+Debug:  time not checked, will check in 3285 seconds
+Debug:  RS time is accurate '6:12 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:12 PM'
+Debug:  time not checked, will check in 3271 seconds
+Debug:  RS time is accurate '6:12 PM 08/22/19 THU'
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:12 PM'
+Debug:  time not checked, will check in 3258 seconds
+Debug:  RS time is accurate '6:12 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  MQTT: DZ: Received message IDX=50 nValue=0 sValue=28.60
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=53 nValue=0 sValue=34.30
+Debug:  MQTT: DZ: Received message IDX=104 nValue=0 sValue=34.30
+Debug:  MQTT: DZ: Received message IDX=51 nValue=63 sValue=1
+Debug:  MQTT: DZ: Received message IDX=47 nValue=0 sValue=34.30
+Debug:  MQTT: DZ: Received message IDX=49 nValue=0 sValue=202
+Debug:  MQTT: DZ: Received message IDX=217 nValue=3 sValue=null value update fo
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:12 PM'
+Debug:  time not checked, will check in 3246 seconds
+Debug:  RS time is accurate '6:12 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   MQTT: Published id=112: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=113: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=114: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=115: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=116: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=117: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=118: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 112)
+Info:   MQTT: received (msg_id: 112), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 113)
+Info:   MQTT: received (msg_id: 113), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 114)
+Info:   MQTT: received (msg_id: 114), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 115)
+Info:   MQTT: Message publishing acknowledged (msg_id: 116)
+Info:   MQTT: received (msg_id: 116), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 117)
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 118)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:13 PM'
+Debug:  time not checked, will check in 3232 seconds
+Debug:  RS time is accurate '6:13 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=114 nValue=1 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=1
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:13 PM'
+Debug:  time not checked, will check in 3220 seconds
+Debug:  RS time is accurate '6:13 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=114 nValue=0 sValue=
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   URI request: '/?command=homebridge'
+Info:   WEB: Message command='homebridge'
+Debug:  WEB: homebridge used 2395 of 3000
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:13 PM'
+Debug:  time not checked, will check in 3208 seconds
+Debug:  RS time is accurate '6:13 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:13 PM'
+Debug:  time not checked, will check in 3195 seconds
+Debug:  RS time is accurate '6:13 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   MQTT: Published id=119: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=120: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=121: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=122: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=123: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=124: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=125: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 119)
+Info:   MQTT: received (msg_id: 119), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 120)
+Info:   MQTT: received (msg_id: 120), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 121)
+Info:   MQTT: received (msg_id: 121), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 122)
+Info:   MQTT: Message publishing acknowledged (msg_id: 123)
+Info:   MQTT: received (msg_id: 123), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 124)
+Info:   MQTT: received (msg_id: 124), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 125)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:13 PM'
+Debug:  time not checked, will check in 3182 seconds
+Debug:  RS time is accurate '6:13 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.8
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=12 nValue=1 sValue=On
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:14 PM'
+Debug:  time not checked, will check in 3171 seconds
+Debug:  RS time is accurate '6:14 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:14 PM'
+Debug:  time not checked, will check in 3157 seconds
+Debug:  RS time is accurate '6:14 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=233 nValue=0 sValue=47.10
+Debug:  MQTT: DZ: Received message IDX=114 nValue=1 sValue=
+Debug:  MQTT: DZ: Received message IDX=226 nValue=0 sValue=46.50
+Debug:  MQTT: DZ: Received message IDX=230 nValue=0 sValue=45.50
+Debug:  MQTT: DZ: Received message IDX=227 nValue=0 sValue=46.20
+Debug:  MQTT: DZ: Received message IDX=229 nValue=0 sValue=40.10
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=224 nValue=0 sValue=42.20
+Debug:  MQTT: DZ: Received message IDX=234 nValue=0 sValue=1.3125
+Debug:  MQTT: DZ: Received message IDX=232 nValue=0 sValue=1.3000
+Debug:  MQTT: DZ: Received message IDX=228 nValue=0 sValue=43.90
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Info:   URI request: '/?command=mhstatus'
+Info:   WEB: Message command='mhstatus'
+Debug:  Served WEB request
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=150 nValue=0 sValue=31.94
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:14 PM'
+Debug:  time not checked, will check in 3144 seconds
+Debug:  RS time is accurate '6:14 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   MQTT: Published id=126: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=127: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=128: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=129: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=130: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=131: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=132: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 126)
+Info:   MQTT: received (msg_id: 126), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 127)
+Info:   MQTT: received (msg_id: 127), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 128)
+Info:   MQTT: received (msg_id: 128), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 129)
+Info:   MQTT: Message publishing acknowledged (msg_id: 130)
+Info:   MQTT: received (msg_id: 130), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 131)
+Info:   MQTT: received (msg_id: 131), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 132)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=114 nValue=0 sValue=
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:14 PM'
+Debug:  time not checked, will check in 3132 seconds
+Debug:  RS time is accurate '6:14 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=50 nValue=0 sValue=28.60
+Debug:  MQTT: DZ: Received message IDX=53 nValue=0 sValue=34.50
+Debug:  MQTT: DZ: Received message IDX=104 nValue=0 sValue=34.50
+Debug:  MQTT: DZ: Received message IDX=51 nValue=62 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=47 nValue=0 sValue=34.50
+Debug:  MQTT: DZ: Received message IDX=49 nValue=0 sValue=135
+Debug:  MQTT: DZ: Received message IDX=217 nValue=3 sValue=null value update fo
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=150 nValue=0 sValue=32.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:14 PM'
+Debug:  time not checked, will check in 3118 seconds
+Debug:  RS time is accurate '6:14 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=142 nValue=0 sValue=100
+Debug:  MQTT: DZ: Received message IDX=141 nValue=0 sValue=116.9
+Debug:  MQTT: DZ: Received message IDX=145 nValue=0 sValue=2232
+Debug:  MQTT: DZ: Received message IDX=144 nValue=0 sValue=14
+Debug:  MQTT: DZ: Received message IDX=143 nValue=0 sValue=59.9
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:15 PM'
+Debug:  time not checked, will check in 3106 seconds
+Debug:  RS time is accurate '6:15 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'POOL TEMP  88ßF'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  MQTT: DZ: Received message IDX=170 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=175 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=168 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=171 nValue=0 sValue=78.00
+Debug:  MQTT: DZ: Received message IDX=174 nValue=0 sValue=25.60
+Debug:  MQTT: DZ: Received message IDX=169 nValue=0 sValue=0
+Debug:  MQTT: DZ: Received message IDX=173 nValue=0 sValue=76.00
+Debug:  MQTT: DZ: Received message IDX=176 nValue=0 sValue=24.40
+Debug:  MQTT: DZ: Received message IDX=172 nValue=0 sValue=1
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=150 nValue=0 sValue=31.94
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AquaPure 80%'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'SALT 2900 PPM'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Info:   URI request: '/?command=status'
+Info:   WEB: Message command='status'
+Debug:  Served WEB request
+Debug:  MQTT: DZ: Received message IDX=37 nValue=1 sValue=On
+Info:   MQTT: DZ: received 'ON' for 'Filter_Pump', already 'ON', Ignoring
+Debug:  MQTT: DZ: Received message IDX=38 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Spa_Mode', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=39 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Aux_1', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=40 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Aux_2', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=41 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Aux_3', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=42 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Aux_4', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=43 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Aux_5', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=44 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Pool_Heater', already 'OFF', Ignoring
+Debug:  RS received packet of type Status length 12
+Debug:  MQTT: DZ: Received message IDX=56 nValue=0 sValue=Off
+Info:   MQTT: DZ: received 'OFF' for 'Spa_Heater', already 'OFF', Ignoring
+Debug:  MQTT: DZ: Received message IDX=13 nValue=0 sValue=33.30
+Debug:  MQTT: DZ: Received message IDX=14 nValue=0 sValue=31.10
+Debug:  MQTT: DZ: Received message IDX=45 nValue=0 sValue=21.1
+Debug:  MQTT: DZ: Received message IDX=45 nValue=0 sValue=21.10
+Debug:  MQTT: DZ: Received message IDX=46 nValue=0 sValue=35.6
+Debug:  MQTT: DZ: Received message IDX=46 nValue=0 sValue=35.60
+Debug:  MQTT: DZ: Received message IDX=15 nValue=0 sValue=31.10
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- '6:15 PM'
+Debug:  time not checked, will check in 3094 seconds
+Debug:  RS time is accurate '6:15 PM 08/22/19 THU'
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'JANDY AquaLinkRS'
+Info:   MQTT: Published id=133: aqualinkd/SWG/Percent 80
+Info:   MQTT: Published id=134: aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Published id=135: aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Published id=136: domoticz/in {"idx":153,"nvalue":0,"stype":"SetPoint","svalue":"80.00"}
+Info:   MQTT: Published id=137: aqualinkd/SWG/PPM 2900
+Info:   MQTT: Published id=138: aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Published id=139: domoticz/in {"idx":152,"nvalue":0,"stype":"SetPoint","svalue":"2900.00"}
+Info:   MQTT: Message publishing acknowledged (msg_id: 133)
+Info:   MQTT: received (msg_id: 133), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent 80
+Info:   MQTT: Message publishing acknowledged (msg_id: 134)
+Info:   MQTT: received (msg_id: 134), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/Percent_f 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 135)
+Info:   MQTT: received (msg_id: 135), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/setpoint 26.67
+Info:   MQTT: Message publishing acknowledged (msg_id: 136)
+Info:   MQTT: Message publishing acknowledged (msg_id: 137)
+Info:   MQTT: received (msg_id: 137), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM 2900
+Info:   MQTT: Message publishing acknowledged (msg_id: 138)
+Info:   MQTT: received (msg_id: 138), looks like my own message, ignoring
+Debug:  MQTT: Ignore aqualinkd/SWG/PPM_f 1593.33
+Info:   MQTT: Message publishing acknowledged (msg_id: 139)
+Debug:  MQTT: DZ: Received message IDX=153 nValue=0 sValue=80.00
+Debug:  MQTT: DZ: Received message IDX=152 nValue=0 sValue=2900.00
+Debug:  RS received packet of type Status length 12
+Debug:  RS Received STATUS length 12.
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Status length 12
+Debug:  RS received packet of type Message length 24
+Info:   RS Message :- 'AIR TEMP 92ßF'
+Info:   WS: Message - Key 'command' Value 'GET_DEVICES' | Key2 '(null)' Value2 '(null)'
+Debug:  WEB: homebridge used 2355 of 3000

@@ -517,6 +517,7 @@ void processPage(struct aqualinkdata *aq_data)
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
   static int cnt = 0;
+  static bool gotStatus = true;
   //char buff[1024];
   
   if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {
@@ -527,6 +528,9 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     memset(_pageButtons, 0, IAQ_PAGE_BUTTONS * sizeof(struct iaqt_page_button));
     memset(_deviceStatus, 0, sizeof(char) * IAQ_STATUS_PAGE_LINES * AQ_MSGLEN+1 );
     memset(_tableInformation, 0, sizeof(char) * IAQ_MSG_TABLE_LINES * AQ_MSGLEN+1 );
+    // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
+    if (gotStatus == false)
+      gotStatus = true;
     //[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
   } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_END) {
     set_iaq_cansend(true);
@@ -580,11 +584,18 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   }
   // Standard ack/poll not interested in printing or kicking threads
   if (packet[3] == 0x30) {
-    // Load status page every 1000 messages
+    //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
+    // Load status page every 50 messages
     if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
       iaqt_queue_cmd(KEY_IAQTCH_STATUS);
+      gotStatus = false; // Reset if we got status page, for fix panel bug.
       //aq_programmer(AQ_GET_IAQTOUCH_VSP_ASSIGNMENT, NULL, aq_data);
       cnt = 0;
+    } else if (gotStatus == false && cnt > 3) {
+      // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
+      LOG(IAQT_LOG,LOG_INFO, "Overcomming Jandy control panel bug, (missing status, goto menu)\n",cnt);
+      iaqt_queue_cmd(KEY_IAQTCH_HOME);
+      iaqt_queue_cmd(KEY_IAQTCH_STATUS);
     } else if (in_programming_mode(aq_data) == true) {
       // Set count to something close to above, so we will pull latest info once programming has finished.
       // This is goot for VSP GPM programming as it takes number of seconds to register once finished programming.

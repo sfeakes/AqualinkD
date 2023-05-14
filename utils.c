@@ -247,6 +247,9 @@ const char* logmask2name(int16_t from)
     case DBGT_LOG:
       return "AQ Timing: ";
     break;
+    case TIMR_LOG:
+      return "Schd/Timer:";
+    break;
     case AQUA_LOG:
     default:
       return "AqualinkD: ";
@@ -268,6 +271,9 @@ void timestamp(char* time_string)
 char *cleanwhitespace(char *str)
 {
   char *end;
+
+  if (str == NULL)
+    return str;
 
   // Trim leading space
   while(isspace(*str)) str++;
@@ -423,6 +429,8 @@ void logMessage(int msg_level, const char *format, ...)
   _LOG(AQUA_LOG, msg_level, buffer);
 }
 */
+#define LOGBUFFER 4096
+
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
   //printf("msg_level=%d _log_level=%d mask=%d\n",msg_level,_log_level,(_logforcemask & from));
@@ -434,7 +442,7 @@ void LOG(int16_t from, int msg_level, const char * format, ...)
   if ( msg_level > getLogLevel(from))
     return;
 
-  char buffer[1024];
+  char buffer[LOGBUFFER];
   va_list args;
   va_start(args, format);
   strncpy(buffer, "         ", 20);
@@ -450,7 +458,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
   int i;
 
   // Make all printable chars
-  for(i = 8; i+8 < strlen(&message[8]) && i < 1024; i++) {
+  for(i = 8; i+8 < strlen(&message[8]) && i < LOGBUFFER; i++) {
     if ( (message[i] < 32 || message[i] > 125) && message[i] != 10 ) {
       //printf ("Change %c to %c in %s\n",message[i], ' ', message);
       message[i] = ' ';
@@ -466,7 +474,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
 
   // Logging has not been setup yet, so STD error & syslog
   if (_log_level == -1) {
-    fprintf (stderr, message);
+    fprintf (stderr, "%s\n", message);
     syslog (msg_level, "%s", &message[9]);
     closelog ();
   }
@@ -494,7 +502,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
-    snprintf(_loq_display_message, 127, message);
+    snprintf(_loq_display_message, 127, "%s\n",message);
   } 
 
   if (_log2file == TRUE && _log_filename != NULL) {   
@@ -741,21 +749,4 @@ char *prittyString(char *str)
 
   return str;
 }
-
-/*
-static FILE *_packetLogFile = NULL;
-
-void writePacketLog(char *buffer) {
-  if (_packetLogFile == NULL)
-    _packetLogFile = fopen("/tmp/RS485.log", "a");
-
-  if (_packetLogFile != NULL) {
-    fputs(buffer, _packetLogFile);
-  } 
-}
-void closePacketLog() {
-  fclose(_packetLogFile);
-}
-*/
-
 

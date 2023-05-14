@@ -1,0 +1,166 @@
+            
+/* portrait mode (default) */
+
+@media all and (orientation:portrait) {
+
+  #main_div{width:540px;height:550px;margin-left:0;padding:0px;}
+  #body_div{position:relative;height:450px;}
+  #header_div{position:relative;height:70px;}
+  #footer_div{height:45px;}
+  #title_div{position:absolute;top:0px;left:0px;padding:5px;}
+  #air_temp_title_div{position:absolute;top:0px;right:120px;font-size:150%;}
+  #air_temp{position:absolute;top:0px;right:45px;font-size:150%;}
+  #messages_div{position:absolute;top:30px;left:5px;width:500px;font-size:100%;}
+  #date_time{position:absolute;bottom:2px;right:5px;}
+  
+  #pool_temp_div{position:absolute;top:5px;height:190px;width:250px;left:10px;}
+  #spa_temp_div{position:absolute;top:5px;height:280px;width:250px;left:270px;}
+  #leds_div{position:absolute;top:205px;height:230px;width:250px;left:10px}
+  #frz_protect_div{position:absolute;top:295px;height:85px;width:250px;left:270px;}
+  #solar_htr_div{position:absolute;top:390px;height:45px;width:250px;left:270px;}
+  #Solar_Heater{position:absolute;bottom:5px;right:10px;width:140px;}          
+  #frz_protect_title_div{position:absolute;top:0px;height:50px;left:5px;font-size:125%;}
+  #frz_protect_set_pnt{position:absolute;bottom:10px;height:50px;right:60px;font-size:250%;}
+  #fp_set_pnt_button_div{position:absolute;bottom:20px;height:50px;right:45px;width:10px;}
+  #fp_set_button_div{position:absolute;bottom:3px;left:3px;width:65px;}
+}
+/*@media only screen and (orientation:portrait){*/
+
+/*@media only screen and (orientation:landscape){*/
+@media all and (orientation:landscape){
+
+  #main_div{width:800px;height:420px;margin-left:0;padding:0px;}
+  #header_div{position:relative;height:70px;}
+  #footer_div{height:45px;}
+  #title_div{position:absolute;top:0;left:0;padding:5px;}
+  #air_temp_title_div{position:absolute;top:0;right:215px;font-size:200%;}
+  #air_temp{position:absolute;top:0;right:75px;font-size:250%;}
+  #messages_div{position:absolute;bottom:2px;left:35px;width:570px;}
+  #date_time{position:absolute;bottom:2px;right:5px;}
+  #body_div{position:relative;height:295px;}
+  #leds_div{position:absolute;top:5px;right:10px;height:230px;width:245px;}
+  #pool_temp_div{position:absolute;top:5px;height:190px;width:250px;left:10px;}
+  #spa_temp_div{position:absolute;top:5px;height:280px;width:250px;left:275px;}
+  #solar_htr_div{position:absolute;bottom:3px;height:45px;width:245px;right:10px;}
+           /*#solar_button_div{position:absolute;bottom:5px;right:10px;width:140px;}*/
+  #Solar_Heater{position:absolute;bottom:5px;right:10px;width:140px;}
+  #frz_protect_div{position:absolute;bottom:5px;height:85px;width:250px;left:10px;}
+  #frz_protect_title_div{position:absolute;top:0px;height:50px;left:5px;font-size:125%;}
+  #frz_protect_set_pnt{position:absolute;bottom:10px;height:50px;right:60px;font-size:250%;}
+  #fp_set_pnt_button_div{position:absolute;bottom:20px;height:50px;right:45px;width:10px;}
+  #fp_set_button_div{position:absolute;bottom:3px;left:3px;width:65px;}
+} 
+
+
+.battery_image_div{position:absolute;top:5px;right:5px;width:30px;}
+.net_activity_div{position:absolute;bottom:2px;left:0;}
+.led_button_div{position:relative;height:37px;width:240px}
+.led_div{position:absolute;top:2px;left:15px;padding:0;}
+.button_div{position:absolute;right:0px;width:140px;}
+.control_button_div{position:absolute;top:40px;height:50px;width:245px;right:5px;}
+/*
+.htr_led_div{position:absolute;top:55px;left:15px;padding:0;}
+.htr_button_div{position:absolute;top:55px;height:45px;right:55px;width:110px;padding:0;margin:0px auto;}
+*/
+.body_sub_div{border:2px solid #a1a1a1;border-radius:15px;}
+.temp_title_div{position:absolute;top:0px;height:50px;left:5px;font-size:175%;}
+.temp_val_div{position:absolute;top:0px;height:55px;right:5px;font-size:225%;}
+.set_pnt_val_div{position:absolute;bottom:15px;height:50px;right:60px;font-size:250%;}
+.set_pnt_button_div{position:absolute;bottom:5px;height:65px;right:5px;width:50px;padding:0;}
+.set_pnt_button{position:relative;right:0px;width:5px;}
+.set_button_div{position:absolute;bottom:5px;left:5px;width:65px;}
+.solar_led_div{position:absolute;top:8px;left:10px;}
+
+.select_pl_div{position:absolute;top:8px;left:10px;height:33px;width:227px;}
+.select_pl_dd{width:227px; height:33px;}
+
+.button {
+    display: inline-block;
+    vertical-align: baseline;
+    outline: none;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    font: 16px/100% Arial, Helvetica, sans-serif;
+    padding: .50em 1.5em;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, .3);
+    -webkit-border-radius: .5em;
+    -moz-border-radius: .5em;
+    border-radius: .5em;
+    -webkit-box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+    -moz-box-shadow: 0 1px 2px rgba(0, 0, 0, .2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .2); 
+}
+.button:hover {
+    text-decoration: none;
+}
+.button:active {
+    top: 1px;
+}
+/*
+.bigrounded {
+    -webkit-border-radius: 2em;
+    -moz-border-radius: 2em;
+    border-radius: 2em;
+}
+*/
+.medium {
+    font-size: 14px;
+    padding: .8em 1.5em .42em;
+}
+/*
+.small {
+    font-size: 11px;
+    padding: .2em 1em .275em;
+}
+*/
+.black {
+    color: #d7d7d7;
+    border: solid 1px #333;
+    background: #333;
+    background: -webkit-gradient(linear, left top, left bottom, from(#666), to(#000));
+    background: -moz-linear-gradient(top, #666, #000);
+}
+.black:hover {
+    background: #000;
+    background: -webkit-gradient(linear, left top, left bottom, from(#444), to(#000));
+    background: -moz-linear-gradient(top, #444, #000);
+}
+.black:active {
+    color: #666;
+    background: -webkit-gradient(linear, left top, left bottom, from(#000), to(#444));
+    background: -moz-linear-gradient(top, #000, #444);
+}
+.bgimg {
+    width: 100%;
+    height: 250px;
+    background-image: -webkit-gradient( linear, left top, left bottom, color-stop(0.15, rgb(50, 50, 50)), color-stop(0.58, rgb(0, 0, 0)), color-stop(0.79, rgb(0, 0, 0)));
+    background-image: -moz-linear-gradient(top, #444, #000);
+}
+.bgimg_body {
+    width: 100%;
+    height: 250px;
+    background-image: -webkit-gradient( linear, left top, left bottom, color-stop(0.15, rgb(75, 75, 75)), color-stop(0.58, rgb(50, 50, 50)), color-stop(0.79, rgb(50, 50, 50)));
+    background-image: -moz-linear-gradient(top, #666, #333);
+}
+/*
+.debug_border {
+    border: 2px solid #a1a1a1;
+    border-radius: 15px;
+}
+*/
+div {
+    border-width: 0px;
+    border-style: solid;
+    padding: 0px;
+}
+body, html {
+    margin: 0;
+    padding: 0;
+    color: #f4f4f4;
+    font-family: Arial, Helvetica, sans-serif;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+}
+
+

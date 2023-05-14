@@ -31,10 +31,14 @@
 #include "packetLogger.h"
 #include "rs_msg_utils.h"
 
+// Make us look lie config.c when we load config.h
+#define CONFIG_C
+#include "config.h"
+
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.4"
+#define VERSION "serial_logger V1.5"
 
 /*
 typedef enum used {
@@ -45,12 +49,15 @@ typedef enum used {
 */
 
 // Bogus config to keep aq_serial.c happy
+/*
 struct aqconfig
 {
   bool readahead_b4_write;
+  bool log_protocol_packets; // Read & Write as packets write to file
+  bool log_raw_bytes; // bytes read and write to file
 };
 struct aqconfig _aqconfig_;
-
+*/
 
 char _panelType[AQ_MSGLEN];
 char _panelRev[AQ_MSGLEN];
@@ -337,7 +344,6 @@ int main(int argc, char *argv[]) {
   int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
-  bool rsRawDebug = false;
   bool panleProbe = true;
   bool rsSerialSpeedTest = false;
   bool serialBlocking = true;
@@ -353,8 +359,10 @@ int main(int argc, char *argv[]) {
   //char buffer[256];
   //bool idMode = true;
   
-  // Keep bogus crap happy for aq_serial.c
+  // aq_serial.c uses the following
   _aqconfig_.readahead_b4_write = false;
+  _aqconfig_.log_protocol_packets = false;
+  _aqconfig_.log_raw_bytes = false;
 
   printf("AqualinkD %s\n",VERSION);
 
@@ -373,7 +381,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\t-i <ID> (just log these ID's, can use multiple -i)\n");
     fprintf(stderr, "\t-r (raw)\n");
     fprintf(stderr, "\t-s (Serial Speed Test / OS caching issues)\n");
-    fprintf(stderr, "\t-rsrd (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
+    fprintf(stderr, "\t-lpack (log RS packets to %s)\n",RS485LOGFILE);
+    fprintf(stderr, "\t-lrawb (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
     fprintf(stderr, "\t-e (monitor errors)\n");
     fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
@@ -397,8 +406,10 @@ int main(int argc, char *argv[]) {
       logLevel = LOG_DEBUG;
     } else if (strcmp(argv[i], "-f") == 0) {
       _playback_file = true;
-    } else if (strcmp(argv[i], "-rsrd") == 0) {
-      rsRawDebug = true;
+    } else if (strcmp(argv[i], "-lpack") == 0) {
+      _aqconfig_.log_protocol_packets = true;
+    } else if (strcmp(argv[i], "-lrawb") == 0) {
+      _aqconfig_.log_raw_bytes = true;
     } else if (strcmp(argv[i], "-n") == 0) {
       panleProbe = false;
     } else if (strcmp(argv[i], "-s") == 0) {
@@ -433,8 +444,16 @@ int main(int argc, char *argv[]) {
   } else {
     LOG(RSSD_LOG, LOG_NOTICE, "Logging serial errors!\n");
   }
+  if (_aqconfig_.log_protocol_packets)
+     LOG(RSSD_LOG, LOG_NOTICE, "Logging packets to %s!\n",RS485LOGFILE);
+  if (_aqconfig_.log_raw_bytes)
+     LOG(RSSD_LOG, LOG_NOTICE, "Logging raw bytes to %s!\n",RS485BYTELOGFILE);
+
   if (logLevel < LOG_DEBUG && errorMonitor==false )
     printf("Please wait.");
+
+  startPacketLogger();
+  //startPacketLogging(true,true);
 
   clock_gettime(CLOCK_REALTIME, &start_time);
 
@@ -443,11 +462,7 @@ int main(int argc, char *argv[]) {
       LOG(RSSD_LOG, LOG_ERR, "ERROR, serial port disconnect\n");
     }
 
-    //packet_length = get_packet(rs_fd, packet_buffer);
-    if (rsRawDebug)
-      packet_length = get_packet_lograw(rs_fd, packet_buffer);
-    else
-      packet_length = get_packet(rs_fd, packet_buffer);
+    packet_length = get_packet(rs_fd, packet_buffer);
 
     if (packet_length == AQSERR_READ) {
       // Unrecoverable read error. Force an attempt to reconnect.
@@ -461,7 +476,7 @@ int main(int argc, char *argv[]) {
       // Error condition
       if (errorMonitor && last_packet_length > 0) { // Error packet wwould have already been printed.
         char buff[900];
-        beautifyPacket(buff, last_packet_buffer, last_packet_length);
+        beautifyPacket(buff, last_packet_buffer, last_packet_length, true);
         LOG(RSSD_LOG, LOG_NOTICE, "Previous packet (before error)\n");
         LOG(RSSD_LOG, LOG_NOTICE, "%s------------------------------\n",buff);
         //LOG(RSSD_LOG, LOG_NOTICE, "\n");
@@ -541,9 +556,6 @@ int main(int argc, char *argv[]) {
 // NSF
       // Test Serial speed & caching
       if (rsSerialSpeedTest) {
-        if (rsRawDebug)
-          packet_length = get_packet_lograw(rs_fd, packet_buffer);
-        else
           packet_length = get_packet(rs_fd, packet_buffer);
 
         if (packet_length > 0 && packet_buffer[PKT_DEST] != 0x00)  {
@@ -572,6 +584,8 @@ int main(int argc, char *argv[]) {
   }
 
   clock_gettime(CLOCK_REALTIME, &end_time);
+
+  stopPacketLogger();
 
   if (errorMonitor) {
     return 0;

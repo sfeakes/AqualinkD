@@ -124,7 +124,7 @@ int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size)
   length += sprintf(buffer+length, "var _light_program = [];\n");
   length += sprintf(buffer+length, "_light_program[0] = light_program;\n");
    
-  for (i=1; i < LIGHT_COLOR_TYPES; i++) {
+  for (i=1; i <= LIGHT_COLOR_TYPES; i++) {
     length += sprintf(buffer+length, "_light_program[%d] = [", i);
     for (j=0; j < LIGHT_COLOR_OPTIONS; j++) {
       if (_color_light_options[i][j] != NULL)

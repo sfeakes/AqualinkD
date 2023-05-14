@@ -64,9 +64,6 @@ void *get_aqualink_aux_labels( void *ptr );
 //void *threadded_send_cmd( void *ptr );
 void *set_aqualink_light_programmode( void *ptr );
 void *set_aqualink_light_colormode( void *ptr );
-#ifdef AQ_PDA
-void *set_aqualink_PDA_init( void *ptr );
-#endif
 void *set_aqualink_SWG( void *ptr );
 void *set_aqualink_boost( void *ptr );
 /*
@@ -138,9 +135,26 @@ int get_aq_cmd_length()
   return _stack_place;
 }
 
+int _expectNextMessage = 0;
+unsigned char _last_sent_command = NUL;
+
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 {
   unsigned char cmd = NUL;
+
+  if ( _expectNextMessage > 0 &&
+       (aq_data->last_packet_type == CMD_MSG || aq_data->last_packet_type == CMD_MSG_LONG || aq_data->last_packet_type == CMD_MSG_LOOP_ST))
+  {
+    _expectNextMessage=0;
+  } else if (_expectNextMessage > 3) {
+    // NSF Should probably check this is a status command AND we are in programming mode.
+    LOG(PROG_LOG, LOG_ERR, "Did not receive expected reply from last RS SEND command, resending '0x%02hhx'\n", _last_sent_command); 
+    _expectNextMessage=0;
+    return _last_sent_command;
+  } else if (_expectNextMessage > 0) {
+    _expectNextMessage++;
+  }
+
   // Only send commands on status messages 
   // Are we in programming mode and it's not ONETOUCH programming mode
   if (in_programming_mode(aq_data) && ( in_ot_programming_mode(aq_data) == false  && in_iaqt_programming_mode(aq_data) == false )) {
@@ -165,6 +179,11 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
 
 //printf("RSM sending cmd '0x%02hhx' in reply to '0x%02hhx'\n",cmd,aq_data->last_packet_type);
 
+  if (cmd == KEY_ENTER || cmd == KEY_RIGHT || cmd == KEY_LEFT || cmd == KEY_MENU ) { //KEY_CANCEL KEY_HOLD KEY_OVERRIDE 
+    _expectNextMessage=1;
+    _last_sent_command = cmd;
+  }
+  
   return cmd;
 }
 
@@ -364,6 +383,18 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data)
   }
 }
 */
+bool in_light_programming_mode(struct aqualinkdata *aq_data)
+{
+  if ( ( aq_data->active_thread.thread_id != 0 ) &&
+       ( aq_data->active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE ||
+         aq_data->active_thread.ptype == AQ_SET_LIGHTCOLOR_MODE)
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 bool in_swg_programming_mode(struct aqualinkdata *aq_data)
 {
   if ( ( aq_data->active_thread.thread_id != 0 ) &&
@@ -518,6 +549,9 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
 
   program_type type = r_type;
 
+  // RS SerialAdapter is quickest for changing thermostat temps, so use that if enabeled.
+  // VSP RPM can only be changed with oneTouch or iAquatouch so check / use those
+  // VSP Program is only available with iAquatouch, so check / use that.
   if (isRSSA_ENABLED && (r_type == AQ_SET_POOL_HEATER_TEMP || r_type == AQ_SET_SPA_HEATER_TEMP)) {
     if (r_type == AQ_SET_POOL_HEATER_TEMP)
       type = AQ_SET_RSSADAPTER_POOL_HEATER_TEMP;
@@ -561,6 +595,10 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
       case AQ_SET_BOOST:
         type = AQ_SET_ONETOUCH_BOOST;
       break;
+      // NSF  ONE TOUCH TIME IS NOT WORKING YET
+      //case AQ_SET_TIME:
+      //  type = AQ_SET_ONETOUCH_TIME;
+      //break;
       default:
         type = r_type;
       break;
@@ -612,12 +650,15 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
 #endif
         type != AQ_GET_POOL_SPA_HEATER_TEMPS &&
         type != AQ_SET_FRZ_PROTECTION_TEMP &&
-        type != AQ_SET_BOOST) {
+        type != AQ_SET_BOOST &&
+        type != AQ_SET_TIME) {
       LOG(PROG_LOG, LOG_ERR, "Selected Programming mode '%d' not supported with PDA mode control panel\n",type);
       return;
     } 
   }
 #endif
+
+  LOG(PROG_LOG, LOG_INFO, "Starting programming thread '%s'\n",ptypeName(type));
 
   programmingthread->aq_data = aq_data;
   programmingthread->thread_id = 0;
@@ -952,6 +993,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
 
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl)
 {
+  waitfor_queue2empty();
   #ifndef AQ_DEBUG
   LOG(PROG_LOG, LOG_DEBUG, "Thread %d,%p (%s) finished\n",threadCtrl->aq_data->active_thread.ptype, threadCtrl->thread_id,ptypeName(threadCtrl->aq_data->active_thread.ptype));
   #else
@@ -1454,7 +1496,7 @@ void *set_aqualink_light_programmode( void *ptr )
     return ptr;
   }
 
-  int seconds = 1000;
+  const int seconds = 1000;
   // Needs to start programming sequence with light on, if off we need to turn on for 15 seconds
   // before we can send the next off.
   if ( button->led->state != ON ) {
@@ -1476,20 +1518,24 @@ void *set_aqualink_light_programmode( void *ptr )
     for (i = 1; i < (val * 2); i++) {
       LOG(PROG_LOG, LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, i % 2 == 0 ? "Off" : "On", val);
       send_cmd(code);
+      waitfor_queue2empty();
       delay(pmode * seconds); // 0.3 works, but using 0.4 to be safe
     }
   } else {
     for (i = 1; i < val; i++) {
+      const int dt = 0.5;  // Time to wait after receiving conformation of light on/off
       LOG(PROG_LOG, LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "ON", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, ON, 2);
+      delay(dt * seconds);
       LOG(PROG_LOG, LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "OFF", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, OFF, 2);
+      delay(dt * seconds);
     }
-
     LOG(PROG_LOG, LOG_INFO, "Finished - Light Programming button press number %d - %s of %d\n", i, "ON", val);
     send_cmd(code);
+    waitfor_queue2empty();
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);
 
@@ -1702,7 +1748,7 @@ void *set_aqualink_freeze_heater_temps( void *ptr )
     LOG(PROG_LOG, LOG_ERR, "%s failed\n", ptypeName( aq_data->active_thread.ptype ) );
     cancel_menu();
     cleanAndTerminateThread(threadCtrl);
-    return ptr;
+    return ptr; 
   }
   
   setAqualinkNumericField(aq_data, "FRZ", val);
@@ -1723,9 +1769,23 @@ void *set_aqualink_time( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_TIME);
   //LOG(PROG_LOG, LOG_NOTICE, "Setting time on aqualink\n");
 
+#ifdef AQ_PDA
+  if (isPDA_PANEL) {
+    set_PDA_aqualink_time(aq_data);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+#endif
+
   time_t now = time(0);   // get time now
   struct tm *result = localtime(&now);
   char hour[20];
+
+  // Add 10 seconds to time since this can take a while to program.
+  // 10 to 20 seconds whould be right, but since there are no seconds we can set, add 30 seconds to get close to minute.
+  // Should probably set this to program the next minute then wait before hitting the final enter command.
+  result->tm_sec += 30;
+  mktime(result);
   
   if (result->tm_hour == 0)
     sprintf(hour, "HOUR 12 AM");
@@ -1962,9 +2022,12 @@ void _waitfor_queue2empty(bool longwait)
 {
   int i=0;
 
+  LOG(PROG_LOG, LOG_DEBUG, "Waiting for queue to empty\n");
+
   while ( (_pgm_command != NUL) && ( i++ < (PROGRAMMING_POLL_COUNTER*(longwait?2:1) ) ) ) {
     delay(PROGRAMMING_POLL_DELAY_TIME);
   }
+
 /*
   //while ( (_pgm_command != NUL) && ( i++ < (30*(longwait?2:1) ) ) ) {
   while ( (_pgm_command != NUL) && ( i++ < (50*(longwait?2:1) ) ) ) {
@@ -1983,6 +2046,8 @@ void _waitfor_queue2empty(bool longwait)
     }
     #endif
     LOG(PROG_LOG, LOG_WARNING, "Send command Queue did not empty, timeout\n");
+  } else {
+    LOG(PROG_LOG, LOG_DEBUG, "Queue now empty!\n");
   }
 
 }
@@ -2103,7 +2168,8 @@ bool waitForEitherMessage(struct aqualinkdata *aq_data, char* message1, char* me
 bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived)
 {
   LOG(PROG_LOG, LOG_DEBUG, "waitForMessage %s %d\n",message,numMessageReceived);
-  waitfor_queue2empty();  // MAke sure the last command was sent
+  // NSF Need to come back to this, as it stops on test enviornment but not real panel, so must be speed related.
+  //waitfor_queue2empty();  // MAke sure the last command was sent
 
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
@@ -2215,6 +2281,7 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
   {
     LOG(PROG_LOG, LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
     send_cmd(KEY_RIGHT);
+    waitfor_queue2empty(); // ADDED BACK MAY 2023
     waitForMessage(aq_data, NULL, 1);
   }
 

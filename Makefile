@@ -19,7 +19,8 @@ AQ_IAQTOUCH = true
 PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
 $(info OS: $(PI_OS_VERSION) )
 GLIBC_VERSION = $(shell ldd --version | grep ldd)
-$(info GLIBC: $(GLIBC_VERSION) )
+$(info GLIBC build with: $(GLIBC_VERSION) )
+$(info GLIBC Prefered  : 2.24-11+deb9u1 2.24 )
 
 
 # define the C compiler to use
@@ -52,7 +53,7 @@ MGFLAGS = -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D 
 #       pda_aq_programmer.c devices_jandy.c onetouch.c onetouch_aq_programmer.c packetLogger.c devices_pentair.c color_lights.c mongoose.c
 
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
-       devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c mongoose.c 
+       devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c mongoose.c 
 
 
 AQ_FLAGS = 

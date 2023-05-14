@@ -22,4 +22,5 @@ void broadcast_aqualinkstate(struct mg_connection *nc);
 void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg);
 
 
+
 #endif // WEB_SERVER_H_

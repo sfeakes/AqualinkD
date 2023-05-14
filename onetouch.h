@@ -65,6 +65,7 @@ unsigned char *last_onetouch_packet();
 int thread_kick_type();
 
 int onetouch_menu_hlightindex();
+int onetouch_menu_hlightcharindex();
 char *onetouch_menu_hlight();
 char *onetouch_menu_line(int index);
 char *onetouch_menu_hlightchars(int *len);

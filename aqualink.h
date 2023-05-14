@@ -4,9 +4,10 @@
 
 #include <pthread.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include "aq_serial.h"
 #include "aq_programmer.h"
-#include "aq_panel.h"
+//#include "aq_panel.h"  // Moved to later in file to overcome circular dependancy. (crappy I know)
 
 #define DEFAULT_POLL_SPEED -1
 #define DEFAULT_POLL_SPEED_NON_THREADDED 2
@@ -20,9 +21,17 @@
 
 #define MAX_ZERO_READ_BEFORE_RECONNECT 10000 // 2k normally
 
-void intHandler(int dummy);
-void setUnits(const char *msg);
+// The below will change state of devices before that are actually set on the control panel, this helps
+// with duplicate messages that come in quick succession that can catch the state before it happens.
+#define PRESTATE_ONOFF
+#define PRESTATE_SWG_SETPOINT
+//#define PRESTATE_HEATER_SETPOINT // This one is not implimented yet
 
+void intHandler(int dummy);
+
+#ifdef AQ_PDA
+bool checkAqualinkTime(); // Only need to externalise this for PDA
+#endif
 // There are cases where SWG will read 80% in allbutton and 0% in onetouch/aqualinktouch, this will compile that in or our
 //#define READ_SWG_FROM_EXTENDED_ID
 
@@ -37,6 +46,7 @@ void setUnits(const char *msg);
 #endif
 */
 #define TEMP_UNKNOWN    -999
+#define TEMP_REFRESH    -998
 //#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
 
@@ -64,7 +74,7 @@ typedef struct aqualinkkey
   uint8_t special_mask;
 } aqkey;
 
-// special_mask
+// special_mask for above aqualinkkey structure.
 #define VS_PUMP        (1 << 0)
 #define PROGRAM_LIGHT  (1 << 1)
 #define TIMER_ACTIVE   (1 << 2) // Not used yet, but will need to timer
@@ -79,6 +89,8 @@ struct programmingthread {
   //void *thread_args;
 };
 
+
+
 typedef enum action_type {
   NO_ACTION = -1,
   POOL_HTR_SETOINT,
@@ -89,7 +101,11 @@ typedef enum action_type {
   PUMP_RPM,
   PUMP_VSPROGRAM,
   POOL_HTR_INCREMENT,   // Setpoint add value (can be negative)
-  SPA_HTR_INCREMENT    // Setpoint add value
+  SPA_HTR_INCREMENT,    // Setpoint add value
+  ON_OFF,
+  TIMER,
+  LIGHT_MODE,
+  DATE_TIME
 } action_type;
 
 struct action {
@@ -141,11 +157,21 @@ typedef enum clight_type {
   LC_INTELLIB
 } clight_type;
 
+typedef enum {
+  NET_MQTT=0, 
+  NET_API, 
+  NET_WS, 
+  NET_DZMQTT} request_source;
+
 typedef struct clightd
 {
   clight_type lightType;
   aqkey *button;
 } clight_detail;
+
+
+#include "aq_panel.h"
+
 
 struct aqualinkdata
 {

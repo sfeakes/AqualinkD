@@ -43,7 +43,7 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
    <ul>
      <li>The layout and functionality are from the Apple HomeKit interface.  This works in any browser or on any mobile device.</li>
       <li>Customizable tile icons & background images. (Tiles not used can be hidden).</li>
-      <li>Thermostat, SWG & Light tiles have more options (ie: setting heater temperature, salt generating percentage and light mode etc). These options are accessible by pressing and holding the tile icon.</li>
+      <li>Thermostat, Switch, SWG & Light tiles have more options (ie: setting heater temperature, timers, salt generating percentage and light mode etc). These options are accessible by pressing and holding the tile icon.</li>
       <li>Supports live background images (ie: poll camera for still image every X seconds).</li>
       </ul>
    </td></tr>
@@ -74,16 +74,29 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 #<a name="release"></a>
 # ToDo (future release)
 * Allow selecting of pre-defined VSP programs
-* Timed based actions / programs (undecided on cron & AqualinkD or use Jandy programs )
-* One off timed actions (ir turn pump on for 2 hours)
-* Put back some form of Jandy panel simulator. (existing was removed in V2.2.0)
-* Add RS Serial protocol. AqualinkD has all Jandy control protocols except RS Serial.
 * Update homekit-aqualinkd to use new API & features.
 * Add light programming to Aqualink Touch protocol.
+* Add set time to Aqualink OneTouch protocol
+
+# Update in Release 2.3.0 (pre release)
+* This is pre-release, please treat it as such.
+* Don't use this release on PDA panels unless you can debug/change code <b>I have not been able to test it fully.</b>
+* Changed a lot of logic around different protocols.
+* AqualinkD will find out the fastest way to change something depending on the protocols available.
+* Added scheduler (click time in web ui). supports full calendar year (ie seasons), See wiki for details. 
+* Added timers for devices (ie can turn on Pump for x minutes), Long press on device in WebUI.
+* Timers supported in MQTT/API.
+* Serial logging / error checking enhancements.
+* Added simulator back. (still a number of issues).
+* Fix issue with incorrect device state after duplicate MQTT messages being sent in rapid succession ( < 0.5 second).
+* Found workaround for panel firmware bug in iAqualink Touch protocol where VSP updates sometimes got lost.
+* Fix bug in IntelliBrite color lights
+* Install script checks for cron and it's config (needed for scheduler)
 
 # Update in Release 2.2.2
 * Fixed some Web UI bugs
 * Color lights now quicker when selecting existing comor mode.
+
 # Update in Release 2.2.1
 * Supports serial adapter protocol `rssa_device_id`, (provides instant heater setpoint changes & setpoint increment)
 * Can use seperate threads for network & RS485 interface. (optimisation for busy RS485 bus implimentations)

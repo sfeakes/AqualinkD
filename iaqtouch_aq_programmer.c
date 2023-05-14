@@ -137,7 +137,7 @@ int ref_iaqt_control_cmd(unsigned char **cmd)
   if ( getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
     char buff[1000];
     //sprintf("Sending control command:")
-    beautifyPacket(buff, _iaqt_control_cmd, _iaqt_control_cmd_len);
+    beautifyPacket(buff, _iaqt_control_cmd, _iaqt_control_cmd_len, false);
     LOG(IAQT_LOG,LOG_DEBUG, "Sending commandsed : %s\n", buff);
   }
 

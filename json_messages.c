@@ -206,7 +206,7 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
   } 
 
 //printf("Button %s is Switch\n", button->name);
-  length += sprintf(buffer, ",\"type_ext\": \"switch\"");
+  length += sprintf(buffer, ",\"type_ext\": \"switch_timer\", \"timer_active\":\"%s\"", (((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE)?JSON_ON:JSON_OFF) );
   return buffer;
 }
 
@@ -236,7 +236,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   for (i=0; i < aqdata->total_buttons; i++) 
   {
     if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && aqdata->pool_htr_set_point != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\", \"timer_active\":\"%s\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
@@ -245,9 +245,11 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                      ((homekit_f)?degFtoC(aqdata->pool_htr_set_point):aqdata->pool_htr_set_point),
                                      ((homekit)?2:0),
                                      ((homekit_f)?degFtoC(aqdata->pool_temp):aqdata->pool_temp),
-                                     LED2int(aqdata->aqbuttons[i].led->state));
+                                     LED2int(aqdata->aqbuttons[i].led->state),
+                                     ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE?JSON_ON:JSON_OFF) );
+
     } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && aqdata->spa_htr_set_point != TEMP_UNKNOWN) {
-      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
+      length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\", \"timer_active\":\"%s\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
                                      aqdata->aqbuttons[i].led->state==ON?JSON_ON:JSON_OFF,
@@ -256,7 +258,9 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                      ((homekit_f)?degFtoC(aqdata->spa_htr_set_point):aqdata->spa_htr_set_point),
                                      ((homekit)?2:0),
                                      ((homekit_f)?degFtoC(aqdata->spa_temp):aqdata->spa_temp),
-                                     LED2int(aqdata->aqbuttons[i].led->state));
+                                     LED2int(aqdata->aqbuttons[i].led->state),
+                                     ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE?JSON_ON:JSON_OFF));
+
     } else {
       get_aux_information(&aqdata->aqbuttons[i], aqdata, aux_info);
       //length += sprintf(buffer+length, "{\"type\": \"switch\", \"type_ext\": \"switch_vsp\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\" %s},", 
@@ -336,14 +340,14 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    "on",
                                    ((homekit_f)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
-      if (!homekit) { // For the moment keep boost off homekit   
+      //if (!homekit) { // For the moment keep boost off homekit   
         length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
                                      SWG_BOOST_TOPIC, 
                                      "SWG Boost",
                                      aqdata->boost?JSON_ON:JSON_OFF,
                                      aqdata->boost?JSON_ON:JSON_OFF,
                                      aqdata->boost?LED2int(ON):LED2int(OFF));
-      }
+      //}
     }
 
     if ( aqdata->swg_ppm != TEMP_UNKNOWN ) {
@@ -396,14 +400,14 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    "Pool Water Temperature",
                                    "on",
                                    ((homekit)?2:0),
-                                   ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->pool_temp));
+                                   ((homekit_f)?degFtoC(aqdata->pool_temp):aqdata->pool_temp));
   length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" }",
                                    SPA_TEMP_TOPIC,
                                    /*SPA_TEMPERATURE,*/
                                    "Spa Water Temperature",
                                    "on",
                                    ((homekit)?2:0),
-                                   ((homekit_f)?degFtoC(aqdata->air_temp):aqdata->spa_temp));
+                                   ((homekit_f)?degFtoC(aqdata->spa_temp):aqdata->spa_temp));
 
 /*
   length += sprintf(buffer+length,  "], \"aux_device_detail\": [");
@@ -433,6 +437,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
 
   length += sprintf(buffer+length, "{\"type\": \"status\"");
   length += sprintf(buffer+length, ",\"status\":\"%s\"",getStatus(aqdata) );
+  length += sprintf(buffer+length, ",\"panel_message\":\"%s\"",aqdata->last_message );
   //length += sprintf(buffer+length, ",\"message\":\"%s\"",aqdata->message );
   length += sprintf(buffer+length, ",\"version\":\"%s\"",aqdata->version );//8157 REV MMM",
   length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"", AQUALINKD_VERSION ); //1.0b,
@@ -496,7 +501,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   {
     char *state = LED2text(aqdata->aqbuttons[i].led->state);
     length += sprintf(buffer+length, "\"%s\": \"%s\"", aqdata->aqbuttons[i].name, state);
-    
+
     if (i+1 < aqdata->total_buttons)
       length += sprintf(buffer+length, "," );
   }
@@ -532,9 +537,21 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
                         (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
     }
   }
-
   if (buffer[length-1] == ',')
     length--;
+
+  length += sprintf(buffer+length, ",\"timers\":{" );
+  for (i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
+      length += sprintf(buffer+length, "\"%s\": \"on\",", aqdata->aqbuttons[i].name);
+    }
+  }
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "}");
+
+  
 
   length += sprintf(buffer+length, "}" );
   

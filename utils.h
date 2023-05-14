@@ -39,6 +39,11 @@
 #define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB?
 #define PROG_LOG (1 << 10) // Programmer
 #define DBGT_LOG (1 << 11) // Debug Timer
+#define TIMR_LOG (1 << 12) // Timers
+
+// Set scheduler log to aqualink general 
+#define SCHD_LOG AQUA_LOG
+
 /*
 typedef enum
 {

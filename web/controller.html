@@ -52,6 +52,9 @@
       --options_radio_ball: 20px;
       --options_radio_highlight: #2196F3;
       --options_radio_lowlight: #d3d3d3;
+
+      --cronhelp_background: rgb(193, 193, 193);
+      --csinputcell_background: rgb(255, 255, 255);
     }
 
     div {
@@ -122,6 +125,20 @@
       align-items: center;
       width: 345px;
       /*height:245px;*/
+    }
+
+    .scheduler_pane {
+      background-color: var(--options_pane_background);
+      border: 2px solid var(--options_pane_bordercolor);
+      border-radius: 20px;
+      justify-content: center;
+      align-items: center;
+      width: 600px;
+      padding: 10px;
+      /*overflow-y: scroll; didn't work*/
+      /*height: 100%;*/
+      /*flex-basis: content;*/
+      /*flex-direction: column;*/
     }
 
     .options {
@@ -398,6 +415,7 @@
     }
 
     .options_button {
+      color: var(--body_text);
       font-family: var(--fonts);
       font-weight: 600;
       font-size: 16px;
@@ -456,6 +474,83 @@
   box-shadow: 0 0.0625em 0 0.0625em rgba(0,0,0,0.075);*/
     }
 
+    .sc_tablehead {
+  vertical-align: top;
+  text-align: center;
+}
+
+.cs_commandcell {
+    background-color: var(--csinputcell_background);
+    width:60px !important;
+    overflow: hidden;
+    overflow: -moz-hidden-unscrollable;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 0;
+}
+.cs_devicecell {
+    background-color: var(--csinputcell_background);
+    width:150px !important;
+    overflow: hidden;
+    overflow: -moz-hidden-unscrollable;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding: 0;
+}
+
+.cs_valuecell {
+    width:40px !important;
+}
+
+.cs_inputcell {
+    background-color: var(--csinputcell_background);
+    text-align: left;
+    width:50px;
+    padding: 2px; 
+    /*background-color:#f0f0f0 ;*/
+    border:none;
+    /*-webkit-appearance: textfield;*/
+    /*-webkit-appearance: none;*/
+    /*-moz-appearance: textfield;*/
+    font-size: 14px;
+    color: var(--body_text);
+}
+
+.cs_deletebutton {
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--body_text);
+}
+
+.cs_crontext {
+    font-size: 18px;
+    background-color: var(--cronhelp_background);
+}
+
+.cs_helpright {
+    background-color: var(--cronhelp_background);
+    font-size: 12px;
+    padding-top: 0px;
+    padding-right: 0px;
+    padding-bottom: 0px;
+    padding-left: 5px;
+    font-weight: 500;
+    text-align:left;
+}
+.cs_helpleft {
+    background-color: var(--cronhelp_background);
+    font-size: 12px;
+    padding-top: 0px;
+    padding-right: 5px;
+    padding-bottom: 0px;
+    padding-left: 0px;
+    font-weight: 600;
+    text-align:right;
+}
+.cs_error {
+  background-color: red;
+}
+
     /*
     .timedate {
       font-size: 10px;
@@ -463,7 +558,7 @@
   </style>
 
   <script type='text/javascript'>
-    //'use strict';
+    'use strict';
     var _lightProgramDropdown = false;
     var _pressEvent;
     var _ignoreMouseEvent = false;
@@ -471,6 +566,9 @@
     var _aqualink_data;
     var _landscape = false;
     var _displayNames = [];
+    var _scheduler_devices_json= [];
+
+
 
     if (typeof show_vsp_gpm !== 'undefined' && show_vsp_gpm == false)
       var _show_vsp_gpm=false;
@@ -491,6 +589,8 @@
       document.getElementById('swg_options').classList.remove("hide");
       document.getElementById('pswitch_options').classList.remove("hide");
       document.getElementById('vspswitch_options').classList.remove("hide");
+      document.getElementById('timer_options').classList.remove("hide");
+      document.getElementById('scheduler_options').classList.remove("hide");
       setColors();
       load_background();
       showTileOptions(false);
@@ -624,8 +724,11 @@
         image.src = "hk/background.jpg"; // Use default if image fails.
       };
       if (typeof background_reload !== 'undefined' && background_reload > 0) {
-        var op = background_url.indexOf('?') > 0 ? '&' : '?';
-        image.src = background_url + op + new Date().getTime();
+        if (background_url.indexOf('?') > 0 )
+          image.src = background_url + '&aqrnd=' + new Date().getTime();
+        else
+          image.src = background_url + '?' + new Date().getTime();
+
         setTimeout(load_background, (background_reload * 1000));
       } else {
         image.src = background_url;
@@ -742,7 +845,7 @@
         subdiv.setAttribute('id', id + '_status');
         subdiv.textContent = formatSatus(status);
         div.appendChild(subdiv);
-        if (type == "switch" && (subtype != "switch_program" && subtype != "switch_vsp") ) {
+        if (type == "switch" && (subtype != "switch_program" && subtype != "switch_vsp" && subtype != "switch_timer") ) {
         //if (type == "switch" && subtype != "switch_program" ) {
           div.setAttribute('onclick', "switchTileState('" + id + "')");
           //console.log("add onclick switchtilestate to "+id);
@@ -783,6 +886,7 @@
       tile.setAttribute('setpoint', sp_value);
       send_setpoint(id);
     }
+
 /*
     function setTileValue(id, value) {
       var ext = '';
@@ -1024,6 +1128,13 @@
             document.getElementById(object.id).setAttribute('lighttype', object.Light_Type);
           }
           // Other switch_program types (other than light_type) GO HERE 
+        } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_timer') {
+          if (typeof object.timer_active !== 'undefined' && object.timer_active) {
+            //console.log("Timer for "+object.name+" = "+object.timer_active);
+            if (object.timer_active == 'on') {
+              setTileOnText(object.id, 'On (timer)');
+            }
+          }
         } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
           if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {   
             if (object.Pump_RPM == -3) {
@@ -1075,33 +1186,62 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
           active_option = document.getElementById('pswitch_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_freeze') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_vsp') {
           active_option = document.getElementById('vspswitch_options');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
           document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_timer') {
+          active_option = document.getElementById('timer_options');
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'scheduler') {
+          active_option = document.getElementById('scheduler_options');
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('pswitch_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
         }
+
         active_option.style.display = 'flex';
+        /*
+        Not sure why I added this, but it breakes scheduler pane growing, and setpoint (heater) panes
+        are located too high for some reason.
         var optionH = window.getComputedStyle(active_option, null).getPropertyValue("height");
         if (optionH <= wrapH)
           active_option.style.height = wrapH;
-        
+        */
         //console.log("Option:"+optionH+" wrapH:"+wrapH);
+
         document.getElementById('wrapper').classList.add("opaque");
       } else {
         // Fake onclick to close and save any values if open
@@ -1114,11 +1254,17 @@
             document.getElementById("pswitch_options_close").click();
           else if (document.getElementById('vspswitch_options').style.display == 'flex')
             document.getElementById("vspswitch_options").click();
+          else if (document.getElementById('timer_options').style.display == 'flex')
+            document.getElementById("timer_options").click();
+          else if (document.getElementById('scheduler_options').style.display == 'flex')
+            document.getElementById("scheduler_options").click();
         }
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
         document.getElementById('pswitch_options').style.display = 'none';
         document.getElementById('vspswitch_options').style.display = 'none';
+        document.getElementById('timer_options').style.display = 'none';
+        document.getElementById('scheduler_options').style.display = 'none';
         document.getElementById('wrapper').classList.remove("opaque");
         return;
       }
@@ -1130,10 +1276,14 @@
         var type = tile.getAttribute('type');
         var slider;
         var slider_output;
+        var tm_slider;
+        var tm_slider_output;
         var title;
         var close_button;
         var ext;
+        var tm_ext;
         var oswitch;
+        var vsp_slider_changed = false;
         if (type == 'setpoint_swg') {
           slider = document.getElementById("swg_option_slider_range");
           slider_output = document.getElementById("swg_option_slider_text_value");
@@ -1150,18 +1300,34 @@
           populateLightProgram(tile.getAttribute('lighttype') );
           title = document.getElementById("pswitch_option_title");
           close_button = document.getElementById("pswitch_options_close");
+          tm_slider = document.getElementById("ps_timer_slider_range");
+          tm_slider_output = document.getElementById("ps_timer_slider_text_value");
         } else if (type == 'switch_vsp') {
           slider = document.getElementById("vspoption_slider_range");
           slider_output = document.getElementById("vspoption_slider_text_value");
+          tm_slider = document.getElementById("vsp_timer_slider_range");
+          tm_slider_output = document.getElementById("vsp_timer_slider_text_value");
           title = document.getElementById("vspswitch_option_title");
           close_button = document.getElementById("vspswitch_option_close");
+        } else if (type == 'switch_timer') {
+          tm_slider = document.getElementById("timer_slider_range");
+          tm_slider_output = document.getElementById("timer_slider_text_value");
+          title = document.getElementById("timer_option_title");
+          close_button = document.getElementById("timer_options_close");
+          //tm_ext = ' runtime (min)';
+        } else if (type == 'scheduler') {
+          title = document.getElementById("scheduler_options_title");
+          close_button = document.getElementById("scheduler_options_close");
         } else {
           slider = document.getElementById("option_slider_range");
           slider_output = document.getElementById("option_slider_text_value");
+          tm_slider = document.getElementById("th_timer_slider_range");
+          tm_slider_output = document.getElementById("th_timer_slider_text_value");
           title = document.getElementById("option_title");
           close_button = document.getElementById("options_close");
           ext = '&deg;' + _temperature_units;
         }
+
         if (type == 'setpoint_swg') {
           slider.min = 0;
           slider.max = 101;
@@ -1199,8 +1365,12 @@
             ext = ' RPM';
           }
         }
-
-        title.innerHTML = document.getElementById(id + '_name').innerHTML;
+        
+        if (type == 'scheduler') {
+          title.innerHTML = "Scheduler";
+        } else {
+          title.innerHTML = document.getElementById(id + '_name').innerHTML;
+        }
 
         if (type == 'switch_program') {
           var pswitch = document.getElementById("pswitch_option_list");
@@ -1240,6 +1410,36 @@
           var oswitch_output = document.getElementById("vspoption_switch_text_value");
           slider_output.innerHTML = slider.value + ext;
           oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          
+          slider.oninput = function() {
+            slider_output.innerHTML = this.value + ext;
+            vsp_slider_changed = true;
+            if (oswitch.checked != true) {
+              oswitch.checked = true;
+              oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            }
+          }
+          oswitch.onclick = function() {
+            oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          }
+        } else if (type == 'switch_timer') {
+          oswitch = document.getElementById("timer_switch");
+          oswitch.checked = tile_state;
+          var oswitch_output = document.getElementById("timer_switch_text_value");
+          oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          // All timer slider options are set below for everyone.
+        } else if (type == 'scheduler') {
+          // NSF BUILD SCHEDULER DEFAULTS HERE
+          cs_clearSchedules();
+          //cs_loadJSON("/api/schedules", cs_schedules,'jsonp');
+          get_schedules();
+        } else {
+          slider.value = sp_value;
+          oswitch = document.getElementById("option_switch");
+          oswitch.checked = tile_state;
+          var oswitch_output = document.getElementById("option_switch_text_value");
+          slider_output.innerHTML = slider.value + ext;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
           slider.oninput = function() {
             slider_output.innerHTML = this.value + ext;
             //sp_value = this.value
@@ -1248,22 +1448,36 @@
             oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
             //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
           }
-        } else {
-          slider.value = sp_value;
-          oswitch = document.getElementById("option_switch");
-          oswitch.checked = tile_state;
-          var oswitch_output = document.getElementById("option_switch_text_value");
-          slider_output.innerHTML = slider.value + ext;
-          oswitch_output.innerHTML = ((oswitch.checked) ? "Heat" : "Off");
-          slider.oninput = function() {
-            slider_output.innerHTML = this.value + ext;
-            //sp_value = this.value
+        }
+
+        if (typeof tm_slider !== 'undefined' && tm_slider != null) {
+          tm_slider.min = ((typeof timer_slider_min !== 'undefined')?timer_slider_min:0);
+          tm_slider.max = ((typeof timer_slider_max !== 'undefined')?timer_slider_max:360);
+          tm_slider.step = ((typeof timer_slider_step !== 'undefined')?timer_slider_step:10);
+          tm_ext = ' runtime (min)';
+
+          tm_slider.value = tm_slider.min;
+
+          tm_slider_output.innerHTML = tm_slider.value + tm_ext;
+          tm_slider.oninput = function() {
+            tm_slider_output.innerHTML = this.value + tm_ext;
+            if (this.value == 0) {
+              oswitch.checked = false;
+              oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            } else {
+              oswitch.checked = true;
+              oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            }
           }
           oswitch.onclick = function() {
-            oswitch_output.innerHTML = ((oswitch.checked) ? "Heat" : "Off");
-            //setTileOn(id, ((oswitch.checked)?"on":"off"), null);
+            oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            if (oswitch.checked == false) {
+              tm_slider.value = 0;
+              tm_slider_output.innerHTML = "0" + tm_ext;
+            }
           }
         }
+
         var cTime;
         try {
           cTime = performance.now();
@@ -1272,13 +1486,16 @@
         }
         var clickHandler = function(e) {
           // Short time diff means event was the one that launched the options pane, so ignore
-          if ((e.timeStamp - cTime) > 1000)
+          // Above description is incorrect, we get here when click is OFF the tile
+          if ((e.timeStamp - cTime) > 1000) {
             showTileOptions(false);
+            document.getElementById("body_wrap").removeEventListener("click", clickHandler);
+          }
         };
         document.getElementById("body_wrap").addEventListener("click", clickHandler);
         close_button.onclick = function() {
           document.getElementById("body_wrap").removeEventListener("click", clickHandler);
-          var state = oswitch.checked;
+          var state = oswitch?.checked;
           if (type == 'switch_program') {
             var mode=false;
             if (_lightProgramDropdown) {
@@ -1317,6 +1534,22 @@
               setTileState(id, state);
             if (sp_value != slider.value)
               setThermostatSetpoint(id, slider.value)
+          } else if (type == 'switch_timer') {
+            if (tm_slider.value == 0 && state == (tile.getAttribute('status') == 'off'))
+              setTileState(id, state);
+          } else if (type == 'switch_vsp') {
+            // VSP, first check is slider changed, as startup we have no ide on RPM
+            var value = slider.value;
+            if (state == (tile.getAttribute('status') == 'off'))
+              setTileState(id, state);
+            if (sp_value != slider.value && vsp_slider_changed == true)
+              setThermostatSetpoint(id, slider.value)
+          } else if (type == 'scheduler') {
+            // NSF SAVE SCHEDULE HERE
+            // validate input form, alert and return if error, contimue if ok.
+            if ( ! cs_createJSON() ) {
+              return // This stops pane from closing.
+            }
           } else {
             var value = slider.value;
             if (state == (tile.getAttribute('status') == 'off'))
@@ -1324,12 +1557,390 @@
             if (sp_value != slider.value)
               setThermostatSetpoint(id, slider.value)
           }
+
+          if (typeof tm_slider !== 'undefined' && tm_slider != null) {
+            if (tm_slider.value > 0)
+              send_switch_timer(id, tm_slider.value);
+          }
           //showTileOptions(false, null, 'this');
           active_option.style.display = 'none';
           document.getElementById('wrapper').classList.remove("opaque");
         }
       }
     }
+
+    /*********************************************************************
+     *  
+     *   SCHEDULER FUNCTIONS
+     * 
+     *********************************************************************/
+
+    // NSF change this import to dynamic config in future.
+    //import("./cronstrue.min.js");
+
+    var CS_ROW_INDEX = 2;
+    var V_OFF = 0;
+    var V_ON = 1;
+    var V_SETPOINT = 3;
+    var V_PERCENT = 4;
+    var V_RPM = 5;
+    var V_GPM = 6;
+
+    function showScheduler(caller){
+      //if (_enable_schedules != false) {
+      // Default to enable.
+      if (typeof _enable_schedules === "undefined" || _enable_schedules != false)
+      {
+        import("./cronstrue.min.js");
+        caller.setAttribute('type', 'scheduler');
+        showTileOptions(true, caller.id);
+      }
+    }
+    // NSF CHANGE TO USING WS FOR THIS REQUEST
+    /*
+      function cs_loadJSON(path, success, error) {
+        var xhr = new XMLHttpRequest();
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+              success(JSON.parse(xhr.responseText));
+            }
+            else {
+              error(xhr);
+            }
+          }
+        };
+        xhr.open('GET', path, true);
+        xhr.send();
+      }*/
+        function device2english(device, name) {
+          for (let i = 0, obj; i < _scheduler_devices_json.length, obj = _scheduler_devices_json[i]; i++) {
+            if (device == obj.id) {
+              if (name == true) {
+                return obj.name;
+              } else {
+                switch (obj.type) {
+                  case "setpoint_thermo":
+                  case "setpoint_freeze":
+                    return "temperature";
+                    break;
+                  case "setpoint_swg":
+                    return "percent";
+                    break;
+                  case "switch":
+                    if (obj.type_ext == "switch_vsp") {
+                      if (obj.Pump_Type == "vfPump" && _show_vsp_gpm == true) {
+                        return "GPM";
+                      } else {
+                        return "RPM";
+                      }
+                    }
+                    break;
+                }
+              }
+            }
+          }
+        }
+
+    function cs_crontext(caller){
+
+      for (let cell of caller.parentNode.parentNode.cells) {
+        switch (cell.firstChild.id) {
+          case "min":
+            min = cell.firstChild.value;
+            break;
+          case "hour":
+            hour = cell.firstChild.value;
+            break;
+          case "daym":
+            daym = cell.firstChild.value;
+            break;
+          case "month":
+            month = cell.firstChild.value;
+            break;
+          case "dayw":
+            dayw = cell.firstChild.value;
+            break;
+          case "device":
+            device = cell.firstChild.value;
+            break;
+          case "command":
+            command = cell.firstChild.value;
+            break;
+          case "value":
+            value = cell.firstChild.value;
+            break;
+        }
+      }
+      var extra = "";
+      
+      if (command >= 2) {
+        //command=cs_getExtraCommand(device);
+        extra = " set "+device2english(device, true)+" "+device2english(device, false)+" to "+value
+      } else {
+        extra = " turn "+device2english(device, true)+" "+((value ==1) ? 'on' : 'off')
+      }
+      
+      var cron = min + " " + hour + " " + daym + " " + month + " " + dayw
+      try {
+        document.getElementById("crontext").innerHTML = "<span class='cs_crontext'>&nbsp;" + cronstrue.toString(cron) + "<font size='-1'>" + extra + "</font>&nbsp;</span>";
+      } catch (error) {}
+
+      var html = ""
+
+      switch (caller.id) {
+        case "min":
+          html = html + "<tr><td class='cs_helpleft'>0-59</td><td class='cs_helpright'>allowed values</td></tr>";
+          break;
+        case "hour":
+          html = html + "<tr><td class='cs_helpleft'>0-23</td><td class='cs_helpright'>allowed values</td></tr>";
+          break;
+        case "daym":
+          html = html + "<tr><td class='cs_helpleft'>1-31</td><td class='cs_helpright'>allowed values</td></tr>";
+          break;
+        case "month":
+          html = html + "<tr><td class='cs_helpleft'>1-12</td><td class='cs_helpright'>allowed values</td></tr>" +
+            "<tr><td class='cs_helpleft'>JAN-DEC</td><td class='cs_helpright'>alternative single values</td></tr>";
+          break;
+        case "dayw":
+          html = html + "<tr><td class='cs_helpleft'>0-6</td><td class='cs_helpright'>allowed values</td></tr>" +
+            "<tr><td class='cs_helpleft'>SAT-SUN</td><td class='cs_helpright'>alternative single values</td></tr>";
+          break;
+      }
+
+      if (html != "") {
+        html = "<table align='center'>" +
+          html +
+          "<tr><td class='cs_helpleft'>*</td><td class='cs_helpright'>any vaue</td></tr>" +
+          "<tr><td class='cs_helpleft'>,</td><td class='cs_helpright'>value list seperator</td></tr>" +
+          "<tr><td class='cs_helpleft'>-</td><td class='cs_helpright'>range values</td></tr>" +
+          "<tr><td class='cs_helpleft'>/</td><td class='cs_helpright'>setp values</td></tr>" +
+          "</table>";
+      }
+
+      document.getElementById("cronhelp").innerHTML = html;
+    }
+
+    function cs_clearSchedules() {
+      var table = document.getElementById("cronschedules");
+      while (table.rows.length > 5) {
+        table.deleteRow(CS_ROW_INDEX+1);
+      }
+    }
+
+      function cs_addschedule(min, hour, daym, month, dayw, device, subdev, value) {
+        var table = document.getElementById("cronschedules");
+        //index = table.rows.length-ROW_INDEX;
+
+        var option = "";
+        var subOption = "";
+        //var value_type = "number";
+        //console.log("device'"+device+"'");
+        if (device === "") {
+          option = '<option selected value=""></option>';
+          //value_type="hidden";
+        }
+
+        for (let i = 0, obj; i < _scheduler_devices_json.length, obj = _scheduler_devices_json[i]; i++) {
+          if (device == obj.id) {
+            option = option + '<option selected value="' + obj.id + '">' + obj.name + '</option>';
+            subOption = cs_getDeviceOptions(obj, subdev, value)
+          } else {
+            option = option + '<option value="' + obj.id + '">' + obj.name + '</option>';
+          }
+        }
+        var html = '<tr> \
+        <td><input type="text" class="cs_inputcell" id="min" value="'+ min + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
+        <td><input type="text" class="cs_inputcell" id="hour" value="'+ hour + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
+        <td><input type="text" class="cs_inputcell" id="daym" value="'+ daym + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
+        <td><input type="text" class="cs_inputcell" id="month" value="'+ month + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
+        <td><input type="text" class="cs_inputcell" id="dayw" value="'+ dayw + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
+        <td><select name="device" class="cs_inputcell cs_devicecell" id="device" onclick="cs_crontext(this);" onchange="cs_deviceChange(this);">'+ option + '<select></td> \
+        <td><select name="command" class="cs_inputcell cs_commandcell" id="command" onclick="cs_crontext(this);" onchange="cs_commandChange(this);">'+ subOption + '<select></td> \
+        <td><input type="text" class="cs_inputcell cs_valuecell" onclick="cs_crontext(this);" id="value" pattern="[0-9]+" value="'+ value + '"></td> \
+        <td><input type="button" class="cs_deletebutton sc_button" id="delete" value="X" onclick="cs_deleteschedule(this);"></td> \
+        </tr>';
+
+        //<td><input type="number" class="cs_inputcell cs_valuecell" onclick="cs_crontext(this);" min="0" max="9999" id="value" value="'+value+'"></td>
+
+        var row = table.insertRow(table.rows.length - CS_ROW_INDEX);
+        row.innerHTML = html;
+        //console.log("add row "+index)
+
+        // dummy an onchange event to the value input so they get hidded if needed.
+        var element = row.querySelector('#command')
+        var event = new Event('change');
+        element.dispatchEvent(event);
+      }
+
+        function cs_isSelected(option, val1, val2) {
+          var rtn = "";
+          if (val1 == "set") {
+            if (option == val2) { rtn = "selected" }
+          } else {
+            if (option == val1) { rtn = "selected" }
+          }
+
+          return rtn;
+        }
+
+
+        function cs_getDeviceOptions(deviceobj, val1, val2) {
+          //setpoint = Temp
+          var html = '<option value="' + V_ON + '" ' + cs_isSelected(V_ON, val1, val2) + '>On</option><option value="' + V_OFF + '" ' + cs_isSelected(V_OFF, val1, val2) + '>Off</option>';
+
+          switch (deviceobj.type) {
+            case "switch":
+              if (deviceobj.type_ext == "switch_vsp") {
+                if (deviceobj.Pump_Type == "vfPump") {
+                  html = html + '<option value="' + V_RPM + '" ' + cs_isSelected("RPM", val1, val2) + '>RPM</option><option value="' + V_GPM + '" ' + cs_isSelected("GPM", val1, val2) + '>GPM</option>';
+                } else {
+                  html = html + '<option value="' + V_RPM + '" ' + cs_isSelected("RPM", val1, val2) + '>RPM</option>';
+                }
+              }
+              break
+            case "setpoint_thermo":
+              html = html + '<option value="' + V_SETPOINT + '" ' + cs_isSelected("setpoint", val1, val2) + '>Temp</option>'
+              break
+            case "setpoint_swg":
+              html = '<option value="' + V_PERCENT + '">Percent</option>'
+              break
+            case "setpoint_freeze":
+              html = '<option value="' + V_SETPOINT + '">Temp</option>'
+              break
+          }
+          return html;
+
+        }
+
+        function cs_deviceChange(caller) {
+
+          for (let i = 0, obj; i < _scheduler_devices_json.length, obj = _scheduler_devices_json[i]; i++) {
+            if (caller.value == obj.id) {
+              var element = caller.parentNode.parentNode.querySelector('#command')
+              element.innerHTML = cs_getDeviceOptions(obj);
+              var event = new Event('change');
+              element.dispatchEvent(event);
+              break;
+            }
+          }
+
+        }
+
+        function cs_commandChange(caller) {
+          //console.log("Called "+caller.value);
+          value = caller.parentNode.parentNode.querySelector('#value')
+          if (caller.value >= 2) {
+            value.type = "text";
+          } else {
+            value.type = "hidden";
+          }
+        }
+
+        function cs_deleteschedule(caller) {
+          var index = caller.parentNode.parentNode.rowIndex;
+          document.getElementById("cronschedules").deleteRow(index);
+        }
+
+        function cs_schedules(json) {
+          if (typeof json.schedules === "undefined"){
+            return
+          }
+            for (let i = 0; i < json.schedules.length; i++) {
+              let obj = json.schedules[i];
+              //console.log("Sched "+obj.url);
+              var f = 0;
+              var subdev = "";
+              var device = "";
+              for (var j = 0; j < obj.url.length; j++) {
+                if (obj.url[j] == "/") {
+                  f++;
+                } else if (f == 2) {
+                  device = device + obj.url[j];
+                } else if (f == 3) {
+                  subdev = subdev + obj.url[j];
+                }
+              }
+              // If in release we add device, use obj.id rather than device in below and remove device from above.
+              cs_addschedule(obj.min, obj.hour, obj.daym, obj.month, obj.dayw, device, subdev, obj.value);
+            }
+        }
+
+        function cs_getExtraCommand(device, commandID) {
+            for (let i = 0, obj; i < _scheduler_devices_json.length, obj = _scheduler_devices_json[i]; i++) {
+              if (device == obj.id) {
+                switch (obj.type) {
+                  case "setpoint_thermo":
+                  case "setpoint_freeze":
+                    return "/setpoint";
+                    break;
+                  case "setpoint_swg":
+                    return "/percent";
+                    break;
+                  case "switch":
+                    if (obj.type_ext == "switch_vsp") {
+                      if (commandID == 4) {
+                        return "/GPM";
+                      } else {
+                        return "/RPM";
+                      }
+                    }
+                    break;
+                }
+              }
+            }
+        }
+
+          function cs_createJSON() {
+
+            var json = {
+              uri: "schedules/set",
+              devices: []
+            };
+            var table = document.getElementById("cronschedules");
+            //console.log("ROWS = "+table.rows.length);
+            for (var r = CS_ROW_INDEX, row; row < table.rows.length-2, row = table.rows[r]; r++) {
+              min = row.querySelector('#min')?.value;
+              hour = row.querySelector('#hour')?.value;
+              daym = row.querySelector('#daym')?.value;
+              month = row.querySelector('#month')?.value;
+              dayw = row.querySelector('#dayw')?.value;
+              device = row.querySelector('#device')?.value;
+              command = row.querySelector('#command')?.value;
+              value = row.querySelector('#value')?.value;
+              if (min && hour && daym && month && dayw && device && command) {
+                if (command >= 2) {
+                  command = cs_getExtraCommand(device, command);
+                  if ( isNaN(value) ) {
+                    row.querySelector('#value').classList.add("cs_error");
+                    document.getElementById("crontext").innerHTML = "<span class='cs_crontext'>&nbsp;<font color='red'>FIX ERROR</font>&nbsp;</span>";
+                    return false;
+                  }
+                } else {
+                  value = command;
+                  command = "";
+                }
+                json.devices.push({
+                  "min": min,
+                  "hour": hour,
+                  "daym": daym,
+                  "month": month,
+                  "dayw": dayw,
+                  "url": "/api/" + device + command + "/set",
+                  "value": value
+                })
+              }
+            }
+            //console.log(JSON.stringify(json));
+            set_schedules(json);
+            return true;
+          }
+
+    /*********************************************************************
+     *  
+     *   LOAD / INIT FUNCTIONS
+     * 
+     *********************************************************************/
 
     function update_status(data) {
       //console.log("Received Update Satus");
@@ -1381,7 +1992,11 @@
         if (obj.toString() == 'SWG/Boost') {
           //console.log("BOOST IS "+data.leds[obj]);
           setTileAttribute('SWG', "Boost", data.leds[obj]);
+          setTileValue
         }
+      }
+      for (var obj in data.timers) {
+        setTileOnText(obj.toString(),"On (timer)");
       }
 
       if (data.swg_boost_msg != null ) {
@@ -1440,10 +2055,12 @@
     }
 
     function deviceSort(a, b) {
+      var pa;
+      var pb;
       try {
         pa = devices.indexOf(a.id);
         pb = devices.indexOf(b.id);
-        if (pa > pb)
+        if (pa > pb) 
           return 1;
         else if (pa < pb)
           return -1;
@@ -1453,8 +2070,14 @@
 
     function check_devices(data) {
       _temperature_units = data['temp_units'];
+      _scheduler_devices_json = [];
       data['devices'].sort(deviceSort);
       for (var obj in data['devices']) {
+
+        if ((data['devices'][obj].type == "switch" || data['devices'][obj].type == "switch_vsp" || data['devices'][obj].type.substr(0,8) == "setpoint" ) && data['devices'][obj].name != "NONE") {
+          _scheduler_devices_json.push(data['devices'][obj]);
+        }
+
         if (document.getElementById(data['devices'][obj].id) == null) {
           _displayNames[data['devices'][obj].id.replace("Aux_", "AUX")] = data['devices'][obj].name;
           createTile(data['devices'][obj]);
@@ -1525,6 +2148,8 @@
             resetBackgroundSize();
             //window.setTimeout(get_devices, (300 * 1000)); // Check for new dvices ever 5 mins.
             window.setTimeout(get_devices, (60 * 1000)); // Check for new dvices ever 1 mins.
+          } else if (data.type == 'schedules') {
+            cs_schedules(data);
           }
         }
         socket_di.onclose = function() {
@@ -1542,10 +2167,6 @@
     }
 
     function get_devices() {
-      /*
-      var msg = {
-        command: "GET_DEVICES"
-      };*/
       var msg = {
         uri: "devices"
       };
@@ -1553,14 +2174,22 @@
     }
 
     function get_status() {
-      /*
-      var msg = {
-        command: "GET_DEVICES"
-      };*/
       var msg = {
         uri: "status"
       };
       socket_di.send(JSON.stringify(msg));
+    }
+
+    function get_schedules() {
+      var msg = {
+        uri: "schedules"
+      };
+      socket_di.send(JSON.stringify(msg));
+    }
+    function set_schedules(msg) {
+      msg.uri = "schedules/set";
+      socket_di.send(JSON.stringify(msg));
+      //socket_di.send(msg);
     }
 
     function send_command(cmd, value=null) {
@@ -1615,6 +2244,13 @@
       socket_di.send(JSON.stringify(mode));  
     }
 
+    function send_switch_timer(id, value) {
+      var message = {};
+      message.uri = id+"/timer/set";
+      message.value = value;
+      socket_di.send(JSON.stringify(message));  
+    }
+
     function reset() {
       socket_di.send("reset\n");
     }
@@ -1647,6 +2283,7 @@
         document.getElementById('pswitch_option_switch').checked = true;
       } else if (source.type == 'checkbox') {
         //console.log(source);
+        var x;
         if (document.getElementById('pswitch_option_switch').checked == false) {
           var radio = document.getElementsByName("light_program");
           for (x = 0; x < radio.length; x++) {
@@ -1656,6 +2293,25 @@
         }
       }
     }
+/*
+    function updateTimerOptions(source) {
+      if (source.type == 'range') {
+        if (source.value > 0) {
+          document.getElementById('timer_switch').checked = true;
+        } else {
+          document.getElementById('timer_switch').checked = false;
+        }
+      } else if (source.type == 'checkbox') {
+        if (document.getElementById('timer_switch').checked == false) {
+          //timer_slider_range = 0;
+          document.getElementById("timer_slider_range").value = 0;
+          document.getElementById("timer_slider_text_value").value = 0;
+        }
+      }
+    }
+  */
+
+
   </script>
 </head>
 
@@ -1668,22 +2324,24 @@
       <div id="header" class="head" onclick="showBackground();">
         <table border='0' width='100%' cellpadding='0' cellspacing='0'>
           <tr>
-            <td width="70px" align='left' id='td_name'><span class='title' id='name' onclick="showVersion(this);event.stopPropagation();">AqualinkD</span>
+            <td width="70px" align='left' id='td_name'><span class='title' id='name'
+                onclick="showVersion(this);event.stopPropagation();">AqualinkD</span>
             </td>
             <td align='center'><span class='title' id='message'></span>
             </td>
-            <td width="70px" align='right' id='td_timedate'><span class='timedate' id='datetime'></class>
-          </td>
-        </tr>
-      </table>
+            <td width="70px" align='right' id='td_timedate'><span class='timedate' id='datetime'
+                onclick="event.stopPropagation();showScheduler(this);"></class>
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
-  </div>
-  <div id='thermostat_options' class='options hide'>
-    <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
-      <table border='0' cellpadding='10px'>
-        <tr class='options_title'>
-          <th colspan='2'><span id="option_title"></span>
-              </th>
+    <div id='thermostat_options' class='options hide'>
+      <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px'>
+          <tr class='options_title'>
+            <th colspan='2'><span id="option_title"></span>
+            </th>
           </tr>
           <tr>
             <td align='right' width='50%'><span class="option_text" id='option_switch_text_value'></span>
@@ -1706,6 +2364,19 @@
               </div>
             </td>
           </tr>
+
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="th_timer_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='th_timer_slider_range'>
+              </div>
+            </td>
+          </tr>
+
           <tr>
             <td colspan='2' align='center'>
               <input type="button" value="close" id='options_close' class='options_button'>
@@ -1777,6 +2448,18 @@
           </tr>
 
           <tr>
+            <td colspan='2' align='center'><span class="option_text" id="ps_timer_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='ps_timer_slider_range'>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
             <td colspan='2' align='center'>
               <input type="button" value="close" id='pswitch_options_close' class='options_button'>
             </td>
@@ -1789,38 +2472,123 @@
         <table border='0' cellpadding='10px'>
           <tr class='options_title'>
             <th colspan='2'><span id="vspswitch_option_title"></span>
-                </th>
-            </tr>
-            <tr>
-              <td align='right' width='50%'><span class="option_text" id='vspoption_switch_text_value'></span>
-              </td>
-              <td align='left' width='50%'>
-                <label class="option_switch">
-                  <input type="checkbox" id='vspoption_switch'>
-                  <span class="option_switch_slide"></span>
-                </label>
-              </td>
-            </tr>
-            <tr>
-              <td colspan='2' align='center'><span class="option_text" id="vspoption_slider_text_value"></span>
-              </td>
-            </tr>
-            <tr>
-              <td colspan='2'>
-                <div class="slidecontainer">
-                  <input type="range" class="option_slider" id='vspoption_slider_range'>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td colspan='2' align='center'>
-                <input type="button" value="close" id='vspswitch_option_close' class='options_button'>
-              </td>
-            </tr>
-          </table>
-        </div>
+            </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='vspoption_switch_text_value'></span>
+            </td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='vspoption_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="vspoption_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='vspoption_slider_range'>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="vsp_timer_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='vsp_timer_slider_range'>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='vspswitch_option_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
       </div>
+    </div>
+    <div id='timer_options' class='options hide'>
+      <div id='timer_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px'>
+          <tr class='options_title'>
+            <th colspan='2'><span id="timer_option_title"></span>
+            </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='timer_switch_text_value'></span>
+            </td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='timer_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="timer_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='timer_slider_range'>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='timer_options_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+
+    <div id='scheduler_options' class='options hide'>
+      <div id='scheduler_options_pane' class='scheduler_pane' onclick='event.stopPropagation();'>
+        <table id="cronschedules" border="0">
+          <th colspan='9'><span id="scheduler_options_title"></span></th>
+          <tr>
+             <td colspan="9" align="center" id="crontext">&nbsp</td> 
+          </tr>
+          <tr class="sc_tablehead">
+              <td>Minute</td>
+              <td>Hour</td>
+              <td>Day<br><font size="-2">Month</font></td>
+              <td>Month</td>
+              <td>Day<br><font size="-2">Week</font></td>
+              <td>Device</td>
+              <td>Cmd</td>
+              <td>Value</td>
+              <td></td>
+          </tr>
+          <!-- HTML will be added here -->
+          <tr  class="sc_tablehead">
+              <td colspan="9">
+                  <input type="button" class="options_button" id="Add" value="Add" onclick="cs_addschedule(0,0,'*','*','*','','','');">
+                  &nbsp;&nbsp;&nbsp;&nbsp;
+                  <input type="button" class="options_button" id="scheduler_options_close" value="Save" onclick="cs_createJSON();">
+              </td>
+          </tr>
+          <tr>
+              <td colspan="9" id="cronhelp"></td>
+          </tr>
+        <table>
+      </div>
+    </div>
+
   </div>
+
 </body>
 
 </html>
