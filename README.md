@@ -79,7 +79,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Add light programming to Aqualink Touch & OneTouch protocols.
 * Add set time to OneTouch protocol.
 
-# Update in Release 2.3.0 (pre release)
+# Update in Release 2.3.0a (pre release)
 * This is pre-release, please treat it as such.
 * Don't use this release on PDA panels unless you can debug/change code <b>I have not been able to test it fully.</b>
 * Changed a lot of logic around different protocols.
