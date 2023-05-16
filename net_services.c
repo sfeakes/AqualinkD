@@ -809,6 +809,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   * Filter_Pump/RPM/set
   * Pump_1/RPM/set
   * Pool Light/color/set
+  * Pool Light/program/set
   */
   uriAtype rtn = uBad;
   bool found = false;

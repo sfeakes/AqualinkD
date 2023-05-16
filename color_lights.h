@@ -6,7 +6,7 @@
 
 #define LIGHT_COLOR_NAME    16
 #define LIGHT_COLOR_OPTIONS 17
-#define LIGHT_COLOR_TYPES   LC_INTELLIB
+//#define LIGHT_COLOR_TYPES   LC_DIMMER+1
 
 /*
 // color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
@@ -29,8 +29,8 @@ int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
 #endif //COLOR_LIGHTS_H_
 
 /*
-Color Name      Jandy Colors    Jandy LED       SAm/SAL         Color Logic     IntelliBrite   
-----------------------------------------------------------------------------------------------
+Color Name      Jandy Colors    Jandy LED       SAm/SAL         Color Logic     IntelliBrite      dimmer
+---------------------------------------------------------------------------------------------------------
 Color Splash    11                              8                                              
 Alpine White    1               1                                                              
 Sky Blue        2               2                                                              
@@ -80,4 +80,8 @@ Green                                                                           
 Red                                                                             10             
 White                                                                           11             
 Magenta                                                                         12 
+25%                                                                                             1
+50%                                                                                             2
+75%                                                                                             3
+100%                                                                                            4
 */

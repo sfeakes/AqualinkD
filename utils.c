@@ -429,7 +429,7 @@ void logMessage(int msg_level, const char *format, ...)
   _LOG(AQUA_LOG, msg_level, buffer);
 }
 */
-#define LOGBUFFER 5096
+#define LOGBUFFER 1024
 
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
@@ -446,8 +446,12 @@ void LOG(int16_t from, int msg_level, const char * format, ...)
   va_list args;
   va_start(args, format);
   strncpy(buffer, "         ", 20);
-  vsprintf (&buffer[20], format, args);
+  //vsprintf (&buffer[20], format, args);
+  int size = vsnprintf (&buffer[20], LOGBUFFER-30, format, args);
   va_end(args);
+  if (size >= LOGBUFFER-30 ) {
+    sprintf(&buffer[LOGBUFFER-11], ".........\n");
+  }
 
   _LOG(from, msg_level, buffer);
 }

@@ -1596,10 +1596,15 @@ void *set_aqualink_light_colormode( void *ptr )
   send_cmd(code);
   waitfor_queue2empty();
   i=0;
+  int waitCounter=12;
 
   do{
-    if ( !waitForMessage(threadCtrl->aq_data, "~*", 3))
+    LOG(PROG_LOG, LOG_INFO,"Light program wait for message\n");
+    if ( !waitForMessage(threadCtrl->aq_data, "~*", waitCounter))
       LOG(PROG_LOG, LOG_ERR, "Light Programming didn't receive color light mode message\n");
+    
+    // Wait for less messages after first try. We get a lot of repeat messages before the one we need.
+    waitCounter = 3;
 
     if (use_current_mode) {
       LOG(PROG_LOG, LOG_INFO, "Light Programming using color mode %s\n",aq_data->last_message);

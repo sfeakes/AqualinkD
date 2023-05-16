@@ -211,7 +211,7 @@ bool checkAqualinkTime()
   time_difference = (int)difftime(now, aqualink_time);
 
   strftime(buff, 20, "%m/%d/%y %I:%M %p", localtime(&now));
-  LOG(AQUA_LOG,LOG_NOTICE, "Aqualink time '%s' is off system time '%s' by %d seconds...\n", datestr, buff, time_difference);
+  LOG(AQUA_LOG,LOG_INFO, "Aqualink time '%s' is off system time '%s' by %d seconds...\n", datestr, buff, time_difference);
 
   if (abs(time_difference) < ACCEPTABLE_TIME_DIFF)
   {

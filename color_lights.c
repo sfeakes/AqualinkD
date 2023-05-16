@@ -7,7 +7,7 @@
 #include "color_lights.h"
 
 /****** This list MUST be in order of clight_type enum *******/
-const char *_color_light_options[LIGHT_COLOR_TYPES+1][LIGHT_COLOR_OPTIONS] = 
+const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
 {
    // AqualnkD Colors ignored as no names in control panel.
    { "bogus" },
@@ -81,6 +81,12 @@ const char *_color_light_options[LIGHT_COLOR_TYPES+1][LIGHT_COLOR_OPTIONS] =
         "Red",
         "White",
         "Magenta"
+  },
+  { // Dimmer
+        "25%",
+        "50%",
+        "75%",
+        "100%"
   }
 };
 
@@ -124,7 +130,7 @@ int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size)
   length += sprintf(buffer+length, "var _light_program = [];\n");
   length += sprintf(buffer+length, "_light_program[0] = light_program;\n");
    
-  for (i=1; i <= LIGHT_COLOR_TYPES; i++) {
+  for (i=1; i < NUMBER_LIGHT_COLOR_TYPES; i++) {
     length += sprintf(buffer+length, "_light_program[%d] = [", i);
     for (j=0; j < LIGHT_COLOR_OPTIONS; j++) {
       if (_color_light_options[i][j] != NULL)

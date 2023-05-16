@@ -558,7 +558,7 @@
   </style>
 
   <script type='text/javascript'>
-    'use strict';
+    //'use strict';
     var _lightProgramDropdown = false;
     var _pressEvent;
     var _ignoreMouseEvent = false;
@@ -580,7 +580,6 @@
     else
       var _link_spa_and_heater=false;
 
-    //init();
     function init() {
       setSizeSpecifics();
       populateLightProgram(-1);
@@ -633,7 +632,11 @@
         var row;
         row = tbody.deleteRow(2);
         row = tbody.insertRow(2);
-        row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
+        if (type == 6) {
+          row.innerHTML = "<td align='center'>Dimmer</td><td align='center'></td>";
+        } else {
+          row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
+        }
         tbody.deleteRow(3);
         row = tbody.insertRow(3);
         row.innerHTML = "<td align='left' valign='top'>" + html1 + "</td><td align='left' valign='top'>" + html2 + "</td>";
@@ -993,6 +996,9 @@
 
     function formatSatus(status) {
       var index;
+      var aux;
+      var status;
+
       if ((index = status.indexOf("AUX")) >= 0) {
         aux = status.substr(index, 4);
         status = status.charAt(0).toUpperCase() + status.substr(1).toLowerCase();

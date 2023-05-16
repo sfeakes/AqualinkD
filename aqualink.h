@@ -79,6 +79,7 @@ typedef struct aqualinkkey
 #define VS_PUMP        (1 << 0)
 #define PROGRAM_LIGHT  (1 << 1)
 #define TIMER_ACTIVE   (1 << 2) 
+//#define DIMMER_LIGHT   (1 << 3) // NOT USED YET 
 
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
@@ -155,7 +156,9 @@ typedef enum clight_type {
   LC_JANDYLED, 
   LC_SAL, 
   LC_CLOGIG, 
-  LC_INTELLIB
+  LC_INTELLIB,
+  LC_DIMMER,
+  NUMBER_LIGHT_COLOR_TYPES // This is used to size and count so add more prior to this
 } clight_type;
 
 typedef enum {

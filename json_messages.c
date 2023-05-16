@@ -204,7 +204,7 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
         return buffer;
       }
     }
-  } 
+  }
 
 //printf("Button %s is Switch\n", button->name);
   length += sprintf(buffer, ",\"type_ext\": \"switch_timer\", \"timer_active\":\"%s\"", (((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE)?JSON_ON:JSON_OFF) );

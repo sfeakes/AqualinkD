@@ -606,7 +606,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
       if (aqdata->num_lights < MAX_LIGHTS) {
         int type = strtoul(value, NULL, 10);
-        if (type < LC_PROGRAMABLE || type > LC_INTELLIB) {
+        if (type < LC_PROGRAMABLE || type > NUMBER_LIGHT_COLOR_TYPES) {
           LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%s'\n",type);
         } else {
           aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
