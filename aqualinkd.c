@@ -168,27 +168,54 @@ bool checkAqualinkTime()
   else
 #endif // AQ_PDA
   {
+    
     strcpy(&datestr[0], _aqualink_data.date);
-    strcpy(&datestr[12], " ");
-    strcpy(&datestr[13], _aqualink_data.time);
-
-    if (strptime(datestr, "%m/%d/%y %a %I:%M %p", &aq_tm) == NULL)
+    datestr[8] = ' ';
+    strcpy(&datestr[9], _aqualink_data.time);
+    //datestr[16] = ' ';
+    if (strlen(_aqualink_data.time) <= 7) {
+      datestr[13] = ' ';
+      datestr[16] ='\0';
+    } else {
+      datestr[14] = ' ';
+      datestr[17] ='\0';
+    }
+    if (strptime(datestr, "%m/%d/%y %I:%M %p", &aq_tm) == NULL)
+    
+    //sprintf(datestr, "%s %s", _aqualink_data.date, _aqualink_data.time);
+    //if (strptime(datestr, "%m/%d/%y %a %I:%M %p", &aq_tm) == NULL)
     {
-      LOG(AQUA_LOG,LOG_ERR, "Could not convert RS time string '%s'", datestr);
+      LOG(AQUA_LOG,LOG_ERR, "Could not convert RS time string '%s'\n", datestr);
       last_checked = (time_t)NULL;
       return true;
     }
   }
 
-  aq_tm.tm_isdst = -1; // Force mktime to use local timezone
+  aq_tm.tm_isdst = localtime(&now)->tm_isdst; // ( Might need to use -1) set daylight savings to same as system time
+  aq_tm.tm_sec = 0; // Set seconds to time.  Really messes up when we don't do this.
+
+  char buff[20];
+  
+  LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd created time from : %s\n", datestr);
+  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", &aq_tm);
+  LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd created time      : %s\n", buff);
+
   aqualink_time = mktime(&aq_tm);
+
+  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&aqualink_time));
+  LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd converted time    : %s\n", buff);
+  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+  LOG(AQUA_LOG,LOG_DEBUG, "System time                 : %s\n", buff);
+
+
   time_difference = (int)difftime(now, aqualink_time);
 
-  LOG(AQUA_LOG,LOG_INFO, "Aqualink time is off by %d seconds...\n", time_difference);
+  strftime(buff, 20, "%m/%d/%y %I:%M %p", localtime(&now));
+  LOG(AQUA_LOG,LOG_NOTICE, "Aqualink time '%s' is off system time '%s' by %d seconds...\n", datestr, buff, time_difference);
 
-  if (abs(time_difference) <= ACCEPTABLE_TIME_DIFF)
+  if (abs(time_difference) < ACCEPTABLE_TIME_DIFF)
   {
-    // Time difference is less than or equal to 90 seconds (1 1/2 minutes).
+    // Time difference is less than or equal to ACCEPTABLE_TIME_DIFF seconds (1 1/2 minutes).
     // Set the return value to true.
     return true;
   }
@@ -595,6 +622,7 @@ void _processMessage(char *message, bool reset)
     LOG(AQRS_LOG,LOG_NOTICE, "Control Panel %s\n", msg);
     if (_initWithRS == false)
     {
+      //LOG(ALLBUTTON,LOG_NOTICE, "Standard protocol initialization complete\n");
       queueGetProgramData(ALLBUTTON, &_aqualink_data);
       //queueGetExtendedProgramData(ALLBUTTON, &_aqualink_data, _aqconfig_.use_panel_aux_labels);
       _initWithRS = true;
@@ -1624,7 +1652,7 @@ void main_loop()
       blank_read = 0;
       if (packet_buffer[PKT_CMD] == CMD_PROBE) {
          got_probe = true;
-         LOG(AQUA_LOG,LOG_DEBUG, "Got probe on '0x%02hhx'\n",_aqconfig_.device_id);
+         LOG(AQUA_LOG,LOG_NOTICE, "Got probe on '0x%02hhx' Standard Protocol\n",_aqconfig_.device_id);
       } else {
         if(!print_once) {
           LOG(AQUA_LOG,LOG_NOTICE, "Got message but no probe on '0x%02hhx', did we start too soon? (waiting for probe)\n",_aqconfig_.device_id);
@@ -1637,7 +1665,7 @@ void main_loop()
       blank_read = 0;
       if (packet_buffer[PKT_CMD] == CMD_PROBE) {
          got_probe_rssa = true;
-         LOG(AQUA_LOG,LOG_DEBUG, "Got probe on '0x%02hhx'\n",_aqconfig_.rssa_device_id);
+         LOG(AQUA_LOG,LOG_NOTICE, "Got probe on '0x%02hhx' RS SerialAdapter Protocol\n",_aqconfig_.rssa_device_id);
       } else {
         if(!print_once) {
           LOG(AQUA_LOG,LOG_NOTICE, "Got message but no probe on '0x%02hhx', did we start too soon? (waiting for probe)\n",_aqconfig_.rssa_device_id);
@@ -1651,7 +1679,7 @@ void main_loop()
       blank_read = 0;
       if (packet_buffer[PKT_CMD] == CMD_PROBE) {
          got_probe_extended = true;
-         LOG(AQUA_LOG,LOG_DEBUG, "Got probe on '0x%02hhx'\n",_aqconfig_.extended_device_id);
+         LOG(AQUA_LOG,LOG_NOTICE, "Got probe on '0x%02hhx' Extended Protocol\n",_aqconfig_.extended_device_id);
       } else {
         if(!print_once) {
           LOG(AQUA_LOG,LOG_NOTICE, "Got message but no probe on '0x%02hhx', did we start too soon? (waiting for probe)\n",_aqconfig_.extended_device_id);

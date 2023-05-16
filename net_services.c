@@ -113,7 +113,7 @@ static void ws_send(struct mg_connection *nc, char *msg)
   
   mg_send_websocket_frame(nc, WEBSOCKET_OP_TEXT, msg, size);
   
-  LOG(NET_LOG,LOG_DEBUG, "WS: Sent %d characters '%s'\n",size, msg);
+  //LOG(NET_LOG,LOG_DEBUG, "WS: Sent %d characters '%s'\n",size, msg);
 }
 
 void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg) 
@@ -243,6 +243,20 @@ void send_mqtt_state_msg(struct mg_connection *nc, char *dev_name, aqledstate st
   send_mqtt(nc, mqtt_pub_topic, (state==OFF?MQTT_OFF:MQTT_ON));
 }
 
+
+void send_mqtt_timer_duration_msg(struct mg_connection *nc, char *dev_name, aqkey *button)
+{
+  static char mqtt_pub_topic[250];
+  sprintf(mqtt_pub_topic, "%s/%s/timer/duration",_aqconfig_.mqtt_aq_topic, dev_name);
+  if ((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
+    char val[10];
+    sprintf(val, "%d", get_timer_left(button));
+    send_mqtt(nc, mqtt_pub_topic, val);
+  } else {
+    send_mqtt(nc, mqtt_pub_topic, "0");
+  }
+}
+
 void send_mqtt_timer_state_msg(struct mg_connection *nc, char *dev_name, aqkey *button)
 {
   static char mqtt_pub_topic[250];
@@ -250,6 +264,8 @@ void send_mqtt_timer_state_msg(struct mg_connection *nc, char *dev_name, aqkey *
   sprintf(mqtt_pub_topic, "%s/%s/timer",_aqconfig_.mqtt_aq_topic, dev_name);
 
   send_mqtt(nc, mqtt_pub_topic, ( ((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) && (button->led->state != OFF) )?MQTT_ON:MQTT_OFF );
+
+  send_mqtt_timer_duration_msg(nc, dev_name, button);
 }
 
 //void send_mqtt_aux_msg(struct mg_connection *nc, char *root_topic, int dev_index, char *dev_topic, int value)
@@ -562,9 +578,16 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       }
 
       send_mqtt_timer_state_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
- 
-      if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX)
+
+      if (_aqualink_data->aqbuttons[i].dz_idx != DZ_NULL_IDX) {
         send_domoticz_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].dz_idx, (_aqualink_data->aqbuttons[i].led->state==OFF?DZ_OFF:DZ_ON));
+      }
+    } else if ((_aqualink_data->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
+      //send_mqtt_timer_duration_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
+      // send_mqtt_timer_state_msg will call send_mqtt_timer_duration_msg so no need to do it here.
+      // Have to use send_mqtt_timer_state_msg due to a timer being set on a device that's already on, (ir no state change so above code does't get hit)
+      send_mqtt_timer_state_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
+
     }
   }
 

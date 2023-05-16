@@ -15,6 +15,7 @@ void *set_aqualink_onetouch_pool_heater_temp( void *ptr );
 void *set_aqualink_onetouch_swg_percent( void *ptr );
 void *set_aqualink_onetouch_boost( void *ptr );
 void *set_aqualink_onetouch_time( void *ptr );
+void *get_aqualink_onetouch_freezeprotect( void *ptr );
 void *set_aqualink_onetouch_freezeprotect( void *ptr );
 
 #endif // ONETOUCH_AQ_PROGRAMMER_H_

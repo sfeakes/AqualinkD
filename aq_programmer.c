@@ -84,6 +84,8 @@ bool push_aq_cmd(unsigned char cmd);
 void waitfor_queue2empty();
 void longwaitfor_queue2empty();
 
+void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data, bool allowOveride);
+
 #define MAX_STACK 20
 int _stack_place = 0;
 unsigned char _commands[MAX_STACK];
@@ -222,6 +224,50 @@ unsigned char pop_aq_cmd_OLD(struct aqualinkdata *aq_data)
 }
 */
 
+/* Maybe use in future, not needed for moment 
+   Idea here was to convert all button on/off commands to rs_serial_adapter commands to use if in all button probramming mode */
+/*
+unsigned char AllButton2RSsrialAdapter(unsigned char abcmd)
+{
+  switch(abcmd) {
+    case KEY_PUMP:
+      return RS_SA_PUMP;
+    break;
+    case KEY_SPA:
+      return RS_SA_SPA;
+    break;
+    case KEY_AUX1:
+      return RS_SA_AUX1;
+    break;
+    case KEY_AUX2:
+      return RS_SA_AUX2;
+    break;
+    case KEY_AUX3:
+      return RS_SA_AUX3;
+    break;
+    case KEY_AUX4:
+      return RS_SA_AUX4;
+    break;
+    case KEY_AUX5:
+      return RS_SA_AUX5;
+    break;
+    case KEY_AUX6:
+      return RS_SA_AUX6;
+    break;
+    case KEY_AUX7:
+      return RS_SA_AUX7;
+    break;
+    case KEY_POOL_HTR:
+      return RS_SA_POOLHT;
+    break;
+    case KEY_SPA_HTR:
+      return RS_SA_SPAHT;
+    break;
+  }
+  return NUL;
+}
+*/
+
 int roundTo(int num, int denominator) {
   return ((num + (denominator/2) ) / denominator )* denominator;
 }
@@ -333,7 +379,78 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   return rtn;
 }
 
+/*
+  Figure out the fastest way in get all needed startup data depending on what protocols
+  are available and what's just called us
+*/
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data)
+{
+   LOG(PROG_LOG, LOG_INFO, "Initial setup call from %s with RSSA=%s ONETouch=%s IAQTouch=%s ExtendedProgramming=%s\n",
+      (source_type == ALLBUTTON)?"AllButton":((source_type == RSSADAPTER)?"RSSA":((source_type == ONETOUCH)?"OneTouch":((source_type == IAQTOUCH)?"IAQTouch":"PDA"))),
+      (isRSSA_ENABLED)?"enabled":"disabled",
+      (isONET_ENABLED)?"enabled":"disabled",
+      (isIAQT_ENABLED)?"enabled":"disabled",
+      (isEXTP_ENABLED)?"enabled":"disabled"
+   );
+
+  if (isRSSA_ENABLED && isEXTP_ENABLED == true) {
+    // serial adapter enabled and extended programming
+    if (source_type == RSSADAPTER) {
+      _aq_programmer(AQ_GET_RSSADAPTER_SETPOINTS, NULL, aq_data, false);
+    } else if (source_type == ONETOUCH && isEXTP_ENABLED) {
+      //_aq_programmer(AQ_GET_ONETOUCH_FREEZEPROTECT, NULL, aq_data, false); // Add back and remove below once tested and working
+      //_aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data, false);
+    } else if (source_type == IAQTOUCH && isEXTP_ENABLED) {
+      //_aq_programmer(AQ_GET_IAQTOUCH_FREEZEPROTECT, NULL, aq_data, false); // Add back and remove below once tested and working
+      //_aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data, false); // This get's freeze & heaters, we should just get freeze if isRSSA_ENABLED
+    } else if (source_type == ALLBUTTON) {
+      _aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data, false); // This is still quicker that IAQ or ONE Touch protocols at the moment.
+      if (_aqconfig_.use_panel_aux_labels) {
+        _aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data, false);
+      }
+    }
+  } else if (isRSSA_ENABLED && isEXTP_ENABLED == false) {
+    // serial adapter enabled with no extended programming
+     if (source_type == RSSADAPTER) {
+      _aq_programmer(AQ_GET_RSSADAPTER_SETPOINTS, NULL, aq_data, false);
+    } else if (source_type == ALLBUTTON) {
+      _aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data, false);
+      if (_aqconfig_.use_panel_aux_labels) {
+        _aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data, false);
+      }
+    }
+  } else if (!isRSSA_ENABLED && isEXTP_ENABLED && isONET_ENABLED) {
+    // One touch extended and no serial adapter
+    if (source_type == ONETOUCH) {
+      _aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data, false);
+    } else if (source_type == ALLBUTTON) {
+      if (_aqconfig_.use_panel_aux_labels) {
+        _aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data, false);
+      }
+    }
+  } else if (!isRSSA_ENABLED && isEXTP_ENABLED && isIAQT_ENABLED) {
+    // IAQ touch extended and no serial adapter
+    if (source_type == IAQTOUCH) {
+      _aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data, false);
+    } else if (source_type == ALLBUTTON) {
+      if (_aqconfig_.use_panel_aux_labels) {
+        _aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data, false);
+      }
+    }
+#ifdef AQ_PDA
+  } else if ( source_type == AQUAPDA) {
+    aq_programmer(AQ_PDA_INIT, NULL, aq_data);
+#endif
+  } else { // Must be all button only
+    aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
+    aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data);
+    if (_aqconfig_.use_panel_aux_labels) {
+      aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+    }
+  }
+}
+
+void queueGetProgramData_OLD(emulation_type source_type, struct aqualinkdata *aq_data)
 {
   // Wait for onetouch if enabeled.
   //if ( source_type == ALLBUTTON && ( onetouch_enabled() == false || extended_device_id_programming() == false ) ) {
@@ -341,15 +458,20 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
     aq_programmer(AQ_GET_RSSADAPTER_SETPOINTS, NULL, aq_data);
   } else if ( source_type == ALLBUTTON && ( isEXTP_ENABLED == false || (isONET_ENABLED == false && isIAQT_ENABLED == false)) ) {
     aq_send_cmd(NUL);
-    if (!isRSSA_ENABLED)
+    if (!isRSSA_ENABLED) {
       aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
+    }
     aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data);
-    if (_aqconfig_.use_panel_aux_labels)
+    if (_aqconfig_.use_panel_aux_labels) {
       aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+    }
 #ifdef AQ_ONETOUCH
   } else if ( source_type == ONETOUCH) {
-    //if (!isRSSA_ENABLED)
-    aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data); // This get's freeze & heaters, we should just get freeze if isRSSA_ENABLED
+    if (!isRSSA_ENABLED) {
+      aq_programmer(AQ_GET_ONETOUCH_FREEZEPROTECT, NULL, aq_data);
+    } else {
+      aq_programmer(AQ_GET_ONETOUCH_SETPOINTS, NULL, aq_data); // This get's freeze & heaters, we should just get freeze if isRSSA_ENABLED
+    }
     if (_aqconfig_.use_panel_aux_labels)
       aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
 #endif
@@ -454,6 +576,34 @@ bool in_iaqt_programming_mode(struct aqualinkdata *aq_data)
   return false;
 }
 
+/* 
+Don't need this at the moment, it's kind-a inverse of above two functions
+
+bool in_allb_programming_mode(struct aqualinkdata *aq_data)
+{
+  if ( ( aq_data->active_thread.thread_id != 0 ) &&
+       ( aq_data->active_thread.ptype == AQ_GET_POOL_SPA_HEATER_TEMPS ||
+         aq_data->active_thread.ptype == AQ_GET_FREEZE_PROTECT_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_TIME ||
+         aq_data->active_thread.ptype == AQ_SET_POOL_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_SPA_HEATER_TEMP ||
+         aq_data->active_thread.ptype == AQ_SET_FRZ_PROTECTION_TEMP ||
+         aq_data->active_thread.ptype == AQ_GET_DIAGNOSTICS_MODEL ||
+         aq_data->active_thread.ptype == AQ_GET_PROGRAMS ||
+         aq_data->active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE ||
+         aq_data->active_thread.ptype == AQ_SET_LIGHTCOLOR_MODE ||
+         aq_data->active_thread.ptype == AQ_SET_SWG_PERCENT ||
+         aq_data->active_thread.ptype == AQ_GET_AUX_LABELS ||
+         aq_data->active_thread.ptype == AQ_SET_BOOST ||
+         aq_data->active_thread.ptype == AQ_SET_PUMP_RPM ||
+         aq_data->active_thread.ptype == AQ_SET_PUMP_VS_PROGRAM)
+     ) {
+     return true;
+  }
+
+  return false;
+}
+*/
 bool in_programming_mode(struct aqualinkdata *aq_data)
 {
   if ( aq_data->active_thread.thread_id != 0 ) {
@@ -468,7 +618,7 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
   if ( aq_data->active_thread.thread_id != 0 ) {
     if ( (source_type == ONETOUCH) && in_ot_programming_mode(aq_data))
     {
-      LOG(PROG_LOG, LOG_DEBUG, "Kicking OneTouch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      LOG(ONET_LOG, LOG_DEBUG, "Kicking OneTouch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);   
     } 
     else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data)) {
@@ -476,19 +626,23 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
     else if (source_type == IAQTOUCH && in_iaqt_programming_mode(aq_data)) {
-      LOG(PROG_LOG, LOG_DEBUG, "Kicking IAQ Touch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      LOG(IAQT_LOG, LOG_DEBUG, "Kicking IAQ Touch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
 #ifdef AQ_PDA
     else if (source_type == AQUAPDA && !in_ot_programming_mode(aq_data)) {
-      LOG(PROG_LOG, LOG_DEBUG, "Kicking PDA thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      LOG(PDA_LOG, LOG_DEBUG, "Kicking PDA thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
 #endif     
   }
 }
 
-void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data)
+
+void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data){
+  _aq_programmer(r_type, args, aq_data, true);
+}
+void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data, bool allowOveride)
 {
   struct programmingThreadCtrl *programmingthread = malloc(sizeof(struct programmingThreadCtrl));
 
@@ -580,7 +734,7 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
   else if (isONET_ENABLED && isEXTP_ENABLED) {
     switch (r_type){
       case AQ_GET_POOL_SPA_HEATER_TEMPS:
-      case AQ_GET_FREEZE_PROTECT_TEMP:
+      //case AQ_GET_FREEZE_PROTECT_TEMP:
         type = AQ_GET_ONETOUCH_SETPOINTS;
       break;
       case AQ_SET_POOL_HEATER_TEMP:
@@ -610,7 +764,7 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
     // IAQ Touch programming modes that should overite standard ones.
     switch (r_type){
       case AQ_GET_POOL_SPA_HEATER_TEMPS:
-      case AQ_GET_FREEZE_PROTECT_TEMP:
+      //case AQ_GET_FREEZE_PROTECT_TEMP:
         type = AQ_GET_IAQTOUCH_SETPOINTS;
       break;
       case AQ_SET_SWG_PERCENT:
@@ -658,7 +812,12 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
   }
 #endif
 
-  LOG(PROG_LOG, LOG_INFO, "Starting programming thread '%s'\n",ptypeName(type));
+  if (!allowOveride) {
+    // Reset anything back from changes above.
+    type = r_type;
+  }
+
+  LOG(PROG_LOG, LOG_NOTICE, "Starting programming thread '%s'\n",ptypeName(type));
 
   programmingthread->aq_data = aq_data;
   programmingthread->thread_id = 0;
@@ -794,6 +953,12 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
         return;
       }
       break;
+    case AQ_GET_ONETOUCH_FREEZEPROTECT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_onetouch_freezeprotect, (void*)programmingthread) < 0) {
+        LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
     case AQ_GET_ONETOUCH_SETPOINTS:
       if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_onetouch_setpoints, (void*)programmingthread) < 0) {
         LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
@@ -852,6 +1017,12 @@ void aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_data
       break;
     case AQ_GET_IAQTOUCH_SETPOINTS:
       if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_iaqtouch_setpoints, (void*)programmingthread) < 0) {
+        LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_GET_IAQTOUCH_FREEZEPROTECT:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  get_aqualink_iaqtouch_freezeprotect, (void*)programmingthread) < 0) {
         LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
         return;
       }
@@ -967,8 +1138,8 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
   
   if (i >= tries) {
     //LOG(PROG_LOG, LOG_ERR, "Thread %d timeout waiting, ending\n",threadCtrl->thread_id);
-    LOG(PROG_LOG, LOG_ERR, "Thread %d,%p timeout waiting for thread %d,%p to finish\n",
-                type, &threadCtrl->thread_id, threadCtrl->aq_data->active_thread.ptype,
+    LOG(PROG_LOG, LOG_ERR, "Thread (%s) %p timeout waiting for thread (%s) %p to finish\n",
+                ptypeName(type), &threadCtrl->thread_id, ptypeName(threadCtrl->aq_data->active_thread.ptype),
                 threadCtrl->aq_data->active_thread.thread_id);
     free(threadCtrl);
     pthread_exit(0);
@@ -983,7 +1154,7 @@ void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, pr
     clock_gettime(CLOCK_REALTIME, &threadCtrl->aq_data->start_active_time);
   #endif
 
-  LOG(PROG_LOG, LOG_NOTICE, "Programming: %s, %d\n", ptypeName(threadCtrl->aq_data->active_thread.ptype), threadCtrl->aq_data->active_thread.ptype);
+  LOG(PROG_LOG, LOG_INFO, "Programming: %s, %d\n", ptypeName(threadCtrl->aq_data->active_thread.ptype), threadCtrl->aq_data->active_thread.ptype);
 
   LOG(PROG_LOG, LOG_DEBUG, "Thread %d,%p is active (%s)\n",
               threadCtrl->aq_data->active_thread.ptype,
@@ -1072,6 +1243,8 @@ bool setAqualinkNumericField_new(struct aqualinkdata *aq_data, char *value_label
   
   return true;
 }
+
+
 
 bool OLD_setAqualinkNumericField_OLD(struct aqualinkdata *aq_data, char *value_label, int value)
 { // Works for everything but not SWG
@@ -2277,12 +2450,15 @@ bool select_sub_menu_item(struct aqualinkdata *aq_data, char* item_string)
   int wait_messages = 28;
   int i=0;
  
+  waitfor_queue2empty();
+
   while( (stristr(aq_data->last_message, item_string) == NULL) && ( i++ < wait_messages) )
   {
     LOG(PROG_LOG, LOG_DEBUG, "Find item in Menu: loop %d of %d looking for '%s' received message '%s'\n",i,wait_messages,item_string,aq_data->last_message);
     send_cmd(KEY_RIGHT);
-    waitfor_queue2empty(); // ADDED BACK MAY 2023
-    waitForMessage(aq_data, NULL, 1);
+    waitfor_queue2empty(); // ADDED BACK MAY 2023 setting time warked better
+    //waitForMessage(aq_data, NULL, 1);
+    waitForMessage(aq_data, item_string, 1);
   }
 
   if (stristr(aq_data->last_message, item_string) == NULL) {
@@ -2407,6 +2583,9 @@ const char *ptypeName(program_type type)
     case AQ_GET_ONETOUCH_SETPOINTS:
       return "Get OneTouch setpoints";
     break;
+     case AQ_GET_ONETOUCH_FREEZEPROTECT:
+      return "Get OneTouch freezeprotect";
+    break;
     case AQ_SET_ONETOUCH_TIME:
       return "Set OneTouch time";
     break;
@@ -2438,6 +2617,9 @@ const char *ptypeName(program_type type)
     break;
     case AQ_GET_IAQTOUCH_SETPOINTS:
       return "Get iAqualink Touch Setpoints";
+    break;
+    case AQ_GET_IAQTOUCH_FREEZEPROTECT:
+      return "Get iAqualink Touch Freezeprotect";
     break;
     case AQ_GET_IAQTOUCH_AUX_LABELS:
       return "Get iAqualink AUX Labels";
@@ -2488,6 +2670,8 @@ const char *programtypeDisplayName(program_type type)
     case AQ_GET_FREEZE_PROTECT_TEMP:
     case AQ_GET_IAQTOUCH_SETPOINTS:
     case AQ_GET_RSSADAPTER_SETPOINTS:
+    case AQ_GET_ONETOUCH_FREEZEPROTECT:
+    case AQ_GET_IAQTOUCH_FREEZEPROTECT:
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
 #endif

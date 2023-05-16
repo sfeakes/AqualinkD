@@ -5,7 +5,8 @@
 #include "aqualink.h"
 
 void start_timer(struct aqualinkdata *aq_data, aqkey *button, int duration);
-
+int get_timer_left(aqkey *button);
+void clear_timer(struct aqualinkdata *aq_data, aqkey *button);
 // Not best place for this, but leave it here so all requests are in net services, this is forward decleration of function in net_services.c
 #ifdef AQ_PDA
 void create_PDA_on_off_request(aqkey *button, bool isON);
