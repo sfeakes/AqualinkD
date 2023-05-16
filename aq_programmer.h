@@ -5,9 +5,9 @@
 #include <pthread.h>
 //#include "aqualink.h"
 
-//#define PROGRAMMING_POLL_DELAY_TIME 10
+#define PROGRAMMING_POLL_DELAY_TIME 10
 //#define PROGRAMMING_POLL_DELAY_TIME 2
-#define PROGRAMMING_POLL_DELAY_TIME 5
+//#define PROGRAMMING_POLL_DELAY_TIME 5
 #define PROGRAMMING_POLL_COUNTER 200
 
 // need to get the C values from aqualink manual and add those just incase
@@ -64,6 +64,7 @@ typedef enum {
   AQ_GET_ONETOUCH_SETPOINTS,
   AQ_SET_ONETOUCH_POOL_HEATER_TEMP,
   AQ_SET_ONETOUCH_SPA_HEATER_TEMP,
+  AQ_GET_ONETOUCH_FREEZEPROTECT,
   AQ_SET_ONETOUCH_FREEZEPROTECT,
   AQ_SET_ONETOUCH_TIME,
   AQ_SET_ONETOUCH_BOOST,
@@ -72,6 +73,8 @@ typedef enum {
   AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM,
   AQ_GET_IAQTOUCH_VSP_ASSIGNMENT,
   AQ_GET_IAQTOUCH_SETPOINTS,
+  AQ_GET_IAQTOUCH_FREEZEPROTECT,
+  AQ_SET_IAQTOUCH_FREEZEPROTECT,
   AQ_GET_IAQTOUCH_AUX_LABELS,
   AQ_SET_IAQTOUCH_SWG_PERCENT,
   AQ_SET_IAQTOUCH_SWG_BOOST,
@@ -110,6 +113,7 @@ bool in_ot_programming_mode(struct aqualinkdata *aq_data);
 bool in_iaqt_programming_mode(struct aqualinkdata *aq_data);
 bool in_swg_programming_mode(struct aqualinkdata *aq_data);
 bool in_light_programming_mode(struct aqualinkdata *aq_data);
+bool in_allb_programming_mode(struct aqualinkdata *aq_data);
 void aq_send_cmd(unsigned char cmd);
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
 //void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);

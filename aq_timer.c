@@ -19,6 +19,7 @@ struct timerthread {
   struct aqualinkdata *aq_data;
   int duration_min;
   struct timespec timeout;
+  time_t started_at;
   struct timerthread *next;
   struct timerthread *prev;
 };
@@ -27,8 +28,56 @@ struct timerthread {
 
 void *timer_worker( void *ptr );
 
+struct timerthread *find_timerthread(aqkey *button)
+{
+  struct timerthread *t_ptr;
+
+  if (_timerthread_ll != NULL) {
+    for (t_ptr = _timerthread_ll; t_ptr != NULL; t_ptr = t_ptr->next) {
+      if (t_ptr->button == button) {
+        return t_ptr;
+      }
+    }
+  }
+
+  return NULL;
+}
+
+int get_timer_left(aqkey *button)
+{
+  struct timerthread *t_ptr = find_timerthread(button);
+
+  if (t_ptr != NULL) {
+    time_t now = time(0);
+    double seconds = difftime(now, t_ptr->started_at);
+    return (int) ((t_ptr->duration_min - (seconds / 60)) +0.5) ;
+  }
+
+  return 0;
+}
+
+void clear_timer(struct aqualinkdata *aq_data, aqkey *button)
+{
+  struct timerthread *t_ptr = find_timerthread(button);
+
+  if (t_ptr != NULL) {
+    LOG(TIMR_LOG, LOG_INFO, "Clearing timer for '%s'\n",t_ptr->button->name);
+    t_ptr->duration_min = 0;
+    pthread_cond_broadcast(&t_ptr->thread_cond);
+  }
+}
+
 void start_timer(struct aqualinkdata *aq_data, aqkey *button, int duration)
 {
+  struct timerthread *t_ptr = find_timerthread(button);
+
+  if (t_ptr != NULL) {
+    LOG(TIMR_LOG, LOG_INFO, "Timer already active for '%s', resetting\n",t_ptr->button->name);
+    t_ptr->duration_min = duration;
+    pthread_cond_broadcast(&t_ptr->thread_cond);
+    return;
+  }
+  /*
   struct timerthread *t_ptr;
 
   if (_timerthread_ll != NULL) {
@@ -40,7 +89,7 @@ void start_timer(struct aqualinkdata *aq_data, aqkey *button, int duration)
         return;
       }
     }
-  }
+  }*/
 
   struct timerthread *tmthread = calloc(1, sizeof(struct timerthread));
   tmthread->aq_data = aq_data;
@@ -81,7 +130,7 @@ void *timer_worker( void *ptr )
   tmthread = (struct timerthread *) ptr;
   int retval = 0;
 
-  LOG(TIMR_LOG, LOG_NOTICE, "Started for button '%s'\n",tmthread->button->name);
+  LOG(TIMR_LOG, LOG_NOTICE, "Start timer for '%s'\n",tmthread->button->name);
 
   // Add mask so we know timer is active
   tmthread->button->special_mask |= TIMER_ACTIVE;
@@ -108,17 +157,23 @@ void *timer_worker( void *ptr )
     if (retval != 0) {
       LOG(TIMR_LOG, LOG_ERR, "pthread_cond_timedwait failed for '%s', error %d %s\n",tmthread->button->name,retval,strerror(retval));
       break;
+    } else if (tmthread->duration_min <= 0) {
+      //LOG(TIMR_LOG, LOG_INFO, "Timer has been reset to 0 for '%s'\n",tmthread->button->name);
+      break;
     }
     clock_gettime(CLOCK_REALTIME, &tmthread->timeout);
     tmthread->timeout.tv_sec += (tmthread->duration_min * 60);
+    tmthread->started_at = time(0);
     LOG(TIMR_LOG, LOG_INFO, "Will turn off '%s' in %d minutes\n",tmthread->button->name, tmthread->duration_min);
   } while ((retval = pthread_cond_timedwait(&tmthread->thread_cond, &tmthread->thread_mutex, &tmthread->timeout)) != ETIMEDOUT);
 
 
   pthread_mutex_unlock(&tmthread->thread_mutex);
 
+  LOG(TIMR_LOG, LOG_NOTICE, "End timer for '%s'\n",tmthread->button->name);    
+
   if (tmthread->button->led->state != OFF) {
-    LOG(TIMR_LOG, LOG_INFO, "waking, turning off '%s'\n",tmthread->button->name);    
+    LOG(TIMR_LOG, LOG_INFO, "Timer waking turning '%s' off\n",tmthread->button->name);    
 #ifdef AQ_PDA
     if (isPDA_PANEL)
       create_PDA_on_off_request(tmthread->button, false);
@@ -126,7 +181,7 @@ void *timer_worker( void *ptr )
 #endif
       aq_send_cmd(tmthread->button->code);
   } else {
-    LOG(TIMR_LOG, LOG_INFO, "waking '%s' is already off\n",tmthread->button->name);
+    LOG(TIMR_LOG, LOG_INFO, "Timer waking '%s' is already off\n",tmthread->button->name);
   }
 
   // remove mask so we know timer is dead

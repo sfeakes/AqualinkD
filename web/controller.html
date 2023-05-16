@@ -1105,6 +1105,15 @@
       }
     }
 
+    function toHoursAndMinutes(totalMinutes) {
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${padToTwoDigits(hours)}:${padToTwoDigits(minutes)}`;
+    }
+    function padToTwoDigits(num) {
+      return num.toString().padStart(2, "0");
+    }
+
     function createTile(object) {
       if (object.name == 'NONE') {
         return;
@@ -1132,7 +1141,11 @@
           if (typeof object.timer_active !== 'undefined' && object.timer_active) {
             //console.log("Timer for "+object.name+" = "+object.timer_active);
             if (object.timer_active == 'on') {
-              setTileOnText(object.id, 'On (timer)');
+              if (typeof object.timer_duration !== 'undefined') {
+                setTileOnText(object.id, 'On (timer '+toHoursAndMinutes(object.timer_duration)+')');
+              } else {
+                setTileOnText(object.id, 'On (timer)');
+              }
             }
           }
         } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
@@ -1998,6 +2011,10 @@
       for (var obj in data.timers) {
         setTileOnText(obj.toString(),"On (timer)");
       }
+      for (var obj in data.timer_durations) {
+        setTileOnText(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
+      }
+        
 
       if (data.swg_boost_msg != null ) {
         var tile = document.getElementById('SWG');

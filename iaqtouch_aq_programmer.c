@@ -545,7 +545,39 @@ void *set_aqualink_iaqtouch_vsp_assignments( void *ptr )
   return ptr;
 }
 
+void *get_aqualink_iaqtouch_freezeprotect( void *ptr )
+{
+  LOG(IAQT_LOG,LOG_ERR, "IAQ Touch get_aqualink_iaqtouch_freezeprotect has not beed tested\n");
+  LOG(IAQT_LOG,LOG_ERR, "**** We should not be here ****\n");
 
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_IAQTOUCH_FREEZEPROTECT);
+
+  if ( goto_iaqt_page(IAQ_PAGE_FREEZE_PROTECT, aq_data) == false )
+    goto f_end;
+
+  // The Message at index 0 is the deg that freeze protect is set to.
+  int frz = rsm_atoi(iaqtGetMessageLine(0));
+  if (frz >= 0) {
+    aq_data->frz_protect_set_point = frz;
+    LOG(IAQT_LOG,LOG_NOTICE, "IAQ Touch Freeze Protection setpoint %d\n",frz);
+  }
+
+  // Need to run over table messages and check ens with X for on off.
+
+  // Go to status page on startup to read devices
+  goto_iaqt_page(IAQ_PAGE_STATUS, aq_data);
+
+  f_end:
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
 void *get_aqualink_iaqtouch_setpoints( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;

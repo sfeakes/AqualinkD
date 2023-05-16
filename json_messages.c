@@ -30,6 +30,7 @@
 #include "aq_mqtt.h"
 #include "devices_jandy.h"
 #include "version.h"
+#include "aq_timer.h"
 
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
@@ -207,6 +208,9 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 
 //printf("Button %s is Switch\n", button->name);
   length += sprintf(buffer, ",\"type_ext\": \"switch_timer\", \"timer_active\":\"%s\"", (((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE)?JSON_ON:JSON_OFF) );
+  if ((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
+    length += sprintf(buffer+length,",\"timer_duration\":\"%d\"", get_timer_left(button));
+  }
   return buffer;
 }
 
@@ -545,13 +549,26 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
   {
     if ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
       length += sprintf(buffer+length, "\"%s\": \"on\",", aqdata->aqbuttons[i].name);
+      //length += sprintf(buffer+length, "\"%s_duration\": \"%d\",", aqdata->aqbuttons[i].name, get_timer_left(&aqdata->aqbuttons[i]) );
     }
   }
   if (buffer[length-1] == ',')
     length--;
   length += sprintf(buffer+length, "}");
 
-  
+  length += sprintf(buffer+length, ",\"timer_durations\":{" );
+  for (i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
+      length += sprintf(buffer+length, "\"%s\": \"%d\",", aqdata->aqbuttons[i].name, get_timer_left(&aqdata->aqbuttons[i]) );
+    }
+  }
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "}");
+
+
+
 
   length += sprintf(buffer+length, "}" );
   

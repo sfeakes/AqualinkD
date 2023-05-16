@@ -13,13 +13,14 @@
 #define DEFAULT_POLL_SPEED_NON_THREADDED 2
 
 #define TIME_CHECK_INTERVAL  3600
+//#define TIME_CHECK_INTERVAL  100 // DEBUG ONLY
 #define ACCEPTABLE_TIME_DIFF 120
 
 // Use these settings to test time
 //#define TIME_CHECK_INTERVAL  100
 //#define ACCEPTABLE_TIME_DIFF 10
 
-#define MAX_ZERO_READ_BEFORE_RECONNECT 10000 // 2k normally
+#define MAX_ZERO_READ_BEFORE_RECONNECT 20000 // 2k normally
 
 // The below will change state of devices before that are actually set on the control panel, this helps
 // with duplicate messages that come in quick succession that can catch the state before it happens.
@@ -77,7 +78,7 @@ typedef struct aqualinkkey
 // special_mask for above aqualinkkey structure.
 #define VS_PUMP        (1 << 0)
 #define PROGRAM_LIGHT  (1 << 1)
-#define TIMER_ACTIVE   (1 << 2) // Not used yet, but will need to timer
+#define TIMER_ACTIVE   (1 << 2) 
 
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 

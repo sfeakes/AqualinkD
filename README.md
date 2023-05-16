@@ -23,9 +23,10 @@ https://github.com/sfeakes/AqualinkD/wiki
 
 For information on Control panel versions and upgrading the chips.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
-
+<!--
 Here's where I started to document what I know about the Jandy RS485 protocol.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
+-->
 
 ## AqualinkD built in WEB Interface(s).
 
@@ -74,10 +75,9 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
 #<a name="release"></a>
 # ToDo (future release)
-* Allow selecting of pre-defined VSP programs
-* Update homekit-aqualinkd to use new API & features.
-* Add light programming to Aqualink Touch protocol.
-* Add set time to Aqualink OneTouch protocol
+* Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
+* Add light programming to Aqualink Touch & OneTouch protocols.
+* Add set time to OneTouch protocol.
 
 # Update in Release 2.3.0 (pre release)
 * This is pre-release, please treat it as such.

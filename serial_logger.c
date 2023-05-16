@@ -38,7 +38,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.5"
+#define VERSION "serial_logger V1.6"
 
 /*
 typedef enum used {
@@ -613,7 +613,7 @@ int main(int argc, char *argv[]) {
     //LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
     if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
-      LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+      LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use  " : "not used",
                (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
     }
   }
@@ -623,7 +623,7 @@ int main(int argc, char *argv[]) {
     LOG(RSSD_LOG, LOG_NOTICE, "Pentair ID's found\n");
   }
   for (i=0; i < pent_sindex; i++) {
-    LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use" : "not used",
+    LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use  " : "not used",
                (pent_slog[i].inuse == false)?canUseExtended(pent_slog[i].ID):getPentairDevice(pent_slog[i].ID));
   }
 

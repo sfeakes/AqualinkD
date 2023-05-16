@@ -541,6 +541,20 @@ void *set_aqualink_onetouch_pump_rpm( void *ptr )
   return ptr;
 }
 
+void *set_aqualink_onetouch_freezeprotect( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_FREEZEPROTECT);
+
+  LOG(ONET_LOG,LOG_ERR, "***** OneTouch set freeze protect not implimented *****\n");
+
+  cleanAndTerminateThread(threadCtrl);
+
+  return ptr;
+}
+
 void *set_aqualink_onetouch_macro( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -565,6 +579,36 @@ void *set_aqualink_onetouch_macro( void *ptr )
   return ptr;
 }
 
+void *get_aqualink_onetouch_freezeprotect( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_ONETOUCH_FREEZEPROTECT);
+
+  LOG(ONET_LOG,LOG_DEBUG, "OneTouch get Freezeprotect\n");
+
+  if ( !goto_onetouch_menu(aq_data, OTM_SET_TEMP) ){
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get heater temp menu\n");
+  }
+
+  if ( !goto_onetouch_menu(aq_data, OTM_FREEZE_PROTECT) ){
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get freeze protect menu\n");
+  }
+
+  if (! goto_onetouch_menu(aq_data, OTM_SYSTEM) ){
+    LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer didn't get back to System menu\n");
+  }
+
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
+/*
+  This will get all setpoints, including freeze protect, above just gets freeze protect.
+*/
 void *get_aqualink_onetouch_setpoints( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -860,10 +904,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   return ptr;
 }
 
-void *set_aqualink_onetouch_freezeprotect( void *ptr )
-{
-  return ptr;
-}
+
 
 bool set_numeric_value(struct aqualinkdata *aq_data, int val) {
   int len;

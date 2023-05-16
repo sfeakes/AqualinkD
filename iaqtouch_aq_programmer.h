@@ -11,6 +11,7 @@ bool iaqt_queue_cmd(unsigned char cmd);
 void *set_aqualink_iaqtouch_pump_rpm( void *ptr );
 void *set_aqualink_iaqtouch_vsp_assignments( void *ptr );
 void *get_aqualink_iaqtouch_setpoints( void *ptr );
+void *get_aqualink_iaqtouch_freezeprotect( void *ptr );
 void *get_aqualink_iaqtouch_aux_labels( void *ptr );
 void *set_aqualink_iaqtouch_swg_percent( void *ptr );
 void *set_aqualink_iaqtouch_swg_boost( void *ptr );

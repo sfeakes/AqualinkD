@@ -429,7 +429,7 @@ void logMessage(int msg_level, const char *format, ...)
   _LOG(AQUA_LOG, msg_level, buffer);
 }
 */
-#define LOGBUFFER 4096
+#define LOGBUFFER 5096
 
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {

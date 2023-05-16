@@ -627,6 +627,10 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
     case ON_OFF:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], value<=0?false:true, deviceIndex );
       setDeviceState(aqdata, deviceIndex, value<=0?false:true );
+      // Clear timer if off request and timer is active
+      if (value<=0 && (aqdata->aqbuttons[deviceIndex].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE ) {
+        clear_timer(aqdata, &aqdata->aqbuttons[deviceIndex]);
+      }
     break;
     case TIMER:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], true);
