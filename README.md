@@ -79,7 +79,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Add set time to OneTouch protocol.
 * Add support for dimmers in All button, Aqualink Touch & OneTouch protocols.
 
-# Update in Release 2.3.0c (pre release)
+# Update in Release 2.3.0d (pre release)
 * This is pre-release, please treat it as such.
 * Don't use this release on PDA panels unless you can debug/change code <b>I have not been able to test it fully.</b>
 * Changed a lot of logic around different protocols.
@@ -89,7 +89,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Added timers for devices (ie can turn on Pump for x minutes), Long press on device in WebUI.
 * Timers supported in MQTT/API.
 * Serial logging / error checking enhancements.
-* Added simulator back. (still a number of issues).
+* Added simulator back. (+ Improved UI).
 * Fix issue with incorrect device state after duplicate MQTT messages being sent in rapid succession ( < 0.5 second).
 * Found workaround for panel firmware bug in iAqualink Touch protocol where VSP updates sometimes got lost.
 * Fix bug in IntelliBrite color lights

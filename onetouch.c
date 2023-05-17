@@ -569,15 +569,18 @@ void set_macro_status()
   // OneTouch Menu Line 5 = CLEAN MODE    ON
   // OneTouch Menu Line 8 = ONETOUCH 3   OFF
   if (get_onetouch_menu_type() == OTM_ONETOUCH) {
-    strncpy(_macros[0].name, _menu[2], 13);
+    //strncpy(_macros[0].name, _menu[2], 13); // Compiler warning, use memcpy
+    memcpy(_macros[0].name, _menu[2], 13);
     chopwhitespace(_macros[0].name);
     _macros[0].ison = (_menu[2][15] == 'N'?true:false);
 
-    strncpy(_macros[1].name, _menu[5], 13);
+    //strncpy(_macros[1].name, _menu[5], 13);// Compiler warning, use memcpy
+    memcpy(_macros[1].name, _menu[5], 13);
     chopwhitespace(_macros[1].name);
     _macros[1].ison = (_menu[5][15] == 'N'?true:false);
 
-    strncpy(_macros[2].name, _menu[8], 13);
+    //strncpy(_macros[2].name, _menu[8], 13);// Compiler warning, use memcpy
+    memcpy(_macros[2].name, _menu[8], 13);
     chopwhitespace(_macros[2].name);
     _macros[2].ison = (_menu[8][15] == 'N'?true:false);
 

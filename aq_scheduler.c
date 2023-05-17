@@ -119,6 +119,8 @@ bool passJson_scObj(char* line, int length, aqs_cron *values)
       readingvalue=false;
     }
   }
+
+  return (captured >= 7)?true:false;
 }
 
 int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)

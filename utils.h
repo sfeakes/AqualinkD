@@ -41,8 +41,8 @@
 #define DBGT_LOG (1 << 11) // Debug Timer
 #define TIMR_LOG (1 << 12) // Timers
 
-// Set scheduler log to aqualink general 
-#define SCHD_LOG AQUA_LOG
+// Set scheduler log to timer log 
+#define SCHD_LOG TIMR_LOG
 
 /*
 typedef enum

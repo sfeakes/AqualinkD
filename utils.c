@@ -468,6 +468,8 @@ void _LOG(int16_t from, int msg_level,  char *message)
       message[i] = ' ';
     }
   }
+  // Add return to end of string if not already their.
+  // NSF need to come back to this, doesn;t always work
   if (message[i] != '\n') {
     message[i] = '\n';
     message[i+1] = '\0';
@@ -496,7 +498,8 @@ void _LOG(int16_t from, int msg_level,  char *message)
   //int len;
   message[8] = ' ';
   char *strLevel = elevel2text(msg_level);
-  strncpy(message, strLevel, strlen(strLevel));
+  //strncpy(message, strLevel, strlen(strLevel)); // Will give compiler warning, so use memcpy instead
+  memcpy(message, strLevel, strlen(strLevel));
   //len = strlen(message); 
   /*
   if ( message[len-1] != '\n') {
@@ -514,14 +517,20 @@ void _LOG(int16_t from, int msg_level,  char *message)
     int fp = open(_log_filename, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if (fp != -1) {
       timestamp(time);
-      write(fp, time, strlen(time) );
-      write(fp, message, strlen(message) );
+      if ( write(fp, time, strlen(time) ) == -1 ||
+           write(fp, time, strlen(time) ) == -1 ) 
+      {
+        syslog(LOG_ERR, "Can't write to log file %s\n %s", _log_filename, message);
+        fprintf (stderr, "Can't write to log file %s\n %s", _log_filename, message);
+      }
+      //write(fp, time, strlen(time) );
+      //write(fp, message, strlen(message) );
       close(fp);
     } else {
       if (_daemonise == TRUE)
-      syslog(LOG_ERR, "Can't open log file\n %s", message);
+        syslog(LOG_ERR, "Can't open log file %s\n %s", _log_filename, message);
       else
-      fprintf (stderr, "Can't open debug log\n %s", message);
+        fprintf (stderr, "Can't open debug log %s\n %s", _log_filename, message);
     }
   }
   
@@ -603,7 +612,9 @@ void daemonise (char *pidFile, void (*main_function) (void))
     exit (EXIT_FAILURE);
   }
   // Change the current working directory to root.
-  chdir ("/");
+  if ( chdir ("/") == -1) {
+    LOG(AQUA_LOG, LOG_ERR,"Can't set working dir to /");
+  }
   // Close stdin. stdout and stderr
   close (STDIN_FILENO);
   close (STDOUT_FILENO);

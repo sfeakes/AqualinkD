@@ -56,6 +56,7 @@ char *rsm_strstr(const char *haystack, const char *needle)
   if (strlen(sp1) == 0 || strlen(sp2) == 0)
     return NULL;
   // Need to write this myself for speed
+  // Maybe use stristr from utils.c in the future. Needs a lot of testing.
   //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
   return strcasestr(sp1, sp2);
 }
@@ -149,6 +150,7 @@ int rsm_atoi(const char* str)
     return base * sign; 
 }
 
+// atof that can have blank start
 float rsm_atof(const char* str)
 {
   int i=0;
