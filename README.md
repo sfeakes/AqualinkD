@@ -77,7 +77,6 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 # ToDo (future release)
 * Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
 * Add set time to OneTouch protocol.
-* Add support for dimmers in All button, Aqualink Touch & OneTouch protocols.
 
 # Update in Release 2.3.0d (pre release)
 * This is pre-release, please treat it as such.
