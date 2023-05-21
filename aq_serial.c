@@ -647,8 +647,17 @@ void send_packet(int fd, unsigned char *packet, int length)
   #endif
   */
 
+  // MAYBE Change this back to debug serial
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
+  //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes, type 0x%02hhx cmd 0x%02hhx\n",length-2,packet[5],packet[6]);
   logPacketWrite(&packet[1], length-2);
+/*
+  if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
+    char buff[1024];
+    beautifyPacket(buff, &packet[1], length, false);
+    LOG(PDA_LOG,LOG_DEBUG, "%s", buff);
+  }
+*/
 /*
   if ( getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL || ) {
     // Packet is padded with 0x00, so discard for logging

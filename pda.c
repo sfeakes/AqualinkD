@@ -30,9 +30,10 @@
 #include "aq_panel.h"
 #include "packetLogger.h"
 #include "devices_jandy.h"
+#include "rs_msg_utils.h"
 
 // This needs to be tested on a real panel.
-#define NEW_UPDATE_METHOD
+//#define NEW_UPDATE_METHOD
 
 
 // static struct aqualinkdata _aqualink_data;
@@ -322,7 +323,7 @@ void process_pda_packet_msg_long_time(const char *msg)
   {
     LOG(AQRS_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data->time, _aqualink_data->date);
     aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
-  }
+  } 
 }
 
 void process_pda_packet_msg_long_equipment_control(const char *msg)
@@ -407,6 +408,21 @@ void setSingleDeviceMode()
     changePanelToMode_Only();
     LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
   }
+}
+
+void process_pda_packet_msg_long_set_time(const char *msg)
+{
+  /*
+  // NOT Working at moment, also wrong format
+  LOG(PDA_LOG,LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
+  if (msg[4] == '/' && msg[7] == '/'){
+    //DATE
+    rsm_strncpycut(_aqualink_data->date, msg, AQ_MSGLEN-1, AQ_MSGLEN-1);
+  } else if (msg[6] == ':' && msg[11] == 'M') {
+    // TIME
+    rsm_strncpycut(_aqualink_data->time, msg, AQ_MSGLEN-1, AQ_MSGLEN-1);
+  }
+  */
 }
 
 void process_pda_packet_msg_long_set_temp(const char *msg)
@@ -512,8 +528,70 @@ void process_pda_packet_msg_long_unknown(const char *msg)
     {
       if (stristr(msg, _aqualink_data->aqbuttons[i].label) != NULL)
       {
-        printf("*** UNKNOWN Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
-        // set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN-1]);
+        //LOG(PDA_LOG,LOG_ERR," UNKNOWN Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
+        // This seems to keep everything off.
+        set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN-1]);
+      }
+    }
+  }
+}
+
+void log_pump_information() {
+  int i;
+  //bool rtn = false;
+  char *m2_line=pda_m_line(2);
+  char *m3_line=pda_m_line(3);
+  char *m4_line=pda_m_line(3);
+  char *m5_line=pda_m_line(3);
+
+  if (rsm_strcmp(m2_line,"Intelliflo VS") == 0 ||
+      rsm_strcmp(m2_line,"Intelliflo VF") == 0 ||
+      rsm_strcmp(m2_line,"Jandy ePUMP") == 0 ||
+      rsm_strcmp(m2_line,"ePump AC") == 0) {
+    //rtn = true;
+    int rpm = 0;
+    int watts = 0;
+    int gpm = 0;
+    int pump_index = rsm_atoi(&m2_line[14]);
+    if (pump_index <= 0)
+      pump_index = rsm_atoi(&m2_line[12]); // Pump inxed is in different position on line `  ePump AC  4`
+    // RPM displays differently depending on 3 or 4 digit rpm.
+    if (rsm_strcmp(m3_line,"RPM:") == 0){
+      rpm = rsm_atoi(&m3_line[10]);
+      if (rsm_strcmp(m4_line,"Watts:") == 0) {
+        watts = rsm_atoi(&m4_line[10]);
+      }
+      if (rsm_strcmp(m5_line,"GPM:") == 0) {
+        gpm = rsm_atoi(&m5_line[10]);
+      }
+    } else if (rsm_strcmp(m3_line,"*** Priming ***") == 0){
+      rpm = PUMP_PRIMING;
+    } else if (rsm_strcmp(m3_line,"(Offline)") == 0){
+      rpm = PUMP_OFFLINE;
+    } else if (rsm_strcmp(m3_line,"(Priming Error)") == 0){
+      rpm = PUMP_ERROR;
+    }
+
+    LOG(PDA_LOG,LOG_INFO, "PDA Pump %s, Index %d, RPM %d, Watts %d, GPM %d\n",m3_line,pump_index,rpm,watts,gpm);
+
+    for (i=0; i < _aqualink_data->num_pumps; i++) {
+      if (_aqualink_data->pumps[i].pumpIndex == pump_index) {
+        //printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
+        //aq_data->pumps[i].updated = true;
+        //pump_update(_aqualink_data, i);
+        _aqualink_data->pumps[i].rpm = rpm;
+        _aqualink_data->pumps[i].watts = watts;
+        _aqualink_data->pumps[i].gpm = gpm;
+        if (_aqualink_data->pumps[i].pumpType == PT_UNKNOWN){
+          if (rsm_strcmp(m2_line,"Intelliflo VS") == 0)
+            _aqualink_data->pumps[i].pumpType = VSPUMP;
+          else if (rsm_strcmp(m2_line,"Intelliflo VF") == 0)
+            _aqualink_data->pumps[i].pumpType = VFPUMP;
+          else if (rsm_strcmp(m2_line,"Jandy ePUMP") == 0 ||
+                   rsm_strcmp(m2_line,"ePump AC") == 0)
+            _aqualink_data->pumps[i].pumpType = EPUMP;
+        }
+        //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
       }
     }
   }
@@ -523,19 +601,27 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
 {
   //pass_pda_equiptment_status_item(msg);
 
+#ifdef NEW_UPDATE_METHOD
   if (reset) {
     equiptment_update_cycle(-1);
     LOG(PDA_LOG,LOG_DEBUG, "*************** Equiptment reset\n");
     return;
   }
+#endif
 
-  LOG(PDA_LOG,LOG_DEBUG, "*************** Pass Equiptment msg %.16s\n", msg_line);
+  LOG(PDA_LOG,LOG_DEBUG, "*************** Pass Equiptment msg '%.16s'\n", msg_line);
+
+  if (msg_line == NULL) {
+    LOG(PDA_LOG,LOG_DEBUG, "*************** Pass Equiptment msg is NULL do nothing\n");
+    return;
+  }
 
   static char *index;
   int i;
   char *msg = (char *)msg_line;
-
   while(isspace(*msg)) msg++;
+  
+    //strncpy(labelBuff, msg, AQ_MSGLEN);
 
   // EQUIPMENT STATUS
   //
@@ -568,61 +654,76 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
 
   // Check message for status of device
   // Loop through all buttons and match the PDA text.
-  if ((index = strcasestr(msg, "CHECK AquaPure")) != NULL)
+  // Should probably use strncasestr
+  if ((index = rsm_strnstr(msg, "CHECK AquaPure", AQ_MSGLEN)) != NULL)
   {
     LOG(PDA_LOG,LOG_DEBUG, "CHECK AquaPure\n");
   }
-  else if ((index = strcasestr(msg, "FREEZE PROTECT")) != NULL)
+  else if ((index = rsm_strnstr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->frz_protect_state = ON;
+    LOG(PDA_LOG,LOG_DEBUG, "Freeze Protect is on\n");
   }
-  else if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
+  else if ((index = rsm_strnstr(msg, MSG_SWG_PCT, AQ_MSGLEN)) != NULL)
   {
     changeSWGpercent(_aqualink_data, atoi(index + strlen(MSG_SWG_PCT)));
     //_aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
     //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
     LOG(PDA_LOG,LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
   }
-  else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
+  else if ((index = rsm_strnstr(msg, MSG_SWG_PPM, AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
     //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
     LOG(PDA_LOG,LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
   }
-  else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
+  else if ((index = rsm_strnstr(msg, MSG_PMP_RPM, AQ_MSGLEN)) != NULL)
   { // Default to pump 0, should check for correct pump
     _aqualink_data->pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
     LOG(PDA_LOG,LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
+    log_pump_information();
   }
-  else if ((index = strcasestr(msg, MSG_PMP_WAT)) != NULL)
+  else if ((index = rsm_strnstr(msg, MSG_PMP_WAT, AQ_MSGLEN)) != NULL)
   { // Default to pump 0, should check for correct pump
     _aqualink_data->pumps[0].watts = atoi(index + strlen(MSG_PMP_WAT));
     LOG(PDA_LOG,LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
+    log_pump_information();
+  }
+  else if ((index = rsm_strnstr(msg, MSG_PMP_GPM, AQ_MSGLEN)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    _aqualink_data->pumps[0].gpm = atoi(index + strlen(MSG_PMP_GPM));
+    LOG(PDA_LOG,LOG_DEBUG, "GPM = %d\n", _aqualink_data->pumps[0].gpm);
+    log_pump_information();
+  }
+  else if ((index = rsm_strnstr(msg, "(Offline)", AQ_MSGLEN)) != NULL)
+  { // Default to pump 0, should check for correct pump
+    //_aqualink_data->pumps[0].gpm = atoi(index + strlen(MSG_PMP_GPM));
+    LOG(PDA_LOG,LOG_DEBUG, "Pump offline\n");
+    log_pump_information();
+  }
+  else if (rsm_strncmp(msg_line, "POOL HEAT ENA",AQ_MSGLEN) == 0)
+  {
+      _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
+      LOG(PDA_LOG,LOG_DEBUG, "Pool Hearter is enabled\n");
+  }
+  else if (rsm_strncmp(msg_line, "SPA HEAT ENA",AQ_MSGLEN) == 0)
+  {
+      _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
+      LOG(PDA_LOG,LOG_DEBUG, "Pool Hearter is enabled\n");
   }
   else
   {
-    char labelBuff[AQ_MSGLEN + 2];
-    strncpy(labelBuff, msg, AQ_MSGLEN + 1);
-    msg = stripwhitespace(labelBuff);
-
-    if (strcasecmp(msg, "POOL HEAT ENA") == 0)
-    {
-      _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
-    }
-    else if (strcasecmp(msg, "SPA HEAT ENA") == 0)
-    {
-      _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
-    }
-    else
-    {
       for (i = 0; i < _aqualink_data->total_buttons; i++)
       {
-        if (strcasecmp(msg, _aqualink_data->aqbuttons[i].label) == 0)
+        //LOG(PDA_LOG,LOG_DEBUG, "*** check msg '%s' against '%s'\n",labelBuff,_aqualink_data->aqbuttons[i].label);
+        LOG(PDA_LOG,LOG_DEBUG, "*** check msg '%.*s' against '%s'\n",AQ_MSGLEN,msg_line,_aqualink_data->aqbuttons[i].label);
+        if (rsm_strncmp(msg_line, _aqualink_data->aqbuttons[i].label, AQ_MSGLEN-1) == 0)
+        //if (rsm_strcmp(_aqualink_data->aqbuttons[i].label, labelBuff) == 0)
         {
 #ifdef NEW_UPDATE_METHOD
           equiptment_update_cycle(i);
 #endif
-          LOG(PDA_LOG,LOG_DEBUG, "*** Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
+          LOG(PDA_LOG,LOG_DEBUG, "Found Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg_line);
           // It's on (or delayed) if it's listed here.
           if (_aqualink_data->aqbuttons[i].led->state != FLASH)
           {
@@ -631,8 +732,8 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
           break;
         }
       }
-    }
   }
+  
 
 
 }
@@ -713,6 +814,8 @@ bool process_pda_packet(unsigned char *packet, int length)
     beautifyPacket(buff, packet, length, true);
     LOG(PDA_LOG,LOG_DEBUG, "%s", buff);
   }
+
+
 /*
     // Some panels don't give the startup messages we used to key the init sequence, so check here
   // need to put this in a better spot some time in the future
@@ -750,6 +853,11 @@ bool process_pda_packet(unsigned char *packet, int length)
     {
       process_pda_packet_msg_long_equiptment_status(NULL, 0, true);
       equiptment_updated = false;
+    } else if (_initWithRS == false && pda_m_type() == PM_FW_VERSION) {
+      _initWithRS = true;
+      LOG(PDA_LOG,LOG_DEBUG, "**** PDA INIT ****\n");
+        //aq_programmer(AQ_PDA_INIT, NULL, _aqualink_data);
+      queueGetProgramData(AQUAPDA, _aqualink_data);
     }
 /*
     // If we get a status packet, and we are on the status menu, this is a list of what's on
@@ -859,11 +967,11 @@ bool process_pda_packet(unsigned char *packet, int length)
         case PM_AUX_LABEL_DEVICE:
           process_pda_packet_msg_long_level_aux_device(msg);
         break;
-        /*
+        
         case PM_SET_TIME:
-          process_pda_packet_msg_long_set_time(index, msg);
+          process_pda_packet_msg_long_set_time(msg);
         break;
-        */
+        
         //case PM_FW_VERSION:
         //  process_pda_packet_msg_long_FW_version(msg);
         //break;
@@ -880,6 +988,7 @@ bool process_pda_packet(unsigned char *packet, int length)
   }
   case CMD_PDA_0x1B:
   {
+    LOG(PDA_LOG,LOG_DEBUG, "**** CMD_PDA_0x1B ****\n");
     // We get two of these on startup, one with 0x00 another with 0x01 at index 4.  Just act on one.
     // Think this is PDA finishd showing startup screen
     if (packet[4] == 0x00) { 

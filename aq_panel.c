@@ -107,6 +107,25 @@ setPanel("RS-6 Combo");
 setPanel("RS-8 Combo");
 }
 */
+
+
+char _panelString[36];
+void setPanelString()
+{
+  sprintf(_panelString, "%s%s-%d %s%s%s",
+      isRS_PANEL?"RS":"",
+      isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
+      PANEL_SIZE(),
+      isCOMBO_PANEL?"Combo Pool/Spa":"",
+      isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
+      isDUAL_EQPT_PANEL?" Dual Equipment":"");
+}
+const char* getPanelString()
+{
+  return _panelString;
+}
+
+
 //bool setPanelByName(const char *str) {
 
 int setSizeMask(int size)
@@ -181,16 +200,10 @@ void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool d
     _aqconfig_.paneltype_mask |= RSP_COMBO;
     _aqconfig_.paneltype_mask &= ~RSP_SINGLE;
   }
-/*
-  LOG(AQUA_LOG,LOG_ERR, "Panel set to %s%s size=%d type=%s%s %s\n",
-      (_aqconfig_.paneltype_mask & RSP_RS) == RSP_RS?"RS":"",
-      (_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA?"PDA":"",
-      nsize,
-      (_aqconfig_.paneltype_mask & RSP_COMBO) == RSP_COMBO?"Combo Pool/Spa":"",
-      (_aqconfig_.paneltype_mask & RSP_SINGLE) == RSP_SINGLE?"Pool/Spa Only":"",
-      (_aqconfig_.paneltype_mask & RSP_DUAL_EQPT) == RSP_DUAL_EQPT?"Dual Equiptment":"");
-*/
+
   initPanelButtons(aqdata, rs, nsize, combo, dual);
+  
+  setPanelString();
 }
 
 void setPanelByName(struct aqualinkdata *aqdata, const char *str)
@@ -481,6 +494,12 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->pool_heater_index = index-3;
     aqdata->spa_heater_index = index-2;
     aqdata->solar_heater_index = index-1;
+
+    // Reset all LED's to off since their is no off state in PDA.
+    for(int i=0; i < aqdata->total_buttons; i++) {
+        aqdata->aqbuttons[i].led->state = OFF;
+    }
+
   #endif
 }
 

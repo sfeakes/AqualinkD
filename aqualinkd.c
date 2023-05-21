@@ -151,17 +151,19 @@ bool checkAqualinkTime()
   char datestr[DATE_STRING_LEN];
 #ifdef AQ_PDA
   if (isPDA_PANEL) {
+    LOG(AQUA_LOG,LOG_DEBUG, "PDA Time Check\n");
     // date is simply a day or week for PDA.
     localtime_r(&now, &aq_tm);
     int real_wday = aq_tm.tm_wday; // NSF Need to do this better, we could be off by 7 days
     snprintf(datestr, DATE_STRING_LEN, "%s %s",_aqualink_data.date,_aqualink_data.time);
+
     if (strptime(datestr, "%A %I:%M%p", &aq_tm) == NULL) {
       LOG(AQUA_LOG,LOG_ERR, "Could not convert PDA RS time string '%s'", datestr);
       last_checked = (time_t)NULL;
       return true;
     }
     if (real_wday != aq_tm.tm_wday) {
-      LOG(PDA_LOG,LOG_INFO, "Day of the week incorrect - request time set\n");
+      LOG(AQUA_LOG,LOG_INFO, "PDA Day of the week incorrect - request time set\n");
       return false;
     }
   } 
@@ -1166,7 +1168,7 @@ int main(int argc, char *argv[])
     setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
 
   LOG(AQUA_LOG,LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
-
+/*
   LOG(AQUA_LOG,LOG_NOTICE, "Panel set to %s%s-%d %s%s %s\n",
       isRS_PANEL?"RS":"",
       isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
@@ -1174,7 +1176,8 @@ int main(int argc, char *argv[])
       isCOMBO_PANEL?"Combo Pool/Spa":"",
       isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
       isDUAL_EQPT_PANEL?"Dual Equipment":"");
-
+*/
+  LOG(AQUA_LOG,LOG_NOTICE, "Panel set to %s\n", getPanelString());
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_level         = %d\n", _aqconfig_.log_level);
   LOG(AQUA_LOG,LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _aqconfig_.device_id);
   LOG(AQUA_LOG,LOG_NOTICE, "Config rssa_device_id    = 0x%02hhx\n", _aqconfig_.rssa_device_id);

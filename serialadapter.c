@@ -95,6 +95,10 @@ unsigned char devID(int bIndex) {
   // pool = 0; spa = 1; aux1 = 2 etc
   // rssa pool / spa are different.  aux1 = 21 (0x15) then goes up from their in order.
 
+  // NSF Pool Heat / Spa Heat / Solar Heater are also out of order. But have not accounted for that.
+  // It might be better to ass the RSS_ID's to the buttons in aq_panel in the future if we expand using
+  // this protocol.
+  // look at AllButton2RSsrialAdapter function at bottom of file.
   if (bIndex==0)
     return RS_SA_PUMP;
   else if (bIndex==1)
@@ -221,6 +225,8 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
   if (cnt == 0 || cnt >= 250) {
     LOG(RSSA_LOG,LOG_INFO, "Queue device update requests\n");
     if (cnt == 0) {
+      // The below inturn calls get_aqualink_rssadapter_setpoints()
+      // But do it here as it's the first init, cnt=0 will only happen once  
       queueGetProgramData(RSSADAPTER, aq_data);
     } else {
       push_rssa_cmd(getPoolSP);
@@ -305,6 +311,50 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
   return rtn;
 }
 
+/* Maybe use in future, not needed for moment 
+   Idea here was to convert all button on/off commands to rs_serial_adapter commands to use if in all button probramming mode */
+/*
+unsigned char AllButton2RSsrialAdapter(unsigned char abcmd)
+{
+  switch(abcmd) {
+    case KEY_PUMP:
+      return RS_SA_PUMP;
+    break;
+    case KEY_SPA:
+      return RS_SA_SPA;
+    break;
+    case KEY_AUX1:
+      return RS_SA_AUX1;
+    break;
+    case KEY_AUX2:
+      return RS_SA_AUX2;
+    break;
+    case KEY_AUX3:
+      return RS_SA_AUX3;
+    break;
+    case KEY_AUX4:
+      return RS_SA_AUX4;
+    break;
+    case KEY_AUX5:
+      return RS_SA_AUX5;
+    break;
+    case KEY_AUX6:
+      return RS_SA_AUX6;
+    break;
+    case KEY_AUX7:
+      return RS_SA_AUX7;
+    break;
+    case KEY_POOL_HTR:
+      return RS_SA_POOLHT;
+    break;
+    case KEY_SPA_HTR:
+      return RS_SA_SPAHT;
+    break;
+  }
+  return NUL;
+}
+*/
+
 #ifdef DO_NOT_COMPILE
 
 // Notes on protocol for Serial Adapter.
@@ -319,7 +369,7 @@ What = 0x05 Query Value | 0x35 Set Value on next command.
 0x10|0x02|0x48|ReplyType|DeviceID|????|Value|0x00|0xXX|0x10|0x03|
 ReplyType 0x13=status, 0x07=set value next message
 DeviceID
-???? Not sure 0x00 modst of the time, 0x02 for (not set or vbat return)
+???? Not sure 0x00 most of the time, 0x02 for (not set or vbat return)
 Value  What it's set to, except VBAT. or 0x07 set on next command
 --------- Send reply to above if 0x07 ---------
 0x10|0x02|0x00|0x01|0x00|Value|0x4f|0x10|0x03|

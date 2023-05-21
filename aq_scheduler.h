@@ -13,6 +13,7 @@
 
 typedef struct aqs_cron
 {
+  int enabled;
   char minute[CV_SIZE];
   char hour[CV_SIZE];
   char daym[CV_SIZE];

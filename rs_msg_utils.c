@@ -60,6 +60,12 @@ char *rsm_strstr(const char *haystack, const char *needle)
   //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
   return strcasestr(sp1, sp2);
 }
+char *rsm_strnstr(const char *haystack, const char *needle, int length)
+{
+  // NEED TO WRITE THIS MYSELF.  Same as below but limit length
+  return strcasestr(haystack, needle);
+}
+
 // Check s2 exists in s1
 int rsm_strcmp(const char *haystack, const char *needle)
 {
@@ -75,6 +81,48 @@ int rsm_strcmp(const char *haystack, const char *needle)
   // Need to write this myself for speed
   //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
   return strncasecmp(sp1, sp2, strlen(sp2));
+}
+
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+int rsm_strncmp(const char *haystack, const char *needle, int length)
+{
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
+  char *ep1 = (sp1+length);
+  //int i=0;
+  // Get rid of all padding
+  while(isspace(*sp1)) sp1++;
+  while(isspace(*sp2)) sp2++;
+
+  if (strlen(sp1) == 0 || strlen(sp2) == 0)
+    return -1;
+
+  // Work out last char in haystack
+  while(isspace(*ep1)) ep1--;
+
+
+  //LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
+  // Need to write this myself for speed
+  // Need to check if full length string (no space on end), that the +1 is accurate. MIN should do it
+  return strncasecmp(sp1, sp2, MIN((ep1-sp1)+1,length));
+}
+
+// NSF Check is this works correctly.
+char *rsm_strncpycut(char *dest, const char *src, int dest_len, int src_len)
+{
+  char *sp = (char *)src;
+  char *ep = (sp+dest_len);
+
+  while(isspace(*sp)) sp++;
+  while(isspace(*ep)) ep--;
+
+  int length=MIN((ep-sp)+1,dest_len);
+
+  memset(dest, '\0',dest_len);
+  return strncpy(dest, sp, length);
+  //dest[length] = '\0';
 }
 
 int _rsm_strncpy(char *dest, const unsigned char *src, int dest_len, int src_len, bool nulspace)

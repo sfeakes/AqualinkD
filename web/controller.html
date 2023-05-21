@@ -133,7 +133,7 @@
       border-radius: 20px;
       justify-content: center;
       align-items: center;
-      width: 600px;
+      width: 650px;
       padding: 10px;
       /*overflow-y: scroll; didn't work*/
       /*height: 100%;*/
@@ -671,6 +671,7 @@
       var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
       var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
       //alert(w+"x"+h+" = "+(w*h));
+
       // 375x724 = 271500
       if ((w * h) > 370000) { // 370000 is kind-a just guess
         document.documentElement.style.setProperty('--tile-width', '125px');
@@ -1588,6 +1589,31 @@
       }
     }
 
+
+
+    _displayMsgTimer=0;
+    _displayMsgTimeout=0;
+
+    function displayMessage(message, timeoutSeconds) {
+      // Check to see if we can display message
+      if (_displayMsgTimeout > 0) {
+        if ( _displayMsgTimer + (_displayMsgTimeout * 1000) >  Date.now() ) {
+          // Can't diaply message, still on timer
+          //console.log("Can't display message '"+message+"'");
+          return;
+        }
+        _displayMsgTimer=0;
+        _displayMsgTimeout=0;
+      }
+
+      // Set the timer if needed
+      if (timeoutSeconds !== undefined && timeoutSeconds > 0) {
+        _displayMsgTimer = Date.now();
+        _displayMsgTimeout = timeoutSeconds;
+      }
+
+      document.getElementById("message").innerHTML = message;
+    }
     /*********************************************************************
      *  
      *   SCHEDULER FUNCTIONS
@@ -1606,15 +1632,20 @@
     var V_GPM = 6;
 
     function showScheduler(caller){
-      //if (_enable_schedules != false) {
-      // Default to enable.
+
       if (typeof _enable_schedules === "undefined" || _enable_schedules != false)
       {
+        if ( parseInt(getComputedStyle(document.querySelector('.scheduler_pane')).width) > Math.max(document.documentElement.clientWidth, window.innerWidth) ) {
+          //alert("Sorry, Scheduler won't fit on screen\nPlease use a different device");
+          displayMessage("Scheduler won't fit on screen", 3);
+          return;
+        }
         import("./cronstrue.min.js");
         caller.setAttribute('type', 'scheduler');
         showTileOptions(true, caller.id);
       }
     }
+
     // NSF CHANGE TO USING WS FOR THIS REQUEST
     /*
       function cs_loadJSON(path, success, error) {
@@ -1632,6 +1663,7 @@
         xhr.open('GET', path, true);
         xhr.send();
       }*/
+
         function device2english(device, name) {
           for (let i = 0, obj; i < _scheduler_devices_json.length, obj = _scheduler_devices_json[i]; i++) {
             if (device == obj.id) {
@@ -1747,7 +1779,7 @@
       }
     }
 
-      function cs_addschedule(min, hour, daym, month, dayw, device, subdev, value) {
+      function cs_addschedule(enabled, min, hour, daym, month, dayw, device, subdev, value) {
         var table = document.getElementById("cronschedules");
         //index = table.rows.length-ROW_INDEX;
 
@@ -1768,7 +1800,10 @@
             option = option + '<option value="' + obj.id + '">' + obj.name + '</option>';
           }
         }
+        var checked
+        if (enabled==1) {checked="checked";}else{ehecked="";}
         var html = '<tr> \
+        <td><input type="checkbox" class="cs_inputcell" id="enabled" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);" '+checked+'></td> \
         <td><input type="text" class="cs_inputcell" id="min" value="'+ min + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
         <td><input type="text" class="cs_inputcell" id="hour" value="'+ hour + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
         <td><input type="text" class="cs_inputcell" id="daym" value="'+ daym + '" onkeyup="cs_crontext(this);" onclick="cs_crontext(this);"></td> \
@@ -1881,7 +1916,7 @@
                 }
               }
               // If in release we add device, use obj.id rather than device in below and remove device from above.
-              cs_addschedule(obj.min, obj.hour, obj.daym, obj.month, obj.dayw, device, subdev, obj.value);
+              cs_addschedule(obj.enabled, obj.min, obj.hour, obj.daym, obj.month, obj.dayw, device, subdev, obj.value);
             }
         }
 
@@ -1919,6 +1954,7 @@
             var table = document.getElementById("cronschedules");
             //console.log("ROWS = "+table.rows.length);
             for (var r = CS_ROW_INDEX, row; row < table.rows.length-2, row = table.rows[r]; r++) {
+              enabled = Number(row.querySelector('#enabled')?.checked).toString();
               min = row.querySelector('#min')?.value;
               hour = row.querySelector('#hour')?.value;
               daym = row.querySelector('#daym')?.value;
@@ -1940,6 +1976,7 @@
                   command = "";
                 }
                 json.devices.push({
+                  "enabled": enabled,
                   "min": min,
                   "hour": hour,
                   "daym": daym,
@@ -1971,9 +2008,11 @@
       
       if (document.getElementById("name").innerHTML == "AqualinkD") {
         if (data.status != "Ready") {
-          document.getElementById("message").innerHTML = formatSatus(data.status);
+          //document.getElementById("message").innerHTML = formatSatus(data.status);
+          displayMessage(formatSatus(data.status));
         } else {
-          document.getElementById("message").innerHTML = '';
+          //document.getElementById("message").innerHTML = '';
+          displayMessage(formatSatus(''));
         }
       }
      
@@ -2288,6 +2327,8 @@
     }
 
     function showVersion(source) {
+      displayMessage("AqualinkD : " + _aqualink_data.aqualinkd_version + " | AqualinkRS : " + _aqualink_data.version, 5);
+      /*
       if ((message = document.getElementById("message")) != null) {
         message.innerHTML = "AqualinkD : " + _aqualink_data.aqualinkd_version + " | AqualinkRS : " + _aqualink_data.version;
       }
@@ -2295,6 +2336,7 @@
       setTimeout(function() {
         source.innerHTML = "AqualinkD";
       }, 5000);
+      */
     }
 
     function updatePwsitchOptions(source, light_type) {
@@ -2580,11 +2622,12 @@
     <div id='scheduler_options' class='options hide'>
       <div id='scheduler_options_pane' class='scheduler_pane' onclick='event.stopPropagation();'>
         <table id="cronschedules" border="0">
-          <th colspan='9'><span id="scheduler_options_title"></span></th>
+          <th colspan='10'><span id="scheduler_options_title"></span></th>
           <tr>
-             <td colspan="9" align="center" id="crontext">&nbsp</td> 
+             <td colspan="10" align="center" id="crontext">&nbsp</td> 
           </tr>
           <tr class="sc_tablehead">
+              <td>Enable</td>
               <td>Minute</td>
               <td>Hour</td>
               <td>Day<br><font size="-2">Month</font></td>
@@ -2593,18 +2636,18 @@
               <td>Device</td>
               <td>Cmd</td>
               <td>Value</td>
-              <td></td>
+              <td>Del</td>
           </tr>
           <!-- HTML will be added here -->
           <tr  class="sc_tablehead">
-              <td colspan="9">
-                  <input type="button" class="options_button" id="Add" value="Add" onclick="cs_addschedule(0,0,'*','*','*','','','');">
+              <td colspan="10">
+                  <input type="button" class="options_button" id="Add" value="Add" onclick="cs_addschedule(1,0,0,'*','*','*','','','');">
                   &nbsp;&nbsp;&nbsp;&nbsp;
                   <input type="button" class="options_button" id="scheduler_options_close" value="Save" onclick="cs_createJSON();">
               </td>
           </tr>
           <tr>
-              <td colspan="9" id="cronhelp"></td>
+              <td colspan="10" id="cronhelp"></td>
           </tr>
         <table>
       </div>

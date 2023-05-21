@@ -78,6 +78,11 @@
             background-color: rgb(116, 116, 116);
         }
 
+        .error {
+            background-color: rgb(255, 0, 0) !important;
+            font-weight: 600;
+        }
+
         .hidden {
           display: none;
         }
@@ -246,6 +251,13 @@
 
 
         function update_status(data) {
+            // Some form of error if PDA only panel.
+            if (data.panel_type.startsWith("PDA")) {
+                document.getElementById("title").innerHTML = '  !!! PDA only panels are not Supported !!!  '
+                document.getElementById("title").classList.add("error");
+                document.getElementById("messages").innerHTML = '  !!! PDA Not Supported !!!  '
+                document.getElementById("messages").classList.add("error");
+            }
 
             if (document.getElementById("status").getAttribute("raw") != data.panel_message) {
               document.getElementById("status_three").innerHTML = document.getElementById("status_two").innerHTML;

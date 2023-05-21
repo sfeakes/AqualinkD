@@ -56,18 +56,18 @@ bool remount_root_ro(bool readonly) {
   }
 }
 
-
 bool passJson_scObj(char* line, int length, aqs_cron *values)
 {
   int keystart=0;
-  int keyend=0;
+  //int keyend=0;
   int valuestart=0;
   int captured=0;
   bool readingvalue=false;
   bool invalue=false;
   //char value;
+  values->enabled = true;
 
-  LOG(SCHD_LOG,LOG_DEBUG, "Obj body:'%.*s'\n", length, line);
+  //LOG(SCHD_LOG,LOG_DEBUG, "Obj body:'%.*s'\n", length, line);
 
   for (int i=0; i < length; i++) {
     if (line[i] == '}') {
@@ -75,7 +75,7 @@ bool passJson_scObj(char* line, int length, aqs_cron *values)
     } else if (line[i] == '"' && keystart==0 && invalue==false && readingvalue==false) {
       keystart=i+1;
     } else if (line[i] == '"' && keystart > 0 && invalue==false && readingvalue==false) {
-      keyend=i;
+      //keyend=i;
     } else if (line[i] == ':' && keystart > 0 ) {
       invalue=true;
     } else if (line[i] == '"' && invalue == true && readingvalue == false && keystart > 0 ) {
@@ -83,7 +83,10 @@ bool passJson_scObj(char* line, int length, aqs_cron *values)
       valuestart=i+1;
     } else if (line[i] == '"' && readingvalue == true) {
       // i is end of key
-      if ( strncmp(&line[keystart], "min", 3) == 0) {
+      if ( strncmp(&line[keystart], "enabled", 7) == 0) {
+        values->enabled = (line[valuestart]=='0'?false:true);
+        captured++;
+      } else if ( strncmp(&line[keystart], "min", 3) == 0) {
         strncpy(values->minute, &line[valuestart], (i-valuestart) );
         values->minute[i-valuestart] = '\0';
         captured++;
@@ -113,7 +116,7 @@ bool passJson_scObj(char* line, int length, aqs_cron *values)
         captured++;
       }
       keystart=0;
-      keyend=0;
+      //keyend=0;
       valuestart=0;
       invalue=false;
       readingvalue=false;
@@ -161,10 +164,9 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
         inarray=false;
       } else if ( inarray && inBuf[i] == '{') {
         passJson_scObj( &inBuf[i], (inSize-i), &cline);
-        //LOG(SCHD_LOG,LOG_NOTICE,"Saving Cron %s %s %s %s %s %s %s\n",cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, cline.url, cline.value);
-        LOG(SCHD_LOG,LOG_INFO, "Write to cron Min=%s Hour=%s DayM=%s Month=%s DayW %s URL %s Value %s\n",cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
-        LOG(SCHD_LOG,LOG_INFO, "%s %s %s %s %s curl localhost:%s%s -d value=%s -X PUT\n",cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
-        fprintf(fp, "%s %s %s %s %s root curl localhost:%s%s -d value=%s -X PUT\n",cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
+        LOG(SCHD_LOG,LOG_DEBUG, "Write to cron Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
+        LOG(SCHD_LOG,LOG_INFO, "%s%s %s %s %s %s curl localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
+        fprintf(fp, "%s%s %s %s %s %s root curl localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
       } else if ( inarray && inBuf[i] == '}') {
         //inobj=false;
         //objed=i;
@@ -202,7 +204,10 @@ int build_schedules_js(char* buffer, int size)
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(/api/.*)\\s-d value=([^\\d]+)\\s(.*)";
   // \d doesn't seem to be supported, so using [0-9]+ instead
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
-  char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
+  
+  //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
+  char *regexString="(#{0,1})([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
+
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(/api/.*/set).*value=([0-9]+).*";
 
 
@@ -232,25 +237,30 @@ int build_schedules_js(char* buffer, int size)
     //lc++;
     //rc = regexec(&regexCompiled, line, maxGroups, groupArray, 0);
     if (0 == (rc = regexec(&regexCompiled, line, maxGroups, groupArray, REG_EXTENDED))) {
-      // Group 1 is minute
-      // Group 2 is hour
-      // Group 3 is day of month
-      // Group 4 is month
-      // Group 5 is day of week
-      // Group 6 is URL
-      // Group 7 is value
+      // Group 1 is # (enable or not)
+      // Group 2 is minute
+      // Group 3 is hour
+      // Group 4 is day of month
+      // Group 5 is month
+      // Group 6 is day of week
+      // Group 7 is root
+      // Group 8 is curl
+      // Group 9 is URL
+      // Group 10 is value
       if (groupArray[8].rm_so == (size_t)-1) {
         LOG(SCHD_LOG,LOG_ERR, "No matching information from cron file\n");
       } else {
-        sprintf(cline.minute, "%.*s", (groupArray[1].rm_eo - groupArray[1].rm_so), (line + groupArray[1].rm_so));
-        sprintf(cline.hour, "%.*s",   (groupArray[2].rm_eo - groupArray[2].rm_so), (line + groupArray[2].rm_so));
-        sprintf(cline.daym, "%.*s",   (groupArray[3].rm_eo - groupArray[3].rm_so), (line + groupArray[3].rm_so));
-        sprintf(cline.month, "%.*s",  (groupArray[4].rm_eo - groupArray[4].rm_so), (line + groupArray[4].rm_so));
-        sprintf(cline.dayw, "%.*s",   (groupArray[5].rm_eo - groupArray[5].rm_so), (line + groupArray[5].rm_so)); 
-        sprintf(cline.url, "%.*s",    (groupArray[8].rm_eo - groupArray[8].rm_so), (line + groupArray[8].rm_so));
-        sprintf(cline.value, "%.*s",  (groupArray[9].rm_eo - groupArray[9].rm_so), (line + groupArray[9].rm_so));
-        LOG(SCHD_LOG,LOG_INFO, "Read from cron. Min=%s Hour=%s DayM=%s Month=%s DayW=%s URL=%s Value=%s\n",cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
-        length += sprintf(buffer+length, "{\"min\": \"%s\",\"hour\": \"%s\",\"daym\": \"%s\",\"month\": \"%s\",\"dayw\": \"%s\",\"url\": \"%s\",\"value\": \"%s\"},",
+        cline.enabled = (line[groupArray[1].rm_so] == '#')?false:true;
+        sprintf(cline.minute, "%.*s", (groupArray[2].rm_eo - groupArray[2].rm_so), (line + groupArray[2].rm_so));
+        sprintf(cline.hour, "%.*s",   (groupArray[3].rm_eo - groupArray[3].rm_so), (line + groupArray[3].rm_so));
+        sprintf(cline.daym, "%.*s",   (groupArray[4].rm_eo - groupArray[4].rm_so), (line + groupArray[4].rm_so));
+        sprintf(cline.month, "%.*s",  (groupArray[5].rm_eo - groupArray[5].rm_so), (line + groupArray[5].rm_so));
+        sprintf(cline.dayw, "%.*s",   (groupArray[6].rm_eo - groupArray[6].rm_so), (line + groupArray[6].rm_so)); 
+        sprintf(cline.url, "%.*s",    (groupArray[9].rm_eo - groupArray[9].rm_so), (line + groupArray[9].rm_so));
+        sprintf(cline.value, "%.*s",  (groupArray[10].rm_eo - groupArray[10].rm_so), (line + groupArray[10].rm_so));
+        LOG(SCHD_LOG,LOG_INFO, "Read from cron. Enabled:%d Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.enabled,cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
+        length += sprintf(buffer+length, "{\"enabled\":\"%d\", \"min\":\"%s\",\"hour\":\"%s\",\"daym\":\"%s\",\"month\":\"%s\",\"dayw\":\"%s\",\"url\":\"%s\",\"value\":\"%s\"},",
+                cline.enabled,
                 cline.minute,
                 cline.hour,
                 cline.daym,

@@ -26,6 +26,8 @@
 #include "utils.h"
 
 static int _hlightindex = -1;
+static int _hlightcharindexstart = -1;
+static int _hlightcharindexstop = -1;
 static char _menu[PDA_LINES][AQ_MSGLEN+1];
 
 void print_menu()
@@ -38,8 +40,12 @@ void print_menu()
   
   if (_hlightindex > -1) {
     //printf("PDA highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
-    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted line = %d = %s\n",_hlightindex,_menu[_hlightindex]);
-  } 
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted line#=%d line='%s'\n",_hlightindex,_menu[_hlightindex]);
+  }
+
+  if (_hlightcharindexstart > -1) {
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted characters numer=%d start=%d end=%d actual='%.*s'\n",(_hlightcharindexstop-_hlightcharindexstart),_hlightcharindexstart,_hlightcharindexstop,(_hlightcharindexstop-_hlightcharindexstart),&_menu[_hlightindex][_hlightcharindexstart+1]);
+  }
 }
 
 int pda_m_hlightindex()
@@ -59,6 +65,12 @@ char *pda_m_line(int index)
   else
     return "-"; // Just return something bad so I can use string comparison with no null check
   //  return NULL;
+}
+
+char *pda_m_hlightchars(int *len)
+{
+  *len = _hlightcharindexstop - _hlightcharindexstart + 1;
+  return &_menu[_hlightindex][_hlightcharindexstart];
 }
 
 // Find exact menu item
@@ -197,6 +209,8 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
   switch (packet[PKT_CMD]) {
     case CMD_PDA_CLEAR:
       _hlightindex = -1;
+      _hlightcharindexstart = -1;
+      _hlightcharindexstop = -1;
       memset(_menu, 0, PDA_LINES * (AQ_MSGLEN+1));
     break;
     case CMD_MSG_LONG:
@@ -218,16 +232,24 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       // when switching from hlight to hlightchars index 255 is sent to turn off hlight
       if (packet[4] <= PDA_LINES) {
         _hlightindex = packet[4];
+        _hlightcharindexstart = -1;
+        _hlightcharindexstop = -1;
       } else {
         _hlightindex = -1;
+         _hlightcharindexstart = -1;
+        _hlightcharindexstop = -1;
       }
       if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
       if (packet[4] <= PDA_LINES) {
         _hlightindex = packet[4];
+        _hlightcharindexstart = packet[5];
+        _hlightcharindexstop = packet[6];
       } else {
         _hlightindex = -1;
+        _hlightcharindexstart = -1;
+        _hlightcharindexstop = -1;
       }
       if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
     break;

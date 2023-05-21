@@ -224,49 +224,7 @@ unsigned char pop_aq_cmd_OLD(struct aqualinkdata *aq_data)
 }
 */
 
-/* Maybe use in future, not needed for moment 
-   Idea here was to convert all button on/off commands to rs_serial_adapter commands to use if in all button probramming mode */
-/*
-unsigned char AllButton2RSsrialAdapter(unsigned char abcmd)
-{
-  switch(abcmd) {
-    case KEY_PUMP:
-      return RS_SA_PUMP;
-    break;
-    case KEY_SPA:
-      return RS_SA_SPA;
-    break;
-    case KEY_AUX1:
-      return RS_SA_AUX1;
-    break;
-    case KEY_AUX2:
-      return RS_SA_AUX2;
-    break;
-    case KEY_AUX3:
-      return RS_SA_AUX3;
-    break;
-    case KEY_AUX4:
-      return RS_SA_AUX4;
-    break;
-    case KEY_AUX5:
-      return RS_SA_AUX5;
-    break;
-    case KEY_AUX6:
-      return RS_SA_AUX6;
-    break;
-    case KEY_AUX7:
-      return RS_SA_AUX7;
-    break;
-    case KEY_POOL_HTR:
-      return RS_SA_POOLHT;
-    break;
-    case KEY_SPA_HTR:
-      return RS_SA_SPAHT;
-    break;
-  }
-  return NUL;
-}
-*/
+
 
 int roundTo(int num, int denominator) {
   return ((num + (denominator/2) ) / denominator )* denominator;
@@ -2200,7 +2158,12 @@ void _waitfor_queue2empty(bool longwait)
 {
   int i=0;
 
-  LOG(PROG_LOG, LOG_DEBUG, "Waiting for queue to empty\n");
+  if (_pgm_command != NUL) {
+    LOG(PROG_LOG, LOG_DEBUG, "Waiting for queue to empty\n");
+  } else {
+    LOG(PROG_LOG, LOG_DEBUG, "Queue empty!\n");
+    return;
+  }
 
   while ( (_pgm_command != NUL) && ( i++ < (PROGRAMMING_POLL_COUNTER*(longwait?2:1) ) ) ) {
     delay(PROGRAMMING_POLL_DELAY_TIME);
@@ -2247,6 +2210,13 @@ void send_cmd(unsigned char cmd)
   //delay(200);
 
   LOG(PROG_LOG, LOG_INFO, "Queue send '0x%02hhx' to controller (programming)\n", _pgm_command);
+}
+void force_queue_delete()
+{
+  if (_pgm_command != NUL)
+    LOG(PROG_LOG, LOG_INFO, "Reall bad coding, don't use this in release\n");
+
+  _pgm_command = NUL;
 }
 
 /*

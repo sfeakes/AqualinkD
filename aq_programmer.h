@@ -119,6 +119,8 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
 //void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
+//void force_queue_delete() // Yes I want compiler warning if this is used.
+
 
 //bool push_aq_cmd(unsigned char cmd);
 

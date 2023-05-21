@@ -500,10 +500,14 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
     sprintf(device_name,"%-13s\n",aq_data->aqbuttons[device].label);
   }
 
+  // NSF Added this since DEBUG hitting wrong command
+  //waitfor_queue2empty();
+
   if ( find_pda_menu_item(aq_data, device_name, 13) ) {
     if (aq_data->aqbuttons[device].led->state != state) {
       //printf("*** Select State ***\n");
       LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].label,state);
+      force_queue_delete(); // NSF This is a really shit thing to do.  Need to fix this
       send_cmd(KEY_PDA_SELECT);
       while (get_aq_cmd_length() > 0) { delay(500); }
       // If you are turning on a heater there will be a sub menu to set temp
@@ -793,7 +797,7 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_
       delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
       waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
       if (i > 10) {
-        LOG(PDA_LOG,LOG_ERR, "PDA numeric selector could not find string '%s'\n", select_label);
+        LOG(PDA_LOG,LOG_ERR, "Numeric selector could not find string '%s'\n", select_label);
         return false;
       }
       i++;
@@ -802,21 +806,21 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_
   }
 
   if (val < cur_val) {
-    LOG(PDA_LOG,LOG_DEBUG, "PDA %s value : lower from %d to %d\n", select_label, cur_val, val);
+    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : lower from %d to %d\n", select_label, cur_val, val);
     for (i = cur_val; i > val; i=i-step) {
       send_cmd(KEY_PDA_DOWN);
     }
   } else if (val > cur_val) {
-    LOG(PDA_LOG,LOG_DEBUG, "PDA %s value : raise from %d to %d\n", select_label, cur_val, val);
+    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : raise from %d to %d\n", select_label, cur_val, val);
     for (i = cur_val; i < val; i=i+step) {
       send_cmd(KEY_PDA_UP);
     }
   } else {
-    LOG(PDA_LOG,LOG_INFO, "PDA %s value : already at %d\n", select_label, val);
+    LOG(PDA_LOG,LOG_INFO, "Numeric selector %s value : already at %d\n", select_label, val);
   }
 
   send_cmd(KEY_PDA_SELECT);
-  LOG(PDA_LOG,LOG_DEBUG, "PDA %s value : set to %d\n", select_label, val);
+  LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : set to %d\n", select_label, val);
   
   return true;
 }
@@ -937,13 +941,18 @@ bool set_PDA_aqualink_time(struct aqualinkdata *aq_data) {
     LOG(PDA_LOG,LOG_ERR, "Error finding freeze protect setpoints menu\n");
     return false;
   }
-  struct tm tm;
-  time_t now;
-  static char result[30];
 
-  time(&now);   // get time now
-  localtime_r(&now, &tm);
-  LOG(PDA_LOG,LOG_DEBUG, "set_PDA_aqualink_time %s\n", asctime_r(&tm,result));
+  //struct tm *tm;
+  //time_t now;
+  //static char result[30];
+  //localtime_r(&now, &tm);
+  //LOG(PDA_LOG,LOG_DEBUG, "set_PDA_aqualink_time %s\n", asctime_r(&tm,result));
+
+  time_t now = time(0);   // get time now
+  struct tm *tm = localtime(&now);
+  LOG(PDA_LOG, LOG_DEBUG, "Setting time to %d/%d/%d %d:%d\n", tm->tm_mon + 1, tm->tm_mday, tm->tm_year + 1900, tm->tm_hour + 1 - tm->tm_isdst, tm->tm_min);
+  LOG(PDA_LOG, LOG_DEBUG, "Setting time to %s\n",  asctime(tm));
+
 /*  
 Debug:   PDA:       PDA Menu Line 0 =     Set Time    
 Debug:   PDA:       PDA Menu Line 1 = 
@@ -960,17 +969,104 @@ Debug:   PDA:       PDA Menu Line 9 = to continue.
   // Crap way to do this, we should use highlight chars, but I don't have enough debug/packet data 
   // info to code that at present.  So just pull from lines.
 
+  
+   waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+
   //int cbuf = 0;
   char *line = pda_m_hlight();
 
+
+  // This is a dam mess.  Needs to be cleaned up.
+
   // Basic check for date line.
-  printf("***** Char %c ****\n",line[4]);
   if (line[4] == '/') {
-    send_cmd(KEY_PDA_SELECT);
+    line = pda_m_hlight();
+    // We should use the CMD_PDA_HIGHLIGHTCHARS to check we are on month
     
-    if (! set_PDA_numeric_field_value(aq_data, tm.tm_mon, atoi(&line[2]), NULL, 1)) {
+    if (! set_PDA_numeric_field_value(aq_data, tm->tm_mon+1, atoi(&line[2]), NULL, 1)) {
       LOG(PDA_LOG,LOG_ERR, "Error failed to set month\n");
     }
+    // No Need to send select, since set_PDA_numeric_field_value does that.
+    longwaitfor_queue2empty();
+
+    waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+
+    //line = pda_m_hlight(); The hlight line jumps down then back up, or we wait for two CMD_PDA_HIGHLIGHTCHARS
+    if (! set_PDA_numeric_field_value(aq_data, tm->tm_mday, atoi(&line[5]), NULL, 1)) {
+      LOG(PDA_LOG,LOG_ERR, "Error failed to set day\n");
+    }
+    longwaitfor_queue2empty();
+    //send_cmd(KEY_PDA_SELECT);
+    waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+    //line = pda_m_hlight();
+
+    int year=tm->tm_year - 100; // tm_year is a number relative to 1900.  so 100 is 2000
+    LOG(PDA_LOG,LOG_DEBUG, "tm year=%d year=%d\n",tm->tm_year,year);
+    if (! set_PDA_numeric_field_value(aq_data, year, atoi(&line[8]), NULL, 1)) {
+      LOG(PDA_LOG,LOG_ERR, "Error failed to set year\n");
+    }
+    longwaitfor_queue2empty();
+    //send_cmd(KEY_PDA_SELECT);
+    waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+
+    //waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+
+    int cnt=0;
+    
+    while ( pda_m_hlightindex() != 3 && line[11] != 'M' ) {
+      delay(50);
+      waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHTCHARS,CMD_PDA_CLEAR,1);
+      line = pda_m_hlight();
+      if (cnt++ >= 30) {
+        LOG(PDA_LOG,LOG_ERR, "Error failed to get to time within date time menu\n");
+        break;
+      }
+    }
+    line = pda_m_hlight();
+
+    int index = 4;
+    if (line[index] == ' ') // Their is no leading 0 on hour
+      index++;
+
+    int hour = (tm->tm_hour+1) - tm->tm_isdst;
+    if (hour > 12) {
+      hour=hour-12;
+      // Still need to to AM PM check.
+      if (line[10] == 'A') {
+        // Need to change AM/PM
+        for (int i = 1; i > 12; i++) {
+          send_cmd(KEY_PDA_DOWN); // Just send 12 down. Can come back and to this better
+        }
+      }
+    } else {
+      if (line[10] == 'P') {
+        // Need to change PM/AM
+        for (int i = 1; i > 12; i++) {
+          send_cmd(KEY_PDA_DOWN); // Just send 12 down. Can come back and to this better
+        }
+      }
+    }
+
+    if (! set_PDA_numeric_field_value(aq_data, hour, atoi(&line[index]), NULL, 1)) {
+      LOG(PDA_LOG,LOG_ERR, "Error failed to set hour\n");
+    }
+
+    longwaitfor_queue2empty();
+
+    // See if we have AM / PM correct.
+    
+    //send_cmd(KEY_PDA_SELECT);
+    waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+
+    if (! set_PDA_numeric_field_value(aq_data, tm->tm_min+1, atoi(&line[7]), NULL, 1)) {
+      LOG(PDA_LOG,LOG_ERR, "Error failed to set minute\n");
+    }
+
+    longwaitfor_queue2empty();
+    send_cmd(KEY_PDA_SELECT);
+    send_cmd(KEY_PDA_BACK);
+    send_cmd(KEY_PDA_BACK);
+
   } else {
     LOG(PDA_LOG,LOG_ERR, "Error set time failed\n");
     send_cmd(KEY_PDA_BACK);

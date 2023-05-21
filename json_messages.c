@@ -442,6 +442,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   length += sprintf(buffer+length, "{\"type\": \"status\"");
   length += sprintf(buffer+length, ",\"status\":\"%s\"",getStatus(aqdata) );
   length += sprintf(buffer+length, ",\"panel_message\":\"%s\"",aqdata->last_message );
+  length += sprintf(buffer+length, ",\"panel_type\":\"%s\"",getPanelString());
   //length += sprintf(buffer+length, ",\"message\":\"%s\"",aqdata->message );
   length += sprintf(buffer+length, ",\"version\":\"%s\"",aqdata->version );//8157 REV MMM",
   length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"", AQUALINKD_VERSION ); //1.0b,

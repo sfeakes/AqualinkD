@@ -33,6 +33,7 @@
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
+const char* getPanelString();
 
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
