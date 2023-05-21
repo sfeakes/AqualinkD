@@ -80,7 +80,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 
 # Update in Release 2.3.0d (pre release)
 * This is pre-release, please treat it as such.
-* Don't use this release on PDA panels unless you can debug/change code <b>I have not been able to test it fully.</b>
+* Proceed with caution on PDA panels <i>I have not been able to test it fully on all variants</i> and you may need to go back to your current (or previous) version of AqualinkD
 * Changed a lot of logic around different protocols.
 * Add support for dimmers.
 * AqualinkD will find out the fastest way to change something depending on the protocols available.
