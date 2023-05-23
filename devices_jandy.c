@@ -33,6 +33,60 @@
 
 static int _swg_noreply_cnt = 0;
 
+bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  static rsDeviceType interestedInNextAck = DRS_NONE;
+  static unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
+  int rtn = false;
+  // We received the ack from a Jandy device we are interested in
+  if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
+  {
+    if (interestedInNextAck == DRS_SWG)
+    {
+      rtn = processPacketFromSWG(packet_buffer, packet_length, aqdata);
+    }
+    else if (interestedInNextAck == DRS_EPUMP)
+    {
+      rtn = processPacketFromJandyPump(packet_buffer, packet_length, aqdata);
+    }
+    interestedInNextAck = DRS_NONE;
+    previous_packet_to = NUL;
+  }
+  // We were expecting an ack from Jandy device but didn't receive it.
+  else if (packet_buffer[PKT_DEST] != DEV_MASTER && interestedInNextAck != DRS_NONE)
+  {
+    if (interestedInNextAck == DRS_SWG && aqdata->ar_swg_device_status != SWG_STATUS_OFF)
+    { // SWG Offline
+      processMissingAckPacketFromSWG(previous_packet_to, aqdata);
+    }
+    else if (interestedInNextAck == DRS_EPUMP)
+    { // ePump offline
+      processMissingAckPacketFromJandyPump(previous_packet_to, aqdata);
+    }
+    interestedInNextAck = DRS_NONE;
+    previous_packet_to = NUL;
+  }
+  else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] == SWG_DEV_ID)
+  {
+    interestedInNextAck = DRS_SWG;
+    rtn = processPacketToSWG(packet_buffer, packet_length, aqdata, _aqconfig_.swg_zero_ignore);
+    previous_packet_to = packet_buffer[PKT_DEST];
+  }
+  else if (READ_RSDEV_ePUMP && packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
+  {
+    interestedInNextAck = DRS_EPUMP;
+    rtn = processPacketToJandyPump(packet_buffer, packet_length, aqdata);
+    previous_packet_to = packet_buffer[PKT_DEST];
+  }
+  else
+  {
+    interestedInNextAck = DRS_NONE;
+    previous_packet_to = NUL;
+  }
+
+  return rtn;
+}
+
 bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore) {
   static int swg_zero_cnt = 0;
   bool changedAnything = false;

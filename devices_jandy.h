@@ -5,6 +5,8 @@
 
 #include "aqualink.h"
 
+bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
+
 bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore);
 bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata);
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);

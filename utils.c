@@ -518,7 +518,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
     if (fp != -1) {
       timestamp(time);
       if ( write(fp, time, strlen(time) ) == -1 ||
-           write(fp, time, strlen(time) ) == -1 ) 
+           write(fp, message, strlen(message) ) == -1 ) 
       {
         syslog(LOG_ERR, "Can't write to log file %s\n %s", _log_filename, message);
         fprintf (stderr, "Can't write to log file %s\n %s", _log_filename, message);

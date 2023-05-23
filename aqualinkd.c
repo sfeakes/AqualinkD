@@ -1481,7 +1481,7 @@ void main_loop()
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
   //bool interestedInNextAck = false;
-  rsDeviceType interestedInNextAck = DRS_NONE;
+  //rsDeviceType interestedInNextAck = DRS_NONE;
   //bool changed = false;
   //int swg_zero_cnt = 0;
   int i;
@@ -1490,7 +1490,7 @@ void main_loop()
   bool got_probe_extended = false;
   bool got_probe_rssa = false;
   bool print_once = false;
-  unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
+  //unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
 
   // NSF need to find a better place to init this.
   //_aqualink_data.aq_command = 0x00;
@@ -1860,6 +1860,8 @@ void main_loop()
       {
         if (getProtocolType(packet_buffer) == JANDY)
         {
+          _aqualink_data.updated = processJandyPacket(packet_buffer, packet_length, &_aqualink_data);
+          /*
           // We received the ack from a Jandy device we are interested in
           if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
           {
@@ -1904,7 +1906,7 @@ void main_loop()
           {
             interestedInNextAck = DRS_NONE;
             previous_packet_to = NUL;
-          }
+          }*/
         }
         // Process Pentair Device Packed (pentair have to & from in message, so no need to)
         else if (getProtocolType(packet_buffer) == PENTAIR && READ_RSDEV_vsfPUMP) {
