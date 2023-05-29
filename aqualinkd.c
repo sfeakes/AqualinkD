@@ -127,7 +127,7 @@ void processLEDstate()
 
 bool checkAqualinkTime()
 {
-  static time_t last_checked;
+  static time_t last_checked = 0;
   time_t now = time(0); // get time now
   int time_difference;
   struct tm aq_tm;
@@ -155,9 +155,9 @@ bool checkAqualinkTime()
     // date is simply a day or week for PDA.
     localtime_r(&now, &aq_tm);
     int real_wday = aq_tm.tm_wday; // NSF Need to do this better, we could be off by 7 days
-    snprintf(datestr, DATE_STRING_LEN, "%s %s",_aqualink_data.date,_aqualink_data.time);
+    snprintf(datestr, DATE_STRING_LEN, "%.12s %.8s",_aqualink_data.date,_aqualink_data.time);
 
-    if (strptime(datestr, "%A %I:%M%p", &aq_tm) == NULL) {
+    if (strptime(datestr, "%a %I:%M%p", &aq_tm) == NULL) {
       LOG(AQUA_LOG,LOG_ERR, "Could not convert PDA RS time string '%s'", datestr);
       last_checked = (time_t)NULL;
       return true;
@@ -196,23 +196,23 @@ bool checkAqualinkTime()
   aq_tm.tm_isdst = localtime(&now)->tm_isdst; // ( Might need to use -1) set daylight savings to same as system time
   aq_tm.tm_sec = 0; // Set seconds to time.  Really messes up when we don't do this.
 
-  char buff[20];
+  char buff[30];
   
   LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd created time from : %s\n", datestr);
-  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", &aq_tm);
+  strftime(buff, 30, "%Y-%m-%d %H:%M:%S %a", &aq_tm);
   LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd created time      : %s\n", buff);
 
   aqualink_time = mktime(&aq_tm);
 
-  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&aqualink_time));
+  strftime(buff, 30, "%Y-%m-%d %H:%M:%S", localtime(&aqualink_time));
   LOG(AQUA_LOG,LOG_DEBUG, "Aqualinkd converted time    : %s\n", buff);
-  strftime(buff, 20, "%Y-%m-%d %H:%M:%S", localtime(&now));
+  strftime(buff, 30, "%Y-%m-%d %H:%M:%S", localtime(&now));
   LOG(AQUA_LOG,LOG_DEBUG, "System time                 : %s\n", buff);
 
 
   time_difference = (int)difftime(now, aqualink_time);
 
-  strftime(buff, 20, "%m/%d/%y %I:%M %p", localtime(&now));
+  strftime(buff, 30, "%m/%d/%y %I:%M %p", localtime(&now));
   LOG(AQUA_LOG,LOG_INFO, "Aqualink time '%s' is off system time '%s' by %d seconds...\n", datestr, buff, time_difference);
 
   if (abs(time_difference) < ACCEPTABLE_TIME_DIFF)

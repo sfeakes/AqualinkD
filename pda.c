@@ -307,18 +307,20 @@ void process_pda_packet_msg_long_time(const char *msg)
   // message "     SAT 8:46AM "
   //         "     SAT 10:29AM"
   //         "     SAT 4:23PM "
+  //         "     SUN  2:36PM"
   // printf("TIME = '%.*s'\n",AQ_MSGLEN,msg );
   // printf("TIME = '%c'\n",msg[AQ_MSGLEN-1] );
+
   if (msg[AQ_MSGLEN - 1] == ' ')
   {
-    strncpy(_aqualink_data->time, msg + 9, 6);
+    snprintf(_aqualink_data->time, sizeof(_aqualink_data->time), "%.6s", msg + 9);
   }
   else
   {
-    strncpy(_aqualink_data->time, msg + 9, 7);
+    snprintf(_aqualink_data->time, sizeof(_aqualink_data->time), "%.7s", msg + 9);
   }
-  strncpy(_aqualink_data->date, msg + 5, 3);
-  
+  snprintf(_aqualink_data->date, sizeof(_aqualink_data->date), "%.3s", msg + 5);
+
   if (checkAqualinkTime() != true)
   {
     LOG(AQRS_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data->time, _aqualink_data->date);
