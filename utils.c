@@ -82,7 +82,9 @@ int getLogLevel(int16_t from)
   // RSSD_LOG should default to INFO unless the mask is explicitly set.
   // IE Even if DEBUG is set, (Note ignored for the moment)
 
-  if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+  if ( from == RSSD_LOG && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+    return LOG_DEBUG_SERIAL;
+  else if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
     return LOG_DEBUG;
   
   return _log_level;

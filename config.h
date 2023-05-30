@@ -77,6 +77,7 @@ struct aqconfig
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
   bool log_raw_bytes; // Read as bytes
+  unsigned char RSSD_LOG_filter;
   //bool log_raw_RS_bytes;
   bool readahead_b4_write;
   bool mqtt_timed_update;

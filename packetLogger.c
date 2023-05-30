@@ -13,6 +13,7 @@ static FILE *_byteLogFile    = NULL;
 static bool _logfile_raw     = false;
 static bool _logfile_packets = false;
 //static bool _includePentair = false;
+static unsigned char _lastReadFrom = NUL;
 
 void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read);
 int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error, bool is_read);
@@ -95,9 +96,29 @@ void debuglogPacket(int16_t from, unsigned char *packet_buffer, int packet_lengt
 void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read)
 {
   // No point in continuing if loglevel is < debug_serial and not writing to file
-  if ( force == false && error == false && getLogLevel(from) < LOG_DEBUG_SERIAL /*&& _logfile_raw == false*/ && _logfile_packets == false) {
+  if ( force == false && 
+       error == false && 
+       getLogLevel(from) < LOG_DEBUG_SERIAL && 
+       /*_logfile_raw == false &&*/ 
+       _logfile_packets == false ) {
     return;
   }
+  
+  if ( _aqconfig_.RSSD_LOG_filter != NUL ) {
+    if (is_read) {
+      _lastReadFrom = packet_buffer[PKT_DEST];
+      if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
+        return;
+      }
+    } else if (!is_read && _lastReadFrom != _aqconfig_.RSSD_LOG_filter) // Must be write
+      return;
+/*
+    if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
+      return;
+    }
+*/
+  }
+
   char buff[1000];
 
   _beautifyPacket(buff, packet_buffer, packet_length, error, is_read);
@@ -110,6 +131,8 @@ void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, b
   else {
     if (force)
       LOG(from,LOG_DEBUG, "%s", buff);
+    //else if (is_read &&  _aqconfig_.serial_debug_filter != NUL && _aqconfig_.serial_debug_filter == packet_buffer[PKT_DEST])
+    //  LOG(from,LOG_NOTICE, "%s", buff);
     else
       LOG(from,LOG_DEBUG_SERIAL, "%s", buff);
   }

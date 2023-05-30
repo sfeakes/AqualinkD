@@ -580,6 +580,25 @@
     else
       var _link_spa_and_heater=false;
 
+    // If swgStatus was defined in config.js, use it, else create our own
+    if (typeof swgStatus !== 'undefined') {
+      var _swgStatus = swgStatus;
+    } else {
+      var _swgStatus = {
+          0: "On",
+          1: "No flow",
+          2: "Low salt",
+          4: "High salt",
+          8: "Clean cell",
+          9: "Turning off",
+         16: "High current",
+         32: "Low volts",
+         64: "Low temp",
+        128: "Check PCB",
+        255: "Off"
+      }
+    }
+
     function init() {
       setSizeSpecifics();
       populateLightProgram(-1);
@@ -1014,6 +1033,7 @@
       return status;
     }
 
+
     function setTileOn(id, status) {
       //console.log("setTileOn "+id+ " "+status);
       var tile;
@@ -1052,7 +1072,12 @@
         var type;
         if ((type = tile.getAttribute('type')) != null) {
           if (type == 'setpoint_swg') {
-            if (tile.getAttribute('Boost') == 'on')
+            var exstatus = parseInt(tile.getAttribute('fullstatus'))
+            // Could also ignore "Enabled" in below, that way we don't jump different stats on startup
+            if (exstatus > 0 && exstatus < 255) {// Not off or on
+              //text = swgFullstatus2String(exstatus);
+              text = _swgStatus[exstatus];
+            } else if (tile.getAttribute('Boost') == 'on')
               text = "Boost";
             else if (status == 'enabled')
               text = 'Enabled';
@@ -2035,11 +2060,14 @@
 
       if (typeof(data.swg_ppm) !== 'undefined')
         setTileValue("SWG/PPM", data.swg_ppm);
-
+      if (typeof(data.swg_fullstatus) !== 'undefined')
+        setTileAttribute('SWG', "fullstatus", data.swg_fullstatus);
+      
       if (typeof(data.chem_ph) !== 'undefined')
         setTileValue("CHEM/pH", data.chem_ph);
       if (typeof(data.chem_orp) !== 'undefined')
         setTileValue("CHEM/ORP", data.chem_orp);
+
       /*
       setTileValue("Air", data.air_temp);
       setTileValue("Pool_Water", data.pool_temp);
@@ -2050,8 +2078,8 @@
         if (obj.toString() == 'SWG/Boost') {
           //console.log("BOOST IS "+data.leds[obj]);
           setTileAttribute('SWG', "Boost", data.leds[obj]);
-          setTileValue
-        }
+          //setTileValue
+        } 
       }
       for (var obj in data.timers) {
         setTileOnText(obj.toString(),"On (timer)");

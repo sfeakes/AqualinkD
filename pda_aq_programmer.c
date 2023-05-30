@@ -33,6 +33,7 @@
 #include "pda_aq_programmer.h"
 #include "config.h"
 #include "aq_panel.h"
+#include "rs_msg_utils.h"
 
 
 #ifdef AQ_DEBUG
@@ -123,7 +124,8 @@ bool wait_pda_selected_item(struct aqualinkdata *aq_data)
 }
 
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data) {
-  waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10);
+  if (!waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10))
+    return false;
   return waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,15);
 }
 
@@ -250,10 +252,12 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
     if ((min_index != -1) && ((index - i) > (i - min_index + max_index - index + 1))) {
         cnt = i - min_index + max_index - index + 1;
         for (i=0; i < cnt; i++) {
+          waitfor_queue2empty();
           send_cmd(KEY_PDA_UP);
         }
     } else {
         for (i=pda_m_hlightindex(); i < index; i++) {
+            waitfor_queue2empty();
             send_cmd(KEY_PDA_DOWN);
         }
     }
@@ -261,10 +265,12 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
     if ((min_index != -1) && ((i - index) > (index - min_index + max_index - i + 1))) {
         cnt = i - min_index + max_index - index + 1;
         for (i=0; i < cnt; i++) {
+          waitfor_queue2empty();
           send_cmd(KEY_PDA_UP);
         }
     } else {
       for (i=pda_m_hlightindex(); i > index; i--) {
+        waitfor_queue2empty();
         send_cmd(KEY_PDA_UP);
       }
     }
@@ -291,7 +297,7 @@ bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wa
 
     LOG(PDA_LOG,LOG_DEBUG, "PDA Device programmer selected menu item '%s'\n",menuText);
     if (waitForNextMenu)
-      waitForPDAnextMenu(aq_data);
+      return waitForPDAnextMenu(aq_data);
 
     return true;
   }
@@ -306,6 +312,7 @@ bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wa
 // https://www.jandy.com/-/media/zodiac/global/downloads/h/h0574200.pdf
 // and 6594 - AquaLink RS Control Panel Installation Manual
 // https://www.jandy.com/-/media/zodiac/global/downloads/0748-91071/6594.pdf
+
 bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
   bool ret = true;
   int cnt = 0;
@@ -600,8 +607,10 @@ void *set_aqualink_PDA_init( void *ptr )
     //printf("****** Version '%s' ********\n",aq_data->version);
     LOG(PDA_LOG,LOG_DEBUG, "PDA type=%d, version=%s\n", _PDA_Type, aq_data->version);
     // don't wait for version menu to time out press back to get to home menu faster
-    send_cmd(KEY_PDA_BACK);
-    if (! waitForPDAnextMenu(aq_data)) {
+    //send_cmd(KEY_PDA_BACK);
+    //if (! waitForPDAnextMenu(aq_data)) { // waitForPDAnextMenu waits for highlight chars, which we don't get on normal menu
+    
+    if (! waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10)) {
         LOG(PDA_LOG,LOG_ERR, "PDA Init :- wait for next menu failed\n");
     }
   }
@@ -625,6 +634,8 @@ void *set_aqualink_PDA_init( void *ptr )
   }
 
   pda_reset_sleep();
+
+  goto_pda_menu(aq_data, PM_HOME);
 
   cleanAndTerminateThread(threadCtrl);
 
@@ -678,7 +689,11 @@ bool get_PDA_aqualink_pool_spa_heater_temps(struct aqualinkdata *aq_data) {
   
    // Get heater setpoints
   if (! goto_pda_menu(aq_data, PM_SET_TEMP)) {
-    return false;
+    LOG(PDA_LOG,LOG_ERR, "Could not get heater setpoints, trying again!\n");
+    // Going to try this twice.
+    if (! goto_pda_menu(aq_data, PM_SET_TEMP)) {
+      return false;
+    }
   }
   
   return true;
@@ -715,19 +730,23 @@ bool waitForPDAMessageHighlight(struct aqualinkdata *aq_data, int highlighIndex,
 }
 
 
-bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, int numMessageReceived)
+bool _waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, int numMessageReceived, bool forceNext)
 {
   LOG(PDA_LOG,LOG_DEBUG, "waitForPDAMessageType  0x%02hhx\n",mtype);
 
   int i=0;
   pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
 
+  if (forceNext) { // Ignore current message type, and wait for next
+    pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
+  } 
+
   while( ++i <= numMessageReceived)
   {
     LOG(PDA_LOG,LOG_DEBUG, "waitForPDAMessageType 0x%02hhx, last message type was 0x%02hhx (%d of %d)\n",mtype,aq_data->last_packet_type,i,numMessageReceived);
-
+    
     if (aq_data->last_packet_type == mtype) break;
-
+    
     pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
   }
 
@@ -742,6 +761,16 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, in
   
   return true;
 }
+
+bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, int numMessageReceived){
+  return _waitForPDAMessageType(aq_data, mtype, numMessageReceived, false);
+}
+bool waitForPDANextMessageType(struct aqualinkdata *aq_data, unsigned char mtype, int numMessageReceived){
+  return _waitForPDAMessageType(aq_data, mtype, numMessageReceived, true);
+}
+
+
+
 
 // Wait for Message, hit return on particular menu.
 bool waitForPDAMessageTypesOrMenu(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived, char *text, int line)
@@ -785,6 +814,10 @@ bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, 
   return waitForPDAMessageTypesOrMenu(aq_data, mtype1, mtype2, numMessageReceived, NULL, 0);
 }
 
+/*
+  Use -1 for cur_val if you want this to find the delected value and change it.
+  Use number for cur_val to  increase / decrease from known start point
+*/
 bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_val, char *select_label, int step) {
   int i=0;
 
@@ -792,17 +825,41 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_
     // :TODO: Should probably change below to call find_pda_menu_item(), rather than doing it here
     // If we lease this, need to limit on the number of loops
     //while ( strncasecmp(pda_m_hlight(), select_label, 8) != 0 ) {
-    while ( strncasecmp(pda_m_hlight(), select_label, strlen(select_label)) != 0 ) {
+    //while ( strncasecmp(pda_m_hlight(), select_label, strlen(select_label)) != 0 ) {
+    while ( rsm_strncmp(pda_m_hlight(), select_label, strlen(select_label)) != 0 ) {
+      LOG(PDA_LOG,LOG_DEBUG, "Numeric selector selecting '%s' current selection '%s'\n", select_label, pda_m_hlight());
       send_cmd(KEY_PDA_DOWN);
-      delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
-      waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,2);
+      //delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
+      waitfor_queue2empty();
+      waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,5);
       if (i > 10) {
         LOG(PDA_LOG,LOG_ERR, "Numeric selector could not find string '%s'\n", select_label);
         return false;
       }
       i++;
     }
+    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector, selecting '%s'\n", pda_m_hlight());
     send_cmd(KEY_PDA_SELECT);
+  }
+
+  if (cur_val == -1) {
+    char *hghlight_chars;
+    int hlight_length=0;
+    int i=0;
+    //hghlight_chars = pda_m_hlightchars(&hlight_length);
+    while (hlight_length >= 15 || hlight_length <= 0) {
+      delay(500);
+      waitForPDANextMessageType(aq_data,CMD_PDA_HIGHLIGHTCHARS,5);
+      hghlight_chars = pda_m_hlightchars(&hlight_length);
+      LOG(PDA_LOG,LOG_DEBUG, "Numeric selector, highlight chars '%.*s'\n",hlight_length , hghlight_chars);
+      if (++i >= 20) {
+        LOG(PDA_LOG,LOG_ERR, "Numeric selector, didn't find highlight chars, current selection is '%.*s'\n",hlight_length , hghlight_chars);
+        return false;
+      }
+    }
+
+    cur_val = atoi(hghlight_chars);
+    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector, highlight chars '%.*s', numeric value using %d\n",hlight_length , hghlight_chars, cur_val);
   }
 
   if (val < cur_val) {
@@ -816,7 +873,7 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_
       send_cmd(KEY_PDA_UP);
     }
   } else {
-    LOG(PDA_LOG,LOG_INFO, "Numeric selector %s value : already at %d\n", select_label, val);
+    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : already at %d\n", select_label, val);
   }
 
   send_cmd(KEY_PDA_SELECT);
@@ -829,12 +886,15 @@ bool set_PDA_aqualink_SWG_setpoint(struct aqualinkdata *aq_data, int val) {
   
   if (! goto_pda_menu(aq_data, PM_AQUAPURE)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding SWG setpoints menu\n");
+    return false;
   }
 
-  if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) 
-    return set_PDA_numeric_field_value(aq_data, val, aq_data->swg_percent, "SET SPA", 5);
-  else
-    return set_PDA_numeric_field_value(aq_data, val, aq_data->swg_percent, "SET POOL", 5);
+  if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) {
+    //int cur_val = atoi
+    return set_PDA_numeric_field_value(aq_data, val, -1, "SET SPA", 5);
+  } else {
+    return set_PDA_numeric_field_value(aq_data, val, -1, "SET POOL", 5);
+  }
   
   //return true;
 }

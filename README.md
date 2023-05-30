@@ -78,15 +78,16 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
 * Add set time to OneTouch protocol.
 
-# Update in Release 2.3.0d (pre release)
+# Update in Release 2.3.0e (pre release)
 * This is pre-release, please treat it as such.
 * Proceed with caution on PDA panels <i>I have not been able to test it fully on all variants</i> and you may need to go back to your current (or previous) version of AqualinkD
 * Changed a lot of logic around different protocols.
-* Add support for dimmers.
 * AqualinkD will find out the fastest way to change something depending on the protocols available.
 * Added scheduler (click time in web ui). supports full calendar year (ie seasons), See wiki for details. 
 * Added timers for devices (ie can turn on Pump for x minutes), Long press on device in WebUI.
 * Timers supported in MQTT/API.
+* Add support for dimmers.
+* Extended SWG status now in web UI.
 * Serial logging / error checking enhancements.
 * Added simulator back. (+ Improved UI).
 * Fix issue with incorrect device state after duplicate MQTT messages being sent in rapid succession ( < 0.5 second).

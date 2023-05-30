@@ -501,6 +501,9 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
   if ( aqdata->orp != TEMP_UNKNOWN )
     length += sprintf(buffer+length, ",\"chem_orp\":\"%d\"",aqdata->orp );
 
+  if ( READ_RSDEV_SWG )
+    length += sprintf(buffer+length, ",\"swg_fullstatus\": \"%d\"", aqdata->ar_swg_device_status);
+
   length += sprintf(buffer+length, ",\"leds\":{" );
   for (i=0; i < aqdata->total_buttons; i++) 
   {

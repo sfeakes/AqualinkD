@@ -44,7 +44,7 @@ void print_menu()
   }
 
   if (_hlightcharindexstart > -1) {
-    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted characters numer=%d start=%d end=%d actual='%.*s'\n",(_hlightcharindexstop-_hlightcharindexstart),_hlightcharindexstart,_hlightcharindexstop,(_hlightcharindexstop-_hlightcharindexstart),&_menu[_hlightindex][_hlightcharindexstart+1]);
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu highlighted characters line#=%d numer=%d start=%d end=%d actual='%.*s'\n",_hlightindex,(_hlightcharindexstop-_hlightcharindexstart),_hlightcharindexstart,_hlightcharindexstop,(_hlightcharindexstop-_hlightcharindexstart),&_menu[_hlightindex][_hlightcharindexstart+1]);
   }
 }
 
@@ -69,7 +69,11 @@ char *pda_m_line(int index)
 
 char *pda_m_hlightchars(int *len)
 {
-  *len = _hlightcharindexstop - _hlightcharindexstart + 1;
+  if (_hlightindex <= -1) {
+    *len = 0;
+    return NULL;
+  }
+  *len = _hlightcharindexstop - _hlightcharindexstart;
   return &_menu[_hlightindex][_hlightcharindexstart];
 }
 
@@ -196,7 +200,7 @@ Line 0 =    EQUIPMENT
 (Line 0 is first. Highlight when complete)
 */
 
-bool process_pda_menu_packet(unsigned char* packet, int length)
+bool process_pda_menu_packet(unsigned char* packet, int length, bool force_print_menu)
 {
   bool rtn = true;
   signed char first_line;
@@ -204,6 +208,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
   signed char line_shift;
   signed char i;
   int index = 0;
+  static bool printed_page = false;
 
 
   switch (packet[PKT_CMD]) {
@@ -212,6 +217,13 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       _hlightcharindexstart = -1;
       _hlightcharindexstop = -1;
       memset(_menu, 0, PDA_LINES * (AQ_MSGLEN+1));
+      printed_page = false;
+    break;
+    case CMD_STATUS:
+      if ( printed_page == false && (getLogLevel(PDA_LOG) >= LOG_DEBUG)){
+        print_menu();
+        printed_page = true;
+      }
     break;
     case CMD_MSG_LONG:
     /*
@@ -226,7 +238,7 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
         strncpy(_menu[index], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
         _menu[index][AQ_MSGLEN] = '\0';
       }
-      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHT:
       // when switching from hlight to hlightchars index 255 is sent to turn off hlight
@@ -236,10 +248,11 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
         _hlightcharindexstop = -1;
       } else {
         _hlightindex = -1;
-         _hlightcharindexstart = -1;
+        _hlightcharindexstart = -1;
         _hlightcharindexstop = -1;
       }
-      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
+      //if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){print_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
       // pkt[4] = line, pkt[5] = startchar, pkt[6] = endchar, pkt[7] = clr/inv
@@ -253,13 +266,16 @@ bool process_pda_menu_packet(unsigned char* packet, int length)
       // https://github.com/ballle98/AqualinkD/issues/46
       // Character highlight should not update highlight index 
       if (packet[4] <= PDA_LINES) {
+        _hlightindex = packet[4];
         _hlightcharindexstart = packet[5];
         _hlightcharindexstop = packet[6];
       } else {
+        _hlightindex = -1;
         _hlightcharindexstart = -1;
         _hlightcharindexstop = -1;
       }
-      if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
+      //if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){print_menu();}
     break;
     case CMD_PDA_SHIFTLINES:
        // press up from top - shift menu down by 1

@@ -51,7 +51,10 @@ const char* get_packet_type(unsigned char* packet , int length)
 
   switch (packet[PKT_CMD]) {
     case CMD_ACK:
-      return "Ack";
+      if (packet[5] == NUL)
+        return "Ack";
+      else
+        return "Ack w/ Command";
     break;
     case CMD_STATUS:
       return "Status";
@@ -919,7 +922,7 @@ int get_packet(int fd, unsigned char* packet)
   }
 
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
-  if (_aqconfig_.log_protocol_packets)
+  if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketRead(packet, index);
   // Return the packet length.
   return index;

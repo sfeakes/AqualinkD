@@ -119,6 +119,9 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
 //void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
 unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
+void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
+void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
+
 //void force_queue_delete() // Yes I want compiler warning if this is used.
 
 
@@ -137,11 +140,6 @@ int RPM_check(pump_type type, int value, struct aqualinkdata *aqdata);
 const char *ptypeName(program_type type);
 const char *programtypeDisplayName(program_type type);
 
-// These shouldn't be here, but just for the PDA AQ PROGRAMMER
-void send_cmd(unsigned char cmd);
-bool push_aq_cmd(unsigned char cmd);
-void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
-void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
-bool waitForMessage(struct aqualinkdata *aq_data, char* message, int numMessageReceived);
+
 
 #endif

@@ -60,6 +60,22 @@
         "Cool Cabaret - Show"
       ];
 
+      // all SWG return a status number, some have different meanings. Change the text below to suit, NOT THE NUMBER.
+      var swgStatus = {
+          0: "On",
+          1: "No flow",
+          2: "Low salt",
+          4: "High salt",
+          8: "Clean cell",
+          9: "Turning off",
+         16: "High current",
+         32: "Low volts",
+         64: "Low temp",
+        128: "Check PCB",
+        255: "Off"
+      }
+
+
       /*
       *  BELOW IS NOT RELIVENT FOR simple.html or simple inteface
       *

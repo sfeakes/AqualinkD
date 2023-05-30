@@ -103,7 +103,7 @@ int rsm_strncmp(const char *haystack, const char *needle, int length)
   while(isspace(*ep1)) ep1--;
 
 
-  //LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
+  LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
   // Need to write this myself for speed
   // Need to check if full length string (no space on end), that the +1 is accurate. MIN should do it
   return strncasecmp(sp1, sp2, MIN((ep1-sp1)+1,length));

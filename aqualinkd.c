@@ -1235,6 +1235,14 @@ int main(int argc, char *argv[])
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_aqconfig_.log_protocol_packets));
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol raw = %s\n", bool2text(_aqconfig_.log_raw_bytes));
+  if ( _aqconfig_.RSSD_LOG_filter != NUL)
+    LOG(AQUA_LOG,LOG_NOTICE, "Log RS485 packets from   = 0x%02hhx\n", _aqconfig_.RSSD_LOG_filter
+    
+    
+    
+    
+    
+       );
   //LOG(AQUA_LOG,LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_aqconfig_.use_PDA_auxiliary));
   //LOG(AQUA_LOG,LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_aqconfig_.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
@@ -1861,52 +1869,6 @@ void main_loop()
         if (getProtocolType(packet_buffer) == JANDY)
         {
           _aqualink_data.updated = processJandyPacket(packet_buffer, packet_length, &_aqualink_data);
-          /*
-          // We received the ack from a Jandy device we are interested in
-          if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
-          {
-            if (interestedInNextAck == DRS_SWG)
-            {
-              _aqualink_data.updated = processPacketFromSWG(packet_buffer, packet_length, &_aqualink_data);
-            }
-            else if (interestedInNextAck == DRS_EPUMP)
-            {
-              _aqualink_data.updated = processPacketFromJandyPump(packet_buffer, packet_length, &_aqualink_data);
-            }
-            interestedInNextAck = DRS_NONE;
-            previous_packet_to = NUL;
-          }
-          // We were expecting an ack from Jandy device but didn't receive it.
-          else if (packet_buffer[PKT_DEST] != DEV_MASTER && interestedInNextAck != DRS_NONE )
-          {
-            if (interestedInNextAck == DRS_SWG && _aqualink_data.ar_swg_device_status != SWG_STATUS_OFF)
-            { // SWG Offline
-              processMissingAckPacketFromSWG(previous_packet_to, &_aqualink_data);
-            }
-            else if (interestedInNextAck == DRS_EPUMP)
-            { // ePump offline
-              processMissingAckPacketFromJandyPump(previous_packet_to, &_aqualink_data);
-            }
-            interestedInNextAck = DRS_NONE;
-            previous_packet_to = NUL;
-          }
-          else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] == SWG_DEV_ID)
-          {
-            interestedInNextAck = DRS_SWG;
-            _aqualink_data.updated = processPacketToSWG(packet_buffer, packet_length, &_aqualink_data, _aqconfig_.swg_zero_ignore);
-            previous_packet_to = packet_buffer[PKT_DEST];
-          }
-          else if (READ_RSDEV_ePUMP && packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
-          {
-            interestedInNextAck = DRS_EPUMP;
-            _aqualink_data.updated = processPacketToJandyPump(packet_buffer, packet_length, &_aqualink_data);
-            previous_packet_to = packet_buffer[PKT_DEST];
-          }
-          else
-          {
-            interestedInNextAck = DRS_NONE;
-            previous_packet_to = NUL;
-          }*/
         }
         // Process Pentair Device Packed (pentair have to & from in message, so no need to)
         else if (getProtocolType(packet_buffer) == PENTAIR && READ_RSDEV_vsfPUMP) {

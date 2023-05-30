@@ -109,7 +109,7 @@ setPanel("RS-8 Combo");
 */
 
 
-char _panelString[36];
+char _panelString[60];
 void setPanelString()
 {
   sprintf(_panelString, "%s%s-%d %s%s%s",
