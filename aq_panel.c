@@ -112,7 +112,7 @@ setPanel("RS-8 Combo");
 char _panelString[60];
 void setPanelString()
 {
-  sprintf(_panelString, "%s%s-%d %s%s%s",
+  snprintf(_panelString, sizeof(_panelString), "%s%s-%d %s%s%s",
       isRS_PANEL?"RS":"",
       isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
       PANEL_SIZE(),
