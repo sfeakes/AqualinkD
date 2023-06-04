@@ -8,6 +8,8 @@
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
 
 
+#define SERIAL_BLOCKING_TIME 50 // (1 to 255) in 1/10th second so 1 = 0.1 sec, 255 = 25.5 sec
+
 // Protocol types
 #define PCOL_JANDY     0xFF
 #define PCOL_PENTAIR   0xFE
@@ -445,6 +447,8 @@ int init_readahead_serial_port(const char* tty);
 
 void close_serial_port(int file_descriptor);
 void close_blocking_serial_port();
+bool serial_blockingmode();
+
 //#ifdef AQ_PDA
 //void set_pda_mode(bool mode);
 //bool pda_mode();

@@ -48,7 +48,7 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
 int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 bool parseJSONwebrequest(char *buffer, struct JSONwebrequest *request);
 bool parseJSONrequest(char *buffer, struct JSONkvptr *request);
-
+int build_logmsg_JSON(char *dest, const char *src, int dest_len, int src_len);
 int build_mqtt_status_JSON(char* buffer, int size, int idx, int nvalue, float setpoint/*char *svalue*/);
 bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, char *svalue);
 int build_aqualink_error_status_JSON(char* buffer, int size, char *msg);

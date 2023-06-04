@@ -15,12 +15,22 @@
 //void main_server_TEST(struct aqualinkdata *aqdata, char *s_http_port);
 //bool start_web_server(struct mg_mgr *mgr, struct aqualinkdata *aqdata, char *port, char* web_root);
 //bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata, struct aqconfig *aqconfig);
+
+/*
+#ifdef AQ_NO_THREAD_NETSERVICE
 bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata);
 void stop_net_services(struct mg_mgr *mgr);
 time_t poll_net_services(struct mg_mgr *mgr, int timeout_ms);
 void broadcast_aqualinkstate(struct mg_connection *nc);
 void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg);
-
+#else*/
+bool start_net_services(struct aqualinkdata *aqdata);
+void stop_net_services();
+time_t poll_net_services(int timeout_ms);
+void broadcast_aqualinkstate();
+void broadcast_aqualinkstate_error(char *msg);
+void broadcast_logs(char *msg);
+//#endif
 
 
 #endif // WEB_SERVER_H_

@@ -60,9 +60,16 @@
 //#define DEFAULT_CONFIG_FILE "./aqualinkd.conf"
 
 static volatile bool _keepRunning = true;
+static volatile bool _restart = false;
+//char** _argv;
 //static struct aqconfig _aqconfig_;
 static struct aqualinkdata _aqualink_data;
 
+char *_self;
+char *_cfgFile;
+int _cmdln_loglevel = -1;
+bool _cmdln_debugRS485 = false;
+bool _cmdln_lograwRS485 = false;
 
 #ifdef AQ_TM_DEBUG
   //struct timespec _rs_packet_readitme;
@@ -71,20 +78,34 @@ static struct aqualinkdata _aqualink_data;
 
 
 void main_loop();
+int startup(char *self, char *cfgFile);
 
-void intHandler(int dummy)
+void intHandler(int sig_num)
 {
+  LOG(AQUA_LOG,LOG_WARNING, "Stopping!\n");
+
   _keepRunning = false;
-  LOG(AQUA_LOG,LOG_NOTICE, "Stopping!\n");
+
+  if (sig_num == SIGRESTART) {
+    _restart = true;
+  }
+  //LOG(AQUA_LOG,LOG_NOTICE, "Stopping!\n");
   //if (dummy){}// stop compile warnings
 
   // In blocking mode, die as cleanly as possible.
+#ifdef AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.rs_poll_speed < 0) {
     stopPacketLogger();
     // This should force port to close and do somewhat gracefull exit.
     close_blocking_serial_port();
     //exit(-1);
   }
+#else
+  stopPacketLogger();
+  // This should force port to close and do somewhat gracefull exit.
+  if (serial_blockingmode())
+    close_blocking_serial_port();
+#endif
 }
 
 void processLEDstate()
@@ -1008,17 +1029,12 @@ void printHelp()
   printf("\t-rsrd      (RS485 raw debug)\n");
 }
 
-
 int main(int argc, char *argv[])
 {
-  int i, j;
-  //char *cfgFile = DEFAULT_CONFIG_FILE;
+  _restart = false;
   char defaultCfg[] = "./aqualinkd.conf";
   char *cfgFile;
-  int cmdln_loglevel = -1;
-  bool cmdln_debugRS485 = false;
-  bool cmdln_lograwRS485 = false;
-
+  
 
 //printf ("TIMER = %d\n",TIMR_LOG);
 
@@ -1065,7 +1081,7 @@ int main(int argc, char *argv[])
   init_config();
   cfgFile = defaultCfg;
 
-  for (i = 1; i < argc; i++)
+  for (int i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "-h") == 0)
     {
@@ -1082,22 +1098,34 @@ int main(int argc, char *argv[])
     }
     else if (strcmp(argv[i], "-vv") == 0)
     {
-      cmdln_loglevel = LOG_DEBUG_SERIAL;
+      _cmdln_loglevel = LOG_DEBUG_SERIAL;
     }
     else if (strcmp(argv[i], "-v") == 0)
     {
-      cmdln_loglevel = LOG_DEBUG;
+      _cmdln_loglevel = LOG_DEBUG;
     }
     else if (strcmp(argv[i], "-rsd") == 0)
     {
-      cmdln_debugRS485 = true;
+      _cmdln_debugRS485 = true;
     }
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
-      cmdln_lograwRS485 = true;
+      _cmdln_lograwRS485 = true;
     }
   }
 
+  // Set this here, so it doesn;t get reset if the manager restarts the AqualinkD process.
+  _aqualink_data.aqManagerActive = false;
+
+  return startup(argv[0], cfgFile);
+}
+
+int startup(char *self, char *cfgFile) 
+{
+  int i, j;
+
+  _self = self;
+  _cfgFile = cfgFile;
   //initButtons(&_aqualink_data);
   
   read_config(&_aqualink_data, cfgFile);
@@ -1152,15 +1180,18 @@ int main(int argc, char *argv[])
 #endif
     _aqualink_data.total_buttons = 12;
   */
-  if (cmdln_loglevel != -1)
-    _aqconfig_.log_level = cmdln_loglevel;
 
-  if (cmdln_debugRS485)
+
+  if (_cmdln_loglevel != -1)
+    _aqconfig_.log_level = _cmdln_loglevel;
+
+  if (_cmdln_debugRS485)
     _aqconfig_.log_protocol_packets = true;
 
-  if (cmdln_lograwRS485)
+  if (_cmdln_lograwRS485)
     _aqconfig_.log_raw_bytes = true;
       
+
 
   if (_aqconfig_.display_warnings_web == true)
     setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, _aqualink_data.last_display_message);
@@ -1224,6 +1255,7 @@ int main(int argc, char *argv[])
   }
 #endif
   LOG(AQUA_LOG,LOG_NOTICE, "Config force SWG         = %s\n", bool2text(_aqconfig_.force_swg));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config force PS setpoint = %s\n", bool2text(_aqconfig_.force_ps_setpoints));
   /* removed until domoticz has a better virtual thermostat
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx pool thermostat = %d\n", _aqconfig_.dzidx_pool_thermostat);
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx spa thermostat  = %d\n", _aqconfig_.dzidx_spa_thermostat);
@@ -1236,13 +1268,7 @@ int main(int argc, char *argv[])
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_aqconfig_.log_protocol_packets));
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol raw = %s\n", bool2text(_aqconfig_.log_raw_bytes));
   if ( _aqconfig_.RSSD_LOG_filter != NUL)
-    LOG(AQUA_LOG,LOG_NOTICE, "Log RS485 packets from   = 0x%02hhx\n", _aqconfig_.RSSD_LOG_filter
-    
-    
-    
-    
-    
-       );
+    LOG(AQUA_LOG,LOG_NOTICE, "Log RS485 packets from   = 0x%02hhx\n", _aqconfig_.RSSD_LOG_filter);
   //LOG(AQUA_LOG,LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_aqconfig_.use_PDA_auxiliary));
   //LOG(AQUA_LOG,LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_aqconfig_.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
@@ -1259,6 +1285,13 @@ int main(int argc, char *argv[])
   if (_aqconfig_.readahead_b4_write == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial Read Ahead Write  = %s\n", bool2text(_aqconfig_.readahead_b4_write));
 
+  if (_aqconfig_.ftdi_low_latency == true)
+    LOG(AQUA_LOG,LOG_NOTICE, "Serial FTDI low latency  = %s\n", bool2text(_aqconfig_.ftdi_low_latency));
+
+  if (_aqconfig_.prioritize_ack == true)
+    LOG(AQUA_LOG,LOG_NOTICE, "Serial Prioritize Ack    = %s\n", bool2text(_aqconfig_.prioritize_ack));
+
+#ifdef AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.thread_netservices)
     LOG(AQUA_LOG,LOG_NOTICE, "Thread Network Services  = %s\n", bool2text(_aqconfig_.thread_netservices));
 
@@ -1273,6 +1306,7 @@ int main(int argc, char *argv[])
     LOG(AQUA_LOG,LOG_WARNING, "Serial Read Ahead Write is not valid when using Negative RS Poll Speed, turning Serial Read Ahead Write off\n");
     _aqconfig_.readahead_b4_write = false;
   }
+#endif
 
   //for (i = 0; i < TOTAL_BUTONS; i++)
   for (i = 0; i < _aqualink_data.total_buttons; i++)
@@ -1311,7 +1345,8 @@ int main(int argc, char *argv[])
   {
     char pidfile[256];
     // sprintf(pidfile, "%s/%s.pid",PIDLOCATION, basename(argv[0]));
-    sprintf(pidfile, "%s/%s.pid", "/run", basename(argv[0]));
+    //sprintf(pidfile, "%s/%s.pid", "/run", basename(argv[0]));
+    sprintf(pidfile, "%s/%s.pid", "/run", basename(self));
     daemonise(pidfile, main_loop);
   }
   else
@@ -1322,10 +1357,10 @@ int main(int argc, char *argv[])
   exit(EXIT_SUCCESS);
 }
 
-
+/*
 #define MAX_BLOCK_ACK 12
 #define MAX_BUSY_ACK  (50 + MAX_BLOCK_ACK)
-
+*/
 
 /* Point of this is to sent ack as quickly as possible, all checks should be done prior to calling this.*/
 void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type source) 
@@ -1391,73 +1426,7 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
 */
 
 }
-/*
-void caculate_ack_packet_old(int rs_fd, unsigned char *packet_buffer) {
-  static int delayAckCnt = 0;
 
-  if (packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id) {
-    if (onetouch_enabled())
-      send_extended_ack(rs_fd, ACK_ONETOUCH, pop_ot_cmd(packet_buffer[PKT_CMD]));
-    else if (iaqtouch_enabled()) {
-      if (packet_buffer[PKT_CMD] != CMD_IAQ_CTRL_READY)
-        send_extended_ack(rs_fd, ACK_IAQ_TOUCH, pop_iaqt_cmd(packet_buffer[PKT_CMD]));
-      else {
-        unsigned char *cmd;
-        int size = ref_iaqt_control_cmd(&cmd);
-        send_jandy_command(rs_fd, cmd, size);
-        rem_iaqt_control_cmd(cmd);
-      }
-    }
-
-    return;
-  } 
-
-  // if PDA mode, should we sleep? if not Can only send command to status message on PDA.
-#ifdef AQ_PDA
-  if (_aqconfig_.pda_mode == true) {
-      //pda_programming_thread_check(&_aqualink_data);
-      if (_aqconfig_.pda_sleep_mode && pda_shouldSleep()) {
-        LOG(AQUA_LOG,LOG_DEBUG, "PDA Aqualink daemon in sleep mode\n");
-        return;
-      } else {
-        send_extended_ack(rs_fd, ACK_PDA, pop_aq_cmd(&_aqualink_data));
-      }
-    
-  } else
-#endif 
-  if (_aqualink_data.simulate_panel && in_programming_mode(&_aqualink_data) == false) { 
-    // We are in simlator mode, ack get's complicated now.
-    // If have a command to send, send a normal ack.
-    // If we last message is waiting for an input "SELECT xxxxx", then sent a pause ack
-    // pause ack starts with around 12 ACK_SCREEN_BUSY_DISPLAY acks, then 50  ACK_SCREEN_BUSY acks
-    // if we send a command (ie keypress), the whole count needs to end and go back to sending normal ack.
-    // In code below, it jumps to sending ACK_SCREEN_BUSY, which still seems to work ok.
-    if (_aqualink_data.last_packet_type == CMD_MSG_LONG) {
-      send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
-    } if (strncasecmp(_aqualink_data.last_display_message, "SELECT", 6) != 0) { // Nothing to wait for, send normal ack.
-      send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-      delayAckCnt = 0;
-    } else if (get_aq_cmd_length() > 0) {
-      // Send command and jump directly "busy but can receive message"
-      send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-      delayAckCnt = MAX_BUSY_ACK; // need to test jumping to MAX_BUSY_ACK here
-    } else {
-      LOG(AQUA_LOG,LOG_NOTICE, "Sending display busy due to Simulator mode \n");
-      if (delayAckCnt < MAX_BLOCK_ACK) // block all incomming messages
-        send_extended_ack(rs_fd, ACK_SCREEN_BUSY_BLOCK, pop_aq_cmd(&_aqualink_data));
-      else if (delayAckCnt < MAX_BUSY_ACK) // say we are pausing
-        send_extended_ack(rs_fd, ACK_SCREEN_BUSY, pop_aq_cmd(&_aqualink_data));
-      else // We timed out pause, send normal ack (This should also reset the display message on next message received)
-        send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-
-      delayAckCnt++;
-    }
-  } else {
-    // We are in simulate panel mode, but a thread is active, so ignore simulate panel
-    send_ack(rs_fd, pop_aq_cmd(&_aqualink_data));
-  }
-}
-*/
 unsigned char find_unused_address(unsigned char* packet) {
   static int ID[4] = {0,0,0,0};  // 0=0x08, 1=0x09, 2=0x0A, 3=0x0B
   static unsigned char lastID = 0x00;
@@ -1484,24 +1453,17 @@ unsigned char find_unused_address(unsigned char* packet) {
 
 void main_loop()
 {
-  struct mg_mgr mgr;
   int rs_fd;
   int packet_length;
   unsigned char packet_buffer[AQ_MAXPKTLEN+1];
-  //bool interestedInNextAck = false;
-  //rsDeviceType interestedInNextAck = DRS_NONE;
-  //bool changed = false;
-  //int swg_zero_cnt = 0;
   int i;
   //int delayAckCnt = 0;
   bool got_probe = false;
   bool got_probe_extended = false;
   bool got_probe_rssa = false;
   bool print_once = false;
-  //unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
+  int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
 
-  // NSF need to find a better place to init this.
-  //_aqualink_data.aq_command = 0x00;
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
   _aqualink_data.simulate_panel = false;
   _aqualink_data.active_thread.thread_id = 0;
@@ -1518,7 +1480,6 @@ void main_loop()
   _aqualink_data.swg_led_state = LED_S_UNKNOWN;
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
-  //_aqualink_data.single_device = false;
   _aqualink_data.service_mode_state = OFF;
   _aqualink_data.frz_protect_state = OFF;
   _aqualink_data.battery = OK;
@@ -1542,7 +1503,12 @@ void main_loop()
     _aqualink_data.swg_ppm = 0;
   }
 
-  if (!start_net_services(&mgr, &_aqualink_data))
+  signal(SIGINT, intHandler);
+  signal(SIGTERM, intHandler);
+  signal(SIGQUIT, intHandler);
+  signal(SIGRESTART, intHandler);
+
+  if (!start_net_services(&_aqualink_data))
   {
     LOG(AQUA_LOG,LOG_ERR, "Can not start webserver on port %s.\n", _aqconfig_.socket_port);
     exit(EXIT_FAILURE);
@@ -1550,23 +1516,18 @@ void main_loop()
 
   startPacketLogger();
 
-  signal(SIGINT, intHandler);
-  signal(SIGTERM, intHandler);
-  signal(SIGQUIT, intHandler);
-
   int blank_read = 0;
-  if (_aqconfig_.rs_poll_speed < 0)
-    rs_fd = init_blocking_serial_port(_aqconfig_.serial_port);
-  else if (_aqconfig_.readahead_b4_write)
-    rs_fd = init_readahead_serial_port(_aqconfig_.serial_port);
-  else
-    rs_fd = init_serial_port(_aqconfig_.serial_port);
+
+  rs_fd = init_serial_port(_aqconfig_.serial_port);
 
   if (rs_fd == -1) {
    LOG(AQUA_LOG,LOG_ERR, "Error Aqualink setting serial port: %s\n", _aqconfig_.serial_port);
    exit(EXIT_FAILURE); 
   }
   LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
+
+  if (!serial_blockingmode())
+    blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_NONBLOCKING;
 
 #ifdef AQ_PDA
   if (isPDA_PANEL) {
@@ -1638,12 +1599,13 @@ void main_loop()
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
   while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
   {
-    if (blank_read == MAX_ZERO_READ_BEFORE_RECONNECT) {
+    if (blank_read == blank_read_reconnect) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
-    } else if (blank_read == MAX_ZERO_READ_BEFORE_RECONNECT*2) {
-      LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
-    } else if (blank_read == MAX_ZERO_READ_BEFORE_RECONNECT*3) {
+    } else if (blank_read == blank_read_reconnect*2) {
       LOG(AQUA_LOG,LOG_ERR, "I'm done, exiting, please check '%s'\n",_aqconfig_.serial_port);
+      stopPacketLogger();
+      close_serial_port(rs_fd);
+      stop_net_services();
       return;
     }
 /*
@@ -1702,11 +1664,15 @@ void main_loop()
 #endif
     else if (packet_length <= 0) {
       blank_read++;
-      //printf("Blank Reads %d\n",blank_read);
+#ifdef AQ_NO_THREAD_NETSERVICE
       if (_aqconfig_.rs_poll_speed < 0)
         LOG(AQUA_LOG,LOG_DEBUG, "Blank RS485 read\n");
       else
         delay(2);
+#else
+      if (serial_blockingmode())
+        LOG(AQUA_LOG,LOG_DEBUG, "Blank RS485 read\n");
+#endif
     }
     else if (packet_length > 0) {
       blank_read = 0;
@@ -1724,8 +1690,7 @@ void main_loop()
 #endif
         stopPacketLogger();
         close_serial_port(rs_fd);
-        //mg_mgr_free(&mgr);
-        stop_net_services(&mgr);
+        stop_net_services();
         return;
       }
     }
@@ -1747,10 +1712,12 @@ void main_loop()
 
   LOG(AQUA_LOG,LOG_NOTICE, "Starting communication with Control Panel\n");
 
-  int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT;
+  
   // Not the best way to do this, but ok for moment
+#ifdef AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.rs_poll_speed == 0)
     blank_read_reconnect = blank_read_reconnect * 50;
+#endif
 
   blank_read = 0;
   // OK, Now go into infinate loop
@@ -1765,55 +1732,45 @@ void main_loop()
         // sleep(1);
         sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
         LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon waiting to connect to master device...\n");
-        broadcast_aqualinkstate_error(mgr.active_connections, CONNECTION_ERROR);
-        //mg_mgr_poll(&mgr, 1000); // Sevice messages
-        //mg_mgr_poll(&mgr, 3000); // should do nothing for 3 seconds.
-        poll_net_services(&mgr, 1000);
-        poll_net_services(&mgr, 3000);
+        _aqualink_data.updated = true;
+        broadcast_aqualinkstate_error(CONNECTION_ERROR);
+#ifdef AQ_NO_THREAD_NETSERVICE
+        poll_net_services(1000);
+        poll_net_services(3000);
+#endif
         // broadcast_aqualinkstate_error(mgr.active_connections, "No connection to RS control panel");
       }
       else
       {
+        sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
         LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon looks like serial error, resetting.\n");
+        _aqualink_data.updated = true;
+        broadcast_aqualinkstate_error(CONNECTION_ERROR);
         close_serial_port(rs_fd);
-
-        if (_aqconfig_.rs_poll_speed < 0)
-          rs_fd = init_blocking_serial_port(_aqconfig_.serial_port);
-        else if (_aqconfig_.readahead_b4_write)
-          rs_fd = init_readahead_serial_port(_aqconfig_.serial_port);
-        else
-          rs_fd = init_serial_port(_aqconfig_.serial_port);
+        rs_fd = init_serial_port(_aqconfig_.serial_port);
       }
 
       blank_read = 0;
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
-    /*
-    if (_aqconfig_.log_raw_RS_bytes)
-      packet_length = get_packet_lograw(rs_fd, packet_buffer);
-    else
-      packet_length = get_packet(rs_fd, packet_buffer);
-    */
-    /*
-    if (packet_length == AQSERR_READ || packet_length == AQSERR_TIMEOUT)
-    {
-      // Unrecoverable read error. Force an attempt to reconnect.
-      if (_aqconfig_.rs_poll_speed < 0) {
-        LOG(AQUA_LOG,LOG_ERR, "Bad serial read or connection\n");
-        blank_read = blank_read_reconnect;
-      } else {
-        blank_read++;
-      }
-    }
-    else*/ 
+
     if (packet_length <= 0)
     {
+#ifdef AQ_NO_THREAD_NETSERVICE
       if (_aqconfig_.rs_poll_speed < 0) {
+#else
+      //if (!_aqconfig_.readahead_b4_write) {
+      if (serial_blockingmode()) {
+#endif
         LOG(AQUA_LOG,LOG_ERR, "Nothing read on blocking serial port\n");
         blank_read = blank_read_reconnect;
-      } else if (packet_length == AQSERR_READ)
+      } else if (packet_length == AQSERR_READ) {
         blank_read = blank_read_reconnect;
+      } else {
+        // In non blocking, so sleep for 2 milliseconds
+        delay(NONBLOCKING_SERIAL_DELAY);
+      }
       //if (blank_read > max_blank_read) {
       //  LOG(AQUA_LOG,LOG_NOTICE, "Nothing read on serial %d\n",blank_read);
       //  max_blank_read = blank_read;
@@ -1834,32 +1791,51 @@ void main_loop()
           logPacketRead(packet_buffer, packet_length);
         }
         
-        _aqualink_data.updated = process_packet(packet_buffer, packet_length);
+        if (!_aqconfig_.prioritize_ack)
+          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
 #ifdef AQ_PDA 
         if (isPDA_PANEL)
           caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
         else
 #endif
           caculate_ack_packet(rs_fd, packet_buffer, ALLBUTTON);
+        
+        if (_aqconfig_.prioritize_ack)
+          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
 
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AllButton Emulation Processed packet in");
       }
       else if (packet_length > 0 && isRSSA_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && getProtocolType(packet_buffer) == JANDY) {
-        _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
-        caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
+        if (_aqconfig_.prioritize_ack) {
+          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
+          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
+        } else {
+          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
+          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
+        }
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"SerialAdapter Emulation Processed packet in");
       }
 #ifdef AQ_ONETOUCH
       else if (packet_length > 0 && isONET_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
-        _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
+        if (_aqconfig_.prioritize_ack) {
+          caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
+          _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
+        } else {
+          _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
+          caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
+        }
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"OneTouch Emulation Processed packet in");
       }
 #endif
 #ifdef AQ_IAQTOUCH
       else if (packet_length > 0 && isIAQT_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
-        _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+        if (_aqconfig_.prioritize_ack) {
+           caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+           _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+        } else {
+          _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+          caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+        }
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation Processed packet in");
       }
 #endif
@@ -1880,19 +1856,17 @@ void main_loop()
         DEBUG_TIMER_CLEAR(_rs_packet_timer); // Clear timer, no need to print anything
       }
 
+#ifdef AQ_NO_THREAD_NETSERVICE
       if (_aqualink_data.updated) {
-        broadcast_aqualinkstate(mgr.active_connections);
-        //_aqualink_data.updated = false;
+        broadcast_aqualinkstate();
       }
+#endif
     }
 
-    //mg_mgr_poll(&mgr, 10);
-    //mg_mgr_poll(&mgr, 5);
-    //mg_mgr_poll(&mgr, packet_length>0?0:_aqconfig_.net_poll_wait); // Don;t wait if we read something.
-    poll_net_services(&mgr, packet_length>0?0:_aqconfig_.rs_poll_speed); // Don;t wait if we read something.
-
-    //tcdrain(rs_fd); // Make sure buffer has been sent.
-    //mg_mgr_poll(&mgr, 0);
+#ifdef AQ_NO_THREAD_NETSERVICE
+    poll_net_services(packet_length>0?0:_aqconfig_.rs_poll_speed); // Don;t wait if we read something.
+#endif
+   // NSF might want to wait if we are on a non blocking serial port.
 
     // Any unactioned commands
     if (_aqualink_data.unactioned.type != NO_ACTION)
@@ -1913,17 +1887,28 @@ void main_loop()
   //if (_aqconfig_.debug_RSProtocol_packets) stopPacketLogger();
   stopPacketLogger();
 
-  // Stop network
-  stop_net_services(&mgr);
+  if (! _restart) { // Stop network if we are not restarting
+     stop_net_services();
+  }
 
   // Reset and close the port.
   close_serial_port(rs_fd);
   // Clear webbrowser
   //mg_mgr_free(&mgr);
 
+  if (! _restart) {
   // NSF need to run through config memory and clean up.
-  LOG(AQUA_LOG,LOG_NOTICE, "Exit!\n");
-  exit(EXIT_FAILURE);
+    LOG(AQUA_LOG,LOG_NOTICE, "Exit!\n");
+    exit(EXIT_FAILURE);
+  } else {
+    LOG(AQUA_LOG,LOG_WARNING, "Waiting for process to fininish!\n");
+    delay(5 * 1000);
+    LOG(AQUA_LOG,LOG_WARNING, "Restarting!\n");
+    _keepRunning = true;
+    _restart = false;
+    startup(_self, _cfgFile);
+  }
+
 }
 
 

@@ -220,7 +220,9 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
   static int cnt=-5;
   cnt++;
   //char buff[1024];
+  
   //LOG(RSSA_LOG,LOG_DEBUG, " Received message\n");
+  //debuglogPacket(RSSA_LOG, packet, length, true);
 
   if (cnt == 0 || cnt >= 250) {
     LOG(RSSA_LOG,LOG_INFO, "Queue device update requests\n");
@@ -276,13 +278,13 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         LOG(RSSA_LOG,LOG_ERR,"Units are Unknown\n");
       }
     } else if (packet[4] == RS_SA_POOLSP) {
-      LOG(RSSA_LOG,LOG_INFO,"Pool SP %d\n", packet[6]);
+      LOG(RSSA_LOG,LOG_INFO,"Pool SP is %d\n", packet[6]);
       aq_data->pool_htr_set_point = (int) packet[6];
     } else if (packet[4] == RS_SA_SPASP) {
-      LOG(RSSA_LOG,LOG_INFO,"Spa SP %d\n", packet[6]);
+      LOG(RSSA_LOG,LOG_INFO,"Spa SP is %d\n", packet[6]);
       aq_data->spa_htr_set_point = (int) packet[6];
     } else if (packet[4] == RS_SA_POOLSP2) {
-      LOG(RSSA_LOG,LOG_INFO,"Spa SP %d\n", packet[6]);
+      LOG(RSSA_LOG,LOG_INFO,"Pool SP2 is %d\n", packet[6]);
       aq_data->spa_htr_set_point = (int) packet[6];
     } else if (packet[4] == 0x03) {
       // These are device status messages 

@@ -15,6 +15,9 @@ AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
+# Turn off threadded net services
+AQ_NO_THREAD_NETSERVICE = false
+
 # Get some system information
 PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
 $(info OS: $(PI_OS_VERSION) )
@@ -80,6 +83,11 @@ endif
 ifeq ($(AQ_MEMCMP), true)
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_MEMCMP
 endif
+
+ifeq ($(AQ_NO_THREAD_NETSERVICE), true)
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_NO_THREAD_NETSERVICE
+endif
+
 
 # Put all flags together.
 CFLAGS = $(GCCFLAGS) $(AQ_FLAGS) $(MGFLAGS)

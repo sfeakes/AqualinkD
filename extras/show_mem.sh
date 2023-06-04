@@ -29,3 +29,6 @@ echo "Pss     " $Pss
 echo "===================";
 echo "Mem     " $Mem
 echo "===================";
+
+ps -p $MYPID -o %cpu,%mem,cmd
+echo "===================";

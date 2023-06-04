@@ -38,7 +38,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.6"
+#define VERSION "serial_logger V1.7"
 
 /*
 typedef enum used {
@@ -83,6 +83,9 @@ bool _playback_file = false;
 
 int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
 
+void broadcast_logs(char *msg){
+  // Do nothing, just for utils.c to work.
+}
 
 void intHandler(int dummy) {
   _keepRunning = false;
@@ -173,6 +176,63 @@ void advance_cursor() {
   pos = (pos+1) % 4;
 }
 
+bool canUseAllB(unsigned char ID) {
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodID[i])
+      return true;
+  }
+  return false;
+}
+bool canUsePDA(unsigned char ID) {
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodPDAID[i])
+      return true;
+  }
+  return false;
+}
+bool canUseONET(unsigned char ID) {
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodONETID[i])
+      return true;
+  }
+  return false;
+}
+bool canUseIQAT(unsigned char ID) {
+  int i;
+  for (i = 0; i < 4; i++) {
+    if (ID == _goodIAQTID[i])
+      return true;
+  }
+  return false;
+}
+bool canUseRSSA(unsigned char ID) {
+  int i;
+  for (i = 0; i < 2; i++) {
+    if (ID == _goodRSSAID[i])
+      return true;
+  }
+  return false;
+}
+
+bool canUse(unsigned char ID) {
+  if (canUseAllB(ID))
+    return true;
+  else if (canUsePDA(ID))
+    return true;
+  else if (canUseONET(ID))
+    return true;
+  else if (canUseIQAT(ID))
+    return true;
+  else if (canUseRSSA(ID))
+    return true;
+
+  return false;
+}
+
+/*
 bool canUse(unsigned char ID) {
   int i;
   for (i = 0; i < 4; i++) {
@@ -197,6 +257,7 @@ bool canUse(unsigned char ID) {
   }
   return false;
 }
+*/
 char* canUseExtended(unsigned char ID) {
   int i;
   for (i = 0; i < 4; i++) {
@@ -628,6 +689,43 @@ int main(int argc, char *argv[]) {
   }
 
   LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
+
+
+  char mainID = 0x00;
+  char rssaID = 0x00;
+  char extID = 0x00; 
+
+  for (i = 0; i < sindex; i++) {
+    if (slog[i].inuse == true)
+      continue;
+    
+    if (canUseAllB(slog[i].ID) && (mainID == 0x00 || canUsePDA(mainID))) 
+      mainID = slog[i].ID;
+    if (canUsePDA(slog[i].ID) && mainID == 0x00) 
+      mainID = slog[i].ID;
+    else if (canUseRSSA(slog[i].ID) && rssaID == 0x00) 
+      rssaID = slog[i].ID;
+    else if (canUseONET(slog[i].ID) && extID == 0x00) 
+      extID = slog[i].ID;
+    else if (canUseIQAT(slog[i].ID) && (extID == 0x00 || canUseONET(extID))) 
+      extID = slog[i].ID;
+    
+  }
+  printf("Suggested aqualinkd.conf values\n");
+  printf("-------------------------\n");
+  if (strlen (_panelType) > 0)
+    printf("panel_type = %s\n",_panelType);
+
+  if (mainID != 0x00)
+    printf("device_id = 0x%02hhx\n",mainID);
+
+  if (rssaID != 0x00)
+    printf("rssa_device_id = 0x%02hhx\n",rssaID);
+
+  if (extID != 0x00)
+    printf("extended_device_id = 0x%02hhx\n",extID);
+
+  printf("-------------------------\n");
 
   return 0;
 }

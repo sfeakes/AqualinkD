@@ -123,6 +123,7 @@ void init_parameters (struct aqconfig * parms)
   parms->use_panel_aux_labels = false;
   
   parms->force_swg = false;
+  parms->force_ps_setpoints = false;
   //parms->swg_pool_and_spa = false;
   parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
@@ -134,10 +135,15 @@ void init_parameters (struct aqconfig * parms)
 
   // Default parameters for threading and USB blocking 
   parms->readahead_b4_write = false;
+
+#ifdef AQ_NO_THREAD_NETSERVICE
   parms->rs_poll_speed = DEFAULT_POLL_SPEED;
   parms->thread_netservices = true;
+#endif
 
   parms->enable_scheduler = true;
+  parms->ftdi_low_latency = true;
+  parms->prioritize_ack = true;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -545,8 +551,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;
-    } else if (strncasecmp (param, "force_SWG", 9) == 0) {
+  } else if (strncasecmp (param, "force_SWG", 9) == 0) {
     _aqconfig_.force_swg = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "force_ps_setpoints", 18) == 0) {
+    _aqconfig_.force_ps_setpoints = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
     _aqconfig_.log_raw_bytes = text2bool(value);
@@ -569,6 +578,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "keep_paneltime_synced", 21) == 0) {
     _aqconfig_.sync_panel_time = text2bool(value);
     rtn=true;
+#ifdef AQ_NO_THREAD_NETSERVICE
   } else if (strncasecmp (param, "network_poll_speed", 18) == 0) {
     LOG(AQUA_LOG,LOG_WARNING, "Config error, 'network_poll_speed' is no longer supported, using value for 'rs_poll_speed'\n");
     _aqconfig_.rs_poll_speed = strtoul(value, NULL, 10);
@@ -579,12 +589,17 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "thread_netservices", 18) == 0) {
     _aqconfig_.thread_netservices = text2bool(value);
     rtn=true;
+#endif
   } else if (strncasecmp (param, "enable_scheduler", 16) == 0) {
     _aqconfig_.enable_scheduler = text2bool(value);
     rtn=true;
-  }
-  
-  
+  } else if (strncasecmp (param, "ftdi_low_latency", 16) == 0) {
+    _aqconfig_.ftdi_low_latency = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "prioritize_ack", 14) == 0) {
+    _aqconfig_.prioritize_ack = text2bool(value);
+    rtn=true;
+  }  
   else if (strncasecmp(param, "button_", 7) == 0) {
     // Check we have inichalized panel information, if not use any settings we may have
     if (_aqconfig_.paneltype_mask == 0)

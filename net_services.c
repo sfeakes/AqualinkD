@@ -54,6 +54,9 @@
 static struct aqualinkdata *_aqualink_data;
 //static char *_web_root;
 
+static pthread_t _net_thread_id = 0;
+static bool _keepNetServicesRunning = false;
+static struct mg_mgr _mgr;
 static int _mqtt_exit_flag = false;
 
 
@@ -71,21 +74,26 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc);
 
 void reset_last_mqtt_status();
 
-
-
-
-static sig_atomic_t s_signal_received = 0;
 //static const char *s_http_port = "8080";
 static struct mg_serve_http_opts _http_server_opts;
 
-static void net_signal_handler(int sig_num) {
 
+#ifdef AQ_NO_THREAD_NETSERVICE
+  static sig_atomic_t s_signal_received = 0;
+#endif
+
+static void net_signal_handler(int sig_num) {
+  //printf("** net_signal_handler **\n");
+#ifdef AQ_NO_THREAD_NETSERVICE
   if (!_aqconfig_.thread_netservices) {
     signal(sig_num, net_signal_handler);  // Reinstantiate signal handler to aqualinkd.c
     s_signal_received = sig_num;
   } else {  
     intHandler(sig_num); // Force signal handler to aqualinkd.c
   }
+#else
+  intHandler(sig_num); // Force signal handler to aqualinkd.c
+#endif
 }
 
 
@@ -99,7 +107,12 @@ static void set_websocket_simulator(struct mg_connection *nc) {
 static int is_websocket_simulator(const struct mg_connection *nc) {
   return nc->flags & MG_F_USER_2;
 }
-
+static void set_websocket_aqmanager(struct mg_connection *nc) {
+  nc->flags |= MG_F_USER_3; 
+}
+static int is_websocket_aqmanager(const struct mg_connection *nc) {
+  return nc->flags & MG_F_USER_3;
+}
 static int is_mqtt(const struct mg_connection *nc) {
   return nc->flags & MG_F_USER_1;
 }
@@ -127,6 +140,32 @@ void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
       ws_send(c, data);
   }
   // Maybe enhacment in future to sent error messages to MQTT
+}
+
+// Send log message to any aqManager websocket.
+void _broadcast_logs(struct mg_connection *nc, char *msg) {
+  
+  char message[LOGBUFFER];
+  struct mg_connection *c;
+
+  for (c = mg_next(nc->mgr, NULL); c != NULL; c = mg_next(nc->mgr, c)) {
+    if (is_websocket(c) && is_websocket_aqmanager(c)) {
+      build_logmsg_JSON(message, msg, LOGBUFFER, strlen(msg));
+      ws_send(c, message);
+    }
+  }
+}
+
+void broadcast_logs(char *msg) {
+  // NSF This causes mongoose to core dump after a period of time due to number of messages
+  // so remove until get time to update to new mongoose version.
+  return;
+
+   // See if we have and manager runnig first so we return ASAP.
+   // Since this get's galled long before net_Services is started, also check we are running.
+  if (_keepNetServicesRunning && _net_thread_id != 0 && _aqualink_data->aqManagerActive)
+    _broadcast_logs(_mgr.active_connections, msg);
+  
 }
 
 void _broadcast_aqualinkstate(struct mg_connection *nc) 
@@ -661,7 +700,7 @@ void set_light_mode(char *value, int button)
 }
 */
 
-typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules} uriAtype;
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager} uriAtype;
 //typedef enum {NET_MQTT=0, NET_API, NET_WS, DZ_MQTT} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS", "DZ"};
 
@@ -817,6 +856,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   char *ri1 = (char *)URI;
   char *ri2 = NULL;
   char *ri3 = NULL;
+  //char *ri4 = NULL;
 
   LOG(NET_LOG,LOG_DEBUG, "%s: URI Request '%.*s': value %.2f\n", actionName[from], uri_length, URI, value);
 
@@ -828,7 +868,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       } else if (ri3 == NULL) {
         ri3 = (char *)&URI[++i];
         break;
-      }
+      } /*else if (ri4 == NULL) {
+        ri4 = (char *)&URI[++i];
+        break;
+      }*/
     }
   }
 
@@ -848,6 +891,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     return uSchedules;
   } else if (strncmp(ri1, "simulator", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uSimulator;
+  } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
+    return uAQmanager;
   } else if (strncmp(ri1, "rawcommand", 10) == 0 && from == NET_WS) { // Only valid from websocket.
     aq_send_cmd((unsigned char)value);
     return uActioned;
@@ -868,6 +913,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     }
     return uDebugStatus;
 // couple of debug items for testing 
+  } else if (strncmp(ri1, "restart", 13) == 0) {
+    LOG(NET_LOG,LOG_NOTICE, "Received restart request!\n");
+    raise(SIGRESTART);
+    return uActioned;
   } else if (strncmp(ri1, "set_date_time", 13) == 0) {
     //aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
     panel_device_request(_aqualink_data, DATE_TIME, 0, 0, from);
@@ -1051,6 +1100,21 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       rtn = uBad;
     } else {
       rtn = uActioned;
+    }
+  } else if ((ri3 != NULL && (strncmp(ri1, "CHEM", 4) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
+  //aqualinkd/CHEM/pH/set
+  //aqualinkd/CHEM/ORP/set
+    if ( strncasecmp(ri2, "ORP", 3) == 0 ) {
+      _aqualink_data->orp = round(value);
+      rtn = uActioned;
+      LOG(NET_LOG,LOG_NOTICE, "%s: request to set ORP to %d\n",actionName[from],_aqualink_data->orp);
+    } else if ( strncasecmp(ri2, "Ph", 2) == 0 ) {
+      _aqualink_data->ph = value;
+      rtn = uActioned;
+      LOG(NET_LOG,LOG_NOTICE, "%s: request to set Ph to %.2f\n",actionName[from],_aqualink_data->ph);
+    } else {
+      LOG(NET_LOG,LOG_WARNING,"%s: ignoring, unknown URI %.*s\n",actionName[from],uri_length,URI);
+      rtn = uBad;
     }
   // Action a Turn on / off message
   } else if ( (ri2 != NULL && (strncasecmp(ri2, "set", 3) == 0) && (strncasecmp(ri2, "setpoint", 8) != 0)) ||
@@ -1417,6 +1481,18 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, message);
     }
     break;
+    case uAQmanager:
+    {
+      LOG(NET_LOG,LOG_DEBUG, "Started AqualinkD Manager\n");
+      set_websocket_aqmanager(nc);
+      _aqualink_data->aqManagerActive = true;
+      DEBUG_TIMER_START(&tid);
+      char message[JSON_BUFFER_SIZE];
+      build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE); // Should change this to simulator.
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() build_aqualink_status_JSON took");
+      ws_send(nc, message);
+    }
+    break;
     case uSchedules:
     {
       DEBUG_TIMER_START(&tid);
@@ -1537,6 +1613,9 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       if (is_websocket_simulator(nc)) {
         _aqualink_data->simulate_panel = false;
         LOG(NET_LOG,LOG_DEBUG, "Stoped Simulator Mode\n");
+      } else if (is_websocket_aqmanager(nc)) {
+        _aqualink_data->aqManagerActive = false;
+        LOG(NET_LOG,LOG_DEBUG, "Stoped Aqualink Manager\n");
       }
     } else if (is_mqtt(nc)) {
       LOG(NET_LOG,LOG_WARNING, "MQTT Connection closed\n");
@@ -1649,9 +1728,15 @@ void reset_last_mqtt_status()
   //_last_mqtt_aqualinkdata.sw .ar_swg_device_status = SWG_STATUS_UNKNOWN;
   _last_mqtt_aqualinkdata.battery = -1;
   _last_mqtt_aqualinkdata.frz_protect_state = -1;
-  _last_mqtt_aqualinkdata.boost = -1;
   _last_mqtt_aqualinkdata.service_mode_state = -1;
-  
+  _last_mqtt_aqualinkdata.pool_htr_set_point = TEMP_REFRESH;
+  _last_mqtt_aqualinkdata.spa_htr_set_point = TEMP_REFRESH;
+  _last_mqtt_aqualinkdata.ph = -1;
+  _last_mqtt_aqualinkdata.orp = -1;
+  _last_mqtt_aqualinkdata.boost = -1;
+  _last_mqtt_aqualinkdata.swg_percent = -1;
+  _last_mqtt_aqualinkdata.swg_ppm = -1;
+
 }
 
 void start_mqtt(struct mg_mgr *mgr) {
@@ -1681,6 +1766,7 @@ bool _start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
  
   signal(SIGTERM, net_signal_handler);
   signal(SIGINT, net_signal_handler);
+  signal(SIGRESTART, net_signal_handler);
   setvbuf(stdout, NULL, _IOLBF, 0);
   setvbuf(stderr, NULL, _IOLBF, 0);
   
@@ -1722,17 +1808,14 @@ bool _start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
  * 
 */
 
-
-pthread_t _net_thread_id;
-bool _keepNetServicesRunning = true;
 //volatile bool _broadcast = false; // This is redundent when most the fully threadded rather than option.
 
 void *net_services_thread( void *ptr )
 {
   struct aqualinkdata *aqdata = (struct aqualinkdata *) ptr;
-  struct mg_mgr mgr;
+  //struct mg_mgr mgr;
 
-  if (!_start_net_services(&mgr, aqdata)) {
+  if (!_start_net_services(&_mgr, aqdata)) {
     //LOG(NET_LOG,LOG_ERR, "Failed to start network services\n");
     // Not the best way to do this (have thread exit process), but forks for the moment.
     _keepNetServicesRunning = false;
@@ -1743,12 +1826,12 @@ void *net_services_thread( void *ptr )
 
   while (_keepNetServicesRunning == true)
   {
-    //poll_net_services(&mgr, 10);
-    mg_mgr_poll(&mgr, 100);
+    //poll_net_services(&_mgr, 10);
+    mg_mgr_poll(&_mgr, 100);
 
     if (aqdata->updated == true /*|| _broadcast == true*/) {
       //LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
-      _broadcast_aqualinkstate(mgr.active_connections);
+      _broadcast_aqualinkstate(_mgr.active_connections);
       aqdata->updated = false;
       //_broadcast = false;
     }
@@ -1756,15 +1839,100 @@ void *net_services_thread( void *ptr )
 
 f_end:
   LOG(NET_LOG,LOG_NOTICE, "Stopping network services thread\n");
-  mg_mgr_free(&mgr);
+  mg_mgr_free(&_mgr);
 
   pthread_exit(0);
 }
 
-bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) 
+
+
+
+#ifndef AQ_NO_THREAD_NETSERVICE
+
+
+void broadcast_aqualinkstate() {
+  _aqualink_data->updated = true;
+}
+void broadcast_aqualinkstate_error(char *msg) {
+  _broadcast_aqualinkstate_error(_mgr.active_connections, msg);
+}
+
+void stop_net_services() {
+  _keepNetServicesRunning = false;
+  return;
+}
+
+bool start_net_services(struct aqualinkdata *aqdata) 
+{
+  // Not the best way to see if we are running, but works for now.
+  if (_net_thread_id != 0 && _keepNetServicesRunning) {
+    LOG(NET_LOG,LOG_NOTICE, "Network services thread is already running, not starting\n");
+    return true;
+  }
+
+  _keepNetServicesRunning = true;
+
+  LOG(NET_LOG,LOG_NOTICE, "Starting network services thread\n");
+
+  if( pthread_create( &_net_thread_id , NULL ,  net_services_thread, (void*)aqdata) < 0) {
+    LOG(NET_LOG, LOG_ERR, "could not create network thread\n");
+    return false;
+  }
+
+  pthread_detach(_net_thread_id);
+
+  return true;
+}
+
+#else // DON'T THREAD NET SERVICES
+
+void stop_net_services() {
+  if ( ! _aqconfig_.thread_netservices) {
+    mg_mgr_free(&_mgr);
+    return;
+  }
+}
+void broadcast_aqualinkstate(/*struct mg_connection *nc*/)
 {
   if ( ! _aqconfig_.thread_netservices) {
-    return _start_net_services(mgr, aqdata);
+    _broadcast_aqualinkstate(_mgr.active_connections);
+    _aqualink_data->updated = false;
+    return;
+  }
+}
+void broadcast_aqualinkstate_error(/*struct mg_connection *nc,*/ char *msg)
+{
+  if ( ! _aqconfig_.thread_netservices) {
+    return _broadcast_aqualinkstate_error(_mgr.active_connections, msg);
+  }
+  LOG(NET_LOG,LOG_NOTICE, "Broadcast error to network\n");
+}
+time_t poll_net_services(/*struct mg_mgr *mgr,*/ int timeout_ms) 
+{
+  if (timeout_ms < 0)
+    timeout_ms = 0;
+
+  if ( ! _aqconfig_.thread_netservices) {
+    //return mg_mgr_poll(mgr, timeout_ms);
+    return mg_mgr_poll(&_mgr, timeout_ms);
+  }
+  
+  if (timeout_ms > 5)
+    delay(5);
+  else if (timeout_ms > 0)
+    delay(timeout_ms);
+
+  //LOG(NET_LOG,LOG_NOTICE, "Poll network services\n");
+
+  return 0;
+}
+bool start_net_services(/*struct mg_mgr *mgr, */struct aqualinkdata *aqdata) 
+{
+  _keepNetServicesRunning = true;
+
+  if ( ! _aqconfig_.thread_netservices) {
+    //return _start_net_services(mgr, aqdata);
+    return _start_net_services(&_mgr, aqdata);
   }
   
   LOG(NET_LOG,LOG_NOTICE, "Starting network services thread\n");
@@ -1779,56 +1947,8 @@ bool start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata)
   return true;
 }
 
-time_t poll_net_services(struct mg_mgr *mgr, int timeout_ms) 
-{
-  if (timeout_ms < 0)
-    timeout_ms = 0;
+#endif
 
-  if ( ! _aqconfig_.thread_netservices) {
-    return mg_mgr_poll(mgr, timeout_ms);
-  }
-  
-  if (timeout_ms > 5)
-    delay(5);
-  else if (timeout_ms > 0)
-    delay(timeout_ms);
-
-  //LOG(NET_LOG,LOG_NOTICE, "Poll network services\n");
-
-  return 0;
-}
-
-void broadcast_aqualinkstate(struct mg_connection *nc)
-{
-  if ( ! _aqconfig_.thread_netservices) {
-    _broadcast_aqualinkstate(nc);
-    _aqualink_data->updated = false;
-    return;
-  }
-  //_broadcast = true;
-  //LOG(NET_LOG,LOG_NOTICE, "Broadcast status to network\n");
-}
-
-void broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
-{
-  if ( ! _aqconfig_.thread_netservices) {
-    return _broadcast_aqualinkstate_error(nc, msg);
-  }
-  
-  LOG(NET_LOG,LOG_NOTICE, "Broadcast error to network\n");
-}
-
-void stop_net_services(struct mg_mgr *mgr) {
-
-  if ( ! _aqconfig_.thread_netservices) {
-    mg_mgr_free(mgr);
-    return;
-  }
-
-  _keepNetServicesRunning = false;
-
-  return;
-}
 
 
 

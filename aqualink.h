@@ -9,8 +9,14 @@
 #include "aq_programmer.h"
 //#include "aq_panel.h"  // Moved to later in file to overcome circular dependancy. (crappy I know)
 
-#define DEFAULT_POLL_SPEED -1
-#define DEFAULT_POLL_SPEED_NON_THREADDED 2
+
+#define SIGRESTART SIGUSR1 
+
+#ifdef AQ_NO_THREAD_NETSERVICE
+  #define DEFAULT_POLL_SPEED -1
+  #define DEFAULT_POLL_SPEED_NON_THREADDED 2
+#endif
+
 
 #define TIME_CHECK_INTERVAL  3600
 //#define TIME_CHECK_INTERVAL  100 // DEBUG ONLY
@@ -20,7 +26,10 @@
 //#define TIME_CHECK_INTERVAL  100
 //#define ACCEPTABLE_TIME_DIFF 10
 
-#define MAX_ZERO_READ_BEFORE_RECONNECT 20000 // 2k normally
+#define MAX_ZERO_READ_BEFORE_RECONNECT_NONBLOCKING 100000 // 10k normally
+#define MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING (25 / (SERIAL_BLOCKING_TIME / 10) ) // Want this to be 25 seconds, so it's depdand on how long the serial blocking is
+// Time in ms to delay between read requests in non blocking serial port.  Have to set something to stop CPU spiking.
+#define NONBLOCKING_SERIAL_DELAY 2
 
 // The below will change state of devices before that are actually set on the control panel, this helps
 // with duplicate messages that come in quick succession that can catch the state before it happens.
@@ -217,6 +226,7 @@ struct aqualinkdata
   unsigned char last_packet_type;
   int swg_delayed_percent;
   bool simulate_panel;
+  bool aqManagerActive;
   int open_websockets;
   struct programmingthread active_thread;
   struct action unactioned;

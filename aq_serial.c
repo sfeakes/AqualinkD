@@ -23,12 +23,27 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <stdbool.h>
+// Below is needed to set low latency.
+#include <linux/serial.h>
 
 #include "aq_serial.h"
 #include "utils.h"
 #include "config.h"
 #include "packetLogger.h"
 
+/*
+Notes for serial usb speed 
+
+File should exist if using ftdi chip, ie ftdi_sio driver.
+/sys/bus/usb-serial/devices/ttyUSB0/latency_timer
+Set to 1 for fastest latency.
+
+Can also be set in code
+ioctl(fd, TIOCGSERIAL, &serial);
+serial.flags |= ASYNC_LOW_LATENCY;
+ioctl(fd, TIOCSSERIAL, &serial);
+
+*/
 
 //#define BLOCKING_MODE
 
@@ -303,7 +318,20 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead);
 
 int init_serial_port(const char* tty)
 {
-  return _init_serial_port(tty, false, false);
+#ifdef AQ_NO_THREAD_NETSERVICE
+  if (_aqconfig_.rs_poll_speed < 0)
+    return init_blocking_serial_port(_aqconfig_.serial_port);
+  else if (_aqconfig_.readahead_b4_write)
+    return init_readahead_serial_port(_aqconfig_.serial_port);
+  else
+    return init_serial_port(_aqconfig_.serial_port);
+#else
+  if (_aqconfig_.readahead_b4_write)
+    return init_readahead_serial_port(_aqconfig_.serial_port);
+  else
+    return init_blocking_serial_port(_aqconfig_.serial_port);
+#endif
+  
 }
 int init_readahead_serial_port(const char* tty)
 {
@@ -313,6 +341,31 @@ int init_blocking_serial_port(const char* tty)
 {
   _blocking_fds = _init_serial_port(tty, true, false);
   return _blocking_fds;
+}
+
+
+
+
+int set_port_low_latency(int fd, const char* tty)
+{
+
+  struct serial_struct serial;
+
+  if (ioctl (fd, TIOCGSERIAL, &serial) < 0) {
+    LOG(RSSD_LOG,LOG_WARNING, "Doesn't look like your USB2RS485 device (%s) supports low latency, this might cause problems on a busy RS485 bus (%d): %s\n ", tty,errno, strerror( errno ));
+    //LOG(RSSD_LOG,LOG_WARNING, "Error reading low latency mode for port %s (%d): %s\n",  tty, errno, strerror( errno ));
+    return -1;
+  }
+
+  LOG(RSSD_LOG,LOG_NOTICE, "Port %s low latency mode is %s\n", tty, (serial.flags & ASYNC_LOW_LATENCY) ? "set" : "NOT set, resetting to low latency!");
+  serial.flags |= ASYNC_LOW_LATENCY;
+
+  if (ioctl (fd, TIOCSSERIAL, &serial) < 0) {
+		LOG(RSSD_LOG,LOG_ERR, "Unable to set port %s to low latency mode (%d): %s\n", tty, errno, strerror( errno ));
+    return -1;
+	}
+
+  return 0;
 }
 
 // https://www.cmrr.umn.edu/~strupp/serial.html#2_5_2
@@ -343,6 +396,9 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
     return -1;
   }
 
+  if (_aqconfig_.ftdi_low_latency)
+    set_port_low_latency(fd, tty);
+
   memcpy(&_oldtio, &newtio, sizeof(struct termios));
 
   cfsetospeed(&newtio, BAUD);
@@ -360,8 +416,10 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
   if (_blocking_mode) {
     fcntl(fd, F_SETFL, 0);     //efficient blocking for the read
     //newtio.c_cc[VMIN] = 1;     // read blocks for 1 character or timeout below
-    //newtio.c_cc[VTIME] = 5;    // 0.5 seconds read timeout
-    newtio.c_cc[VTIME] = 255;  // 25 seconds read timeout
+    //newtio.c_cc[VTIME] = 0;    // 0.5 seconds read timeout
+    //newtio.c_cc[VTIME] = 255;  // 25 seconds read timeout
+    //newtio.c_cc[VTIME] = 10;  // (1 to 255)  1 = 0.1 sec, 255 = 25.5 sec
+    newtio.c_cc[VTIME] = SERIAL_BLOCKING_TIME;
     newtio.c_cc[VMIN] = 0;    
   } else {
     newtio.c_cc[VMIN]= 0;   // read doesn't block
@@ -390,7 +448,7 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
     return -1;
   }
 
-  LOG(RSSD_LOG,LOG_INFO, "Set serial port %s io %s attributes\n",tty,_blocking_mode?"blocking":"non blocking");
+  LOG(RSSD_LOG,LOG_INFO, "Set serial port %s I/O %s attributes\n",tty,_blocking_mode?"blocking":"non blocking");
 
   return fd;
 }
@@ -465,6 +523,11 @@ void close_serial_port(int fd)
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Closed serial port\n");
+}
+
+bool serial_blockingmode()
+{
+  return _blocking_mode;
 }
 
 
@@ -749,11 +812,12 @@ int get_packet(int fd, unsigned char* packet)
 
 
   while (!endOfPacket) {
+//printf("READ SERIAL\n");
     bytesRead = read(fd, &byte, 1);
 //printf("Read %d 0x%02hhx err=%d fd=%d\n",bytesRead,byte,errno,fd);
     //if (bytesRead < 0 && errno == EAGAIN && packetStarted == FALSE && lastByteDLE == FALSE) {
     //if (bytesRead < 0 && (errno == EAGAIN || errno == 0) && 
-    if (bytesRead <= 0 && (errno == EAGAIN || errno == 0) ) {
+    if (bytesRead <= 0 && (errno == EAGAIN || errno == 0 || errno == ENOTTY) ) { // We also get ENOTTY on some non FTDI adapters
       if (_blocking_mode) {
          // Something is wrong wrong
         return AQSERR_TIMEOUT;

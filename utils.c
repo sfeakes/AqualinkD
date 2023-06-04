@@ -14,6 +14,7 @@
  *  https://github.com/sfeakes/aqualinkd
  */
 
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -39,11 +40,13 @@
 
 #include "utils.h"
 
-
 #define DEFAULT_LOG_FILE "/tmp/aqualinkd-inline.log"
 //#define MAXCFGLINE 265
 #define TIMESTAMP_LENGTH 30
 
+// Since this get's compiled without net_services for serial_logger
+// pre-define this here rather than include netservices.h
+void broadcast_logs(char *msg);
 
 static bool _daemonise = false;
 static bool _log2file = false;
@@ -431,7 +434,7 @@ void logMessage(int msg_level, const char *format, ...)
   _LOG(AQUA_LOG, msg_level, buffer);
 }
 */
-#define LOGBUFFER 1024
+
 
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
@@ -509,10 +512,13 @@ void _LOG(int16_t from, int msg_level,  char *message)
   }
   */
 
+  // Send logs to any websocket that's interested.
+  broadcast_logs(message);
+
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
     snprintf(_loq_display_message, 127, "%s\n",message);
-  } 
+  }
 
   if (_log2file == TRUE && _log_filename != NULL) {   
     char time[TIMESTAMP_LENGTH];

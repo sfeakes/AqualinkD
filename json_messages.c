@@ -31,7 +31,7 @@
 #include "devices_jandy.h"
 #include "version.h"
 #include "aq_timer.h"
-
+#include "aq_programmer.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -41,7 +41,50 @@
 //{"type": "aux_labels","Pool Pump": "Pool Pump","Spa Mode": "Spa Mode","Cleaner": "Aux 1","Waterfall": "Aux 2","Spa Blower": "Aux 2","Pool Light": "Aux 4","Spa Light ": "Aux 5","Aux 6": "Aux 6","Aux 7": "Aux 7","Heater": "Heater","Heater": "Heater","Solar Heater": "Solar Heater","(null)": "(null)"}
 
 //SPA WILL TURN OFF AFTER COOL DOWN CYCLE
-#include "aq_programmer.h"
+
+
+
+
+int json_chars(char *dest, const char *src, int dest_len, int src_len)
+{
+  int i;
+  int end = dest_len < src_len ? dest_len:src_len;
+  for(i=0; i < end; i++) {
+    if ( (src[i] < 32 || src[i] > 126) || 
+          src[i] == 123 || // {
+          src[i] == 125 || // }
+          src[i] == 34 || // "
+          src[i] == 92 // backslash
+       ) // only printable chars
+      dest[i] = ' ';
+    else
+      dest[i] = src[i];
+  }
+
+  i--;
+  while (dest[i] == ' ')
+    i--;
+
+  if (dest[i] != '\0') {
+    if (i < (dest_len-1))
+      i++;
+
+    dest[i] = '\0';
+  }
+
+  return i;
+}
+
+int build_logmsg_JSON(char *dest, const char *src, int dest_len, int src_len)
+{
+  int length = sprintf(dest, "{\"logmsg\":\"");
+  length += json_chars(dest+length, src, (dest_len-20), src_len);
+  length += sprintf(dest+length, "\"}");
+  dest[length] = '\n';
+  dest[length+1] = '\0';
+
+  return length;
+}
 
 const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
 {
@@ -57,6 +100,7 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return JSON_TIMEOUT;
   }
 
+  // NSF should probably use json_chars here.
   if (aqdata->last_display_message[0] != '\0') {
     int i;
     for(i=0; i < strlen(aqdata->last_display_message); i++ ) {
@@ -239,7 +283,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   
   for (i=0; i < aqdata->total_buttons; i++) 
   {
-    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && aqdata->pool_htr_set_point != TEMP_UNKNOWN) {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (_aqconfig_.force_ps_setpoints || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) {
       length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\", \"timer_active\":\"%s\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,
@@ -252,7 +296,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                      LED2int(aqdata->aqbuttons[i].led->state),
                                      ((aqdata->aqbuttons[i].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE?JSON_ON:JSON_OFF) );
 
-    } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && aqdata->spa_htr_set_point != TEMP_UNKNOWN) {
+    } else if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (_aqconfig_.force_ps_setpoints || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) {
       length += sprintf(buffer+length, "{\"type\": \"setpoint_thermo\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\", \"timer_active\":\"%s\" },",
                                      aqdata->aqbuttons[i].name, 
                                      aqdata->aqbuttons[i].label,

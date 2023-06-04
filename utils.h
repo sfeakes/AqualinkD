@@ -17,6 +17,8 @@
   #define FALSE 0
 #endif
 
+#define LOGBUFFER 1024
+
 #define MAXLEN 256
 
 //#define round(a) (int) (a+0.5) // 0 decimal places (doesn't work for negative numbers)

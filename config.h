@@ -73,6 +73,7 @@ struct aqconfig
   uint8_t read_RS485_devmask;
   bool use_panel_aux_labels;
   bool force_swg;
+  bool force_ps_setpoints;
   int swg_zero_ignore;
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
@@ -82,9 +83,13 @@ struct aqconfig
   bool readahead_b4_write;
   bool mqtt_timed_update;
   bool sync_panel_time;
-  int rs_poll_speed;
-  bool thread_netservices;
   bool enable_scheduler;
+  bool ftdi_low_latency;
+  bool prioritize_ack;
+#ifdef AQ_NO_THREAD_NETSERVICE
+  int rs_poll_speed; // Need to remove
+  bool thread_netservices; // Need to remove
+#endif
 };
 
 #ifndef CONFIG_C
