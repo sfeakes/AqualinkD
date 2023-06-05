@@ -642,6 +642,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
 //bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, int subIndex, bool fromMQTT)
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source)
 {
+  //LOG(AQUA_LOG,LOG_NOTICE, "Device request type %d for deviceindex %d of value %d from %d\n",type,deviceIndex, value, source);
   switch (type) {
     case ON_OFF:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], value<=0?false:true, deviceIndex );

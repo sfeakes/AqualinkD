@@ -119,7 +119,7 @@ unsigned char pop_ot_cmd(unsigned char receive_type)
 */
 bool push_aq_cmd(unsigned char cmd) {
   
-  //LOG(PROG_LOG, LOG_DEBUG, "push_aq_cmd '0x%02hhx'\n", cmd);
+  //LOG(PROG_LOG, LOG_NOTICE, "push_aq_cmd '0x%02hhx'\n", cmd);
 
   if (_stack_place < MAX_STACK) {
     _commands[_stack_place] = cmd;
@@ -174,6 +174,7 @@ unsigned char pop_aq_cmd(struct aqualinkdata *aq_data)
     cmd = _commands[0];
     _stack_place--;
     LOG(PROG_LOG, LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx'\n", cmd);
+    //LOG(PROG_LOG, LOG_NOTICE, "pop_cmd '0x%02hhx'\n", cmd);
     memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _stack_place ) ;
   } else {
     LOG(PROG_LOG, LOG_DEBUG_SERIAL, "RS SEND cmd '0x%02hhx'\n", cmd);

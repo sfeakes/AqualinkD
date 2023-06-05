@@ -1242,11 +1242,13 @@ float pass_mg_body(struct mg_str *body) {
         // Need to copy to buffer so we can terminate correctly.
         strncpy(buf, &body->p[i], body->len - i);
         buf[body->len - i] = '\0';
+        //printf ("RETURN\n");
         //return atof(&body->p[i]);
         return atof(buf);
       }
     }
   }
+  //printf ("RETURN UNKNOWN\n");
   return TEMP_UNKNOWN;
 }
 

@@ -49,7 +49,7 @@ DBGFLAGS = -g -O0 -Wall -D AQ_DEBUG -D AQ_TM_DEBUG
 
 # Mongoose flags
 MGFLAGS = -D MG_DISABLE_MD5 -D MG_DISABLE_HTTP_DIGEST_AUTH -D MG_DISABLE_MD5 -D MG_DISABLE_JSON_RPC
-
+#MGFLAGS = 
 
 # define the C source files
 #SRCS = aqualinkd.c utils.c config.c aq_serial.c init_buttons.c aq_programmer.c net_services.c json_messages.c pda.c pda_menu.c \

@@ -143,7 +143,7 @@ void init_parameters (struct aqconfig * parms)
 
   parms->enable_scheduler = true;
   parms->ftdi_low_latency = true;
-  parms->prioritize_ack = true;
+  parms->prioritize_ack = false;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
