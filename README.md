@@ -77,6 +77,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 # ToDo (future release)
 * Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
 * Add set time to OneTouch protocol.
+* Publish AqualinkD Management console. (Configure, Restart, run serial_logger) within AqualinkD.
 
 # Update in Release 2.3.1
 * Changed a lot of logic around different protocols.
