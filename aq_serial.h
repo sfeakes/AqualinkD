@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
+#define CONNECTION_RUNNING_SLOG "Running serial_logger, this will take some time"
 
 
 #define SERIAL_BLOCKING_TIME 50 // (1 to 255) in 1/10th second so 1 = 0.1 sec, 255 = 25.5 sec
