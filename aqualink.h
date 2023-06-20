@@ -233,6 +233,7 @@ struct aqualinkdata
   unsigned char raw_status[AQ_PSTLEN];
   // Multiple threads update this value.
   volatile bool updated;
+  volatile bool run_slogger;
 
   #ifdef AQ_RS16
   int rs16_vbutton_start;

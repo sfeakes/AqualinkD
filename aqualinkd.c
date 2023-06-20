@@ -51,6 +51,7 @@
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
 #include "debug_timer.h"
+#include "serial_logger.h"
 
 /*
 #if defined AQ_DEBUG || defined AQ_TM_DEBUG
@@ -648,7 +649,7 @@ void _processMessage(char *message, bool reset)
     }
     */
   }
-  else if (strstr(msg, " REV ") != NULL)
+  else if (strstr(msg, " REV ") != NULL || strstr(msg, " REV. ") != NULL)
   { // '8157 REV MMM'
     // A master firmware revision message.
     strcpy(_aqualink_data.version, msg);
@@ -1763,6 +1764,13 @@ void main_loop()
       }
 
       blank_read = 0;
+    }
+
+    if (_aqualink_data.run_slogger) {
+       LOG(AQUA_LOG,LOG_WARNING, "Starting serial_logger, this will take some time!\n");
+       broadcast_aqualinkstate_error(CONNECTION_RUNNING_SLOG);
+       serial_logger(rs_fd, _aqconfig_.serial_port, getSystemLogLevel());
+       _aqualink_data.run_slogger = false;
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);

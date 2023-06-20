@@ -166,14 +166,14 @@ $(SL_OBJ_DIR)/%.o: %.c | $(SL_OBJ_DIR)
 
 # Rules to link
 $(MAIN): $(OBJ_FILES) 
-	$(CC) $(CFLAGS) $(INCLUDES) $(LIBS) -o $@ $^
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 $(DEBG): $(DBG_OBJ_FILES) 
-	$(CC) $(DBG_CFLAGS) $(INCLUDES) $(LIBS) -o $@ $^
+	$(CC) $(DBG_CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 $(SLOG): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
 $(SLOG): $(SL_OBJ_FILES)
-	$(CC) $(CFLAGS) $(INCLUDES) $(LIBS) -o $@ $^
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 # Rules to make object directories.
 $(OBJ_DIR):
