@@ -48,16 +48,14 @@ MGFLAGS = -D MG_ENABLE_HTTP_SSI=0 -D MG_ENABLE_DIRECTORY_LISTING=0 -D MG_ENABLE_
 # Detect OS and set some specifics
 ifeq ($(OS),Windows_NT)
    # Windows Make.
-   RM = del /Q
    MKDIR = mkdir
-   FixPath = $(subst /,\,$1)
+   #FixPath = $(subst /,\,$1)
 else
    UNAME_S := $(shell uname -s)
    # Linux
    ifeq ($(UNAME_S),Linux)
-      RM = rm -f
 	  MKDIR = mkdir -p
-      FixPath = $1
+      #FixPath = $1
 	  # Get some system information
       PI_OS_VERSION = $(shell cat /etc/os-release | grep VERSION= | cut -d\" -f2)
       $(info OS: $(PI_OS_VERSION) )
@@ -74,7 +72,7 @@ endif
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-	   mongoose.c 
+	   serial_logger.c mongoose.c 
 
 
 AQ_FLAGS = 
