@@ -46,7 +46,7 @@
 
 // Since this get's compiled without net_services for serial_logger
 // pre-define this here rather than include netservices.h
-void broadcast_logs(char *msg);
+void broadcast_log(char *msg);
 
 static bool _daemonise = false;
 static bool _log2file = false;
@@ -79,6 +79,14 @@ void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_mes
   }  
 }
 
+void setSystemLogLevel( int level)
+{
+  _log_level = level;
+}
+int getSystemLogLevel()
+{
+  return _log_level;
+}
 int getLogLevel(int16_t from)
 {
 
@@ -93,7 +101,38 @@ int getLogLevel(int16_t from)
   return _log_level;
 }
 
+void startInlineLog2File()
+{
+   _log2file = true;
+  if (_log_filename == NULL)
+    _log_filename = DEFAULT_LOG_FILE;
+}
+void stopInlineLog2File()
+{
+  _log2file = _cfg_log2file;
+}
+char *getInlineLogFName()
+{
+  return _log_filename;
+}
+void cleanInlineLogFile() {
+  if (_log_filename != NULL) {
+    fclose(fopen(_log_filename, "w"));
+  }
+}
+bool islogFileReady()
+{
+  if (_log_filename != NULL) {   
+    struct stat st;
+    stat(_log_filename, &st);
+    if ( st.st_size > 0)
+      return true;
+  } 
+  return false;
+}
 
+
+#ifdef INCLUDE_OLD_DEBUG_HTML
 void startInlineDebug()
 {
   _log_level = LOG_DEBUG;
@@ -115,30 +154,13 @@ void stopInlineDebug()
   _log_level = _cfg_log_level;
   _log2file = _cfg_log2file;
 }
-
-char *getInlineLogFName()
-{
-  return _log_filename;
-}
-
-
-
-bool islogFileReady()
-{
-  if (_log_filename != NULL) {   
-    struct stat st;
-    stat(_log_filename, &st);
-    if ( st.st_size > 0)
-      return true;
-  } 
-  return false;
-}
-
 void cleanInlineDebug() {
   if (_log_filename != NULL) {
     fclose(fopen(_log_filename, "w"));
   }
 }
+#endif
+
 
 /*
 * This function reports the error and
@@ -214,6 +236,14 @@ int text2elevel(char* level)
   }
   
   return  LOG_ERR; 
+}
+
+const char* loglevel2name(int level)
+{
+  if (level == LOG_DEBUG_SERIAL)
+    return "Debug Serial:";
+
+  return elevel2text(level);
 }
 
 const char* logmask2name(int16_t from)
@@ -415,6 +445,16 @@ void removeDebugLogMask(int16_t flag)
   _logforcemask &= ~flag;
 }
 
+void clearDebugLogMask()
+{
+  _logforcemask = 0;
+}
+
+bool isDebugLogMaskSet(int16_t flag)
+{
+  return _logforcemask & flag;
+}
+
 void _LOG(int16_t from, int msg_level, char * message);
 
 /*
@@ -434,7 +474,6 @@ void logMessage(int msg_level, const char *format, ...)
   _LOG(AQUA_LOG, msg_level, buffer);
 }
 */
-
 
 void LOG(int16_t from, int msg_level, const char * format, ...)
 {
@@ -513,7 +552,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
   */
 
   // Send logs to any websocket that's interested.
-  broadcast_logs(message);
+  broadcast_log(message);
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {

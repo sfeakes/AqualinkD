@@ -5,6 +5,9 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+// In future release, delete this and all code, it's been replaced with aqmanager
+#define INCLUDE_OLD_DEBUG_HTML
+
 #define LOG_DEBUG_SERIAL 8
 
 #ifndef EXIT_SUCCESS
@@ -17,9 +20,9 @@
   #define FALSE 0
 #endif
 
-#define LOGBUFFER 1024
+#define LOGBUFFER 256
 
-#define MAXLEN 256
+//#define MAXLEN 256
 
 //#define round(a) (int) (a+0.5) // 0 decimal places (doesn't work for negative numbers)
 #define round(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))  
@@ -55,6 +58,8 @@ typedef enum
 //void setLoggingPrms(int level , bool deamonized, char* log_file);
 void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages);
 int getLogLevel(int16_t from);
+int getSystemLogLevel();
+void setSystemLogLevel( int level);
 void daemonise ( char *pidFile, void (*main_function)(void) );
 //void debugPrint (char *format, ...);
 void displayLastSystemError (const char *on_what);
@@ -62,6 +67,10 @@ void displayLastSystemError (const char *on_what);
 
 void addDebugLogMask(int16_t flag);
 void removeDebugLogMask(int16_t flag);
+void clearDebugLogMask();
+bool isDebugLogMaskSet(int16_t flag);
+const char* logmask2name(int16_t mask);
+const char* loglevel2name(int level);
 //#define logMessage(msg_level, format, ...) LOG (1, msg_level, format, ##__VA_ARGS__)
 
 
@@ -93,13 +102,22 @@ char* stristr(const char* haystack, const char* needle);
 char *prittyString(char *str);
 //void writePacketLog(char *buff);
 //void closePacketLog();
+
+void startInlineLog2File();
+void stopInlineLog2File();
+void cleanInlineLogFile();
+
+#ifdef INCLUDE_OLD_DEBUG_HTML
 void startInlineDebug();
-void startInlineSerialDebug();
 void stopInlineDebug();
+void startInlineSerialDebug();
 void cleanInlineDebug();
+#endif
+
+
 char *getInlineLogFName();
 bool islogFileReady();
-const char *logmask2name(int16_t from);
+//const char *logmask2name(int16_t from);
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

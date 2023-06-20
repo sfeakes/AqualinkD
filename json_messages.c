@@ -80,8 +80,9 @@ int build_logmsg_JSON(char *dest, const char *src, int dest_len, int src_len)
   int length = sprintf(dest, "{\"logmsg\":\"");
   length += json_chars(dest+length, src, (dest_len-20), src_len);
   length += sprintf(dest+length, "\"}");
-  dest[length] = '\n';
-  dest[length+1] = '\0';
+  dest[length] = '\0';
+  //dest[length] = '\n';
+  //dest[length+1] = '\0';
 
   return length;
 }
@@ -473,6 +474,64 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   //return length;
 }
 
+int logmaskjsonobject(int16_t flag, char* buffer)
+{
+  int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
+  return length;
+}
+int logleveljsonobject(int level, char* buffer)
+{
+  int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", loglevel2name(level), level,(getSystemLogLevel()==level?JSON_ON:JSON_OFF));
+  return length;
+}
+int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
+{
+  memset(&buffer[0], 0, size);
+  int length = 0;
+
+  length += sprintf(buffer+length, "{\"type\": \"aqmanager\"");
+  length += sprintf(buffer+length, ",\"deamonized\": \"%s\"", (_aqconfig_.deamonize?JSON_ON:JSON_OFF) );
+  /*
+  length += sprintf(buffer+length, ",\"panel_type\":\"%s\"",getPanelString());
+  length += sprintf(buffer+length, ",\"version\":\"%s\"",aqdata->version );//8157 REV MMM",
+  length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"", AQUALINKD_VERSION ); //1.0b,
+  */
+  //length += sprintf(buffer+length, ",\"logging2file\": \"%s\"",islogFileReady()?JSON_ON:JSON_OFF);
+  length += sprintf(buffer+length, ",\"logfileready\": \"%s\"",islogFileReady()?JSON_ON:JSON_OFF);
+  length += sprintf(buffer+length, ",\"logfilename\": \"%s\"",_aqconfig_.log_file);
+  length += sprintf(buffer+length, ",\"debugmasks\":[");
+  length += logmaskjsonobject(AQUA_LOG, buffer+length);
+  length += logmaskjsonobject(NET_LOG, buffer+length);
+  length += logmaskjsonobject(AQRS_LOG, buffer+length);
+  length += logmaskjsonobject(ONET_LOG, buffer+length);
+  length += logmaskjsonobject(IAQT_LOG, buffer+length);
+  length += logmaskjsonobject(PDA_LOG, buffer+length);
+  length += logmaskjsonobject(RSSA_LOG, buffer+length);
+  length += logmaskjsonobject(DJAN_LOG, buffer+length);
+  length += logmaskjsonobject(DPEN_LOG, buffer+length);
+  length += logmaskjsonobject(RSSD_LOG, buffer+length);
+  length += logmaskjsonobject(PROG_LOG, buffer+length);
+  length += logmaskjsonobject(DBGT_LOG, buffer+length);
+  length += logmaskjsonobject(TIMR_LOG, buffer+length);
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "]");
+
+  length += sprintf(buffer+length, ",\"loglevels\":[");
+  length += logleveljsonobject(LOG_DEBUG_SERIAL, buffer+length);
+  length += logleveljsonobject(LOG_DEBUG, buffer+length);
+  length += logleveljsonobject(LOG_INFO, buffer+length);
+  length += logleveljsonobject(LOG_NOTICE, buffer+length);
+  length += logleveljsonobject(LOG_WARNING, buffer+length);
+  length += logleveljsonobject(LOG_ERR, buffer+length);
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "]");
+
+  length += sprintf(buffer+length, "}");
+  
+  return length;
+}
 int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 {
   //strncpy(buffer, test_message, strlen(test_message)+1);

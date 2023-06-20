@@ -83,6 +83,11 @@ unsigned char iaqtLastMsg()
   return _lastMsgType;
 }
 
+void set_iaqtouch_lastmsg(unsigned char msgtype)
+{
+  _lastMsgType = msgtype;
+}
+
 bool wasiaqtThreadKickTypePage()
 {
   switch(_lastMsgType) {
@@ -608,8 +613,8 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
   //debuglogPacket(IAQT_LOG ,packet, length);
 
-  _lastMsgType = packet[PKT_CMD];
-
+  //_lastMsgType = packet[PKT_CMD];
+  set_iaqtouch_lastmsg(packet[PKT_CMD]);
   //debuglogPacket(IAQT_LOG ,packet, length);
   //beautifyPacket(buff, packet, length);
   //LOG(IAQT_LOG,LOG_DEBUG, "%s", buff);

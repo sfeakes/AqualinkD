@@ -87,7 +87,18 @@ void intHandler(int sig_num)
   _keepRunning = false;
 
   if (sig_num == SIGRESTART) {
-    _restart = true;
+    // If we are deamonized, we need to use the system
+    if (_aqconfig_.deamonize) {
+      if(fork() == 0) {
+        sleep(2);
+        char *newargv[] = {"/bin/systemctl", "restart", "aqualinkd", NULL};
+        char *newenviron[] = { NULL };
+        execve(newargv[0], newargv, newenviron);
+        exit (EXIT_SUCCESS);
+      }
+    } else {
+      _restart = true;
+    }
   }
   //LOG(AQUA_LOG,LOG_NOTICE, "Stopping!\n");
   //if (dummy){}// stop compile warnings
@@ -1128,6 +1139,7 @@ int startup(char *self, char *cfgFile)
   _cfgFile = cfgFile;
   //initButtons(&_aqualink_data);
   
+  clearDebugLogMask();
   read_config(&_aqualink_data, cfgFile);
 
   // Sanity check on Device ID's against panel type
@@ -1791,8 +1803,14 @@ void main_loop()
           logPacketRead(packet_buffer, packet_length);
         }
         
-        if (!_aqconfig_.prioritize_ack)
+        if (!_aqconfig_.prioritize_ack) {
           _aqualink_data.updated = process_packet(packet_buffer, packet_length);
+        } else {
+          // If we did not process the packet, above we need to record it for the caculate_ack_packet call.
+          // Should find a better place to put this, but since prioritize_ack is expermental it's ok for now.
+          // NSF The exact same needs to be done for onetouch / iaqtouch and probably rssaadapter.
+          _aqualink_data.last_packet_type = packet_buffer[PKT_CMD];
+        }
 #ifdef AQ_PDA 
         if (isPDA_PANEL)
           caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
@@ -1807,17 +1825,18 @@ void main_loop()
       }
       else if (packet_length > 0 && isRSSA_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && getProtocolType(packet_buffer) == JANDY) {
         if (_aqconfig_.prioritize_ack) {
-          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
           caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
+          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
         } else {
-          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
           _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
+          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
         }
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"SerialAdapter Emulation Processed packet in");
       }
 #ifdef AQ_ONETOUCH
       else if (packet_length > 0 && isONET_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
         if (_aqconfig_.prioritize_ack) {
+          set_onetouch_lastmsg(packet_buffer[PKT_CMD]);
           caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
           _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
         } else {
@@ -1830,8 +1849,9 @@ void main_loop()
 #ifdef AQ_IAQTOUCH
       else if (packet_length > 0 && isIAQT_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
         if (_aqconfig_.prioritize_ack) {
-           caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
-           _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+          set_iaqtouch_lastmsg(packet_buffer[PKT_CMD]);
+          caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+          _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
         } else {
           _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
           caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);

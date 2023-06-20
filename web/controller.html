@@ -1872,7 +1872,8 @@
             case "switch":
               if (deviceobj.type_ext == "switch_vsp") {
                 if (deviceobj.Pump_Type == "vfPump") {
-                  html = html + '<option value="' + V_RPM + '" ' + cs_isSelected("RPM", val1, val2) + '>RPM</option><option value="' + V_GPM + '" ' + cs_isSelected("GPM", val1, val2) + '>GPM</option>';
+                  //html = html + '<option value="' + V_RPM + '" ' + cs_isSelected("RPM", val1, val2) + '>RPM</option><option value="' + V_GPM + '" ' + cs_isSelected("GPM", val1, val2) + '>GPM</option>';
+                  html = html + '<option value="' + V_GPM + '" ' + cs_isSelected("GPM", val1, val2) + '>GPM</option>';
                 } else {
                   html = html + '<option value="' + V_RPM + '" ' + cs_isSelected("RPM", val1, val2) + '>RPM</option>';
                 }

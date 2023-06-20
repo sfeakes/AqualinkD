@@ -195,23 +195,25 @@ void get_aqualink_rssadapter_setpoints() {
     push_rssa_cmd(getPoolSP2);
 }
 
-void setLEDstate( aqled *led, unsigned char state, struct aqualinkdata *aq_data)
+// Return true if we change the state.
+bool setLEDstate( aqled *led, unsigned char state, struct aqualinkdata *aq_data)
 {
   if (state == 0x00) {
     if (led->state != OFF) {
       led->state = OFF;
-      aq_data->updated = true;
+      return true;
     }
   } else if (state == 0x01) {
     if (led->state != ON) {
       led->state = ON;
-      aq_data->updated = true;
+      return true;
     }
   }
   // Should also add FLASH and ENABLE.
 
   //_aqualink_data.aqbuttons[13].led->state = OFF;
-  // 
+  //
+  return false;
 }
 
 bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data) {
@@ -271,37 +273,42 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
       if (packet[6] == 0x01) {
         LOG(RSSA_LOG,LOG_INFO,"Units are Deg C\n");
         aq_data->temp_units = CELSIUS;
+        rtn = true;
       } else if (packet[6] == 0x00) {
         LOG(RSSA_LOG,LOG_INFO,"Units are Deg F\n");
         aq_data->temp_units = FAHRENHEIT;
+        rtn = true;
       } else {
         LOG(RSSA_LOG,LOG_ERR,"Units are Unknown\n");
       }
     } else if (packet[4] == RS_SA_POOLSP) {
       LOG(RSSA_LOG,LOG_INFO,"Pool SP is %d\n", packet[6]);
       aq_data->pool_htr_set_point = (int) packet[6];
+      rtn = true;
     } else if (packet[4] == RS_SA_SPASP) {
       LOG(RSSA_LOG,LOG_INFO,"Spa SP is %d\n", packet[6]);
       aq_data->spa_htr_set_point = (int) packet[6];
+      rtn = true;
     } else if (packet[4] == RS_SA_POOLSP2) {
       LOG(RSSA_LOG,LOG_INFO,"Pool SP2 is %d\n", packet[6]);
       aq_data->spa_htr_set_point = (int) packet[6];
+      rtn = true;
     } else if (packet[4] == 0x03) {
       // These are device status messages 
 #ifdef AQ_RS16
       if (packet[7] == RS_SA_AUX12) {
         LOG(RSSA_LOG,LOG_INFO,"AUX12 %d\n", packet[6]);
-        setLEDstate(aq_data->aqbuttons[13].led,  packet[6], aq_data);
+        rtn = setLEDstate(aq_data->aqbuttons[13].led,  packet[6], aq_data);
         //_aqualink_data.aqbuttons[13].led->state = OFF;
       } else if (packet[7] == RS_SA_AUX13) {
         LOG(RSSA_LOG,LOG_INFO,"AUX13 %d\n", packet[6]);
-        setLEDstate(aq_data->aqbuttons[14].led,  packet[6], aq_data);
+        rtn = setLEDstate(aq_data->aqbuttons[14].led,  packet[6], aq_data);
       } else if (packet[7] == RS_SA_AUX14) {
         LOG(RSSA_LOG,LOG_INFO,"AUX14 %d\n", packet[6]);
-        setLEDstate(aq_data->aqbuttons[15].led,  packet[6], aq_data);
+        rtn = setLEDstate(aq_data->aqbuttons[15].led,  packet[6], aq_data);
       } else if (packet[7] == RS_SA_AUX15) {
         LOG(RSSA_LOG,LOG_INFO,"AUX15 %d\n", packet[6]);
-        setLEDstate(aq_data->aqbuttons[16].led,  packet[6], aq_data);
+        rtn = setLEDstate(aq_data->aqbuttons[16].led,  packet[6], aq_data);
       }
 #endif
     }
@@ -359,6 +366,9 @@ unsigned char AllButton2RSsrialAdapter(unsigned char abcmd)
 
 #ifdef DO_NOT_COMPILE
 
+
+/
+//*********************************************
 // Notes on protocol for Serial Adapter.
 
 /*
@@ -1284,6 +1294,9 @@ Debug:   RS Serial: To 0x48 of type   RSSA DevStatus | HEX: 0x10|0x02|0x48|0x13|
 Solar Heat Off
 Debug:   RS Serial: To 0x00 of type              Ack | HEX: 0x10|0x02|0x00|0x01|0x00|0x12|0x25|0x10|0x03|
 Debug:   RS Serial: To 0x48 of type   RSSA DevStatus | HEX: 0x10|0x02|0x48|0x13|0x03|0x00|0x00|0x12|0x82|0x10|0x03|
+
+
+
 
 */
 

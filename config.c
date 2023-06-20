@@ -69,6 +69,8 @@ void init_parameters (struct aqconfig * parms)
   _tmpPanel->combo = true;
   _tmpPanel->dual = false;
 
+  clearDebugLogMask();
+
   //int i;
   //char *p;
   //parms->rs_panel_size = 8;

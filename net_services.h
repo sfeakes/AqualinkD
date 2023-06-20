@@ -29,7 +29,7 @@ void stop_net_services();
 time_t poll_net_services(int timeout_ms);
 void broadcast_aqualinkstate();
 void broadcast_aqualinkstate_error(char *msg);
-void broadcast_logs(char *msg);
+void broadcast_log(char *msg);
 //#endif
 
 

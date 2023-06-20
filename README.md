@@ -78,11 +78,9 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
 * Add set time to OneTouch protocol.
 
-# Update in Release 2.3.0f (pre release)
-* This is pre-release, please treat it as such.
-* Proceed with caution on PDA panels <i>I have not been able to test it fully on all variants</i> and you may need to go back to your current (or previous) version of AqualinkD
+# Update in Release 2.3.1
 * Changed a lot of logic around different protocols.
-* Added low latency support for ITDI usb driver.
+* Added low latency support for FTDI usb driver.
 * AqualinkD will find out the fastest way to change something depending on the protocols available.
 * Added scheduler (click time in web ui). supports full calendar year (ie seasons), See wiki for details. 
 * Added timers for devices (ie can turn on Pump for x minutes), Long press on device in WebUI.
@@ -97,6 +95,8 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Fix bug in IntelliBrite color lights
 * Install script checks for cron and it's config (needed for scheduler)
 * serial-logger will now give recommended values for aqualinkd.conf
+* Lock the serial port to stop duplicate process conflict.
+* Lots of code cleanup & modifying ready for AqualinkD Management console in a future release.
 
 # Update in Release 2.2.2
 * Fixed some Web UI bugs

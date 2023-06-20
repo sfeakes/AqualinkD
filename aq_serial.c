@@ -368,6 +368,33 @@ int set_port_low_latency(int fd, const char* tty)
   return 0;
 }
 
+#include <sys/file.h>
+
+int lock_port(int fd, const char* tty)
+{
+  if (ioctl (fd, TIOCEXCL) < 0) {
+    LOG(RSSD_LOG,LOG_ERR, "Can't put (%s) into exclusive mode (%d): %s\n", tty,errno, strerror( errno ));
+    return -1;
+  }
+
+  if (flock(fd, LOCK_EX | LOCK_NB) < 0) {
+    LOG(RSSD_LOG,LOG_ERR, "Can't lock (%s) (%d): %s\n", tty,errno, strerror( errno ));
+    return -1;
+  }
+  
+  return 0;
+}
+
+int unlock_port(int fd)
+{
+  if (flock(fd, LOCK_UN) < 0) {
+    LOG(RSSD_LOG,LOG_ERR, "Can't unlock serial port (%d): %s\n",errno, strerror( errno ));
+    return -1;
+  }
+  return 0;
+}
+
+
 // https://www.cmrr.umn.edu/~strupp/serial.html#2_5_2
 // http://unixwiz.net/techtips/termios-vmin-vtime.html
 //#define OLD_SERIAL_INIT
@@ -393,6 +420,11 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
 
   if (tcgetattr(fd, &newtio) != 0) {
     LOG(RSSD_LOG,LOG_ERR, "Unable to get port attributes: %s, error %d\n", tty,errno);
+    return -1;
+  }
+
+  if ( lock_port(fd, tty) < 0) {
+    //LOG(RSSD_LOG,LOG_ERR, "Unable to lock port: %s, error %d\n", tty, errno);
     return -1;
   }
 
@@ -448,7 +480,7 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
     return -1;
   }
 
-  LOG(RSSD_LOG,LOG_INFO, "Set serial port %s I/O %s attributes\n",tty,_blocking_mode?"blocking":"non blocking");
+  LOG(RSSD_LOG,LOG_INFO, "Port %s set I/O %s attributes\n",tty,_blocking_mode?"blocking":"non blocking");
 
   return fd;
 }
@@ -520,6 +552,7 @@ void close_blocking_serial_port()
 /* close tty port */
 void close_serial_port(int fd)
 {
+  unlock_port(fd);
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Closed serial port\n");

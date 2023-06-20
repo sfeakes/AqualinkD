@@ -72,7 +72,7 @@ char *onetouch_menu_hlightchars(int *len);
 int onetouch_menu_find_index(char *text);
 int ot_atoi(const char* str);
 int ot_strcmp(const char *s1, const char *s2);
-
+void set_onetouch_lastmsg(unsigned char msgtype);
 
 
 

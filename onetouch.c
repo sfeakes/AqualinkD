@@ -604,6 +604,11 @@ unsigned char *last_onetouch_packet()
   return &_last_msg_type;
 }
 
+void set_onetouch_lastmsg(unsigned char msgtype)
+{
+  _last_msg_type = msgtype;
+}
+
 bool process_onetouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
   static bool filling_menu = false;
@@ -651,7 +656,8 @@ bool process_onetouch_packet(unsigned char *packet, int length, struct aqualinkd
     _last_kick_type = KICKT_CMD;
   }
 */
-  _last_msg_type = packet[PKT_CMD];
+  //_last_msg_type = packet[PKT_CMD];
+  set_onetouch_lastmsg(packet[PKT_CMD]);
 
   // Receive 0x04 for System menu (before 0x02)
   // Receive 0x04 for startup menu (before 0x02)

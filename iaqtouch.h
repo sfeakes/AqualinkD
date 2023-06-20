@@ -25,6 +25,8 @@ const char *iaqt_page_name(const unsigned char page);
 int num2iaqtRSset (unsigned char* packetbuffer, int num, bool pad4unknownreason);
 int char2iaqtRSset (unsigned char* packetbuffer, char *msg, int msg_len);
 
+void set_iaqtouch_lastmsg(unsigned char msgtype);
+
 // This should be moved to aq_serial once finished.
 #define PKT_IAQT_BUTINDX    4
 #define PKT_IAQT_BUTSTATE   5
