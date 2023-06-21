@@ -32,8 +32,10 @@
 #include "packetLogger.h"
 #include "rs_msg_utils.h"
 
-// Make us look lie config.c when we load config.h
-#define CONFIG_C
+#ifdef SERIAL_LOGGER
+  // Make us look lie config.c when we load config.h
+  #define CONFIG_C
+#endif
 #include "config.h"
 
 #define SLOG_MAX 80
@@ -435,13 +437,13 @@ int main(int argc, char *argv[]) {
   //int logLevel; 
   //char buffer[256];
   //bool idMode = true;
-  
+
   // aq_serial.c uses the following
   _aqconfig_.readahead_b4_write = false;
   _aqconfig_.log_protocol_packets = false;
   _aqconfig_.log_raw_bytes = false;
   _aqconfig_.ftdi_low_latency  = true;
-
+  
   printf("AqualinkD %s\n",VERSION);
 
   if (getuid() != 0) {
