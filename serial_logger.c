@@ -82,7 +82,7 @@ bool _rawlog=false;
 bool _playback_file = false;
 
 
-int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
+int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
 
 int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
 
@@ -716,7 +716,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     return 1;
   }
 
-  timespec_subtract(&elapsed, &end_time, &start_time);
+  sl_timespec_subtract(&elapsed, &end_time, &start_time);
 
   LOG(RSSD_LOG, LOG_DEBUG, "\n\n");
   if (logLevel < LOG_DEBUG)
@@ -798,12 +798,12 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
 
 
-int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y)
+int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y)
 {
   struct timespec tmp;
 
   memcpy (&tmp, y, sizeof(struct timespec));
-  /* Perform the carry for the later subtraction by updating y. */
+
   if (x->tv_nsec < tmp.tv_nsec)
     {
       int nsec = (tmp.tv_nsec - x->tv_nsec) / 1000000000 + 1;
@@ -817,12 +817,11 @@ int timespec_subtract (struct timespec *result, const struct timespec *x, const 
       tmp.tv_sec -= nsec;
     }
 
-  /* Compute the time remaining to wait.
-   tv_nsec is certainly positive. */
+
   result->tv_sec = x->tv_sec - tmp.tv_sec;
   result->tv_nsec = x->tv_nsec - tmp.tv_nsec;
 
-  /* Return 1 if result is negative. */
+
   return x->tv_sec < tmp.tv_sec;
 }
 
