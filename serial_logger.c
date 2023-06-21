@@ -84,16 +84,22 @@ bool _playback_file = false;
 
 int timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
 
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
+
+
 #ifdef SERIAL_LOGGER
 void broadcast_log(char *msg){
   // Do nothing, just for utils.c to work.
 }
-
 void intHandler(int dummy) {
   _keepRunning = false;
   LOG(RSSD_LOG, LOG_NOTICE, "Stopping!\n");
   if (_playback_file)  // If we are reading file, loop is irevelent
     exit(0);
+}
+#else
+int serial_logger (int rs_fd, char *port_name, int logLevel) {
+  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false);
 }
 #endif
 
@@ -532,7 +538,7 @@ int main(int argc, char *argv[]) {
 
   startPacketLogger();
 
-  serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor);
+  _serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor);
 
   stopPacketLogger();
 
@@ -544,7 +550,7 @@ int main(int argc, char *argv[]) {
 
 
 
-int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor) {
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor) {
   int packet_length;
   int last_packet_length = 0;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
@@ -688,7 +694,9 @@ int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool
         received_packets = 0;
       }
     } else if (logLevel < LOG_DEBUG) {
+#ifdef SERIAL_LOGGER
       advance_cursor();
+#endif
     }
 
     //sleep(1);
@@ -767,21 +775,21 @@ int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool
       extID = slog[i].ID;
     
   }
-  printf("Suggested aqualinkd.conf values\n");
-  printf("-------------------------\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "Suggested aqualinkd.conf values\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "-------------------------\n");
   if (strlen (_panelType) > 0)
-    printf("panel_type = %s\n",_panelType);
+    LOG(RSSD_LOG, LOG_NOTICE, "panel_type = %s\n",_panelType);
 
   if (mainID != 0x00)
-    printf("device_id = 0x%02hhx\n",mainID);
+    LOG(RSSD_LOG, LOG_NOTICE, "device_id = 0x%02hhx\n",mainID);
 
   if (rssaID != 0x00)
-    printf("rssa_device_id = 0x%02hhx\n",rssaID);
+    LOG(RSSD_LOG, LOG_NOTICE, "rssa_device_id = 0x%02hhx\n",rssaID);
 
   if (extID != 0x00)
-    printf("extended_device_id = 0x%02hhx\n",extID);
+    LOG(RSSD_LOG, LOG_NOTICE, "extended_device_id = 0x%02hhx\n",extID);
 
-  printf("-------------------------\n");
+  LOG(RSSD_LOG, LOG_NOTICE, "-------------------------\n");
 
   return 0;
 }

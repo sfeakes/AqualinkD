@@ -11,6 +11,8 @@ int logPackets = PACKET_MAX;
   bool errorMonitor = false;
 */
 //int serial_logger(int rs_fd, char *port_name);
-int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
+//int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
+
+int serial_logger (int rs_fd, char *port_name, int logLevel);
 
 #endif // SERIAL_LOGGER_H_
