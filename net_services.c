@@ -22,6 +22,9 @@
 #include <sys/time.h>
 #include <syslog.h>
 
+#ifdef AQ_MANAGER
+#include <systemd/sd-journal.h>
+#endif
 
 #include "mongoose.h"
 
@@ -39,13 +42,12 @@
 #include "serialadapter.h"
 #include "aq_timer.h"
 #include "aq_scheduler.h"
+#include "rs_msg_utils.h"
+#include "version.h"
 
 #ifdef AQ_PDA
 #include "pda.h"
 #endif
-
-// NSF remove once aqmanager is released.
-#define INCLUDE_OLD_DEBUG_HTML
 
 /*
 #if defined AQ_DEBUG || defined AQ_TM_DEBUG
@@ -139,15 +141,11 @@ void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
   // Maybe enhacment in future to sent error messages to MQTT
 }
 
-#define MAX_LOGSTACK 30
+#ifdef AQ_MANAGER
+
 #define WS_LOG_LENGTH 200
-char _logstack[MAX_LOGSTACK][WS_LOG_LENGTH];
-int _logstack_place=0;
-pthread_mutex_t logmsg_mutex;
-
-
 // Send log message to any aqManager websocket.
-void _ws_send_logmsg(struct mg_connection *nc, char *msg) {
+void ws_send_logmsg(struct mg_connection *nc, char *msg) {
   struct mg_connection *c;
 
   for (c = mg_next(nc->mgr, NULL); c != NULL; c = mg_next(nc->mgr, c)) {
@@ -157,26 +155,148 @@ void _ws_send_logmsg(struct mg_connection *nc, char *msg) {
   }
 }
 
+void find_aqualinkd_startupmsg(sd_journal *journal)
+{
+  static bool once=false;
+  const void *log;
+  size_t len;
+
+  // Only going to do this one time, incase re reset while reading.
+  if (once) {
+    return;
+  }
+  once=true;
+
+  sd_journal_previous_skip(journal, 200);
+
+  while ( sd_journal_next(journal) > 0) // need to capture return of this
+  {
+    if (sd_journal_get_data(journal, "MESSAGE", &log, &len) >= 0) {
+      if (rsm_strnstr((const char *)log+8, AQUALINKD_NAME, len-8) != NULL) {
+        // Go back one and return
+        sd_journal_previous_skip(journal, 1);
+        return;
+      }
+    }
+  }
+  
+  // Blindly go back 100 messages since above didn;t find start
+  sd_journal_previous_skip(journal, 100);
+}
+
+bool broadcast_systemd_logmessages(bool aqMgrActive) {
+  static sd_journal *journal;
+  static bool active = false;
+  char msg[WS_LOG_LENGTH];
+  static int cnt=0;
+  static char *cursor = NULL;
+
+  if (!aqMgrActive) {
+    if (!active) {
+      return true;
+    } else {
+      sd_journal_close(journal);
+      active = false;
+      return true;
+      cursor = NULL;
+    }
+  } 
+  // aqManager is active
+  if (!active) {
+      if ( sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to open journal", WS_LOG_LENGTH,22);
+        ws_send_logmsg(_mgr.active_connections, msg);
+        return false;
+      }
+      if (sd_journal_add_match(journal, "SYSLOG_IDENTIFIER=aqualinkd", 0) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal filter", WS_LOG_LENGTH,27);
+        ws_send_logmsg(_mgr.active_connections, msg);
+        sd_journal_close(journal);
+        return false;
+      }
+      if (sd_journal_seek_tail(journal) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to seek to journal end", WS_LOG_LENGTH,29);
+        ws_send_logmsg(_mgr.active_connections, msg);
+        sd_journal_close(journal);
+        return false;
+      }
+      //if we have cusror go to it, otherwise jump back and try to find startup message
+      if (cursor != NULL) {
+        sd_journal_seek_cursor(journal, cursor);
+        sd_journal_next(journal);
+      } else
+        find_aqualinkd_startupmsg(journal);
+
+      active = true;
+  }
+
+  const void *log;
+  size_t len;
+  const void *pri;
+  size_t plen;
+  int rtn;
+
+  while ( (rtn = sd_journal_next(journal)) > 0) // need to capture return of this
+  {
+    if (sd_journal_get_data(journal, "MESSAGE", &log, &len) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to get journal message", WS_LOG_LENGTH,29);
+        ws_send_logmsg(_mgr.active_connections, msg);
+    } else if (sd_journal_get_data(journal, "PRIORITY", &pri, &plen) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to seek to journal message priority", WS_LOG_LENGTH,42);
+        ws_send_logmsg(_mgr.active_connections, msg);
+    } else {
+        build_logmsg_JSON(msg, atoi((const char *)pri+9), (const char *)log+8, WS_LOG_LENGTH,(int)len-8);
+        ws_send_logmsg(_mgr.active_connections, msg);
+        cnt=0;
+        sd_journal_get_cursor(journal, &cursor);
+    }
+  }
+  if (rtn < 0) {
+    build_logmsg_JSON(msg, LOG_ERR, "Failed to get seen to next journal message", WS_LOG_LENGTH,42);
+    ws_send_logmsg(_mgr.active_connections, msg);
+    sd_journal_close(journal);
+    active = false;
+  } else if (rtn == 0) {
+    // Sometimes we get no errors, and nothing to read, even when their is.
+    // So if we get too many, restart but don;t reset the cursor.
+    // Could tesd moving  sd_journal_get_cursor(journal, &cursor); line to here from above.
+    if (cnt++ == 100) {
+      //printf("**** %d Too many blank reads, resetting!! ****\n",cnt);
+      sd_journal_close(journal);
+      active = false;
+    }
+  }
+  
+  return true;
+}
+#endif
+
+/* superseded with systemd/sd-journal
+#define MAX_LOGSTACK 30
+#define WS_LOG_LENGTH 200
+char _logstack[MAX_LOGSTACK][WS_LOG_LENGTH];
+int _logstack_place=0;
+pthread_mutex_t logmsg_mutex;
+
 void send_ws_logmessages()
 {
   pthread_mutex_lock(&logmsg_mutex);
   // This pulls them off in the wrong order.
   while (_logstack_place > 0) {
-    _ws_send_logmsg(_mgr.active_connections, _logstack[0]);
+    ws_send_logmsg(_mgr.active_connections, _logstack[0]);
     memmove(&_logstack[0], &_logstack[1], WS_LOG_LENGTH * _logstack_place ) ;
     _logstack_place--;
   }
   pthread_mutex_unlock(&logmsg_mutex);
 }
 
-// This needs to be thread safe.
 void broadcast_log(char *msg) {
   // NSF This causes mongoose to core dump after a period of time due to number of messages
   // so remove until get time to update to new mongoose version.
   //return;
 
 #ifdef AQ_NO_THREAD_NETSERVICE
-  if (_keepNetServicesRunning && !_aqconfig_.thread_netservices && _aqualink_data->aqManagerActive)
+  if (_keepNetServicesRunning && !_aqconfig_.thread_netservices && _aqualink_data != NULL && _aqualink_data->aqManagerActive)
   {
     char message[WS_LOG_LENGTH];
     build_logmsg_JSON(message, msg, WS_LOG_LENGTH, strlen(msg));
@@ -186,7 +306,7 @@ void broadcast_log(char *msg) {
 #endif
    // See if we have and manager runnig first so we return ASAP.
    // Since this get's called long before net_Services is started, also check we are running.
-  if (_keepNetServicesRunning && _net_thread_id != 0 && _aqualink_data->aqManagerActive)
+  if (_keepNetServicesRunning && _net_thread_id != 0 && _aqualink_data != NULL && _aqualink_data->aqManagerActive)
   {
     pthread_mutex_lock(&logmsg_mutex);
     if (_logstack_place < MAX_LOGSTACK)
@@ -204,6 +324,7 @@ void broadcast_log(char *msg) {
   }
 
 }
+*/
 
 void _broadcast_aqualinkstate(struct mg_connection *nc) 
 {
@@ -692,7 +813,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 }
 
 
-typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager} uriAtype;
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uNotAvailable} uriAtype;
 //typedef enum {NET_MQTT=0, NET_API, NET_WS, DZ_MQTT} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS", "DZ"};
 
@@ -785,6 +906,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "rawcommand", 10) == 0 && from == NET_WS) { // Only valid from websocket.
     aq_send_cmd((unsigned char)value);
     return uActioned;
+#ifdef AQ_MANAGER
   } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uAQmanager;
   } else if (strncmp(ri1, "setloglevel", 11) == 0 && from == NET_WS) { // Only valid from websocket.
@@ -802,14 +924,23 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     } else if (ri2 != NULL && strncmp(ri2, "stop", 4) == 0) {
       stopInlineLog2File();
     } else if (ri2 != NULL && strncmp(ri2, "clean", 5) == 0) {
-      cleanInlineLogFile();
+      cleanInlineLog2File();
     } else if (ri2 != NULL && strncmp(ri2, "download", 8) == 0) {
       return uDebugDownload;
     } 
     return uAQmanager; // Want to resent updated status
-
-  // BELOW IS FOR OLD DEBUG.HTML, Need to remove in future release
-#ifdef INCLUDE_OLD_DEBUG_HTML
+  } else if (strncmp(ri1, "restart", 7) == 0 && from == NET_WS) { // Only valid from websocket.
+    LOG(NET_LOG,LOG_NOTICE, "Received restart request!\n");
+    raise(SIGRESTART);
+    return uActioned; 
+  } else if (strncmp(ri1, "seriallogger", 12) == 0 && from == NET_WS) { // Only valid from websocket.
+    LOG(NET_LOG,LOG_NOTICE, "Received request to run serial_logger!\n");
+    _aqualink_data->run_slogger = true;
+    return uActioned; 
+#else // AQ_MANAGER
+  } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
+    return uNotAvailable;
+  // BELOW IS FOR OLD DEBUG.HTML, Need to remove in future release with aqmanager goes live
   } else if (strncmp(ri1, "debug", 5) == 0) {
     if (ri2 != NULL && strncmp(ri2, "start", 5) == 0) {
       startInlineDebug();
@@ -825,16 +956,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       return uDebugDownload;
     } 
     return uDebugStatus;
-#endif
+#endif //AQ_MANAGER
 // couple of debug items for testing 
-  } else if (strncmp(ri1, "restart", 13) == 0 && from == NET_WS) { // Only valid from websocket.
-  /*
-    LOG(NET_LOG,LOG_NOTICE, "Received restart request!\n");
-    raise(SIGRESTART);
-    return uActioned;
-  */
-    LOG(NET_LOG,LOG_WARNING, "Received restart request, not implimented in this release!\n");
-    return uBad;
   } else if (strncmp(ri1, "set_date_time", 13) == 0) {
     //aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
     panel_device_request(_aqualink_data, DATE_TIME, 0, 0, from);
@@ -1271,7 +1394,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           mg_send(nc, message, size); 
         }
         break;
-#ifdef INCLUDE_OLD_DEBUG_HTML
+#ifndef AQ_MANAGER
         case uDebugStatus:
         {
           char message[JSON_BUFFER_SIZE];
@@ -1391,6 +1514,11 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, message);
     }
     break;
+    case uNotAvailable:
+    {
+      sprintf(buffer, "{\"na_message\":\"not available in this version!\"}");
+       ws_send(nc, buffer);
+    }
     case uSchedules:
     {
       DEBUG_TIMER_START(&tid);
@@ -1712,7 +1840,6 @@ void *net_services_thread( void *ptr )
 {
   struct aqualinkdata *aqdata = (struct aqualinkdata *) ptr;
   //struct mg_mgr mgr;
-
   if (!_start_net_services(&_mgr, aqdata)) {
     //LOG(NET_LOG,LOG_ERR, "Failed to start network services\n");
     // Not the best way to do this (have thread exit process), but forks for the moment.
@@ -1726,17 +1853,19 @@ void *net_services_thread( void *ptr )
   {
     //poll_net_services(&_mgr, 10);
     // Shorten poll cycle when logging messages to WS
-    mg_mgr_poll(&_mgr, (_aqualink_data->aqManagerActive)?5:100);
-    //mg_mgr_poll(&_mgr, 100);
+    //mg_mgr_poll(&_mgr, (_aqualink_data->aqManagerActive)?50:100);
+    mg_mgr_poll(&_mgr, 100);
 
     if (aqdata->updated == true /*|| _broadcast == true*/) {
       //LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
       _broadcast_aqualinkstate(_mgr.active_connections);
       aqdata->updated = false;
     }
-    if (_aqualink_data->aqManagerActive) {
-      send_ws_logmessages();
+#ifdef AQ_MANAGER
+    if ( ! broadcast_systemd_logmessages(_aqualink_data->aqManagerActive)) {
+      LOG(AQUA_LOG,LOG_ERR, "Couldn't open systemd journal log\n");
     }
+#endif
   }
 
 f_end:

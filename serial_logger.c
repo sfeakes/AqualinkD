@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V1.8"
+#define VERSION "serial_logger V2.0"
 
 /*
 typedef enum used {
@@ -243,32 +243,6 @@ bool canUse(unsigned char ID) {
   return false;
 }
 
-/*
-bool canUse(unsigned char ID) {
-  int i;
-  for (i = 0; i < 4; i++) {
-    if (ID == _goodID[i])
-      return true;
-  }
-  for (i = 0; i < 4; i++) {
-    if (ID == _goodPDAID[i])
-      return true;
-  }
-  for (i = 0; i < 4; i++) {
-    if (ID == _goodONETID[i])
-      return true;
-  }
-  for (i = 0; i < 4; i++) {
-    if (ID == _goodIAQTID[i])
-      return true;
-  }
-  for (i = 0; i < 2; i++) {
-    if (ID == _goodRSSAID[i])
-      return true;
-  }
-  return false;
-}
-*/
 char* canUseExtended(unsigned char ID) {
   int i;
   for (i = 0; i < 4; i++) {
@@ -294,85 +268,11 @@ char* canUseExtended(unsigned char ID) {
   return "";
 }
 
-
-void printHex(char *pk, int length)
-{
-  int i=0;
-  for (i=0;i<length;i++)
-  {
-    printf("0x%02hhx|",pk[i]);
-  }
-}
-
-
-void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length)
-{
-  int i;
-  //if (_filter != 0x00 && ID != _filter && packet_buffer[PKT_DEST] != _filter )
-  //  return;
-  if (_rawlog) {
-    printHex((char *)packet_buffer, packet_length);
-    printf("\n");
-    return;
-  }
-
-  if (_filters != 0)
-  {
-    //int i;
-    bool dest_match = false;
-    bool src_match = false;
-
-    for (i=0; i < _filters; i++) {
-      if ( packet_buffer[PKT_DEST] == _filter[i])
-        dest_match = true;
-      if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
-        src_match = true;
-    }
-
-    if(dest_match == false && src_match == false)
-      return;
-  }
-  
-/*
-  if (_filter != 0x00) {
-    if ( packet_buffer[PKT_DEST]==0x00 && ID != _filter )
-      return;
-    if ( packet_buffer[PKT_DEST]!=0x00 && packet_buffer[PKT_DEST] != _filter )
-      return;
-  }
-*/
-  if (getProtocolType(packet_buffer)==JANDY) {
-    if (packet_buffer[PKT_DEST] != 0x00)
-      printf("\n");
-    printf("Jandy   %4.4s 0x%02hhx of type %16.16s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
-  } else {
-    printf("Pentair From 0x%02hhx To 0x%02hhx       ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
-  }
-  printf(" | HEX: ");
-  printHex((char *)packet_buffer, packet_length);
-  
-  if (packet_buffer[PKT_CMD] == CMD_MSG || packet_buffer[PKT_CMD] == CMD_MSG_LONG) {
-    printf("  Message : ");
-    //fwrite(packet_buffer + 4, 1, AQ_MSGLEN+1, stdout);
-    //fwrite(packet_buffer + 4, 1, packet_length-7, stdout);
-    for(i=4; i < packet_length-3; i++) {
-      if (packet_buffer[i] >= 32 && packet_buffer[i] <= 126)
-        printf("%c",packet_buffer[i]);
-    }
-  }
-  
-  //if (packet_buffer[PKT_DEST]==0x00)
-  //  printf("\n\n");
-  //else
-    printf("\n");
-}
-
 void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
 {
   static unsigned char getPanelRev[] = {0x00,0x14,0x01};
   static unsigned char getPanelType[] = {0x00,0x14,0x02};
   static int msgcnt=0;
-  //int i;
 
   if (packet_buffer[PKT_CMD] == CMD_PROBE) {
     if (msgcnt == 0)
@@ -388,55 +288,77 @@ void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
       rsm_strncpy(_panelRev, packet_buffer+4, AQ_MSGLEN, packet_length-5);
     else if (msgcnt == 3)
       rsm_strncpy(_panelType, packet_buffer+4, AQ_MSGLEN, packet_length-5);
-    /*
-    for(i=4; i < packet_length-3; i++) {
-      if (packet_buffer[i] == 0x00)
-        break;
-      else if (packet_buffer[i] >= 32 && packet_buffer[i] <= 126)
-        printf("%c",packet_buffer[i]);
-    }
-    printf("\n");
-    */
   }
 }
 
 #ifdef SERIAL_LOGGER
+
+void printHex(char *pk, int length)
+{
+  int i=0;
+  for (i=0;i<length;i++)
+  {
+    printf("0x%02hhx|",pk[i]);
+  }
+}
+
+
+void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length)
+{
+  int i;
+
+  if (_rawlog) {
+    printHex((char *)packet_buffer, packet_length);
+    printf("\n");
+    return;
+  }
+
+  if (_filters != 0)
+  {
+    bool dest_match = false;
+    bool src_match = false;
+
+    for (i=0; i < _filters; i++) {
+      if ( packet_buffer[PKT_DEST] == _filter[i])
+        dest_match = true;
+      if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
+        src_match = true;
+    }
+
+    if(dest_match == false && src_match == false)
+      return;
+  }
+  
+  if (getProtocolType(packet_buffer)==JANDY) {
+    if (packet_buffer[PKT_DEST] != 0x00)
+      printf("\n");
+    printf("Jandy   %4.4s 0x%02hhx of type %16.16s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
+  } else {
+    printf("Pentair From 0x%02hhx To 0x%02hhx       ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
+  }
+  printf(" | HEX: ");
+  printHex((char *)packet_buffer, packet_length);
+  
+  if (packet_buffer[PKT_CMD] == CMD_MSG || packet_buffer[PKT_CMD] == CMD_MSG_LONG) {
+    printf("  Message : ");
+    for(i=4; i < packet_length-3; i++) {
+      if (packet_buffer[i] >= 32 && packet_buffer[i] <= 126)
+        printf("%c",packet_buffer[i]);
+    }
+  }
+  
+  printf("\n");
+}
+
 int main(int argc, char *argv[]) {
   int rs_fd;
-  //int packet_length;
-  //int last_packet_length = 0;
-  //unsigned char packet_buffer[AQ_MAXPKTLEN];
-  //unsigned char last_packet_buffer[AQ_MAXPKTLEN];
-  //unsigned char lastID = 0x00;
   int i = 0;
-  //bool found;
-  //serial_id_log slog[SLOG_MAX];
-  //serial_id_log pent_slog[SLOG_MAX];
-  //int sindex = 0;
-  //int pent_sindex = 0;
-  //int received_packets = 0;
   int logPackets = PACKET_MAX;
   int logLevel = LOG_NOTICE;
   bool panleProbe = true;
   bool rsSerialSpeedTest = false;
   bool serialBlocking = true;
   bool errorMonitor = false;
-  //struct timespec start_time;
-  //struct timespec end_time;
-  //struct timespec elapsed;
-  //int blankReads = 0;
-  //bool returnError = false;
-
-
-
-
-  //bool monitorOnly = false;
-  
-  //bool playback_file = false;
-  
-  //int logLevel; 
-  //char buffer[256];
-  //bool idMode = true;
 
   // aq_serial.c uses the following
   _aqconfig_.readahead_b4_write = false;
@@ -611,9 +533,10 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     } else if (packet_length > 0) {
         blankReads = 0;
         //LOG(RSSD_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
+#ifdef SERIAL_LOGGER
         if (logLevel > LOG_NOTICE)
           printPacket(lastID, packet_buffer, packet_length);
-
+#endif
         if (getProtocolType(packet_buffer) == PENTAIR) {
           found = false;
           for (i = 0; i <= pent_sindex; i++) {
@@ -661,18 +584,6 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
       }
       received_packets++;
 
-      // NSF TESTING
-      /*
-        if (packet_buffer[PKT_DEST] == 0x40) {
-          static int hex = 0;
-          //printf("Sent ack\n");
-          //printf("Sent ack hex 0x%02hhx\n",(unsigned char)hex);
-          //send_extended_ack (rs_fd, 0x8b, (unsigned char)hex);
-          send_extended_ack (rs_fd, 0x8b, 0x00);
-          hex++;
-         
-        }*/
-// NSF
       // Test Serial speed & caching
       if (rsSerialSpeedTest) {
           packet_length = get_packet(rs_fd, packet_buffer);
@@ -705,11 +616,6 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   }
 
   clock_gettime(CLOCK_REALTIME, &end_time);
-
-  //stopPacketLogger();
-
-    // Reset and close the port.
-  //close_serial_port(rs_fd);
 
   // If we were monitoring errors, or filtering messages, or no panel probe, don;t print details
   if (errorMonitor || panleProbe==false || _filters > 0) {

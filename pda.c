@@ -658,23 +658,23 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
   // Check message for status of device
   // Loop through all buttons and match the PDA text.
   // Should probably use strncasestr
-  if ((index = rsm_strnstr(msg, "CHECK AquaPure", AQ_MSGLEN)) != NULL)
+  if ((index = rsm_strncasestr(msg, "CHECK AquaPure", AQ_MSGLEN)) != NULL)
   {
     LOG(PDA_LOG,LOG_DEBUG, "CHECK AquaPure\n");
   }
-  else if ((index = rsm_strnstr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
+  else if ((index = rsm_strncasestr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->frz_protect_state = ON;
     LOG(PDA_LOG,LOG_DEBUG, "Freeze Protect is on\n");
   }
-  else if ((index = rsm_strnstr(msg, MSG_SWG_PCT, AQ_MSGLEN)) != NULL)
+  else if ((index = rsm_strncasestr(msg, MSG_SWG_PCT, AQ_MSGLEN)) != NULL)
   {
     changeSWGpercent(_aqualink_data, atoi(index + strlen(MSG_SWG_PCT)));
     //_aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
     //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
     LOG(PDA_LOG,LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
   }
-  else if ((index = rsm_strnstr(msg, MSG_SWG_PPM, AQ_MSGLEN)) != NULL)
+  else if ((index = rsm_strncasestr(msg, MSG_SWG_PPM, AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
     //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}

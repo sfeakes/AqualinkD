@@ -5,10 +5,7 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-// In future release, delete this and all code, it's been replaced with aqmanager
-#define INCLUDE_OLD_DEBUG_HTML
-
-#define LOG_DEBUG_SERIAL 8
+#define LOG_DEBUG_SERIAL LOG_DEBUG+1
 
 #ifndef EXIT_SUCCESS
   #define EXIT_FAILURE 1
@@ -103,17 +100,17 @@ char *prittyString(char *str);
 //void writePacketLog(char *buff);
 //void closePacketLog();
 
+
+#ifdef AQ_MANAGER
 void startInlineLog2File();
 void stopInlineLog2File();
-void cleanInlineLogFile();
-
-#ifdef INCLUDE_OLD_DEBUG_HTML
+void cleanInlineLog2File();
+#else
 void startInlineDebug();
 void stopInlineDebug();
 void startInlineSerialDebug();
 void cleanInlineDebug();
 #endif
-
 
 char *getInlineLogFName();
 bool islogFileReady();

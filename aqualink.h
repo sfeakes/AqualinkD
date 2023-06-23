@@ -42,7 +42,8 @@ void intHandler(int dummy);
 #ifdef AQ_PDA
 bool checkAqualinkTime(); // Only need to externalise this for PDA
 #endif
-// There are cases where SWG will read 80% in allbutton and 0% in onetouch/aqualinktouch, this will compile that in or our
+
+// There are cases where SWG will read 80% in allbutton and 0% in onetouch/aqualinktouch, this will compile that in or out
 //#define READ_SWG_FROM_EXTENDED_ID
 
 //#define TOTAL_BUTTONS     12
@@ -189,6 +190,7 @@ typedef struct clightd
 struct aqualinkdata
 {
   char version[AQ_MSGLEN*2];
+  char revision[AQ_MSGLEN];
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
   char last_message[AQ_MSGLONGLEN+1]; // Last ascii message from panel - allbutton (or PDA) protocol
@@ -233,7 +235,10 @@ struct aqualinkdata
   unsigned char raw_status[AQ_PSTLEN];
   // Multiple threads update this value.
   volatile bool updated;
+
+  #ifdef AQ_MANAGER
   volatile bool run_slogger;
+  #endif
 
   #ifdef AQ_RS16
   int rs16_vbutton_start;

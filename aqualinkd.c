@@ -51,7 +51,10 @@
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
 #include "debug_timer.h"
+
+#ifdef AQ_MANAGER
 #include "serial_logger.h"
+#endif
 
 /*
 #if defined AQ_DEBUG || defined AQ_TM_DEBUG
@@ -590,6 +593,12 @@ void _processMessage(char *message, bool reset)
     //freeze_msg_count = 0;
     strcpy(_aqualink_data.last_display_message, msg); // Also display the message on web UI
   }
+  /* // Not sure when to do with these for the moment, so no need to compile in the test.
+  else if (stristr(msg, LNG_MSG_CHEM_FEED_ON) != NULL) {
+  }
+  else if (stristr(msg, LNG_MSG_CHEM_FEED_OFF) != NULL) {
+  }
+  */
   else if (msg[2] == '/' && msg[5] == '/' && msg[8] == ' ')
   { // date in format '08/29/16 MON'
     strcpy(_aqualink_data.date, msg);
@@ -653,8 +662,10 @@ void _processMessage(char *message, bool reset)
   { // '8157 REV MMM'
     // A master firmware revision message.
     strcpy(_aqualink_data.version, msg);
+    rsm_get_revision(_aqualink_data.revision, msg, strlen(msg));
     //_gotREV = true;
-    LOG(AQRS_LOG,LOG_NOTICE, "Control Panel %s\n", msg);
+    LOG(AQRS_LOG,LOG_NOTICE, "Control Panel version %s\n", _aqualink_data.version);
+    LOG(AQRS_LOG,LOG_NOTICE, "Control Panel revision %s\n", _aqualink_data.revision);
     if (_initWithRS == false)
     {
       //LOG(ALLBUTTON,LOG_NOTICE, "Standard protocol initialization complete\n");
@@ -1080,7 +1091,9 @@ int main(int argc, char *argv[])
   // struct lws_context_creation_info info;
   // Log only NOTICE messages and above. Debug and info messages
   // will not be logged to syslog.
+#ifndef AQ_MANAGER
   setlogmask(LOG_UPTO(LOG_NOTICE));
+#endif
 
   if (getuid() != 0)
   {
@@ -1766,12 +1779,14 @@ void main_loop()
       blank_read = 0;
     }
 
+#ifdef AQ_MANAGER
     if (_aqualink_data.run_slogger) {
        LOG(AQUA_LOG,LOG_WARNING, "Starting serial_logger, this will take some time!\n");
        broadcast_aqualinkstate_error(CONNECTION_RUNNING_SLOG);
        serial_logger(rs_fd, _aqconfig_.serial_port, getSystemLogLevel());
        _aqualink_data.run_slogger = false;
     }
+#endif
 
     packet_length = get_packet(rs_fd, packet_buffer);
 
@@ -1816,7 +1831,7 @@ void main_loop()
         } else {
           // If we did not process the packet, above we need to record it for the caculate_ack_packet call.
           // Should find a better place to put this, but since prioritize_ack is expermental it's ok for now.
-          // NSF The exact same needs to be done for onetouch / iaqtouch and probably rssaadapter.
+          // NSF We shouldn;t need to do the same for rssa / onetouch / iaqtouch and probably rssaadapter since they don;t queue commands & programming commands.
           _aqualink_data.last_packet_type = packet_buffer[PKT_CMD];
         }
 #ifdef AQ_PDA 

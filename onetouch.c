@@ -40,6 +40,8 @@ static int _ot_hlightcharindexstart = -1;
 static int _ot_hlightcharindexstop = -1;
 static char _menu[ONETOUCH_LINES][AQ_MSGLEN+1];
 static struct ot_macro _macros[3];
+bool _panel_version_P2 = false; // Older panels REV 0.1 and 0.2
+
 
 void set_macro_status();
 void pump_update(struct aqualinkdata *aq_data, int updated);
@@ -290,6 +292,17 @@ bool log_panelversion(struct aqualinkdata *aq_data)
   end = aq_data->version + strlen(aq_data->version) - 1;
   while(end > aq_data->version && isspace(*end)) end--;
 
+  rsm_get_revision(aq_data->revision, _menu[7], AQ_MSGLEN);
+  LOG(ONET_LOG,LOG_NOTICE, "Control Panel version %s\n", aq_data->version);
+  LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
+
+  if ( strcmp(aq_data->revision, "0.1") == 0 || strcmp(aq_data->revision, "0.2") == 0 ) {
+    LOG(ONET_LOG,LOG_NOTICE, "Setting early version for OneTouch\n");
+    _panel_version_P2 = true;
+  }
+
+  // Probably should check the panel size here as well.
+  // One Touch: OneTouch Menu Line 5 =   RS-16 Combo
   // Write new null terminator
   *(end+1) = 0;
 
@@ -314,115 +327,214 @@ bool log_freeze_setpoints(struct aqualinkdata *aq_data)
 }
 
 
+
+bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
+{
+  int rpm = 0;
+  int watts = 0;
+  int gpm = 0;
+  int pump_index = rsm_atoi(&_menu[menuLineIdx][14]);
+  if (pump_index <= 0)
+    pump_index = rsm_atoi(&_menu[menuLineIdx][12]); // Pump inxed is in different position on line `  ePump AC  4`
+
+  // RPM displays differently depending on 3 or 4 digit rpm.
+  if (rsm_strcmp(_menu[menuLineIdx + 1], "RPM:") == 0)
+  {
+    rpm = rsm_atoi(&_menu[menuLineIdx + 1][10]);
+    if (rsm_strcmp(_menu[menuLineIdx + 2], "Watts:") == 0){
+      watts = rsm_atoi(&_menu[menuLineIdx + 2][10]);
+    }
+    if (rsm_strcmp(_menu[menuLineIdx + 3], "GPM:") == 0){
+      gpm = rsm_atoi(&_menu[menuLineIdx + 3][10]);
+    }
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx+1], "*** Priming ***") == 0){
+    rpm = PUMP_PRIMING;
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx+1], "(Offline)") == 0){
+    rpm = PUMP_OFFLINE;
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx+1], "(Priming Error)") == 0){
+    rpm = PUMP_ERROR;
+  }
+
+  LOG(ONET_LOG, LOG_DEBUG, "Found OneTouch Pump '%s', Index %d, RPM %d, Watts %d, GPM %d\n", _menu[menuLineIdx], pump_index, rpm, watts, gpm);
+
+  for (int i = 0; i < aq_data->num_pumps; i++)
+  {
+    if (aq_data->pumps[i].pumpIndex == pump_index)
+    {
+      // printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
+      // aq_data->pumps[i].updated = true;
+      pump_update(aq_data, i);
+      aq_data->pumps[i].rpm = rpm;
+      aq_data->pumps[i].watts = watts;
+      aq_data->pumps[i].gpm = gpm;
+      // LOG(ONET_LOG,LOG_INFO, "Matched OneTouch Pump to Index %d, RPM %d, Watts %d, GPM %d\n",i,rpm,watts,gpm);
+      LOG(ONET_LOG, LOG_INFO, "Matched OneTouch Pump to '%s', Index %d, RPM %d, Watts %d, GPM %d\n", aq_data->pumps[i].button->name, i, rpm, watts, gpm);
+      if (aq_data->pumps[i].pumpType == PT_UNKNOWN)
+      {
+        if (rsm_strcmp(_menu[2], "Intelliflo VS") == 0)
+          aq_data->pumps[i].pumpType = VSPUMP;
+        else if (rsm_strcmp(_menu[2], "Intelliflo VF") == 0)
+          aq_data->pumps[i].pumpType = VFPUMP;
+        else if (rsm_strcmp(_menu[2], "Jandy ePUMP") == 0 ||
+                 rsm_strcmp(_menu[2], "ePump AC") == 0)
+          aq_data->pumps[i].pumpType = EPUMP;
+
+        LOG(ONET_LOG, LOG_INFO, "OneTouch Pump index %d set PumpType to %d\n", i, aq_data->pumps[i].pumpType);
+        return true;
+      }
+    }
+  }
+  LOG(ONET_LOG, LOG_WARNING, "Did not find AqualinkD config for Pump '%s'\n",_menu[menuLineIdx]);
+  return false;
+}
+
+ /* 
+         Info:   OneTouch Menu Line 1 = 
+         Info:   OneTouch Menu Line 2 =    Chemlink 1   
+         Info:   OneTouch Menu Line 3 =  ORP 750/PH 7.0  
+*/
+bool get_chemlinkinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
+{
+  if (rsm_strcmp(_menu[menuLineIdx + 1], "ORP") == 0)
+  {
+    int orp = atoi(&_menu[menuLineIdx + 1][4]);
+    char *indx = strchr(_menu[menuLineIdx + 1], '/');
+    float ph = atof(indx + 3);
+    LOG(ONET_LOG, LOG_INFO, "OneTouch Cemlink ORP = %d PH = %f\n", orp, ph);
+    if (aq_data->ph != ph || aq_data->orp != orp)
+    {
+      aq_data->ph = ph;
+      aq_data->orp = orp;
+      return true;
+    }
+    return false;
+  }
+  LOG(ONET_LOG, LOG_WARNING, "Did not understand Chemlink message '%s'\n",_menu[menuLineIdx + 1]);
+  return false;
+}
+
+    /* 
+       Info:   OneTouch Menu Line 2 =   AQUAPURE 60%  
+       Info:   OneTouch Menu Line 3 =  Salt 7600 PPM  */
+bool get_aquapureinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
+{
+  bool rtn = false;
+
+#ifdef READ_SWG_FROM_EXTENDED_ID
+
+  int swgp = atoi(&_menu[menuLineIdx][10]);
+  if (aq_data->swg_percent != swgp)
+  {
+    changeSWGpercent(aq_data, swgp);
+    rtn = true;
+  }
+
+  if (rsm_strcmp(_menu[menuLineIdx+1], "Salt") == 0)
+  {
+    int ppm = atoi(&_menu[menuLineIdx+1][6]);
+    if (aq_data->swg_ppm != ppm)
+    {
+      aq_data->swg_ppm = ppm;
+      rtn = true;
+    }
+    LOG(ONET_LOG, LOG_INFO, "OneTouch Aquapure SWG %d%, %d PPM\n", swgp, ppm);
+  }
+
+#endif
+
+  return rtn;
+}
+
+#ifdef AQ_RS16
+bool get_RS16buttoninfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
+{
+  for (int i = aq_data->rs16_vbutton_start; i <= aq_data->rs16_vbutton_end; i++)
+  {
+    if (rsm_strcmp(_menu[menuLineIdx], aq_data->aqbuttons[i].label) == 0)
+    {
+      // Matched must be on.
+      LOG(ONET_LOG, LOG_INFO, "OneTouch RS16 equiptment status '%s' matched '%s'\n", _menu[menuLineIdx], aq_data->aqbuttons[i].label);
+      rs16led_update(aq_data, i);
+      aq_data->aqbuttons[i].led->state = ON;
+      return true;
+    }
+  }
+  return false;
+}
+#endif
+
+/*
+  For older Panel versions 0.1 and 0.2
+  These display information all on one page, kind'a limped together like PDA
+ OneTouch Menu Line 0 = EQUIPMENT STATUS
+ OneTouch Menu Line 1 = 
+ OneTouch Menu Line 2 =   AquaPure 35%  
+ OneTouch Menu Line 3 =  SALT 3200 PPM  
+ OneTouch Menu Line 4 =   FILTER PUMP   
+ OneTouch Menu Line 5 = Intelliflo VS 1 
+ OneTouch Menu Line 6 =     RPM: 1750
+ OneTouch Menu Line 7 =   WATTS: 330
+ OneTouch Menu Line 8 = 
+ OneTouch Menu Line 9 = 
+ OneTouch Menu Line 10 = 
+ OneTouch Menu Line 11 = 
+*/
+bool log_qeuiptment_status_VP2(struct aqualinkdata *aq_data)
+{
+  bool rtn = false;
+
+  int i;
+  for (i = 0; i < ONETOUCH_LINES; i++)
+  {
+    if (rsm_strcmp(_menu[i], "Intelliflo VS") == 0 ||
+        rsm_strcmp(_menu[i], "Intelliflo VF") == 0 ||
+        rsm_strcmp(_menu[i], "Jandy ePUMP") == 0 ||
+        rsm_strcmp(_menu[i], "ePump AC") == 0)
+    {
+      rtn = get_pumpinfo_from_menu(aq_data, i);
+    } else if (rsm_strcmp(_menu[2],"AQUAPURE") == 0) {
+      rtn = get_aquapureinfo_from_menu(aq_data, i);
+    } else if (rsm_strcmp(_menu[i],"Chemlink") == 0) {
+      rtn = get_chemlinkinfo_from_menu(aq_data, i);
+#ifdef AQ_RS16
+    } else if (PANEL_SIZE() >= 16 ) {
+      // Loop over RS 16 buttons.
+      get_RS16buttoninfo_from_menu(aq_data, i);
+    }
+#endif
+  }
+
+  return rtn;
+}
+/*
+Newer panels have a page per device and specific lines with information
+*/
 bool log_qeuiptment_status(struct aqualinkdata *aq_data)
 {
-  int i;
+  if (_panel_version_P2)
+    return log_qeuiptment_status_VP2(aq_data);
+
   bool rtn = false;
 
   if (rsm_strcmp(_menu[2],"Intelliflo VS") == 0 ||
       rsm_strcmp(_menu[2],"Intelliflo VF") == 0 ||
       rsm_strcmp(_menu[2],"Jandy ePUMP") == 0 ||
       rsm_strcmp(_menu[2],"ePump AC") == 0) {
-    rtn = true;
-    int rpm = 0;
-    int watts = 0;
-    int gpm = 0;
-    int pump_index = rsm_atoi(&_menu[2][14]);
-    if (pump_index <= 0)
-      pump_index = rsm_atoi(&_menu[2][12]); // Pump inxed is in different position on line `  ePump AC  4`
-    // RPM displays differently depending on 3 or 4 digit rpm.
-    if (rsm_strcmp(_menu[3],"RPM:") == 0){
-      rpm = rsm_atoi(&_menu[3][10]);
-      if (rsm_strcmp(_menu[4],"Watts:") == 0) {
-        watts = rsm_atoi(&_menu[4][10]);
-      }
-      if (rsm_strcmp(_menu[5],"GPM:") == 0) {
-        gpm = rsm_atoi(&_menu[5][10]);
-      }
-    } else if (rsm_strcmp(_menu[3],"*** Priming ***") == 0){
-      rpm = PUMP_PRIMING;
-    } else if (rsm_strcmp(_menu[3],"(Offline)") == 0){
-      rpm = PUMP_OFFLINE;
-    } else if (rsm_strcmp(_menu[3],"(Priming Error)") == 0){
-      rpm = PUMP_ERROR;
-    }
-
-    LOG(ONET_LOG,LOG_INFO, "OneTouch Pump %s, Index %d, RPM %d, Watts %d, GPM %d\n",_menu[2],pump_index,rpm,watts,gpm);
-
-    for (i=0; i < aq_data->num_pumps; i++) {
-      if (aq_data->pumps[i].pumpIndex == pump_index) {
-        //printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
-        //aq_data->pumps[i].updated = true;
-        pump_update(aq_data, i);
-        aq_data->pumps[i].rpm = rpm;
-        aq_data->pumps[i].watts = watts;
-        aq_data->pumps[i].gpm = gpm;
-        if (aq_data->pumps[i].pumpType == PT_UNKNOWN){
-          if (rsm_strcmp(_menu[2],"Intelliflo VS") == 0)
-            aq_data->pumps[i].pumpType = VSPUMP;
-          else if (rsm_strcmp(_menu[2],"Intelliflo VF") == 0)
-            aq_data->pumps[i].pumpType = VFPUMP;
-          else if (rsm_strcmp(_menu[2],"Jandy ePUMP") == 0 ||
-                   rsm_strcmp(_menu[2],"ePump AC") == 0)
-            aq_data->pumps[i].pumpType = EPUMP;
-        }
-        //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
-      }
-    }
-#ifdef READ_SWG_FROM_EXTENDED_ID
+    rtn = get_pumpinfo_from_menu(aq_data, 2);
   } else if (rsm_strcmp(_menu[2],"AQUAPURE") == 0) {
-    /* Info:   OneTouch Menu Line 0 = Equipment Status
-       Info:   OneTouch Menu Line 1 = 
-       Info:   OneTouch Menu Line 2 =   AQUAPURE 60%  
-       Info:   OneTouch Menu Line 3 =  Salt 7600 PPM  */
-    int swgp = atoi(&_menu[2][10]);
-    if ( aq_data->swg_percent != swgp ) {
-      //aq_data->swg_percent = swgp;
-      if (changeSWGpercent(aq_data, swgp))
-        LOG(ONET_LOG,LOG_INFO, "OneTouch SWG = %d\n",swgp);
-      rtn = true;
-    }
-    
-    if (rsm_strcmp(_menu[3],"Salt") == 0) {
-      int ppm = atoi(&_menu[3][6]);
-      if ( aq_data->swg_ppm != ppm ) {
-        aq_data->swg_ppm = ppm;
-        rtn = true;
-      }
-      LOG(ONET_LOG,LOG_INFO, "OneTouch PPM = %d\n",ppm);
-    }
-#endif
+    rtn = get_aquapureinfo_from_menu(aq_data, 2);
   } else if (rsm_strcmp(_menu[2],"Chemlink") == 0) {
-    /*   Info:   OneTouch Menu Line 0 = Equipment Status
-         Info:   OneTouch Menu Line 1 = 
-         Info:   OneTouch Menu Line 2 =    Chemlink 1   
-         Info:   OneTouch Menu Line 3 =  ORP 750/PH 7.0  */
-    if (rsm_strcmp(_menu[3],"ORP") == 0) {
-      int orp = atoi(&_menu[3][4]);
-      char *indx = strchr(_menu[3], '/');
-      float ph = atof(indx+3);
-      if (aq_data->ph != ph || aq_data->orp != orp) {
-         aq_data->ph = ph;
-         aq_data->orp = orp;
-        return true;
-      }
-      LOG(ONET_LOG,LOG_INFO, "OneTouch Cemlink ORP = %d PH = %f\n",orp,ph);
-    }
+    rtn = get_chemlinkinfo_from_menu(aq_data, 2);
   }
-
-  #ifdef AQ_RS16
+#ifdef AQ_RS16
   else if (PANEL_SIZE() >= 16 ) { // This fails on RS4, comeback and find out why. // Run over devices that have no status LED's on RS12&16 panels.
   //else if ( 16 <= (int)PANEL_SIZE  ) {
-    int j;
+    int i;
     for (i=2; i <= ONETOUCH_LINES; i++) {
-      for (j = aq_data->rs16_vbutton_start; j <= aq_data->rs16_vbutton_end; j++) {
-        if ( rsm_strcmp(_menu[i], aq_data->aqbuttons[j].label) == 0 ) {
-          //Matched must be on.
-          LOG(ONET_LOG,LOG_DEBUG, "OneTouch equiptment status '%s' matched '%s'\n",_menu[i],aq_data->aqbuttons[j].label);
-          rs16led_update(aq_data, j);
-          aq_data->aqbuttons[j].led->state = ON;
-        }
-      }
+      get_RS16buttoninfo_from_menu(aq_data, i);
     }
   }
 #endif
@@ -456,7 +568,7 @@ ot_menu_type get_onetouch_menu_type()
     return OTM_BOOST;
   else if (rsm_strcmp(_menu[0],"Set AQUAPURE") == 0)
     return OTM_SET_AQUAPURE;
-  else if (rsm_strcmp(_menu[7],"REV ") == 0) // NSF Need a better check.
+  else if (rsm_strcmp(_menu[7],"REV") == 0) // NSF Need a better check.
     return OTM_VERSION;
 
   return OTM_UNKNOWN;

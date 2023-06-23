@@ -1,8 +1,8 @@
 #
 # Options
 #
-# make          // standard everything
-# make debug    // Give standard binary just with debugging
+# make          // standard build aqualinkd and serial_logger
+# make debug    // Compule standard aqualinkd binary just with debugging
 # make aqdebug  // Compile with extra aqualink debug information like timings
 # make slog     // Serial logger
 # make <other>  // not documenting
@@ -13,6 +13,7 @@ AQ_RS16 = true
 AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
+AQ_MANAGER = false
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
 # Turn off threadded net services
@@ -22,8 +23,9 @@ AQ_NO_THREAD_NETSERVICE = false
 CC = gcc
 
 #LIBS := -lpthread -lm
-LIBS := -l pthread -l m
+#LIBS := -l pthread -l m
 #LIBS := -l pthread -l m -static # Take out -static, just for dev
+LIBS := -lpthread -lm
 
 # Standard compile flags
 GCCFLAGS = -Wall -O3
@@ -100,8 +102,22 @@ ifeq ($(AQ_MEMCMP), true)
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_MEMCMP
 endif
 
-ifeq ($(AQ_NO_THREAD_NETSERVICE), true)
-  AQ_FLAGS := $(AQ_FLAGS) -D AQ_NO_THREAD_NETSERVICE
+
+ifeq ($(AQ_MANAGER), true)
+  AQ_FLAGS := $(AQ_FLAGS) -D AQ_MANAGER
+  LIBS := $(LIBS) -lsystemd
+  # aq_manager requires threads, so make sure that's turned on.
+  ifeq ($(AQ_NO_THREAD_NETSERVICE), true)
+    # Show error
+    $(warning AQ_MANAGER requires threads, ignoring AQ_NO_THREAD_NETSERVICE)
+  endif
+else
+  # No need for serial_logger without aq_manager
+  SRCS := $(filter-out serial_logger.c, $(SRCS))
+  # no threadded net service only valid without aq manager.
+  ifeq ($(AQ_NO_THREAD_NETSERVICE), true)
+    AQ_FLAGS := $(AQ_FLAGS) -D AQ_NO_THREAD_NETSERVICE
+  endif
 endif
 
 

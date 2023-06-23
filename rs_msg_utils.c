@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 #include "utils.h"
+#include "rs_msg_utils.h"
 
 /*
 int check_panel_conf(char *panel)
@@ -44,6 +45,45 @@ int check_panel_conf(char *panel)
 "RS-8 Combo"
 }
 */
+
+/*
+Pull revision from string  examples
+'E0260801 REV. O.2'
+'    REV. O.2    '
+'B0029221 REV T.0.1'
+'   REV T.0.1'
+*/
+bool rsm_get_revision(char *dest, const char *src, int src_len)
+{
+  char *sp = NULL;
+  char *ep = NULL;
+  
+  sp = rsm_strnstr(src, "REV", src_len);
+  if (sp == NULL) {
+    return false;
+  }
+  sp = sp+3;
+  while ( *sp == ' ' || *sp == '.') {
+    sp = sp+1;
+  }
+  // sp is now the start of string revision #
+  ep = sp;
+  while ( *ep != ' ' && *ep != '\0') {
+    ep = ep+1;
+  }
+  
+  int len=ep-sp;
+  // Check we got something usefull
+  if (len > 5) {
+    return false;
+  }
+
+  memcpy(dest, sp, len);
+  dest[len] = '\0';
+
+  return true;
+}
+
 char *rsm_strstr(const char *haystack, const char *needle)
 {
   char *sp1 = (char *)haystack;
@@ -60,10 +100,36 @@ char *rsm_strstr(const char *haystack, const char *needle)
   //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
   return strcasestr(sp1, sp2);
 }
-char *rsm_strnstr(const char *haystack, const char *needle, int length)
+
+
+char *rsm_strncasestr(const char *haystack, const char *needle, int length)
 {
   // NEED TO WRITE THIS MYSELF.  Same as below but limit length
   return strcasestr(haystack, needle);
+}
+
+/*
+ * Find the first occurrence of find in s, where the search is limited to the
+ * first slen characters of s.
+ */
+char *rsm_strnstr(const char *s, const char *find, size_t slen)
+{
+	char c, sc;
+	size_t len;
+
+	if ((c = *find++) != '\0') {
+		len = strlen(find);
+		do {
+			do {
+				if (slen-- < 1 || (sc = *s++) == '\0')
+					return (NULL);
+			} while (sc != c);
+			if (len > slen)
+				return (NULL);
+		} while (strncmp(s, find, len) != 0);
+		s--;
+	}
+	return ((char *)s);
 }
 
 // Check s2 exists in s1

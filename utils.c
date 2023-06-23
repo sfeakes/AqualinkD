@@ -34,6 +34,10 @@
 #include <sys/time.h>
 #endif
 
+#ifdef AQ_MANAGER
+#include <systemd/sd-journal.h>
+#endif
+
 #ifndef _UTILS_C_
 #define _UTILS_C_
 #endif
@@ -101,6 +105,8 @@ int getLogLevel(int16_t from)
   return _log_level;
 }
 
+#ifdef AQ_MANAGER
+
 void startInlineLog2File()
 {
    _log2file = true;
@@ -111,28 +117,12 @@ void stopInlineLog2File()
 {
   _log2file = _cfg_log2file;
 }
-char *getInlineLogFName()
-{
-  return _log_filename;
-}
-void cleanInlineLogFile() {
+void cleanInlineLog2File() {
   if (_log_filename != NULL) {
     fclose(fopen(_log_filename, "w"));
   }
 }
-bool islogFileReady()
-{
-  if (_log_filename != NULL) {   
-    struct stat st;
-    stat(_log_filename, &st);
-    if ( st.st_size > 0)
-      return true;
-  } 
-  return false;
-}
-
-
-#ifdef INCLUDE_OLD_DEBUG_HTML
+#else // AQ_MANAGER
 void startInlineDebug()
 {
   _log_level = LOG_DEBUG;
@@ -159,7 +149,23 @@ void cleanInlineDebug() {
     fclose(fopen(_log_filename, "w"));
   }
 }
-#endif
+#endif // AQ_MANAGER
+
+char *getInlineLogFName()
+{
+  return _log_filename;
+}
+
+bool islogFileReady()
+{
+  if (_log_filename != NULL) {   
+    struct stat st;
+    stat(_log_filename, &st);
+    if ( st.st_size > 0)
+      return true;
+  } 
+  return false;
+}
 
 
 /*
@@ -529,6 +535,17 @@ void _LOG(int16_t from, int msg_level,  char *message)
     closelog ();
   }
   
+  #ifdef AQ_MANAGER // Always use syslog with aqmanager
+    //sd_journal_print()
+    //openlog("aqualinkd", 0, LOG_DAEMON);
+    if (msg_level > LOG_DEBUG)  // Let's not confuse syslog with custom levels
+      sd_journal_print (LOG_DEBUG, "%s", &message[9]);
+      //sd_journal_print_with_location(LOG_DEBUG, "aqualinkd", "%s", &message[9]);
+    else
+      sd_journal_print (msg_level, "%s", &message[9]);
+      //sd_journal_print_with_location(msg_level, "aqualinkd", "%s", &message[9]);
+    //closelog ();
+  #else
   if (_daemonise == TRUE)
   {
     if (msg_level > LOG_DEBUG)  // Let's not confuse syslog with custom levels
@@ -538,6 +555,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
     closelog ();
     //return;
   }
+  #endif
   
   //int len;
   message[8] = ' ';
@@ -551,8 +569,9 @@ void _LOG(int16_t from, int msg_level,  char *message)
   }
   */
 
-  // Send logs to any websocket that's interested.
-  broadcast_log(message);
+  // Superceded systemd/sd-journal
+  //with Send logs to any websocket that's interested.
+  //broadcast_log(message);
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {

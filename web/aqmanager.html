@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+    <title>AqualinkD Managment Console</title>
+    <meta name='viewport' content='width=device-width'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <link href="aqualinkd.png" rel="apple-touch-icon">
+    <link href="aqualinkd.png" rel="icon">
+    <style>
+        html {}
+
+        body {
+            font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+            font-weight: 300;
+            background-color: white;
+            color: #000000;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .wrapper {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            grid-gap: 1rem;
+        }
+
+        .inner {
+            /*padding: 1rem;*/
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /*border: 1px solid red;*/
+            align-items: flex-start;
+
+        }
+
+        .aqualinkd {
+            grid-column: 1 / -1;
+        }
+
+        .commands {
+            /*padding: 1rem;*/
+
+            /*display: grid;*/
+            align-items: center;
+            justify-content: center;
+            /*border: 1px solid red;*/
+            row-gap: 20px;
+
+        }
+
+        /*
+        .loglevelstitle {
+            background-color: rgb(221, 221, 221);
+        }
+
+        .debugmaskstitle {
+            background-color: rgb(221, 221, 221);
+        }
+*/
+
+        table {
+            background-color: rgb(221, 221, 221);
+            padding: 10px;
+        }
+
+        th {
+            background-color: white;
+        }
+
+        #title {
+            background-color: rgb(200, 200, 200);
+            font-weight: 600;
+        }
+
+        input[type=button],
+        input[type=submit],
+        input[type=reset] {
+            /*background-color: rgb(165, 165, 165);*/
+            background-color: #4CAAD9;
+            border: none;
+            color: rgb(0, 0, 0);
+            padding: 2px 2px;
+            text-decoration: none;
+            margin: 2px 2px 2px 2px;
+            min-width: 70px;
+            border-radius: 70px;
+            height: 20px;
+            /*max-width: 120px;*/
+        }
+
+        .disablebutton {
+            background-color: #ccc !important;
+            color: #777 !important;
+        }
+
+        .disabletoggle {
+            color: #777 !important;
+        }
+
+        .statusmsg {
+
+        }
+
+        .error {
+            background-color: rgb(255, 0, 0) !important;
+            font-weight: 600;
+        }
+
+        .logmsgerror {
+            color: rgb(255, 0, 0) !important;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .commands {
+            vertical-align: top;
+        }
+
+        .loglevels {}
+
+        .logcontainer {
+            font-family: monospace;
+            height: 510px;
+
+            width: 100%;
+            overflow: auto;
+            display: flex;
+            flex-direction: column-reverse;
+            background-color: #2b2b2b;
+            color: white;
+        }
+
+        .toggle {
+            cursor: pointer;
+            display: inline-block;
+            margin: 1px 1px 1px 1px;
+
+        }
+
+        .logtoggle {
+            width: 130px;
+        }
+
+        .toggle-switch {
+            display: inline-block;
+            background: #ccc;
+            border-radius: 16px;
+            width: 35px;
+            height: 18px;
+            position: relative;
+            vertical-align: middle;
+            transition: background 0.25s;
+        }
+
+        .toggle-switch:before,
+        .toggle-switch:after {
+            content: "";
+        }
+
+        .toggle-switch:before {
+            display: block;
+            background: linear-gradient(to bottom, #fff 0%, #eee 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+            width: 15px;
+            height: 15px;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: left 0.25s;
+        }
+
+        .toggle:hover .toggle-switch:before {
+            background: linear-gradient(to bottom, #fff 0%, #fff 100%);
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+        }
+
+        .toggle-checkbox:checked+.toggle-switch {
+            /*background: #56c080;*/
+            background: #4CAAD9;
+        }
+
+        .toggle-checkbox:checked+.toggle-switch:before {
+            left: 19px;
+        }
+
+        .toggle-checkbox {
+            position: absolute;
+            visibility: hidden;
+        }
+
+        .toggle-label {
+            margin-left: 5px;
+            position: relative;
+            top: 2px;
+        }
+
+
+        .collapsible {
+            background-color: #777;
+            color: white;
+            cursor: pointer;
+            /*padding: 18px;*/
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .collapsible:after {
+            content: '\002B';
+            color: white;
+            font-weight: bold;
+            float: right;
+            margin-left: 5px;
+        }
+
+        .active:after {
+            content: "\2212";
+        }
+
+        .content {
+            display: grid;
+            /*padding: 0 18px;*/
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            background-color: #f1f1f1;
+            font-size: 14px;
+        }
+    </style>
+
+    <script type='text/javascript'>
+
+        var _panel_size = 6;
+        var _panel_set = 0;
+
+        function init_collapsible() {
+            var coll = document.getElementsByClassName("collapsible");
+            var i;
+
+            for (i = 0; i < coll.length; i++) {
+                coll[i].addEventListener("click", function () {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    if (content.style.maxHeight) {
+                        content.style.maxHeight = null;
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + "px";
+                    }
+                });
+            }
+
+            // open up the system information collapsable content
+            document.getElementById("systembutton").dispatchEvent(new Event('click'));
+
+            // disable the download log button on startup
+            disablebutton("downloadlog");
+            disabletoggle("log2file");
+            //disabletoggle("seriallog");
+        }
+
+        function disablebutton(id) {
+            console.log("disable " + id);
+            var button = document.getElementById(id);
+            if (button) {
+                button.disabled = true;
+                button.classList.add("disablebutton");
+            }
+        }
+        function enablebutton(id) {
+            console.log("enable " + id);
+            var button = document.getElementById(id);
+            if (button) {
+                button.disabled = false;
+                button.classList.remove("disablebutton");
+            }
+        }
+        function disabletoggle(id) {
+            disablebutton(id);
+            try {
+                document.getElementById(id).parentNode.classList.add("disabletoggle");
+            } catch (e) { console.log("error " + e) }
+        }
+        function enabletoggle(id) {
+            enablebutton(id);
+            try {
+                document.getElementById(id).parentNode.classList.remove("disabletoggle");
+            } catch (e) { console.log("error " + e) }
+        }
+
+        function tohex(value) {
+            var rtn = parseInt(value).toString(16);
+            if (rtn.length <= 1)
+                return "0x0" + rtn;
+            else
+                return "0x" + rtn;
+        }
+        function todec(value) {
+            let number = parseInt(value, 16);
+            return number;
+        }
+
+        var last_message_element = null;
+
+        function update_log_message(message) {
+            var element = document.createElement("div");
+            if (message.startsWith("Error:")) {
+                element.classList.add("logmsgerror");
+            }
+
+            element.appendChild(document.createTextNode(message));
+            document.getElementById("logs").insertBefore(element, last_message_element);
+            last_message_element = element;
+        }
+
+        function update_status(data) {
+        }
+
+        function setloglevel(caller) {
+            //console.log(caller.id);
+            var id = parseInt(caller.id.split('_')[1]);
+            var msg = {
+                uri: "setloglevel",
+                value: id
+            };
+            send_command(msg);
+        }
+        function setlogmask(caller) {
+            console.log(caller.id);
+            var id = parseInt(caller.id.split('_')[1]);
+            var addremove = "";
+            if (caller.checked) {
+                addremove = "addlogmask";
+            } else {
+                addremove = "removelogmask";
+            }
+
+            var msg = {
+                uri: addremove,
+                value: id
+            };
+            send_command(msg);
+        }
+        function setlogfile(caller) {
+            var msg = {};
+            if (caller.id == "log2file") {
+                var startstop = "";
+                if (caller.checked) {
+                    startstop = "start";
+                } else {
+                    startstop = "stop";
+                }
+                msg = {
+                    uri: "log2file/" + startstop,
+                    value: 0
+                };
+            } else if (caller.id == "cleanlog") {
+                msg = {
+                    uri: "log2file/clean",
+                    value: 0
+                };
+            } else if (caller.id == "downloadlog") {
+                //window.location = '/api/debug/download';
+                downloadFile('/api/debug/download/aqualinkd.log');
+                return;
+            }
+
+            send_command(msg);
+        }
+
+        function downloadFile(filePath) {
+            var link = document.createElement('a');
+            link.href = filePath;
+            link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
+            link.click();
+        }
+
+        function settoggle(id, onoff) {
+            var element = document.getElementById(id);
+            if (onoff == "on") {
+                element.checked = true;
+                //console.log("set " + element.id + " on");
+            } else {
+                element.checked = false;
+                //console.log("set " + element.id + " off");
+            }
+        }
+
+
+
+        function update_status(data) {
+            /*
+              read panel_message, panel_type, version, aqualinkd_version
+ 
+            */
+            if (data['aqualinkd_version']) {
+                var eCommands = document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+            }
+            if (data['version']) {
+                var eCommands = document.getElementById("panelversion").innerHTML = data['version'];
+            }
+            if (data['panel_type']) {
+                var eCommands = document.getElementById("paneltype").innerHTML = data['panel_type'];
+            }
+            if (data['status']) {
+                update_status_message(data['status']);
+            }
+            /*
+            if (data['status'] == " ") {
+                document.getElementById("statusmsg").innerHTML = "Connected";
+            } else if (data['status'] != " ") {
+                document.getElementById("statusmsg").innerHTML = data['status'];
+            }
+            */
+        }
+
+        function update_status_message(message, error=false) {
+          try{
+            if (error || message.substring(0, 5).toLowerCase() == "error" )
+              document.getElementById("statusmsg").classList.add("error");
+            else
+              document.getElementById("statusmsg").classList.remove("error");
+
+            if (message == " ") {
+                document.getElementById("statusmsg").innerHTML = "Connected";
+            } else if (message != " ") {
+                document.getElementById("statusmsg").innerHTML = message;
+            }
+          } catch (Error) {}
+        }
+
+        function setAqManagerOptions(data) {
+
+            /*
+              read deamonized logging2file logfilename debugmasks[] loglevels[]
+              if logfilename=NULL we can turn on/off logging to file.
+              logging2file will tell us if it's currently on or off
+            */
+            console.log("deamonized=" + data['deamonized']);
+            console.log("logfilename=" + data['logfilename']);
+            console.log("logfileready=" + data['logfileready']);
+
+            if (data['logfilename'] == "(null)")
+                enabletoggle("log2file");
+            else
+                disabletoggle("log2file");
+
+            if (data['logfileready'] == "on") {
+                enablebutton("downloadlog");
+                enablebutton("cleanlog");
+            } else {
+                disablebutton("downloadlog");
+                disablebutton("cleanlog");
+            }
+
+            var eCommands = document.getElementById("loglevels");
+            for (var obj in data['loglevels']) {
+                //console.log(data['loglevels'][obj].name);
+                var element_id = "loglevel_" + data['loglevels'][obj].id;
+                var element = document.getElementById(element_id);
+                if (!element) {
+                    element = document.createElement('label');
+                    element.classList.add('toggle');
+                    element.classList.add('logtoggle');
+                    element.innerHTML = '<input class="toggle-checkbox" type="checkbox" id="' + element_id + '" onclick="setloglevel(this);">' +
+                        '<div class="toggle-switch"></div>' +
+                        '<span class="toggle-label">' + data['loglevels'][obj].name + '</span>';
+                    eCommands.appendChild(element);
+                }
+                settoggle(element_id, data['loglevels'][obj].set);
+            }
+
+            var eCommands = document.getElementById("debugmasks");
+            for (var obj in data['debugmasks']) {
+                var element_id = "debugmask_" + data['debugmasks'][obj].id;
+                var element = document.getElementById(element_id);
+                if (!element) {
+                    element = document.createElement('label');
+                    element.classList.add('toggle');
+                    element.classList.add('logtoggle');
+                    element.innerHTML = '<input class="toggle-checkbox" type="checkbox" id="' + element_id + '" onclick="setlogmask(this);">' +
+                        '<div class="toggle-switch"></div>' +
+                        '<span class="toggle-label">' + data['debugmasks'][obj].name + '</span>';
+                    eCommands.appendChild(element);
+                }
+                settoggle(element_id, data['debugmasks'][obj].set);
+            }
+        }
+
+        function get_appropriate_ws_url() {
+            var pcol;
+            var u = document.URL;
+            /*
+             * We open the websocket encrypted if this page came on an
+             * https:// url itself, otherwise unencrypted
+             */
+            if (u.substring(0, 5) == "https") {
+                pcol = "wss://";
+                u = u.substr(8);
+            } else {
+                pcol = "ws://";
+                if (u.substring(0, 4) == "http")
+                    u = u.substr(7);
+            }
+            u = u.split('/');
+            //alert (pcol + u[0] + ":6500");
+            return pcol + u[0];
+        }
+        /* dumb increment protocol */
+        var socket_di;
+
+        function startWebsockets() {
+            socket_di = new WebSocket(get_appropriate_ws_url());
+            try {
+                socket_di.onopen = function () {
+                    // success!
+                    start_manager();
+                    //get_devices();
+                }
+                socket_di.onmessage = function got_packet(msg) {
+                    //document.getElementById("status").classList.remove("error");
+                    //console.log(msg.data);
+                    var data
+                    try {
+                        data = JSON.parse(msg.data);
+
+                    }
+                    catch (error) {
+                        console.error(error);
+                        console.log(msg.data);
+                    }
+
+                    if (data.logmsg) {
+                        update_log_message(data.logmsg);
+                    } else if (data.na_message) {
+                        set_unavailable(data.na_message);
+                    } else if (data.message) {
+                        update_status_message(data.message);
+                    } else if (data.type == 'aqmanager') {
+                        setAqManagerOptions(data);
+                        //update_status(data);
+                    } else if (data.type == 'devices') {
+                        //update_device(data);
+                    } else if (data.type == 'status') {
+                        update_status(data);
+                    } else if (data.type == 'aux_labels') {
+                        //set_labels(data);
+                    }
+                }
+                socket_di.onclose = function () {
+                    // something went wrong
+                    //document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
+                    //document.getElementById("status").classList.add("error");
+                    // Try to reconnect every 5 seconds.
+                    update_status_message('  !!! Connection error !!!  ', true);
+                    setTimeout(function () {
+                        startWebsockets();
+                    }, 5000);
+                }
+            } catch (exception) {
+                alert('<p>Error' + exception);
+            }
+        }
+
+        function send_command(cmd) {
+            console.log("Send " + JSON.stringify(cmd));
+            socket_di.send(JSON.stringify(cmd));
+
+        }
+
+        function start_manager() {
+            var msg = {
+                //command: "simulator"
+                uri: "aqmanager"
+            };
+            socket_di.send(JSON.stringify(msg));
+        }
+
+        function get_devices() {
+            var msg = {
+                uri: "devices"
+            };
+            socket_di.send(JSON.stringify(msg));
+        }
+
+
+        /*
+                function reset() {
+                    socket_di.send("reset\n");
+                }
+        */
+        function init() {
+            startWebsockets();
+        }
+
+        function set_unavailable(message) {
+            
+            console.log("!!! NOT Available !!!");
+
+            update_log_message("!!! AqualinkD Manager "+message+" !!!");
+
+            const demoClasses = document.querySelectorAll('.inner');
+            demoClasses.forEach(element => {
+                element.style.opacity = 0.2;
+                console.log('Element '+element);
+            });
+
+            disablebutton("restart");
+            disablebutton("seriallog");
+            disablebutton("downloadlog");
+            disabletoggle("log2file");
+
+            var coll = document.getElementsByClassName("collapsible");
+            var i;
+            for (i = 0; i < coll.length; i++) {
+                // Remove event listeners from Element by cloning it.
+                coll[i].replaceWith(coll[i].cloneNode(true));
+            }
+            //disabletoggle("seriallog");
+        }
+
+
+        function send(source) {
+            //console.log("from" + source.id);
+
+            var cmd = {};
+            //cmd.uri = "rawcommand"
+            switch (source.id) {
+                case "restart":
+                    cmd.uri = "restart"
+                    // NEED TO REGET aqmanager after restart.
+                    break;
+                case "debugstart":
+                    cmd.uri = "debug/start"
+                    break;
+                case "debugstop":
+                    cmd.uri = "debug/stop"
+                    break;
+                case "seriallog":
+                    cmd.uri = "seriallogger"
+                    break;
+                default:
+                    alert("Unknown button");
+                    return;
+                    break;
+            }
+
+            send_command(cmd);
+        }
+    </script>
+
+<body onload="init();init_collapsible();">
+    <div class="wrapper">
+        <div class="aqualinkd">
+            <iframe id="aqd" src="/" width="100%" height="350px"></iframe>
+        </div>
+        <div class="inner">
+            <div class="commands">
+                <table border='0' id="deviceList">
+                    <tr style="title">
+                        <td colspan="2" style="title" align="center"><label id="title">&nbsp;&nbsp;AqualinkD Managment
+                                Console&nbsp;&nbsp;</label></th>
+                    </tr>
+                    <tr>
+                        <td colspan="2" align="center"><label id="statusmsg" class="statusmsg" >status</label></td>
+                    </tr>
+                    <tr>
+                        <td align="center">
+                            <input id="restart" type="button" onclick="send(this);" value="Restart AqualinkD">
+                        </td>
+                        <td>
+                            <input id="seriallog" type="button" onclick="send(this);" value="Run Serial Logger">
+                        </td>
+                    </tr>
+                </table>
+                <button class="collapsible" id="systembutton">System Information</button>
+                <div class="content" id="system">
+                    <table border='0'>
+                        <tr>
+                            <td>AqualinkD version:</td>
+                            <td id="aqualinkdversion"></td>
+                        </tr>
+                        <tr>
+                            <td>Panel version:</td>
+                            <td id="panelversion"></td>
+                        </tr>
+                        <tr>
+                            <td>Panel type:</td>
+                            <td id="paneltype"></td>
+                        </tr>
+                    </table>
+                </div>
+                <!--&nbsp;-->
+                <button class="collapsible">Log Levels</button>
+                <div class="content" id="loglevels">
+                    <!-- Will be populated on load -->
+                </div>
+                <button class="collapsible">Log File</button>
+                <div class="content" id="loglevels">
+                    <label class="toggle logtoggle"><input class="toggle-checkbox" type="checkbox" id="log2file"
+                            onclick="setlogfile(this);">
+                        <div class="toggle-switch"></div><span class="toggle-label">Log to file</span>
+                    </label>
+                    <input id="downloadlog" type="button" onclick="setlogfile(this);" value="Download logfile"></input>
+                    <input id="cleanlog" type="button" onclick="setlogfile(this);" value="Delete logfile"></input>
+                </div>
+                <!--&nbsp;-->
+                <button class="collapsible">Debug Masks</button>
+                <div class="debugmasks content" id="debugmasks">
+                    <!-- Will be populated on load -->
+                </div>
+                <button class="collapsible">Config</button>
+                <div class="content" id="config">
+                    <!-- Will be populated on load -->
+                    <label>Not Implimented</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="inner">
+            <div class="logcontainer" id="logs">
+                <!--<div class="inner">END</div>-->
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

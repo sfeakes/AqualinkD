@@ -6,8 +6,9 @@
 #include <stdbool.h>
 
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
+#ifdef AQ_MANAGER
 #define CONNECTION_RUNNING_SLOG "Running serial_logger, this will take some time"
-
+#endif
 
 #define SERIAL_BLOCKING_TIME 50 // (1 to 255) in 1/10th second so 1 = 0.1 sec, 255 = 25.5 sec
 
@@ -229,6 +230,10 @@
 #define LNG_MSG_BATTERY_LOW           "BATTERY LOW"
 //#define LNG_MSG_FREEZE_PROTECTION_ACTIVATED "FREEZE PROTECTION ACTIVATED"
 #define LNG_MSG_FREEZE_PROTECTION_ACTIVATED "FREEZE PROTECTION IS ACTIVATED"
+
+// These are
+#define LNG_MSG_CHEM_FEED_ON          "CHEM FEED ON"
+#define LNG_MSG_CHEM_FEED_OFF         "CHEM FEED OFF"
 
 
 #define MSG_AIR_TEMP   "AIR TEMP"

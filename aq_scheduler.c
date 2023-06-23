@@ -165,8 +165,8 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
       } else if ( inarray && inBuf[i] == '{') {
         passJson_scObj( &inBuf[i], (inSize-i), &cline);
         LOG(SCHD_LOG,LOG_DEBUG, "Write to cron Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
-        LOG(SCHD_LOG,LOG_INFO, "%s%s %s %s %s %s curl localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
-        fprintf(fp, "%s%s %s %s %s %s root curl localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
+        LOG(SCHD_LOG,LOG_INFO, "%s%s %s %s %s %s curl -s -S --show-error -o /dev/null localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
+        fprintf(fp, "%s%s %s %s %s %s root curl -s -S --show-error -o /dev/null localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
       } else if ( inarray && inBuf[i] == '}') {
         //inobj=false;
         //objed=i;

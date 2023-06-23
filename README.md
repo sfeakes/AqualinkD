@@ -79,6 +79,9 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Add set time to OneTouch protocol.
 * Publish AqualinkD Management console. (Configure, Restart, run serial_logger) within AqualinkD.
 
+# Update in Release 2.3.2 (Current Development)
+* Added support for VSP on panel versions REV 0.1 & 0.2
+
 # Update in Release 2.3.1
 * Changed a lot of logic around different protocols.
 * Added low latency support for FTDI usb driver.

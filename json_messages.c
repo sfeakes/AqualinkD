@@ -75,9 +75,9 @@ int json_chars(char *dest, const char *src, int dest_len, int src_len)
   return i;
 }
 
-int build_logmsg_JSON(char *dest, const char *src, int dest_len, int src_len)
+int build_logmsg_JSON(char *dest, int loglevel, const char *src, int dest_len, int src_len)
 {
-  int length = sprintf(dest, "{\"logmsg\":\"");
+  int length = sprintf(dest, "{\"logmsg\":\"%-7s",elevel2text(loglevel));
   length += json_chars(dest+length, src, (dest_len-20), src_len);
   length += sprintf(dest+length, "\"}");
   dest[length] = '\0';
