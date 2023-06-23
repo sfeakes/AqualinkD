@@ -2215,7 +2215,7 @@ void send_cmd(unsigned char cmd)
 void force_queue_delete()
 {
   if (_pgm_command != NUL)
-    LOG(PROG_LOG, LOG_INFO, "Reall bad coding, don't use this in release\n");
+    LOG(PROG_LOG, LOG_INFO, "Really bad coding, don't use this in release\n");
 
   _pgm_command = NUL;
 }
