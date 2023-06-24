@@ -514,7 +514,7 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
     if (aq_data->aqbuttons[device].led->state != state) {
       //printf("*** Select State ***\n");
       LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].label,state);
-      force_queue_delete(); // NSF This is a really shit thing to do.  Need to fix this
+      force_queue_delete(); // NSF This is a bad thing to do.  Need to fix this
       send_cmd(KEY_PDA_SELECT);
       while (get_aq_cmd_length() > 0) { delay(500); }
       // If you are turning on a heater there will be a sub menu to set temp

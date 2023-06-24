@@ -191,6 +191,9 @@ void pass_pda_equiptment_status_item_OLD(char *msg)
   // 
   // 
   // 
+  // JANDY ePUMP   1 
+  //     RPM: 2520
+  //   WATTS: 856
 
   // Check message for status of device
   // Loop through all buttons and match the PDA text.
@@ -594,7 +597,7 @@ void log_pump_information() {
 
     for (i=0; i < _aqualink_data->num_pumps; i++) {
       if (_aqualink_data->pumps[i].pumpIndex == pump_index) {
-        LOG(PDA_LOG,LOG_INFO, "PDA Pump label: %s Index: %d, ID: %d, RPM: %d, Watts: %d, GPM: %d\n",_aqualink_data->pumps[i].button->name, i ,pump_index,pump_index,rpm,watts,gpm);
+        LOG(PDA_LOG,LOG_INFO, "PDA Pump label: %s Index: %d, ID: %d, RPM: %d, Watts: %d, GPM: %d\n",_aqualink_data->pumps[i].button->name, i ,pump_index,rpm,watts,gpm);
         //printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
         //aq_data->pumps[i].updated = true;
         pda_pump_update(_aqualink_data, i);

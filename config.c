@@ -661,6 +661,19 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
+    } else if (strncasecmp(param + 9, "_pumpType", 9) == 0) {
+      pump_detail *pump = getpump(aqdata, num);
+      if (pump != NULL) {
+        if ( stristr(value, "Pentair VS") != 0)
+          pump->pumpType = VSPUMP;
+        else if ( stristr(value, "Pentair VF") != 0)
+          pump->pumpType = VFPUMP;
+        else if ( stristr(value, "Jandy ePump") != 0)
+          pump->pumpType = EPUMP;
+      } else {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+      }
+      rtn=true;
     }
       /*
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {

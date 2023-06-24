@@ -663,7 +663,7 @@ void _processMessage(char *message, bool reset)
   { // '8157 REV MMM'
     // A master firmware revision message.
     strcpy(_aqualink_data.version, msg);
-    rsm_get_revision(_aqualink_data.revision, msg, strlen(msg));
+    rsm_get_revision(_aqualink_data.revision, _aqualink_data.version, strlen(_aqualink_data.version));
     //_gotREV = true;
     LOG(AQRS_LOG,LOG_NOTICE, "Control Panel version %s\n", _aqualink_data.version);
     LOG(AQRS_LOG,LOG_NOTICE, "Control Panel revision %s\n", _aqualink_data.revision);
