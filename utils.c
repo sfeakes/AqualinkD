@@ -53,12 +53,15 @@
 void broadcast_log(char *msg);
 
 static bool _daemonise = false;
+
+#ifndef AD_MANAGER
 static bool _log2file = false;
 //static int _log_level = LOG_ERR;
 static int _log_level = LOG_WARNING;
 static char *_log_filename = NULL;
 static bool _cfg_log2file;
 static int _cfg_log_level;
+#endif
 
 static char *_loq_display_message = NULL;
 int16_t _logforcemask = 0;
@@ -106,7 +109,7 @@ int getLogLevel(int16_t from)
 }
 
 #ifdef AQ_MANAGER
-
+/*
 void startInlineLog2File()
 {
    _log2file = true;
@@ -122,6 +125,7 @@ void cleanInlineLog2File() {
     fclose(fopen(_log_filename, "w"));
   }
 }
+*/
 #else // AQ_MANAGER
 void startInlineDebug()
 {
@@ -149,8 +153,6 @@ void cleanInlineDebug() {
     fclose(fopen(_log_filename, "w"));
   }
 }
-#endif // AQ_MANAGER
-
 char *getInlineLogFName()
 {
   return _log_filename;
@@ -166,6 +168,9 @@ bool islogFileReady()
   } 
   return false;
 }
+#endif // AQ_MANAGER
+
+
 
 
 /*
@@ -658,9 +663,9 @@ void daemonise (char *pidFile, void (*main_function) (void))
     fp = fopen (pidFile, "w");
 
     if (fp == NULL)
-    LOG(AQUA_LOG, LOG_ERR,"can't write to PID file %s",pidFile);
+      LOG(AQUA_LOG, LOG_ERR,"can't write to PID file %s",pidFile);
     else
-    fprintf(fp, "%d", process_id);
+      fprintf(fp, "%d", process_id);
 
     fclose (fp);
     LOG(AQUA_LOG, LOG_DEBUG, "process_id of child process %d \n", process_id);

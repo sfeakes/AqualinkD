@@ -263,8 +263,8 @@
             document.getElementById("systembutton").dispatchEvent(new Event('click'));
 
             // disable the download log button on startup
-            disablebutton("downloadlog");
-            disabletoggle("log2file");
+            //disablebutton("downloadlog");
+            //disabletoggle("log2file");
             //disabletoggle("seriallog");
         }
 
@@ -369,19 +369,35 @@
                     value: 0
                 };
             } else if (caller.id == "downloadlog") {
+                
                 //window.location = '/api/debug/download';
-                downloadFile('/api/debug/download/aqualinkd.log');
+                downloadFile('/api/log2file/download/aqualinkd.log', document.getElementById("logsize").value);
                 return;
             }
 
             send_command(msg);
         }
 
-        function downloadFile(filePath) {
-            var link = document.createElement('a');
-            link.href = filePath;
-            link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
-            link.click();
+        function downloadFile(filePath, lines) {
+                console.log("Lines=" + lines);
+                /*
+                var link = document.createElement('a');
+                link.href = filePath;
+                link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
+                link.click();
+                */
+               
+                var form = document.createElement('form');
+                form.setAttribute("style", "display: none;");
+                form.method='POST';
+                form.action=filePath;
+                element=document.createElement('INPUT');
+                element.name='value';
+                element.value=lines;
+                form.appendChild(element);
+                document.body.appendChild(form);
+                form.submit();
+                
         }
 
         function settoggle(id, onoff) {
@@ -453,7 +469,7 @@
                 enabletoggle("log2file");
             else
                 disabletoggle("log2file");
-
+/*
             if (data['logfileready'] == "on") {
                 enablebutton("downloadlog");
                 enablebutton("cleanlog");
@@ -461,7 +477,7 @@
                 disablebutton("downloadlog");
                 disablebutton("cleanlog");
             }
-
+*/
             var eCommands = document.getElementById("loglevels");
             for (var obj in data['loglevels']) {
                 //console.log(data['loglevels'][obj].name);
@@ -617,7 +633,7 @@
             disablebutton("restart");
             disablebutton("seriallog");
             disablebutton("downloadlog");
-            disabletoggle("log2file");
+            //disabletoggle("log2file");
 
             var coll = document.getElementsByClassName("collapsible");
             var i;
@@ -706,12 +722,17 @@
                 </div>
                 <button class="collapsible">Log File</button>
                 <div class="content" id="loglevels">
+                    <!--
                     <label class="toggle logtoggle"><input class="toggle-checkbox" type="checkbox" id="log2file"
                             onclick="setlogfile(this);">
                         <div class="toggle-switch"></div><span class="toggle-label">Log to file</span>
                     </label>
-                    <input id="downloadlog" type="button" onclick="setlogfile(this);" value="Download logfile"></input>
-                    <input id="cleanlog" type="button" onclick="setlogfile(this);" value="Delete logfile"></input>
+                -->
+                    <table border='0'><tr><td>
+                      <input id="downloadlog" type="button" onclick="setlogfile(this);" value="Download logfile"></input>
+                    </td><td>
+                      <input id="logsize" type="text" value="1000" size="5">#lines</input>
+                    </td></tr></table>
                 </div>
                 <!--&nbsp;-->
                 <button class="collapsible">Debug Masks</button>

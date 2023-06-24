@@ -69,6 +69,7 @@ static volatile bool _restart = false;
 //static struct aqconfig _aqconfig_;
 static struct aqualinkdata _aqualink_data;
 
+// NSF Need to remove self
 char *_self;
 char *_cfgFile;
 int _cmdln_loglevel = -1;
@@ -1153,6 +1154,7 @@ int startup(char *self, char *cfgFile)
   _cfgFile = cfgFile;
   //initButtons(&_aqualink_data);
   
+  sprintf(_aqualink_data.self, basename(self));
   clearDebugLogMask();
   read_config(&_aqualink_data, cfgFile);
 
@@ -1372,7 +1374,8 @@ int startup(char *self, char *cfgFile)
     char pidfile[256];
     // sprintf(pidfile, "%s/%s.pid",PIDLOCATION, basename(argv[0]));
     //sprintf(pidfile, "%s/%s.pid", "/run", basename(argv[0]));
-    sprintf(pidfile, "%s/%s.pid", "/run", basename(self));
+    //sprintf(pidfile, "%s/%s.pid", "/run", basename(self));
+    sprintf(pidfile, "%s/%s.pid", "/run", _aqualink_data.self);
     daemonise(pidfile, main_loop);
   }
   else

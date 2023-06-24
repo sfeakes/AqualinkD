@@ -235,6 +235,7 @@ struct aqualinkdata
   unsigned char raw_status[AQ_PSTLEN];
   // Multiple threads update this value.
   volatile bool updated;
+  char self[AQ_MSGLEN*2];
 
   #ifdef AQ_MANAGER
   volatile bool run_slogger;

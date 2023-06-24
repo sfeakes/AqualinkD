@@ -102,18 +102,19 @@ char *prittyString(char *str);
 
 
 #ifdef AQ_MANAGER
-void startInlineLog2File();
-void stopInlineLog2File();
-void cleanInlineLog2File();
+//void startInlineLog2File();
+//void stopInlineLog2File();
+//void cleanInlineLog2File();
 #else
 void startInlineDebug();
 void stopInlineDebug();
 void startInlineSerialDebug();
 void cleanInlineDebug();
-#endif
-
 char *getInlineLogFName();
 bool islogFileReady();
+#endif
+
+
 //const char *logmask2name(int16_t from);
 
 //#ifndef _UTILS_C_

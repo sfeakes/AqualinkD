@@ -279,6 +279,11 @@ bool log_panelversion(struct aqualinkdata *aq_data)
 
   // It's already been set
   if (strlen(aq_data->version) > 0) {
+    // If another protocol set it, we need to check if it's version.
+    if ( strcmp(aq_data->revision, "0.1") == 0 || strcmp(aq_data->revision, "0.2") == 0 ) {
+      LOG(ONET_LOG,LOG_NOTICE, "Setting early version for OneTouch\n");
+      _panel_version_P2 = true;
+    }
     return false;
   }
 

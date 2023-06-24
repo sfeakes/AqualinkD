@@ -497,8 +497,8 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"", AQUALINKD_VERSION ); //1.0b,
   */
   //length += sprintf(buffer+length, ",\"logging2file\": \"%s\"",islogFileReady()?JSON_ON:JSON_OFF);
-  length += sprintf(buffer+length, ",\"logfileready\": \"%s\"",islogFileReady()?JSON_ON:JSON_OFF);
-  length += sprintf(buffer+length, ",\"logfilename\": \"%s\"",_aqconfig_.log_file);
+  //length += sprintf(buffer+length, ",\"logfileready\": \"%s\"",islogFileReady()?JSON_ON:JSON_OFF);
+  //length += sprintf(buffer+length, ",\"logfilename\": \"%s\"",_aqconfig_.log_file);
   length += sprintf(buffer+length, ",\"debugmasks\":[");
   length += logmaskjsonobject(AQUA_LOG, buffer+length);
   length += logmaskjsonobject(NET_LOG, buffer+length);

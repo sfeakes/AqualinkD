@@ -190,6 +190,7 @@ bool broadcast_systemd_logmessages(bool aqMgrActive) {
   char msg[WS_LOG_LENGTH];
   static int cnt=0;
   static char *cursor = NULL;
+  char filter[51];
 
   if (!aqMgrActive) {
     if (!active) {
@@ -208,8 +209,16 @@ bool broadcast_systemd_logmessages(bool aqMgrActive) {
         ws_send_logmsg(_mgr.active_connections, msg);
         return false;
       }
+      snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
       if (sd_journal_add_match(journal, "SYSLOG_IDENTIFIER=aqualinkd", 0) < 0) {
-        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal filter", WS_LOG_LENGTH,27);
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal syslog filter", WS_LOG_LENGTH,35);
+        ws_send_logmsg(_mgr.active_connections, msg);
+        sd_journal_close(journal);
+        return false;
+      }
+      snprintf(filter, 50, "_PID=%d",getpid());
+      if (sd_journal_add_match(journal, filter, 0) < 0) {
+        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal PID filter", WS_LOG_LENGTH,32);
         ws_send_logmsg(_mgr.active_connections, msg);
         sd_journal_close(journal);
         return false;
@@ -269,6 +278,76 @@ bool broadcast_systemd_logmessages(bool aqMgrActive) {
   
   return true;
 }
+
+bool write_systemd_logmessages_2file(char *fname, int lines)
+{
+  FILE *fp = NULL;
+  sd_journal *journal;
+  const void *log;
+  size_t len;
+  const void *pri;
+  size_t plen;
+  char filter[51];
+
+  fp = fopen (fname, "w");
+  if (fp == NULL) {
+    LOG(NET_LOG, LOG_WARNING, "Failed to open tmp log file '%s'\n",fname);
+    return false;
+  }
+  if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to open journal");
+    fclose (fp);
+    return false;
+  }
+  snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
+  if (sd_journal_add_match(journal, "SYSLOG_IDENTIFIER=aqualinkd", 0) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to set journal syslog filter");
+    fclose (fp);
+    sd_journal_close(journal);
+    return false;
+  }
+  snprintf(filter, 50, "_PID=%d",getpid());
+  if (sd_journal_add_match(journal, filter, 0) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to set journal pid filter");
+    fclose (fp);
+    sd_journal_close(journal);
+    return false;
+  }
+  if (sd_journal_seek_tail(journal) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to seek to journal end");
+    fclose (fp);
+    sd_journal_close(journal);
+    return false;
+  }
+  if (sd_journal_previous_skip(journal, lines) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to seek to journal start");
+    fclose (fp);
+    sd_journal_close(journal);
+    return false;
+  }
+
+  while ( sd_journal_next(journal) > 0) // need to capture return of this
+  {
+    if (sd_journal_get_data(journal, "MESSAGE", &log, &len) < 0) {
+        LOG(NET_LOG, LOG_WARNING, "Failed to get journal message");
+    } else if (sd_journal_get_data(journal, "PRIORITY", &pri, &plen) < 0) {
+        LOG(NET_LOG, LOG_WARNING, "Failed to seek to journal message priority");
+    } else {
+      fprintf(fp, "%-7s %.*s\n",elevel2text(atoi((const char *)pri+9)), (int)len-8,(const char *)log+8);
+    }
+  }
+
+  sd_journal_close(journal);
+  fclose (fp);
+
+  return true;
+}
+
 #endif
 
 /* superseded with systemd/sd-journal
@@ -813,7 +892,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 }
 
 
-typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uNotAvailable} uriAtype;
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uLogDownload, uNotAvailable} uriAtype;
 //typedef enum {NET_MQTT=0, NET_API, NET_WS, DZ_MQTT} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS", "DZ"};
 
@@ -919,14 +998,15 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     removeDebugLogMask(round(value));
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "log2file", 5) == 0) {
+    /*
     if (ri2 != NULL && strncmp(ri2, "start", 5) == 0) {
       startInlineLog2File();
     } else if (ri2 != NULL && strncmp(ri2, "stop", 4) == 0) {
       stopInlineLog2File();
     } else if (ri2 != NULL && strncmp(ri2, "clean", 5) == 0) {
       cleanInlineLog2File();
-    } else if (ri2 != NULL && strncmp(ri2, "download", 8) == 0) {
-      return uDebugDownload;
+    } else*/ if (ri2 != NULL && strncmp(ri2, "download", 8) == 0) {
+      return uLogDownload;
     } 
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "restart", 7) == 0 && from == NET_WS) { // Only valid from websocket.
@@ -1403,10 +1483,15 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           mg_send(nc, message, size);
         }
         break;
-#endif
-        case uDebugDownload:
-          mg_http_serve_file(nc, http_msg, getInlineLogFName(), mg_mk_str("text/plain"), mg_mk_str(""));
+#else
+        case uLogDownload:
+          LOG(NET_LOG, LOG_DEBUG, "Downloading log of max %d lines\n",value>0?(int)value:1000);
+          if (write_systemd_logmessages_2file("/dev/shm/aqualinkd.log", value>0?(int)value:1000) ) {
+            mg_http_serve_file(nc, http_msg, "/dev/shm/aqualinkd.log", mg_mk_str("text/plain"), mg_mk_str("Content-Disposition: attachment; filename=\"aqualinkd.log\""));
+            remove("/dev/shm/aqualinkd.log");
+          }
         break;
+#endif
         case uBad:
         default:
           if (msg == NULL) {
