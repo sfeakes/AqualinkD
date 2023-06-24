@@ -158,109 +158,6 @@ void equiptment_update_cycle(int eqID) {
 }
 
 
-void pass_pda_equiptment_status_item_OLD(char *msg)
-{
-  static char *index;
-  int i;
-
-  // EQUIPMENT STATUS
-  //
-  //  AquaPure 100%
-  //  SALT 25500 PPM
-  //   FILTER PUMP
-  //    POOL HEAT
-  //   SPA HEAT ENA
-
-  // EQUIPMENT STATUS
-  //
-  //  FREEZE PROTECT
-  //  AquaPure 100%
-  //  SALT 25500 PPM
-  //  CHECK AquaPure
-  //  GENERAL FAULT
-  //   FILTER PUMP
-  //     CLEANER
-  //
-  // Equipment Status
-  // 
-  // Intelliflo VS 1 
-  //      RPM: 1700  
-  //     Watts: 367  
-  // 
-  // 
-  // 
-  // 
-  // 
-  // JANDY ePUMP   1 
-  //     RPM: 2520
-  //   WATTS: 856
-
-  // Check message for status of device
-  // Loop through all buttons and match the PDA text.
-  if ((index = strcasestr(msg, "CHECK AquaPure")) != NULL)
-  {
-    LOG(PDA_LOG,LOG_DEBUG, "CHECK AquaPure\n");
-  }
-  else if ((index = strcasestr(msg, "FREEZE PROTECT")) != NULL)
-  {
-    _aqualink_data->frz_protect_state = ON;
-  }
-  else if ((index = strcasestr(msg, MSG_SWG_PCT)) != NULL)
-  {
-    changeSWGpercent(_aqualink_data, atoi(index + strlen(MSG_SWG_PCT)));
-    //_aqualink_data->swg_percent = atoi(index + strlen(MSG_SWG_PCT));
-    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
-    LOG(PDA_LOG,LOG_DEBUG, "AquaPure = %d\n", _aqualink_data->swg_percent);
-  }
-  else if ((index = strcasestr(msg, MSG_SWG_PPM)) != NULL)
-  {
-    _aqualink_data->swg_ppm = atoi(index + strlen(MSG_SWG_PPM));
-    //if (_aqualink_data->ar_swg_status == SWG_STATUS_OFF) {_aqualink_data->ar_swg_status = SWG_STATUS_ON;}
-    LOG(PDA_LOG,LOG_DEBUG, "SALT = %d\n", _aqualink_data->swg_ppm);
-  }
-  else if ((index = strcasestr(msg, MSG_PMP_RPM)) != NULL)
-  { // Default to pump 0, should check for correct pump
-    _aqualink_data->pumps[0].rpm = atoi(index + strlen(MSG_PMP_RPM));
-    LOG(PDA_LOG,LOG_DEBUG, "RPM = %d\n", _aqualink_data->pumps[0].rpm);
-  }
-  else if ((index = strcasestr(msg, MSG_PMP_WAT)) != NULL)
-  { // Default to pump 0, should check for correct pump
-    _aqualink_data->pumps[0].watts = atoi(index + strlen(MSG_PMP_WAT));
-    LOG(PDA_LOG,LOG_DEBUG, "Watts = %d\n", _aqualink_data->pumps[0].watts);
-  }
-  else
-  {
-    char labelBuff[AQ_MSGLEN + 2];
-    strncpy(labelBuff, msg, AQ_MSGLEN + 1);
-    msg = stripwhitespace(labelBuff);
-
-    if (strcasecmp(msg, "POOL HEAT ENA") == 0)
-    {
-      _aqualink_data->aqbuttons[_aqualink_data->pool_heater_index].led->state = ENABLE;
-    }
-    else if (strcasecmp(msg, "SPA HEAT ENA") == 0)
-    {
-      _aqualink_data->aqbuttons[_aqualink_data->spa_heater_index].led->state = ENABLE;
-    }
-    else
-    {
-      for (i = 0; i < _aqualink_data->total_buttons; i++)
-      {
-        if (strcasecmp(msg, _aqualink_data->aqbuttons[i].label) == 0)
-        {
-          equiptment_update_cycle(i);
-          LOG(PDA_LOG,LOG_DEBUG, "Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
-          // It's on (or delayed) if it's listed here.
-          if (_aqualink_data->aqbuttons[i].led->state != FLASH)
-          {
-            _aqualink_data->aqbuttons[i].led->state = ON;
-          }
-          break;
-        }
-      }
-    }
-  }
-}
 
 void process_pda_packet_msg_long_temp(const char *msg)
 {
@@ -557,69 +454,123 @@ void pda_pump_update(struct aqualinkdata *aq_data, int updated) {
   }
 }
 
+/*
+// Messages from different PDA versions.
+PDA Menu Line 0 = Equipment Status
+PDA Menu Line 1 = 
+PDA Menu Line 2 = Intelliflo VS 1 
+PDA Menu Line 3 =      RPM: 1700  
+PDA Menu Line 4 =     Watts: 367  
+------------
+PDA Menu Line 2 = JANDY ePUMP   1 
+PDA Menu Line 3 =     RPM: 2520
+PDA Menu Line 4 =   WATTS: 856
+------------
+PDA Menu Line 0 = EQUIPMENT STATUS
+PDA Menu Line 1 = 
+PDA Menu Line 2 = 
+PDA Menu Line 3 =  *** PRIMING ***
+PDA Menu Line 4 =   WATTS: 1303
+------------
+PDA Menu Line 4 =   WATTS: 1298
+------------
+PDA Menu Line 0 = Equipment Status
+PDA Menu Line 1 =
+PDA Menu Line 2 = Intelliflo VS 1
+PDA Menu Line 3 =    (Offline)
+----------
+PDA Menu Line 0 = EQUIPMENT STATUS
+PDA Menu Line 1 = 
+PDA Menu Line 2 = JANDY ePUMP   1 
+PDA Menu Line 3 =     RPM: 2520
+PDA Menu Line 4 =   WATTS: 809
+----------
+*/
+// NSF This is now VERY similar to onetouch function get_pumpinfo_from_menu(), should thinmk about combining in future
+void get_pda_pumpinfo_from_menu(int menuLineIdx, int pump_number)
+{
+  int rpm = 0;
+  int watts = 0;
+  int gpm = 0;
+  char *cidx = NULL;
+
+  // valid controlpanel pump numbers are 1,2,3,4
+  if (pump_number < 1 || pump_number > MAX_PUMPS) {
+    LOG(PDA_LOG, LOG_WARNING, "Pump number %d for pump '%s' is invalid, ignoring!\n",pump_number,pda_m_line(menuLineIdx));
+    return;
+  }
+  if ( (cidx = rsm_charafterstr(pda_m_line(menuLineIdx+1), "RPM", AQ_MSGLEN)) != NULL ){
+    rpm = rsm_atoi(cidx);
+    // Assuming Watts is always next line and GPM (if available) line after
+    if ( (cidx = rsm_charafterstr(pda_m_line(menuLineIdx+2), "Watts", AQ_MSGLEN)) != NULL ){
+      watts = rsm_atoi(cidx);
+    }
+    if ( (cidx = rsm_charafterstr(pda_m_line(menuLineIdx+3), "GPM", AQ_MSGLEN)) != NULL ){
+      gpm = rsm_atoi(cidx);
+    }
+  }
+  else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "*** Priming ***") == 0){
+    rpm = PUMP_PRIMING;
+  }
+  else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "(Offline)") == 0){
+    rpm = PUMP_OFFLINE;
+  }
+  else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "(Priming Error)") == 0){
+    rpm = PUMP_ERROR;
+  }
+
+  if (rpm==0 && watts==0 && rpm==0) {
+    // Didn't get any info, so return.
+    return;
+  }
+  LOG(PDA_LOG, LOG_DEBUG, "Found Pump information '%s', RPM %d, Watts %d, GPM %d\n", pda_m_line(menuLineIdx), rpm, watts, gpm);
+
+  for (int i=0; i < _aqualink_data->num_pumps; i++) {
+    if (_aqualink_data->pumps[i].pumpIndex == pump_number) {
+      LOG(PDA_LOG,LOG_DEBUG, "Pump label: %s Index: %d, Number: %d, RPM: %d, Watts: %d, GPM: %d\n",_aqualink_data->pumps[i].button->name, i ,pump_number,rpm,watts,gpm);
+      pda_pump_update(_aqualink_data, i);
+      _aqualink_data->pumps[i].rpm = rpm;
+      _aqualink_data->pumps[i].watts = watts;
+      _aqualink_data->pumps[i].gpm = gpm;
+      if (_aqualink_data->pumps[i].pumpType == PT_UNKNOWN){
+        if (rsm_strcmp(pda_m_line(menuLineIdx),"Intelliflo VS") == 0)
+          _aqualink_data->pumps[i].pumpType = VSPUMP;
+        else if (rsm_strcmp(pda_m_line(menuLineIdx),"Intelliflo VF") == 0)
+          _aqualink_data->pumps[i].pumpType = VFPUMP;
+        else if (rsm_strcmp(pda_m_line(menuLineIdx),"Jandy ePUMP") == 0 ||
+                   rsm_strcmp(pda_m_line(menuLineIdx),"ePump AC") == 0)
+          _aqualink_data->pumps[i].pumpType = EPUMP;
+
+        LOG(PDA_LOG, LOG_DEBUG, "Pump index %d set PumpType to %d\n", i, _aqualink_data->pumps[i].pumpType);
+      }
+      return;
+    }
+  }
+  LOG(PDA_LOG,LOG_WARNING, "PDA Could not find config for Pump %s, Number %d, RPM %d, Watts %d, GPM %d\n",pda_m_line(menuLineIdx),pump_number,rpm,watts,gpm);
+}
+
 void log_pump_information() {
   int i;
-  //bool rtn = false;
-  char *m2_line=pda_m_line(2);
-  char *m3_line=pda_m_line(3);
-  char *m4_line=pda_m_line(3);
-  char *m5_line=pda_m_line(3);
+  char *cidx = NULL;
 
-  if (rsm_strcmp(m2_line,"Intelliflo VS") == 0 ||
-      rsm_strcmp(m2_line,"Intelliflo VF") == 0 ||
-      rsm_strcmp(m2_line,"Jandy ePUMP") == 0 ||
-      rsm_strcmp(m2_line,"ePump AC") == 0) {
-    //rtn = true;
-    int rpm = 0;
-    int watts = 0;
-    int gpm = 0;
-    int pump_index = rsm_atoi(&m2_line[14]);
-    if (pump_index <= 0)
-      pump_index = rsm_atoi(&m2_line[12]); // Pump inxed is in different position on line `  ePump AC  4`
-    // RPM displays differently depending on 3 or 4 digit rpm.
-    if (rsm_strcmp(m3_line,"RPM:") == 0){
-      rpm = rsm_atoi(&m3_line[10]);
-      if (rsm_strcmp(m4_line,"Watts:") == 0) {
-        watts = rsm_atoi(&m4_line[10]);
-      }
-      if (rsm_strcmp(m5_line,"GPM:") == 0) {
-        gpm = rsm_atoi(&m5_line[10]);
-      }
-    } else if (rsm_strcmp(m3_line,"*** Priming ***") == 0){
-      rpm = PUMP_PRIMING;
-    } else if (rsm_strcmp(m3_line,"(Offline)") == 0){
-      rpm = PUMP_OFFLINE;
-    } else if (rsm_strcmp(m3_line,"(Priming Error)") == 0){
-      rpm = PUMP_ERROR;
+  for (i = 0; i < PDA_LINES; i++)
+  {
+    if ( (cidx = rsm_charafterstr(pda_m_line(i), "Intelliflo VS", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(pda_m_line(i), "Intelliflo VF", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(pda_m_line(i), "Jandy ePUMP", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(pda_m_line(i), "ePump AC", AQ_MSGLEN)) != NULL)
+    {
+      get_pda_pumpinfo_from_menu(i, rsm_atoi(cidx));
     }
-
-    LOG(PDA_LOG,LOG_INFO, "PDA Pump %s, Index %d, RPM %d, Watts %d, GPM %d\n",m3_line,pump_index,rpm,watts,gpm);
-
-    for (i=0; i < _aqualink_data->num_pumps; i++) {
-      if (_aqualink_data->pumps[i].pumpIndex == pump_index) {
-        LOG(PDA_LOG,LOG_INFO, "PDA Pump label: %s Index: %d, ID: %d, RPM: %d, Watts: %d, GPM: %d\n",_aqualink_data->pumps[i].button->name, i ,pump_index,rpm,watts,gpm);
-        //printf("**** FOUND PUMP %d at index %d *****\n",pump_index,i);
-        //aq_data->pumps[i].updated = true;
-        pda_pump_update(_aqualink_data, i);
-        _aqualink_data->pumps[i].rpm = rpm;
-        _aqualink_data->pumps[i].watts = watts;
-        _aqualink_data->pumps[i].gpm = gpm;
-        if (_aqualink_data->pumps[i].pumpType == PT_UNKNOWN){
-          if (rsm_strcmp(m2_line,"Intelliflo VS") == 0)
-            _aqualink_data->pumps[i].pumpType = VSPUMP;
-          else if (rsm_strcmp(m2_line,"Intelliflo VF") == 0)
-            _aqualink_data->pumps[i].pumpType = VFPUMP;
-          else if (rsm_strcmp(m2_line,"Jandy ePUMP") == 0 ||
-                   rsm_strcmp(m2_line,"ePump AC") == 0)
-            _aqualink_data->pumps[i].pumpType = EPUMP;
-        }
-        //printf ("Set Pump Type to %d\n",aq_data->pumps[i].pumpType);
-        return;
-      }
-    }
-    LOG(PDA_LOG,LOG_ERR, "PDA Could not find config for Pump %s, Index %d, RPM %d, Watts %d, GPM %d\n",m3_line,pump_index,rpm,watts,gpm);
+    /* // NSF This need to be used in the future and not process_pda_packet_msg_long_equiptment_status()
+    else if (rsm_strcmp(pda_m_line(i),"AQUAPURE") == 0) {
+      rtn = get_aquapureinfo_from_menu(aq_data, i);
+    } else if (rsm_strcmp(pda_m_line(i),"Chemlink") == 0) {
+      rtn = get_chemlinkinfo_from_menu(aq_data, i);
+    */
   }
 }
+
 
 void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lineindex, bool reset)
 {
@@ -863,6 +814,10 @@ bool process_pda_packet(unsigned char *packet, int length)
             process_pda_packet_msg_long_home(msg);
           break;
           case PM_EQUIPTMENT_STATUS:
+            // NSF In the future need to run over this like log_pump_information()
+            // So move into that function.  This way you can get status of devices 
+            // that span over multiple lines (like AQUAPURE).
+            // Plus tell if a device is not seen in loop, so can turn it off.
             process_pda_packet_msg_long_equiptment_status(msg, index, false);
           break;
           case PM_SET_TEMP:

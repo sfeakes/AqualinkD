@@ -35,7 +35,7 @@ void print_menu()
   int i;
   for (i=0; i < PDA_LINES; i++) {
     //printf("PDA Line %d = %s\n",i,_menu[i]);
-    LOG(PDA_LOG,LOG_DEBUG, "PDA Menu Line %d = %s\n",i,_menu[i]);
+    LOG(PDA_LOG,LOG_INFO, "PDA Menu Line %d = %s\n",i,_menu[i]);
   }
   
   if (_hlightindex > -1) {

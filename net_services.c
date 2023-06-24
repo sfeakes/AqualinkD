@@ -1334,7 +1334,7 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
 
 
 float pass_mg_body(struct mg_str *body) {
-  LOG(NET_LOG,LOG_INFO, "Message body:\n'%.*s'\n", body->len, body->p);
+  LOG(NET_LOG,LOG_INFO, "Message body:'%.*s'\n", body->len, body->p);
   // Quick n dirty pass value from either of below.
   // value=1.5&arg2=val2
   // {"value":"1.5"}

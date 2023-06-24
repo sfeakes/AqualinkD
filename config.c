@@ -662,6 +662,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpType", 9) == 0) {
+      // This is not documented, as it's prefered for AqualinkD to find the pump type.
       pump_detail *pump = getpump(aqdata, num);
       if (pump != NULL) {
         if ( stristr(value, "Pentair VS") != 0)

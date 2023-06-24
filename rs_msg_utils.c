@@ -84,6 +84,35 @@ bool rsm_get_revision(char *dest, const char *src, int src_len)
   return true;
 }
 
+/*
+Find first char after a space in haystack after searching needle.
+'  RPM: 1234    '
+'  RPM    1234 '
+'  RPMcrap 1    '
+Search RPM in above should return 1 in all cases.
+return NULL is not found
+*/ 
+char *rsm_charafterstr(const char *haystack, const char *needle, int length)
+{
+  // Need to make this case insensative
+  char *sp = rsm_strncasestr(haystack,needle,length);
+
+  if(sp == NULL)
+    return NULL;
+
+  sp = sp+strlen(needle);
+
+  while(*sp != ' ') {
+    sp++;
+    if (sp > haystack+length)
+      return NULL;
+  }
+  return ++sp;
+}
+
+/*
+  Can probably replace this with rsm_strncasestr in all code.
+*/
 char *rsm_strstr(const char *haystack, const char *needle)
 {
   char *sp1 = (char *)haystack;
@@ -101,35 +130,53 @@ char *rsm_strstr(const char *haystack, const char *needle)
   return strcasestr(sp1, sp2);
 }
 
-
-char *rsm_strncasestr(const char *haystack, const char *needle, int length)
-{
-  // NEED TO WRITE THIS MYSELF.  Same as below but limit length
-  return strcasestr(haystack, needle);
-}
-
 /*
- * Find the first occurrence of find in s, where the search is limited to the
- * first slen characters of s.
+ * Find the first occurrence of needle in haystack, where the search is limited to the
+ * first slen characters of haystack.
  */
-char *rsm_strnstr(const char *s, const char *find, size_t slen)
+char *rsm_strnstr(const char *haystack, const char *needle, size_t slen)
 {
 	char c, sc;
 	size_t len;
 
-	if ((c = *find++) != '\0') {
-		len = strlen(find);
+	if ((c = *needle++) != '\0') {
+		len = strlen(needle);
 		do {
 			do {
-				if (slen-- < 1 || (sc = *s++) == '\0')
+				if (slen-- < 1 || (sc = *haystack++) == '\0')
 					return (NULL);
 			} while (sc != c);
 			if (len > slen)
 				return (NULL);
-		} while (strncmp(s, find, len) != 0);
-		s--;
+		} while (strncmp(haystack, needle, len) != 0);
+		haystack--;
 	}
-	return ((char *)s);
+	return ((char *)haystack);
+}
+
+/*
+ * Case insensative version of above (rsm_strnstr)
+ * Find the first occurrence of needle in haystack, where the search is limited to the
+ * first slen characters of haystack.
+ */
+char *rsm_strncasestr(const char *haystack, const char *needle, size_t slen)
+{
+	char c, sc;
+	size_t len;
+
+	if ((c = *needle++) != '\0') {
+		len = strlen(needle);
+		do {
+			do {
+				if (slen-- < 1 || (sc = *haystack++) == '\0')
+					return (NULL);
+			} while ( tolower(sc) != tolower(c));
+			if (len > slen)
+				return (NULL);
+		} while (strncasecmp(haystack, needle, len) != 0);
+		haystack--;
+	}
+	return ((char *)haystack);
 }
 
 // Check s2 exists in s1
@@ -169,7 +216,7 @@ int rsm_strncmp(const char *haystack, const char *needle, int length)
   while(isspace(*ep1)) ep1--;
 
 
-  LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
+  //LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
   // Need to write this myself for speed
   // Need to check if full length string (no space on end), that the +1 is accurate. MIN should do it
   return strncasecmp(sp1, sp2, MIN((ep1-sp1)+1,length));

@@ -338,8 +338,7 @@ bool log_freeze_setpoints(struct aqualinkdata *aq_data)
 }
 
 
-
-bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
+bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
 {
   int rpm = 0;
   int watts = 0;
@@ -394,11 +393,78 @@ bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
           aq_data->pumps[i].pumpType = EPUMP;
 
         LOG(ONET_LOG, LOG_INFO, "OneTouch Pump index %d set PumpType to %d\n", i, aq_data->pumps[i].pumpType);
-        return true;
       }
+      return true;
     }
   }
   LOG(ONET_LOG, LOG_WARNING, "Did not find AqualinkD config for Pump '%s'\n",_menu[menuLineIdx]);
+  return false;
+}
+
+
+bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx, int pump_number)
+{
+  int rpm = 0;
+  int watts = 0;
+  int gpm = 0;
+  char *cidx = NULL;
+
+  // valid controlpanel pump numbers are 1,2,3,4
+  if (pump_number < 1 || pump_number > MAX_PUMPS) {
+    LOG(ONET_LOG, LOG_WARNING, "Pump number %d for pump '%s' is invalid, ignoring!\n",pump_number,_menu[menuLineIdx]);
+    return false;
+  }
+
+  if ( (cidx = rsm_charafterstr(_menu[menuLineIdx + 1], "RPM", AQ_MSGLEN)) != NULL ){
+    rpm = rsm_atoi(cidx);
+    // Assuming Watts is always next line and GPM (if available) line after
+    if ( (cidx = rsm_charafterstr(_menu[menuLineIdx + 2], "Watts", AQ_MSGLEN)) != NULL ){
+      watts = rsm_atoi(cidx);
+    }
+    if ( (cidx = rsm_charafterstr(_menu[menuLineIdx + 3], "GPM", AQ_MSGLEN)) != NULL ){
+      gpm = rsm_atoi(cidx);
+    }
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx + 1], "*** Priming ***") == 0){
+    rpm = PUMP_PRIMING;
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx + 1], "(Offline)") == 0){
+    rpm = PUMP_OFFLINE;
+  }
+  else if (rsm_strcmp(_menu[menuLineIdx + 1], "(Priming Error)") == 0){
+    rpm = PUMP_ERROR;
+  }
+
+  if (rpm==0 && watts==0 && rpm==0) {
+    // Didn't get any info, so return.
+    return false;
+  }
+
+  LOG(ONET_LOG, LOG_DEBUG, "Found Pump information '%s', RPM %d, Watts %d, GPM %d\n", _menu[menuLineIdx], rpm, watts, gpm);
+
+  for (int i=0; i < aq_data->num_pumps; i++) {
+    if (aq_data->pumps[i].pumpIndex == pump_number) {
+      LOG(ONET_LOG,LOG_INFO, "Pump label: %s Index: %d, Number: %d, RPM: %d, Watts: %d, GPM: %d\n",aq_data->pumps[i].button->name, i ,pump_number,rpm,watts,gpm);
+      pump_update(aq_data, i);
+      aq_data->pumps[i].rpm = rpm;
+      aq_data->pumps[i].watts = watts;
+      aq_data->pumps[i].gpm = gpm;
+      if (aq_data->pumps[i].pumpType == PT_UNKNOWN){
+        if (rsm_strcmp(_menu[menuLineIdx],"Intelliflo VS") == 0)
+          aq_data->pumps[i].pumpType = VSPUMP;
+        else if (rsm_strcmp(_menu[menuLineIdx],"Intelliflo VF") == 0)
+          aq_data->pumps[i].pumpType = VFPUMP;
+        else if (rsm_strcmp(_menu[menuLineIdx],"Jandy ePUMP") == 0 ||
+                 rsm_strcmp(_menu[menuLineIdx],"ePump AC") == 0)
+          aq_data->pumps[i].pumpType = EPUMP;
+
+        LOG(ONET_LOG, LOG_INFO, "Pump index %d set PumpType to %d\n", i, aq_data->pumps[i].pumpType);
+      }
+      return true;
+    }
+  }
+  LOG(ONET_LOG,LOG_WARNING, "PDA Could not find config for Pump %s, Number %d, RPM %d, Watts %d, GPM %d\n",_menu[menuLineIdx],pump_number,rpm,watts,gpm);
+
   return false;
 }
 
@@ -496,16 +562,25 @@ bool get_RS16buttoninfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
 bool log_qeuiptment_status_VP2(struct aqualinkdata *aq_data)
 {
   bool rtn = false;
+  char *cidx = NULL;
 
   int i;
   for (i = 0; i < ONETOUCH_LINES; i++)
   {
+    /*
     if (rsm_strcmp(_menu[i], "Intelliflo VS") == 0 ||
         rsm_strcmp(_menu[i], "Intelliflo VF") == 0 ||
         rsm_strcmp(_menu[i], "Jandy ePUMP") == 0 ||
         rsm_strcmp(_menu[i], "ePump AC") == 0)
     {
       rtn = get_pumpinfo_from_menu(aq_data, i);
+    }*/
+    if ( (cidx = rsm_charafterstr(_menu[i], "Intelliflo VS", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[i], "Intelliflo VF", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[i], "Jandy ePUMP", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[i], "ePump AC", AQ_MSGLEN)) != NULL)
+    {
+      rtn = get_pumpinfo_from_menu(aq_data, i, rsm_atoi(cidx));
     } else if (rsm_strcmp(_menu[2],"AQUAPURE") == 0) {
       rtn = get_aquapureinfo_from_menu(aq_data, i);
     } else if (rsm_strcmp(_menu[i],"Chemlink") == 0) {
@@ -529,12 +604,20 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
     return log_qeuiptment_status_VP2(aq_data);
 
   bool rtn = false;
-
+  char *cidx = NULL;
+/*
   if (rsm_strcmp(_menu[2],"Intelliflo VS") == 0 ||
       rsm_strcmp(_menu[2],"Intelliflo VF") == 0 ||
       rsm_strcmp(_menu[2],"Jandy ePUMP") == 0 ||
       rsm_strcmp(_menu[2],"ePump AC") == 0) {
     rtn = get_pumpinfo_from_menu(aq_data, 2);
+  } */
+  if ( (cidx = rsm_charafterstr(_menu[2], "Intelliflo VS", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[2], "Intelliflo VF", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[2], "Jandy ePUMP", AQ_MSGLEN)) != NULL ||
+         (cidx = rsm_charafterstr(_menu[2], "ePump AC", AQ_MSGLEN)) != NULL)
+  {
+    rtn = get_pumpinfo_from_menu(aq_data, 2, rsm_atoi(cidx));
   } else if (rsm_strcmp(_menu[2],"AQUAPURE") == 0) {
     rtn = get_aquapureinfo_from_menu(aq_data, 2);
   } else if (rsm_strcmp(_menu[2],"Chemlink") == 0) {

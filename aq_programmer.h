@@ -96,11 +96,12 @@ struct programmingThreadCtrl {
   struct aqualinkdata *aq_data;
 };
 
+
 typedef enum pump_type {
   PT_UNKNOWN = -1,
-  EPUMP,
-  VSPUMP,
-  VFPUMP
+  EPUMP,           // = ePump AC & Jandy ePUMP
+  VSPUMP,          // = Intelliflo VS
+  VFPUMP           // = Intelliflo VF
 } pump_type;
 
 
