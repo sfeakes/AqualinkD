@@ -196,6 +196,28 @@ int rsm_strcmp(const char *haystack, const char *needle)
   return strncasecmp(sp1, sp2, strlen(sp2));
 }
 
+
+/*
+* Find last index of char in string.
+*    char *sp;
+*    sp = rsm_lastindexof("/api/crap/something/100", "/", 23);
+*    printf("Next char after '/'   = %c\n",*sp+1);
+*    printf("Next string after '/' = %s\n",sp+1);
+*/
+
+char *rsm_lastindexof(const char *haystack, const char *needle, size_t length)
+{
+  char *ep = (char *)haystack + length;
+
+  for ( ; ep != (char *)haystack; ep--) {
+    if ( *ep == *needle) {
+      return ep;
+    }
+  }
+
+  return NULL;
+}
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 

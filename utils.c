@@ -54,20 +54,29 @@ void broadcast_log(char *msg);
 
 static bool _daemonise = false;
 
-#ifndef AD_MANAGER
+#ifndef AQ_MANAGER
 static bool _log2file = false;
-//static int _log_level = LOG_ERR;
-static int _log_level = LOG_WARNING;
 static char *_log_filename = NULL;
 static bool _cfg_log2file;
 static int _cfg_log_level;
 #endif
+static int _log_level = LOG_WARNING;
 
 static char *_loq_display_message = NULL;
 int16_t _logforcemask = 0;
 
 //static char _log_filename[256];
 
+#ifdef AQ_MANAGER
+void setLoggingPrms(int level , bool deamonized, char *error_messages)
+{
+	_log_level = level;
+  _daemonise = deamonized;
+  _loq_display_message = error_messages;
+
+  //_cfg_log_level = _log_level; 
+}
+#else
 void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages)
 {
 	_log_level = level;
@@ -85,6 +94,7 @@ void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_mes
     //strcpy(_log_filename, log_file);
   }  
 }
+#endif // AQ_MANAGER
 
 void setSystemLogLevel( int level)
 {
@@ -174,10 +184,9 @@ bool islogFileReady()
 
 
 /*
-* This function reports the error and
-* exits back to the shell:
+* This function reports the last error 
 */
-void displayLastSystemError (const char *on_what)
+void LOGSystemError (int errnum, int16_t from, const char *on_what)
 {
   fputs (strerror (errno), stderr);
   fputs (": ", stderr);
@@ -187,9 +196,26 @@ void displayLastSystemError (const char *on_what)
   if (_daemonise == TRUE)
   {
     //logMessage (LOG_ERR, "%d : %s", errno, on_what);
-    LOG(AQUA_LOG, LOG_ERR, "%d : %s", errno, on_what);
+    LOG(AQUA_LOG, LOG_ERR, "%s (%d) : %s\n", strerror (errno), errno, on_what);
     closelog ();
   }
+}
+void displayLastSystemError (const char *on_what)
+{
+  LOGSystemError(errno, AQUA_LOG, on_what);
+  /*
+  fputs (strerror (errno), stderr);
+  fputs (": ", stderr);
+  fputs (on_what, stderr);
+  fputc ('\n', stderr);
+
+  if (_daemonise == TRUE)
+  {
+    //logMessage (LOG_ERR, "%d : %s", errno, on_what);
+    LOG(AQUA_LOG, LOG_ERR, "%s (%d) : %s", strerror (errno), errno, on_what);
+    closelog ();
+  }
+  */
 }
 
 /*
@@ -540,7 +566,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
     closelog ();
   }
   
-  #ifdef AQ_MANAGER // Always use syslog with aqmanager
+  #ifdef AQ_MANAGER // Always use systemd journel with aqmanager
     //sd_journal_print()
     //openlog("aqualinkd", 0, LOG_DAEMON);
     if (msg_level > LOG_DEBUG)  // Let's not confuse syslog with custom levels
@@ -560,7 +586,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
     closelog ();
     //return;
   }
-  #endif
+  #endif //AQ_MANAGER
   
   //int len;
   message[8] = ' ';
@@ -583,6 +609,7 @@ void _LOG(int16_t from, int msg_level,  char *message)
     snprintf(_loq_display_message, 127, "%s\n",message);
   }
 
+#ifndef AQ_MANAGER
   if (_log2file == TRUE && _log_filename != NULL) {   
     char time[TIMESTAMP_LENGTH];
     int fp = open(_log_filename, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
@@ -604,7 +631,8 @@ void _LOG(int16_t from, int msg_level,  char *message)
         fprintf (stderr, "Can't open debug log %s\n %s", _log_filename, message);
     }
   }
-  
+#endif //AQ_MANAGER
+
   if (_daemonise == FALSE) {
     if (msg_level == LOG_ERR) {
       fprintf(stderr, "%s", message);

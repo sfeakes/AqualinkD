@@ -99,6 +99,9 @@
       // This will turn on/off the Spa Heater when you turn on/off Spa Mode.
       //var link_spa_and_spa_heater = true;
 
+      // Change the min max for heater slider
+      var heater_slider_min = 36;
+      var heater_slider_max = 104;
       // Change the slider for timers
       var timer_slider_min = 0;
       //var timer_slider_max = 360;

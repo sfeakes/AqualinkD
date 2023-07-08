@@ -9,6 +9,7 @@ char *rsm_strstr(const char *haystack, const char *needle);
 //char *rsm_strnstr(const char *haystack, const char *needle, int length);
 char *rsm_strnstr(const char *haystack, const char *needle, size_t slen);
 char *rsm_strncasestr(const char *haystack, const char *needle, size_t length);
+char *rsm_lastindexof(const char *haystack, const char *needle, size_t length);
 
 int rsm_strncpy(char *dest, const unsigned char *src, int dest_len, int src_len);
 int rsm_strcmp(const char *s1, const char *s2);

@@ -135,6 +135,7 @@
             flex-direction: column-reverse;
             background-color: #2b2b2b;
             color: white;
+            white-space: pre;
         }
 
         .toggle {
@@ -264,7 +265,7 @@
 
             // disable the download log button on startup
             //disablebutton("downloadlog");
-            //disabletoggle("log2file");
+            //disabletoggle("logfile");
             //disabletoggle("seriallog");
         }
 
@@ -310,6 +311,8 @@
         }
 
         var last_message_element = null;
+        var log_element_count = 0;
+        const LOGS2DISPLAY = 500;
 
         function update_log_message(message) {
             var element = document.createElement("div");
@@ -317,8 +320,22 @@
                 element.classList.add("logmsgerror");
             }
 
+            var logcontainer = document.getElementById("logs");
+
+            if (log_element_count >= LOGS2DISPLAY) {
+              try {
+                console.log("Removing "+logcontainer.lastElementChild.innerHTML);
+                logcontainer.lastElementChild.remove();
+              } catch(e) {
+                console.log("ERROR Removing log '"+logcontainer.lastElementChild.innerHTML+"'");
+                log_element_count++;
+              }
+            } else {
+              log_element_count++;
+            }
+
             element.appendChild(document.createTextNode(message));
-            document.getElementById("logs").insertBefore(element, last_message_element);
+            logcontainer.insertBefore(element, last_message_element);
             last_message_element = element;
         }
 
@@ -352,7 +369,8 @@
         }
         function setlogfile(caller) {
             var msg = {};
-            if (caller.id == "log2file") {
+            /*
+            if (caller.id == "logfile") {
                 var startstop = "";
                 if (caller.checked) {
                     startstop = "start";
@@ -360,18 +378,19 @@
                     startstop = "stop";
                 }
                 msg = {
-                    uri: "log2file/" + startstop,
+                    uri: "logfile/" + startstop,
                     value: 0
                 };
             } else if (caller.id == "cleanlog") {
                 msg = {
-                    uri: "log2file/clean",
+                    uri: "logfile/clean",
                     value: 0
                 };
-            } else if (caller.id == "downloadlog") {
+            } else*/
+            if (caller.id == "downloadlog") {
                 
                 //window.location = '/api/debug/download';
-                downloadFile('/api/log2file/download/aqualinkd.log', document.getElementById("logsize").value);
+                downloadFile('/api/logfile/download', document.getElementById("logsize").value);
                 return;
             }
 
@@ -380,23 +399,26 @@
 
         function downloadFile(filePath, lines) {
                 console.log("Lines=" + lines);
-                /*
+                
                 var link = document.createElement('a');
-                link.href = filePath;
-                link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
+                link.href = filePath+"/"+lines;
+                //link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
+                link.download = "aqualinkd.log"
                 link.click();
-                */
-               
+                // Can't get a form post to cleanly download, and "a download" above can only do get. So add value
+               /*
                 var form = document.createElement('form');
                 form.setAttribute("style", "display: none;");
                 form.method='POST';
                 form.action=filePath;
+                form.target='aqd'; // Set trget to iframe "aqd"(aqualinkd), this stops WS for resetting
                 element=document.createElement('INPUT');
                 element.name='value';
                 element.value=lines;
                 form.appendChild(element);
                 document.body.appendChild(form);
                 form.submit();
+                */
                 
         }
 
@@ -461,14 +483,16 @@
               if logfilename=NULL we can turn on/off logging to file.
               logging2file will tell us if it's currently on or off
             */
-            console.log("deamonized=" + data['deamonized']);
-            console.log("logfilename=" + data['logfilename']);
-            console.log("logfileready=" + data['logfileready']);
+           if (data['deamonized'] == 'off') {
+            console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
+           }
 
+/*
             if (data['logfilename'] == "(null)")
-                enabletoggle("log2file");
+                enabletoggle("logfile");
             else
-                disabletoggle("log2file");
+                disabletoggle("logfile");
+*/
 /*
             if (data['logfileready'] == "on") {
                 enablebutton("downloadlog");
@@ -633,7 +657,7 @@
             disablebutton("restart");
             disablebutton("seriallog");
             disablebutton("downloadlog");
-            //disabletoggle("log2file");
+            //disabletoggle("logfile");
 
             var coll = document.getElementsByClassName("collapsible");
             var i;
@@ -723,7 +747,7 @@
                 <button class="collapsible">Log File</button>
                 <div class="content" id="loglevels">
                     <!--
-                    <label class="toggle logtoggle"><input class="toggle-checkbox" type="checkbox" id="log2file"
+                    <label class="toggle logtoggle"><input class="toggle-checkbox" type="checkbox" id="logfile"
                             onclick="setlogfile(this);">
                         <div class="toggle-switch"></div><span class="toggle-label">Log to file</span>
                     </label>
@@ -752,6 +776,7 @@
                 <!--<div class="inner">END</div>-->
             </div>
         </div>
+    <!--<iframe src='about:blank' id="logdownload"></iframe>-->
     </div>
 </body>
 

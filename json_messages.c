@@ -62,8 +62,10 @@ int json_chars(char *dest, const char *src, int dest_len, int src_len)
   }
 
   i--;
+  /* // Don't delete trailing whitespace
   while (dest[i] == ' ')
     i--;
+    */
 
   if (dest[i] != '\0') {
     if (i < (dest_len-1))
@@ -71,7 +73,7 @@ int json_chars(char *dest, const char *src, int dest_len, int src_len)
 
     dest[i] = '\0';
   }
-
+  
   return i;
 }
 
@@ -268,7 +270,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   int i;
 
   // IF temp units are F assume homekit is using F
-  bool homekit_f = (homekit && aqdata->temp_units==FAHRENHEIT);
+  bool homekit_f = (homekit && ( aqdata->temp_units==FAHRENHEIT || aqdata->temp_units == UNKNOWN) );
 
   length += sprintf(buffer+length, "{\"type\": \"devices\"");
   length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
@@ -351,7 +353,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
     }*/
   }
 
-  if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) {
+  if ( _aqconfig_.force_frzprotect_setpoints || (aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) ) {
     length += sprintf(buffer+length, "{\"type\": \"setpoint_freeze\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
                                      FREEZE_PROTECT,
                                     "Freeze Protection",
@@ -390,6 +392,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    ((homekit_f)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->swg_percent):aqdata->swg_percent));
       //if (!homekit) { // For the moment keep boost off homekit   
+
         length += sprintf(buffer+length, "{\"type\": \"switch\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"int_status\": \"%d\"},", 
                                      SWG_BOOST_TOPIC, 
                                      "SWG Boost",
@@ -624,8 +627,9 @@ int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int si
     length += sprintf(buffer+length, ", \"%s\": \"%s\"", SWG_BOOST_TOPIC, aqdata->boost?JSON_ON:JSON_OFF);
   }
   //NSF Need to come back and read what the display states when Freeze protection is on
-  if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN ) {
-    length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, aqdata->frz_protect_state==ON?JSON_ON:JSON_ENABLED);
+  if ( aqdata->frz_protect_set_point != TEMP_UNKNOWN || _aqconfig_.force_frzprotect_setpoints ) {
+    //length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, aqdata->frz_protect_state==ON?JSON_ON:JSON_ENABLED);
+    length += sprintf(buffer+length, ", \"%s\": \"%s\"", FREEZE_PROTECT, LED2text(aqdata->frz_protect_state) );
   }
 
   //length += sprintf(buffer+length, "}, \"extra\":{" );

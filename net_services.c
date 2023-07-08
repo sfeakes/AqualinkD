@@ -155,6 +155,41 @@ void ws_send_logmsg(struct mg_connection *nc, char *msg) {
   }
 }
 
+sd_journal *open_journal() {
+  sd_journal *journal;
+  char filter[51];
+
+  if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
+  {
+    LOGSystemError(errno, NET_LOG, "Failed to open journal");
+    return journal;
+  }
+  snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
+  if (sd_journal_add_match(journal, filter, 0) < 0)
+  {
+    LOGSystemError(errno, NET_LOG, "Failed to set journal syslog filter");
+    sd_journal_close(journal);
+    return journal;
+  }
+  // Daemon will change PID after printing startup message, so don't filter on current PID
+  if (_aqconfig_.deamonize != true) {
+    snprintf(filter, 50, "_PID=%d",getpid());
+    if (sd_journal_add_match(journal, filter, 0) < 0)
+    {
+      LOGSystemError(errno, NET_LOG, "Failed to set journal pid filter");
+      sd_journal_close(journal);
+      return journal;
+    }  
+  }
+
+  if (sd_journal_set_data_threshold(journal, LOGBUFFER) < 0)
+  {
+    LOG(NET_LOG, LOG_WARNING, "Failed to set journal message size\n");
+  }
+
+  return journal;
+}
+
 void find_aqualinkd_startupmsg(sd_journal *journal)
 {
   static bool once=false;
@@ -184,14 +219,26 @@ void find_aqualinkd_startupmsg(sd_journal *journal)
   sd_journal_previous_skip(journal, 100);
 }
 
+#define BLANK_JOURNAL_READ_RESET 100
+
+bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection);
+
 bool broadcast_systemd_logmessages(bool aqMgrActive) {
+  return _broadcast_systemd_logmessages(aqMgrActive, false);
+}
+
+bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection) {
   static sd_journal *journal;
   static bool active = false;
   char msg[WS_LOG_LENGTH];
   static int cnt=0;
   static char *cursor = NULL;
-  char filter[51];
+  //char filter[51];
 
+  if (reOpenStaleConnection) {
+    sd_journal_close(journal);
+    active = false;
+  }
   if (!aqMgrActive) {
     if (!active) {
       return true;
@@ -204,23 +251,9 @@ bool broadcast_systemd_logmessages(bool aqMgrActive) {
   } 
   // aqManager is active
   if (!active) {
-      if ( sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0) {
+      if ( (journal = open_journal()) < 0) {
         build_logmsg_JSON(msg, LOG_ERR, "Failed to open journal", WS_LOG_LENGTH,22);
         ws_send_logmsg(_mgr.active_connections, msg);
-        return false;
-      }
-      snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
-      if (sd_journal_add_match(journal, "SYSLOG_IDENTIFIER=aqualinkd", 0) < 0) {
-        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal syslog filter", WS_LOG_LENGTH,35);
-        ws_send_logmsg(_mgr.active_connections, msg);
-        sd_journal_close(journal);
-        return false;
-      }
-      snprintf(filter, 50, "_PID=%d",getpid());
-      if (sd_journal_add_match(journal, filter, 0) < 0) {
-        build_logmsg_JSON(msg, LOG_ERR, "Failed to set journal PID filter", WS_LOG_LENGTH,32);
-        ws_send_logmsg(_mgr.active_connections, msg);
-        sd_journal_close(journal);
         return false;
       }
       if (sd_journal_seek_tail(journal) < 0) {
@@ -268,16 +301,25 @@ bool broadcast_systemd_logmessages(bool aqMgrActive) {
   } else if (rtn == 0) {
     // Sometimes we get no errors, and nothing to read, even when their is.
     // So if we get too many, restart but don;t reset the cursor.
-    // Could tesd moving  sd_journal_get_cursor(journal, &cursor); line to here from above.
-    if (cnt++ == 100) {
-      //printf("**** %d Too many blank reads, resetting!! ****\n",cnt);
-      sd_journal_close(journal);
-      active = false;
+    // Could test moving  sd_journal_get_cursor(journal, &cursor); line to here from above.
+
+    // Quick way to times blank reads by log level, since less logs written higher number of blank reads
+    if ( cnt++ >= BLANK_JOURNAL_READ_RESET * ( (LOG_DEBUG_SERIAL+1) - getSystemLogLevel() ) ) {
+      /* Stale connection, call ourselves to reopen*/
+      if (!reOpenStaleConnection) {
+        //LOG(NET_LOG, LOG_WARNING, "**** %d Too many blank reads, resetting!! ****\n",cnt);
+        return _broadcast_systemd_logmessages(aqMgrActive, true);
+      }
+      //LOG(NET_LOG, LOG_WARNING, "**** Reset didn't work ****\n",cnt);
+      //return false;
     }
   }
   
   return true;
 }
+
+
+#define USEC_PER_SEC	1000000L
 
 bool write_systemd_logmessages_2file(char *fname, int lines)
 {
@@ -287,33 +329,19 @@ bool write_systemd_logmessages_2file(char *fname, int lines)
   size_t len;
   const void *pri;
   size_t plen;
-  char filter[51];
+  char tsbuffer[20];
+  uint64_t realtime;
+  struct tm tm;
+  time_t sec;
+
 
   fp = fopen (fname, "w");
   if (fp == NULL) {
     LOG(NET_LOG, LOG_WARNING, "Failed to open tmp log file '%s'\n",fname);
     return false;
   }
-  if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
-  {
-    LOG(NET_LOG, LOG_WARNING, "Failed to open journal");
+   if ( (journal = open_journal()) < 0) {
     fclose (fp);
-    return false;
-  }
-  snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
-  if (sd_journal_add_match(journal, "SYSLOG_IDENTIFIER=aqualinkd", 0) < 0)
-  {
-    LOG(NET_LOG, LOG_WARNING, "Failed to set journal syslog filter");
-    fclose (fp);
-    sd_journal_close(journal);
-    return false;
-  }
-  snprintf(filter, 50, "_PID=%d",getpid());
-  if (sd_journal_add_match(journal, filter, 0) < 0)
-  {
-    LOG(NET_LOG, LOG_WARNING, "Failed to set journal pid filter");
-    fclose (fp);
-    sd_journal_close(journal);
     return false;
   }
   if (sd_journal_seek_tail(journal) < 0)
@@ -336,9 +364,14 @@ bool write_systemd_logmessages_2file(char *fname, int lines)
     if (sd_journal_get_data(journal, "MESSAGE", &log, &len) < 0) {
         LOG(NET_LOG, LOG_WARNING, "Failed to get journal message");
     } else if (sd_journal_get_data(journal, "PRIORITY", &pri, &plen) < 0) {
-        LOG(NET_LOG, LOG_WARNING, "Failed to seek to journal message priority");
+        LOG(NET_LOG, LOG_WARNING, "Failed to get journal message priority");
+    } else if (sd_journal_get_realtime_usec(journal, &realtime) < 0) {
+        LOG(NET_LOG, LOG_WARNING, "Failed to get journal message timestamp");
     } else {
-      fprintf(fp, "%-7s %.*s\n",elevel2text(atoi((const char *)pri+9)), (int)len-8,(const char *)log+8);
+      sec = (time_t)(realtime/USEC_PER_SEC);
+      localtime_r(&sec, &tm);
+      strftime(tsbuffer, sizeof(tsbuffer), "%b %d %T", &tm); // need to capture return of this
+      fprintf(fp, "%-15s %-7s %.*s\n",tsbuffer,elevel2text(atoi((const char *)pri+9)), (int)len-8,(const char *)log+8);
     }
   }
 
@@ -349,61 +382,6 @@ bool write_systemd_logmessages_2file(char *fname, int lines)
 }
 
 #endif
-
-/* superseded with systemd/sd-journal
-#define MAX_LOGSTACK 30
-#define WS_LOG_LENGTH 200
-char _logstack[MAX_LOGSTACK][WS_LOG_LENGTH];
-int _logstack_place=0;
-pthread_mutex_t logmsg_mutex;
-
-void send_ws_logmessages()
-{
-  pthread_mutex_lock(&logmsg_mutex);
-  // This pulls them off in the wrong order.
-  while (_logstack_place > 0) {
-    ws_send_logmsg(_mgr.active_connections, _logstack[0]);
-    memmove(&_logstack[0], &_logstack[1], WS_LOG_LENGTH * _logstack_place ) ;
-    _logstack_place--;
-  }
-  pthread_mutex_unlock(&logmsg_mutex);
-}
-
-void broadcast_log(char *msg) {
-  // NSF This causes mongoose to core dump after a period of time due to number of messages
-  // so remove until get time to update to new mongoose version.
-  //return;
-
-#ifdef AQ_NO_THREAD_NETSERVICE
-  if (_keepNetServicesRunning && !_aqconfig_.thread_netservices && _aqualink_data != NULL && _aqualink_data->aqManagerActive)
-  {
-    char message[WS_LOG_LENGTH];
-    build_logmsg_JSON(message, msg, WS_LOG_LENGTH, strlen(msg));
-    _ws_send_logmsg(_mgr.active_connections , message);
-    return;
-  }
-#endif
-   // See if we have and manager runnig first so we return ASAP.
-   // Since this get's called long before net_Services is started, also check we are running.
-  if (_keepNetServicesRunning && _net_thread_id != 0 && _aqualink_data != NULL && _aqualink_data->aqManagerActive)
-  {
-    pthread_mutex_lock(&logmsg_mutex);
-    if (_logstack_place < MAX_LOGSTACK)
-    {
-      //printf("**** Add message %s\n",msg);
-      // This need mutex lock on _logstack
-      build_logmsg_JSON(_logstack[_logstack_place++], msg, WS_LOG_LENGTH, strlen(msg) );
-    } else {
-    // Need to figure this out, can't send error message as that will put us in a infinate loop.
-      fprintf(stderr, "*** ERROR Log queue full ***\n");
-      // Use the last message to let UI know
-      build_logmsg_JSON(_logstack[MAX_LOGSTACK-1], "Error: *** Logs truncated, see server to complete list of message ***\n", LOGBUFFER, strlen(msg) );
-    }
-    pthread_mutex_unlock(&logmsg_mutex);
-  }
-
-}
-*/
 
 void _broadcast_aqualinkstate(struct mg_connection *nc) 
 {
@@ -997,7 +975,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "removelogmask", 13) == 0 && from == NET_WS) { // Only valid from websocket.
     removeDebugLogMask(round(value));
     return uAQmanager; // Want to resent updated status
-  } else if (strncmp(ri1, "log2file", 5) == 0) {
+  } else if (strncmp(ri1, "logfile", 7) == 0) {
     /*
     if (ri2 != NULL && strncmp(ri2, "start", 5) == 0) {
       startInlineLog2File();
@@ -1485,8 +1463,16 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
         break;
 #else
         case uLogDownload:
-          LOG(NET_LOG, LOG_DEBUG, "Downloading log of max %d lines\n",value>0?(int)value:1000);
-          if (write_systemd_logmessages_2file("/dev/shm/aqualinkd.log", value>0?(int)value:1000) ) {
+          //int lines = 1000;
+          #define DEFAULT_LOG_DOWNLOAD_LINES 100
+          // If lines was passed in post use it, if not see if it's next path in URI is a number
+          if (value == 0.0) {
+            // /api/<downloadmsg>/<lines>
+            char *pt = rsm_lastindexof(buf, "/", strlen(buf));
+            value = atoi(pt+1);
+          }
+          LOG(NET_LOG, LOG_DEBUG, "Downloading log of max %d lines\n",value>0?(int)value:DEFAULT_LOG_DOWNLOAD_LINES);
+          if (write_systemd_logmessages_2file("/dev/shm/aqualinkd.log", value>0?(int)value:DEFAULT_LOG_DOWNLOAD_LINES) ) {
             mg_http_serve_file(nc, http_msg, "/dev/shm/aqualinkd.log", mg_mk_str("text/plain"), mg_mk_str("Content-Disposition: attachment; filename=\"aqualinkd.log\""));
             remove("/dev/shm/aqualinkd.log");
           }

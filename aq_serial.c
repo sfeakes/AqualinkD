@@ -148,6 +148,20 @@ const char* get_packet_type(unsigned char* packet , int length)
     case RSSA_DEV_READY:
       return "RSSA SendCommand";
     break;
+    case CMD_EPUMP_STATUS:
+      if (packet[4] == CMD_EPUMP_RPM)
+        return "ePump RPM";
+      else if (packet[4] == CMD_EPUMP_WATTS)
+        return "ePump Watts";
+      else
+        return "ePump (unknown)";
+    break;
+    case CMD_EPUMP_RPM:
+      return "ePump set RPM";
+    break;
+    case CMD_EPUMP_WATTS:
+      return "ePump get Watts";
+    break;
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;

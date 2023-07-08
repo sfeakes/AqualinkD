@@ -27,6 +27,8 @@
 #define READ_RS485_SWG      (1 << 0) // 1   SWG
 #define READ_RS485_JAN_PUMP (1 << 1) // 2   Jandy Pump
 #define READ_RS485_PEN_PUMP (1 << 2) // 4   Pentair Pump
+#define READ_RS485_JAN_LXI   (1 << 3) //    Jandy LX & LXi heater
+//#define READ_RS485_JAN_LXI  (1 << 4) //     Jandy LXi heater
 
 struct aqconfig
 {
@@ -43,7 +45,9 @@ struct aqconfig
   bool extended_device_id_programming;
 #endif
   bool deamonize;
+#ifndef AQ_MANAGER // Need to uncomment and clean up referances in future.
   char *log_file;
+#endif
   char *mqtt_dz_sub_topic;
   char *mqtt_dz_pub_topic;
   char *mqtt_aq_topic;
@@ -74,6 +78,7 @@ struct aqconfig
   bool use_panel_aux_labels;
   bool force_swg;
   bool force_ps_setpoints;
+  bool force_frzprotect_setpoints;
   int swg_zero_ignore;
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
@@ -102,6 +107,7 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_SWG ((_aqconfig_.read_RS485_devmask & READ_RS485_SWG) == READ_RS485_SWG)
 #define READ_RSDEV_ePUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_PUMP) == READ_RS485_JAN_PUMP)
 #define READ_RSDEV_vsfPUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_PEN_PUMP) == READ_RS485_PEN_PUMP)
+#define READ_RSDEV_LXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LXI) == READ_RS485_JAN_LXI)
 
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
 

@@ -1389,8 +1389,10 @@
           }
         } else if (type == 'setpoint_thermo') {
           if (_temperature_units != 'c') { // Change to DegF
-            slider.min = 36;
-            slider.max = 104;
+            //slider.min = 36;
+            //slider.max = 104;
+            slider.min = ((typeof heater_slider_min !== 'undefined')?heater_slider_min:36);
+            slider.max = ((typeof heater_slider_max !== 'undefined')?heater_slider_max:104);
             slider.step = 1;
           } else { // Change to DegF
             slider.min = 0;

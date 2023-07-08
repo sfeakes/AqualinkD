@@ -15,6 +15,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "devices_jandy.h"
 #include "aq_serial.h"
@@ -47,7 +48,11 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     }
     else if (interestedInNextAck == DRS_EPUMP)
     {
-      rtn = processPacketFromJandyPump(packet_buffer, packet_length, aqdata);
+      rtn = processPacketFromJandyPump(packet_buffer, packet_length, aqdata, previous_packet_to);
+    }
+    else if (interestedInNextAck == DRS_LXI)
+    {
+      rtn = processPacketFromJandyHeater(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
@@ -78,12 +83,25 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     rtn = processPacketToJandyPump(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
+  else if (READ_RSDEV_LXI && (   (packet_buffer[PKT_DEST] >= JANDY_DEC_LX_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LX_MAX)
+                              || (packet_buffer[PKT_DEST] >= JANDY_DEC_LXI_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LXI_MAX)))
+  {
+    interestedInNextAck = DRS_LXI;
+    rtn = processPacketToJandyHeater(packet_buffer, packet_length, aqdata);
+    previous_packet_to = packet_buffer[PKT_DEST];
+  }
   else
   {
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
   }
-
+/*
+  if (packet_buffer[PKT_CMD] != CMD_PROBE && getLogLevel(DJAN_LOG) >= LOG_DEBUG) {
+    char msg[1000];
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "Jandy : %s\n", msg);
+  }
+*/
   return rtn;
 }
 
@@ -188,8 +206,10 @@ bool isSWGDeviceErrorState(unsigned char status)
 }
 
 void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, unsigned char status) {
-  if (aqdata->ar_swg_device_status == status)
+  if (aqdata->ar_swg_device_status == status) {
+    //LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
     return;
+  }
 
   // If we get (ALLBUTTON, SWG_STATUS_CHECK_PCB), it sends this for many status, like clean cell.
   // So if we are in one of those states, don't use it.
@@ -197,7 +217,7 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
   if (requester == ALLBUTTON && status == SWG_STATUS_CHECK_PCB ) {
     if (aqdata->ar_swg_device_status > SWG_STATUS_ON && 
         aqdata->ar_swg_device_status < SWG_STATUS_TURNING_OFF) {
-          LOG(DJAN_LOG, LOG_DEBUG, "Ignoreing set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
+          LOG(DJAN_LOG, LOG_DEBUG, "Ignoring set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
           return;
         }
   }
@@ -437,17 +457,45 @@ void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status
   }
 }
 
+
+#define EP_HI_B_WAT 8
+#define EP_LO_B_WAT 7
+#define EP_HI_B_RPM 7
+#define EP_LO_B_RPM 6
+
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
-  char msg[1000];
-  //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-  beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
+  /*
+  Set & Sataus Watts.  Looks like send to ePump type 0x45, return type 0xf1|0x45
+  JandyDvce: To   ePump:  Read To 0x78 of type   Unknown '0x45' | HEX: 0x10|0x02|0x78|0x45|0x00|0x05|0xd4|0x10|0x03|
+  JandyDvce: From ePump:  Read To 0x00 of type   Unknown '0x1f' | HEX: 0x10|0x02|0x00|0x1f|0x45|0x00|0x05|0x1d|0x05|0x9d|0x10|0x03|
+  JandyDvce: From ePump:  Read To 0x00 of type   Unknown '0x1f' | HEX: 0x10|0x02|0x00|0x1f|  69|   0|   5|  29|   5|0x9d|0x10|0x03| (Decimal)
+  Type 0x1F and cmd 0x45 is Watts = 5 * (256) + 29 = 1309  or  Byte 8 * 265 + Byte 7
+  */
+ /*
+  Set & Sataus RPM.  Looks like send to ePump type 0x44, return type 0xf1|0x44
+  JandyDvce: To   ePump:  Read To 0x78 of type   Unknown '0x44' | HEX: 0x10|0x02|0x78|0x44|0x00|0x60|0x27|0x55|0x10|0x03|  
+  JandyDvce: From ePump:  Read To 0x00 of type   Unknown '0x1f' | HEX: 0x10|0x02|0x00|0x1f|0x44|0x00|0x60|0x27|0x00|0xfc|0x10|0x03|
+  JandyDvce: From ePump:  Read To 0x00 of type   Unknown '0x1f' | HEX: 0x10|0x02|0x00|0x1f|  68|   0|  96|  39|   0|0xfc|0x10|0x03| (Decimal)
+  PDA:       PDA Menu Line 3 = SET TO 2520 RPM 
 
+  Type 0x1F and cmd 0x45 is RPM = 39 * (256) + 96 / 4 = 2520  or  Byte 8 * 265 + Byte 7 / 4
+ */
+
+  // If type 0x45 and 0x44 set to interested in next command.
+  if (packet_buffer[3] == CMD_EPUMP_RPM) {
+    // All we need to do is set we are interested in next packet, but ca   lling function already did this.
+    LOG(DJAN_LOG, LOG_DEBUG, "ControlPanel request Pump ID 0x%02hhx set RPM to %d\n",packet_buffer[PKT_DEST], ( (packet_buffer[EP_HI_B_RPM-1] * 256) + packet_buffer[EP_LO_B_RPM-1]) / 4 );
+  } else if (packet_buffer[3] == CMD_EPUMP_WATTS) {
+    LOG(DJAN_LOG, LOG_DEBUG, "ControlPanel request Pump ID 0x%02hhx get watts\n",packet_buffer[PKT_DEST]);
+  }
+
+  if (getLogLevel(DJAN_LOG) >= LOG_DEBUG) {
+    char msg[1000];
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
   //find pump for message
-  if ( 1 == 0 /*SOME_DEBUG_TEST*/) {
-    int i;
-    for (i=0; i < aqdata->num_pumps; i++) {
+    for (int i=0; i < aqdata->num_pumps; i++) {
       if (aqdata->pumps[i].pumpID == packet_buffer[PKT_DEST]) {
         LOG(DJAN_LOG, LOG_DEBUG, "Last panel info RPM:%d GPM:%d WATTS:%d\n", aqdata->pumps[i].rpm, aqdata->pumps[i].gpm, aqdata->pumps[i].watts);
         break;
@@ -457,26 +505,110 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
 
   return false;
 }
-bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+
+bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
-  char msg[1000];
-  //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-  beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
+  bool found=false;
+
+  if (packet_buffer[3] == CMD_EPUMP_STATUS && packet_buffer[4] == CMD_EPUMP_RPM) {
+    for (int i = 0; i < MAX_PUMPS; i++) {
+      if ( aqdata->pumps[i].prclType == JANDY && aqdata->pumps[i].pumpID == previous_packet_to ) {
+        LOG(DJAN_LOG, LOG_INFO, "Jandy Pump Status message = RPM %d\n",( (packet_buffer[EP_HI_B_RPM] * 256) + packet_buffer[EP_LO_B_RPM]) / 4 );
+        aqdata->pumps[i].rpm = ( (packet_buffer[EP_HI_B_RPM] * 256) + packet_buffer[EP_LO_B_RPM] ) / 4;
+        found=true;
+      }
+    }
+  } else if (packet_buffer[3] == CMD_EPUMP_STATUS && packet_buffer[4] == CMD_EPUMP_WATTS) {
+    for (int i = 0; i < MAX_PUMPS; i++) {
+      if ( aqdata->pumps[i].prclType == JANDY && aqdata->pumps[i].pumpID == previous_packet_to ) {
+        LOG(DJAN_LOG, LOG_INFO, "Jandy Pump Status message = WATTS %d\n", (packet_buffer[EP_HI_B_WAT] * 256) + packet_buffer[EP_LO_B_WAT]);
+        aqdata->pumps[i].watts = (packet_buffer[EP_HI_B_WAT] * 256) + packet_buffer[EP_LO_B_WAT];
+        found=true;
+      }
+    }
+  }
+
+  if (!found) {
+    if (packet_buffer[4] == CMD_EPUMP_RPM)
+      LOG(DJAN_LOG, LOG_NOTICE, "Jandy Pump found at ID 0x%02hhx with RPM %d, but not configured, information ignored!\n",previous_packet_to,( (packet_buffer[EP_HI_B_RPM] * 256) + packet_buffer[EP_LO_B_RPM]) / 4 );
+    else if (packet_buffer[4] == CMD_EPUMP_WATTS)
+      LOG(DJAN_LOG, LOG_NOTICE, "Jandy Pump found at ID 0x%02hhx with WATTS %d, but not configured, information ignored!\n",previous_packet_to, (packet_buffer[EP_HI_B_WAT] * 256) + packet_buffer[EP_LO_B_WAT]);
+  }
+
+  if (getLogLevel(DJAN_LOG) >= LOG_DEBUG) {
+    char msg[1000];
+    //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
+  }
   return false;
 }
+
 void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata)
 {
   // Do nothing for the moment.
   return;
 }
 
-/*
-Messages to ePump so far.
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x42|0xcc|0x10|0x03|
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x10|0x27|0x05|0x10|0x03|
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x44|0x00|0x58|0x1b|0x41|0x10|0x03|
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x45|0x00|0x05|0xd4|0x10|0x03|
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x46|0x00|0x00|0x03|0xd3|0x10|0x03|
-Debug:  To   ePump:    Jandy Packet | HEX: 0x10|0x02|0x78|0x46|0x00|0x04|0x00|0xd4|0x10|0x03|
-*/
+
+
+
+
+
+bool processPacketToJandyHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  char msg[1000];
+  int length = 0;
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "To   Heater: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  for (int i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Pool Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+    if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Spa Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+  }
+
+  length += sprintf(msg+length, ", Pool SP=%d, Spa SP=%d",aqdata->pool_htr_set_point, aqdata->spa_htr_set_point);
+  length += sprintf(msg+length, ", Pool temp=%d, Spa temp=%d",aqdata->pool_temp, aqdata->spa_temp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+
+  return false;
+}
+
+bool processPacketFromJandyHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
+{
+  char msg[1000];
+  int length = 0;   
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "From Heater: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  for (int i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Pool Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+    if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Spa Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+  }
+
+  length += sprintf(msg+length, ", Pool SP=%d, Spa SP=%d",aqdata->pool_htr_set_point, aqdata->spa_htr_set_point);
+  length += sprintf(msg+length, ", Pool temp=%d, Spa temp=%d",aqdata->pool_temp, aqdata->spa_temp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+
+  return false;
+}
+
+

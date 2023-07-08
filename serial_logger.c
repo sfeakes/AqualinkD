@@ -110,13 +110,14 @@ int serial_logger (int rs_fd, char *port_name, int logLevel) {
 #define KEYPAD " <-- RS Keypad"
 #define SPA_R " <-- Spa remote"
 #define AQUA " <-- Aqualink (iAqualink / Touch)"
-#define HEATER " <-- LX Heater"
+#define LX_HEATER " <-- LX Heater"
 #define ONE_T " <-- Onetouch device"
 #define RS_SERL " <-- RS Serial Adapter"
 #define PC_DOCK " <-- PC Interface (RS485 to RS232)"
 #define PDA " <-- PDA Remote"
 #define EPUMP " <-- Jandy VSP ePump"
 #define CHEM " <-- Chemlink"
+#define LXI_LRZ_HEATER " <-- LXi / LRZ Heater"
 
 #define UNKNOWN " <-- Unknown Device"
 
@@ -140,7 +141,7 @@ const char *getDevice(unsigned char ID) {
   if (ID >= 0x30 && ID <= 0x33)
     return AQUA;
   if (ID >= 0x38 && ID <= 0x3B)
-    return HEATER;
+    return LX_HEATER;
   if (ID >= 0x40 && ID <= 0x43)
     return ONE_T;
   if (ID >= 0x48 && ID <= 0x4B)
@@ -149,6 +150,8 @@ const char *getDevice(unsigned char ID) {
     return PC_DOCK;
   if (ID >= 0x60 && ID <= 0x63)
     return PDA;
+  if (ID >= 0x68 && ID <= 0x6B)
+    return LXI_LRZ_HEATER;
   //if (ID >= 0x70 && ID <= 0x73)
   if (ID >= 0x78 && ID <= 0x7B)
     return EPUMP;
@@ -422,7 +425,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+#ifdef AQ_MANAGER
+  setLoggingPrms(logLevel, false, NULL);
+#else
   setLoggingPrms(logLevel, false, false, NULL);
+#endif
 
   if (_playback_file) {
     rs_fd = open(argv[1], O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NDELAY);

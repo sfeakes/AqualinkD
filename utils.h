@@ -53,13 +53,17 @@ typedef enum
 } bool;
 */
 //void setLoggingPrms(int level , bool deamonized, char* log_file);
+#ifdef AQ_MANAGER
+void setLoggingPrms(int level , bool deamonized, char *error_messages);
+#else
 void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages);
+#endif
 int getLogLevel(int16_t from);
 int getSystemLogLevel();
 void setSystemLogLevel( int level);
 void daemonise ( char *pidFile, void (*main_function)(void) );
 //void debugPrint (char *format, ...);
-void displayLastSystemError (const char *on_what);
+
 
 
 void addDebugLogMask(int16_t flag);
@@ -76,6 +80,8 @@ const char* loglevel2name(int level);
 
 //void LOG(int from, int level, char *format, ...);
 void LOG(int16_t from, int msg_level, const char *format, ...);
+void LOGSystemError (int errnum, int16_t from, const char *on_what);
+void displayLastSystemError (const char *on_what);
 
 int count_characters(const char *str, char character);
 //void readCfg (char *cfgFile);

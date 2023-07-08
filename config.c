@@ -110,7 +110,9 @@ void init_parameters (struct aqconfig * parms)
   //parms->light_programming_button_pool = TEMP_UNKNOWN;
   //parms->light_programming_button_spa = TEMP_UNKNOWN;
   parms->deamonize = true;
+#ifndef AQ_MANAGER
   parms->log_file = '\0';
+#endif
 #ifdef AQ_PDA
   parms->pda_sleep_mode = false;
 #endif
@@ -126,6 +128,7 @@ void init_parameters (struct aqconfig * parms)
   
   parms->force_swg = false;
   parms->force_ps_setpoints = false;
+  parms->force_frzprotect_setpoints = false;
   //parms->swg_pool_and_spa = false;
   parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
@@ -428,9 +431,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "web_directory", 13) == 0) {
     _aqconfig_.web_directory = cleanalloc(value);
     rtn=true;
+#ifndef AQ_MANAGER
   } else if (strncasecmp(param, "log_file", 8) == 0) {
     _aqconfig_.log_file = cleanalloc(value);
     rtn=true;
+#endif
   } else if (strncasecmp(param, "mqtt_address", 12) == 0) {
     _aqconfig_.mqtt_server = cleanalloc(value);
     rtn=true;
@@ -550,6 +555,12 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
+  } else if (strncasecmp (param, "read_RS485_LXi", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LXI;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LXI;
+    rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;
@@ -558,6 +569,9 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp (param, "force_ps_setpoints", 18) == 0) {
     _aqconfig_.force_ps_setpoints = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "force_frzprotect_setpoints", 26) == 0) {
+    _aqconfig_.force_frzprotect_setpoints = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
     _aqconfig_.log_raw_bytes = text2bool(value);

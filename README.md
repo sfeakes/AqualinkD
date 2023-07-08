@@ -79,8 +79,10 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 * Add set time to OneTouch protocol.
 * Publish AqualinkD Management console. (Configure, Restart, run serial_logger) within AqualinkD.
 
-# Update in Release 2.3.2 (Current Development)
+# Update in Release 2.3.2
 * Added support for VSP on panel versions REV 0.1 & 0.2
+* Can change heater sliver min/max values in web UI. `./web/config.js`
+* Added reading ePump RPM/Watts directly from RS485 bus.
 
 # Update in Release 2.3.1
 * Changed a lot of logic around different protocols.
@@ -104,7 +106,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 
 # Update in Release 2.2.2
 * Fixed some Web UI bugs
-* Color lights now quicker when selecting existing comor mode.
+* Color lights now quicker when selecting existing color mode.
 
 # Update in Release 2.2.1
 * Supports serial adapter protocol `rssa_device_id`, (provides instant heater setpoint changes & setpoint increment)

@@ -56,16 +56,16 @@ void print_onetouch_menu()
   int i;
   for (i=0; i < ONETOUCH_LINES; i++) {
     //printf("PDA Line %d = %s\n",i,_menu[i]);
-    LOG(ONET_LOG,LOG_INFO, "OneTouch Menu Line %d = %s\n",i,_menu[i]);
+    LOG(ONET_LOG,LOG_INFO, "Menu Line %d = %s\n",i,_menu[i]);
   }
   
   if (_ot_hlightcharindexstart > -1) {
-    LOG(ONET_LOG,LOG_INFO, "OneTouch Menu highlighted line = %d, '%s' hligh-char(s) '%.*s'\n",
+    LOG(ONET_LOG,LOG_INFO, "Menu highlighted line = %d, '%s' hligh-char(s) '%.*s'\n",
                  _ot_hlightindex,_menu[_ot_hlightindex],
                  (_ot_hlightcharindexstop - _ot_hlightcharindexstart + 1), 
                  &_menu[_ot_hlightindex][_ot_hlightcharindexstart]);
   } else if (_ot_hlightindex > -1) {
-    LOG(ONET_LOG,LOG_INFO, "OneTouch Menu highlighted line = %d = %s\n",_ot_hlightindex,_menu[_ot_hlightindex]);
+    LOG(ONET_LOG,LOG_INFO, "Menu highlighted line = %d = %s\n",_ot_hlightindex,_menu[_ot_hlightindex]);
   } 
 }
 
@@ -180,7 +180,7 @@ bool process_onetouch_menu_packet(struct aqualinkdata *aq_data, unsigned char* p
         _ot_hlightcharindexstart = -1;
         _ot_hlightcharindexstart = -1;
       }
-      LOG(ONET_LOG,LOG_DEBUG, "OneTouch Menu highlighted line = %d = %s\n",_ot_hlightindex,_menu[_ot_hlightindex]);
+      LOG(ONET_LOG,LOG_DEBUG, "Menu highlighted line = %d = %s\n",_ot_hlightindex,_menu[_ot_hlightindex]);
       //if (getLogLevel() >= LOG_DEBUG){print_onetouch_menu();}
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
@@ -195,7 +195,7 @@ bool process_onetouch_menu_packet(struct aqualinkdata *aq_data, unsigned char* p
         _ot_hlightcharindexstart = -1;
         _ot_hlightcharindexstart = -1;
       }
-      LOG(ONET_LOG,LOG_DEBUG, "OneTouch Menu highlighted line = %d, '%s' chars '%.*s'\n",
+      LOG(ONET_LOG,LOG_DEBUG, "Menu highlighted line = %d, '%s' chars '%.*s'\n",
                  _ot_hlightindex,
                  _menu[_ot_hlightindex],
                  (_ot_hlightcharindexstop - _ot_hlightcharindexstart) + 1, 
@@ -368,7 +368,7 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
     rpm = PUMP_ERROR;
   }
 
-  LOG(ONET_LOG, LOG_DEBUG, "Found OneTouch Pump '%s', Index %d, RPM %d, Watts %d, GPM %d\n", _menu[menuLineIdx], pump_index, rpm, watts, gpm);
+  LOG(ONET_LOG, LOG_DEBUG, "Found Pump '%s', Index %d, RPM %d, Watts %d, GPM %d\n", _menu[menuLineIdx], pump_index, rpm, watts, gpm);
 
   for (int i = 0; i < aq_data->num_pumps; i++)
   {
@@ -381,7 +381,7 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
       aq_data->pumps[i].watts = watts;
       aq_data->pumps[i].gpm = gpm;
       // LOG(ONET_LOG,LOG_INFO, "Matched OneTouch Pump to Index %d, RPM %d, Watts %d, GPM %d\n",i,rpm,watts,gpm);
-      LOG(ONET_LOG, LOG_INFO, "Matched OneTouch Pump to '%s', Index %d, RPM %d, Watts %d, GPM %d\n", aq_data->pumps[i].button->name, i, rpm, watts, gpm);
+      LOG(ONET_LOG, LOG_INFO, "Matched Pump to '%s', Index %d, RPM %d, Watts %d, GPM %d\n", aq_data->pumps[i].button->name, i, rpm, watts, gpm);
       if (aq_data->pumps[i].pumpType == PT_UNKNOWN)
       {
         if (rsm_strcmp(_menu[2], "Intelliflo VS") == 0)
@@ -392,7 +392,7 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
                  rsm_strcmp(_menu[2], "ePump AC") == 0)
           aq_data->pumps[i].pumpType = EPUMP;
 
-        LOG(ONET_LOG, LOG_INFO, "OneTouch Pump index %d set PumpType to %d\n", i, aq_data->pumps[i].pumpType);
+        LOG(ONET_LOG, LOG_INFO, "Pump index %d set PumpType to %d\n", i, aq_data->pumps[i].pumpType);
       }
       return true;
     }
@@ -463,7 +463,7 @@ bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx, int p
       return true;
     }
   }
-  LOG(ONET_LOG,LOG_WARNING, "PDA Could not find config for Pump %s, Number %d, RPM %d, Watts %d, GPM %d\n",_menu[menuLineIdx],pump_number,rpm,watts,gpm);
+  LOG(ONET_LOG,LOG_WARNING, "Could not find config for Pump %s, Number %d, RPM %d, Watts %d, GPM %d\n",_menu[menuLineIdx],pump_number,rpm,watts,gpm);
 
   return false;
 }
@@ -480,7 +480,7 @@ bool get_chemlinkinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
     int orp = atoi(&_menu[menuLineIdx + 1][4]);
     char *indx = strchr(_menu[menuLineIdx + 1], '/');
     float ph = atof(indx + 3);
-    LOG(ONET_LOG, LOG_INFO, "OneTouch Cemlink ORP = %d PH = %f\n", orp, ph);
+    LOG(ONET_LOG, LOG_INFO, "Cemlink ORP = %d PH = %f\n", orp, ph);
     if (aq_data->ph != ph || aq_data->orp != orp)
     {
       aq_data->ph = ph;
@@ -517,7 +517,7 @@ bool get_aquapureinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
       aq_data->swg_ppm = ppm;
       rtn = true;
     }
-    LOG(ONET_LOG, LOG_INFO, "OneTouch Aquapure SWG %d%, %d PPM\n", swgp, ppm);
+    LOG(ONET_LOG, LOG_INFO, "Aquapure SWG %d%, %d PPM\n", swgp, ppm);
   }
 
 #endif
@@ -533,7 +533,7 @@ bool get_RS16buttoninfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
     if (rsm_strcmp(_menu[menuLineIdx], aq_data->aqbuttons[i].label) == 0)
     {
       // Matched must be on.
-      LOG(ONET_LOG, LOG_INFO, "OneTouch RS16 equiptment status '%s' matched '%s'\n", _menu[menuLineIdx], aq_data->aqbuttons[i].label);
+      LOG(ONET_LOG, LOG_INFO, "RS16 equiptment status '%s' matched '%s'\n", _menu[menuLineIdx], aq_data->aqbuttons[i].label);
       rs16led_update(aq_data, i);
       aq_data->aqbuttons[i].led->state = ON;
       return true;

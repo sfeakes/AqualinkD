@@ -36,10 +36,14 @@
 #  Jandy pump ID's
 #  0x78, 0x79, 0x7A, 0x7B
 */
-#define PENTAIR_DEC_PUMP_MIN   96
-#define PENTAIR_DEC_PUMP_MAX  111
-#define JANDY_DEC_PUMP_MIN    120
-#define JANDY_DEC_PUMP_MAX    123
+#define PENTAIR_DEC_PUMP_MIN   96   // 0x60
+#define PENTAIR_DEC_PUMP_MAX  111   // 0x6F
+#define JANDY_DEC_PUMP_MIN    120   // 0x80
+#define JANDY_DEC_PUMP_MAX    123   // 0x83
+#define JANDY_DEC_LX_MIN       56   // 0x40
+#define JANDY_DEC_LX_MAX       59   // 0x43
+#define JANDY_DEC_LXI_MIN     104   // 0x60
+#define JANDY_DEC_LXI_MAX     107   // 0x6B 
 
 
 // PACKET DEFINES Jandy
@@ -315,6 +319,10 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_PDA_SHIFTLINES     0x0F
 #define CMD_PDA_HIGHLIGHTCHARS 0x10
 
+/* ePump */
+#define CMD_EPUMP_STATUS       0x1F
+#define CMD_EPUMP_RPM          0x44
+#define CMD_EPUMP_WATTS        0x45
 // One Touch commands
 //#define CMD_PDA_0x04           0x04 // No idea, might be building menu
 
@@ -417,7 +425,8 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 typedef enum {
   DRS_NONE,
   DRS_SWG,
-  DRS_EPUMP
+  DRS_EPUMP,
+  DRS_LXI
 } rsDeviceType;
 
 typedef enum {

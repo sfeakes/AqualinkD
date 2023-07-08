@@ -1220,11 +1220,14 @@ int startup(char *self, char *cfgFile)
     _aqconfig_.log_raw_bytes = true;
       
 
-
+#ifdef AQ_MANAGER
+  setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, (_aqconfig_.display_warnings_web?_aqualink_data.last_display_message:NULL));
+#else
   if (_aqconfig_.display_warnings_web == true)
     setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, _aqualink_data.last_display_message);
   else
     setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
+#endif
 
   LOG(AQUA_LOG,LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 /*
@@ -1284,13 +1287,16 @@ int startup(char *self, char *cfgFile)
 #endif
   LOG(AQUA_LOG,LOG_NOTICE, "Config force SWG         = %s\n", bool2text(_aqconfig_.force_swg));
   LOG(AQUA_LOG,LOG_NOTICE, "Config force PS setpoint = %s\n", bool2text(_aqconfig_.force_ps_setpoints));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config force Freeze Prot = %s\n", bool2text(_aqconfig_.force_frzprotect_setpoints));
   /* removed until domoticz has a better virtual thermostat
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx pool thermostat = %d\n", _aqconfig_.dzidx_pool_thermostat);
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx spa thermostat  = %d\n", _aqconfig_.dzidx_spa_thermostat);
   */
 
   LOG(AQUA_LOG,LOG_NOTICE, "Config deamonize         = %s\n", bool2text(_aqconfig_.deamonize));
+#ifndef AQ_MANAGER
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_file          = %s\n", _aqconfig_.log_file);
+#endif
   LOG(AQUA_LOG,LOG_NOTICE, "Config enable scheduler  = %s\n", bool2text(_aqconfig_.enable_scheduler));
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_aqconfig_.log_protocol_packets));
@@ -1741,7 +1747,6 @@ void main_loop()
 
   LOG(AQUA_LOG,LOG_NOTICE, "Starting communication with Control Panel\n");
 
-  
   // Not the best way to do this, but ok for moment
 #ifdef AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.rs_poll_speed == 0)
@@ -1795,11 +1800,18 @@ void main_loop()
 
     if (packet_length <= 0)
     {
+      
+      // AQSERR_2SMALL // no reset (-5)
+      // AQSERR_2LARGE // no reset (-4)
+      // AQSERR_CHKSUM // no reset (-3)
+      // AQSERR_TIMEOUT // reset blocking mode (-2)
+      // AQSERR_READ // reset (-1)
+      
 #ifdef AQ_NO_THREAD_NETSERVICE
       if (_aqconfig_.rs_poll_speed < 0) {
 #else
       //if (!_aqconfig_.readahead_b4_write) {
-      if (serial_blockingmode()) {
+      if (serial_blockingmode() && (packet_length == AQSERR_READ || packet_length == AQSERR_TIMEOUT) ) {
 #endif
         LOG(AQUA_LOG,LOG_ERR, "Nothing read on blocking serial port\n");
         blank_read = blank_read_reconnect;
@@ -1956,5 +1968,26 @@ void main_loop()
   }
 
 }
+
+/*
+
+void debugtestePump()
+{
+  LOG(DJAN_LOG, LOG_INFO, "Jandy Pump code check\n");
+
+  unsigned char toPumpWatts[] = {0x10,0x02,0x78,0x45,0x00,0x05,0xd4,0x10,0x03};
+  unsigned char fromPumpWatts[] = {0x10,0x02,0x00,0x1f,0x45,0x00,0x05,0x1d,0x05,0x9d,0x10,0x03};
+                                 
+
+  unsigned char toPumpRPM[] = {0x10,0x02,0x78,0x44,0x00,0x60,0x27,0x55,0x10,0x03};
+  unsigned char fromPumpRPM[] = {0x10,0x02,0x00,0x1f,0x44,0x00,0x60,0x27,0x00,0xfc,0x10,0x03};
+
+  processJandyPacket(toPumpWatts, 8, &_aqualink_data);
+  processJandyPacket(fromPumpWatts, 11, &_aqualink_data);
+
+  processJandyPacket(toPumpRPM, 8, &_aqualink_data);
+  processJandyPacket(fromPumpRPM, 11, &_aqualink_data);
+}
+*/
 
 
