@@ -133,18 +133,21 @@ void set_pda_led(struct aqualinkled *led, char state)
   }
 }
 
+// :TODO: Test what happens if there are more devices on than can fit on the status page
+// :TODO: If web page is up PDA will not sleep therefore there is no wake and seeing
+// the equipment page.  Need to add support for determining filter pump on/off based on home
 void equiptment_update_cycle(int eqID) {
   // If you have a -1, it's a reset to clear / update information.
+  // TOTAL_BUTTONS is 20 so bits 21-31 available for BOOST, FREEZE PROTECT, etc.
   int i;
-  // :TODO: need to add freeze protect and boost support to bitmask, perhaps sercive_mode
-  // TOTAL_BUTTONS is 20 so bits 21-31 should be available
   static uint32_t update_equiptment_bitmask = 0;
 
   if (eqID == -1) {
-    LOG(PDA_LOG,LOG_DEBUG, "Start new equipment cycle\n");
+    LOG(PDA_LOG,LOG_DEBUG, "Start new equipment cycle bitmask 0x%04x\n",
+        update_equiptment_bitmask);
    
     for (i=0; i < _aqualink_data->total_buttons - 2 ; i++) { // total_buttons - 2 because we don't get heaters in this cycle
-      if ((update_equiptment_bitmask & (1 << (i+1))) != (1 << (i+1))) {
+      if ((update_equiptment_bitmask & (1 << (i))) != (1 << (i))) {
         if (_aqualink_data->aqbuttons[i].led->state != OFF) {
           _aqualink_data->aqbuttons[i].led->state = OFF;
           _aqualink_data->updated = true;
@@ -152,18 +155,35 @@ void equiptment_update_cycle(int eqID) {
         }
       }
     }
-    // :TODO: This needs to go into the equipment status processing to turn FP off
-    // if (_aqualink_data->frz_protect_state == ON) {
-    //   _aqualink_data->frz_protect_state = ENABLE;
-    // }
-    // :TODO: This needs to go into the equipment status processing to turn boost off
-    // if (_aqualink_data->boost) {
-    //   setSWGboost(_aqualink_data, false);
-    // }
+
+    if ((_aqualink_data->frz_protect_state == ON) &&
+        (! (update_equiptment_bitmask & (1 << FREEZE_PROTECT_INDEX)))) {
+        LOG(PDA_LOG,LOG_DEBUG, "Turn off freeze protect not seen in last cycle\n");
+       _aqualink_data->frz_protect_state = ENABLE;
+    }
+
+    if ((_aqualink_data->boost) &&
+        (! (update_equiptment_bitmask & (1 << BOOST_INDEX)))) {
+        LOG(PDA_LOG,LOG_DEBUG, "Turn off BOOST not seen in last cycle\n");
+      setSWGboost(_aqualink_data, false);
+    }
     update_equiptment_bitmask = 0;
+  } else if ((eqID >= 0) && (eqID < 32)) {
+    update_equiptment_bitmask |= (1 << (eqID));
+    char *eqName = NULL;
+    if (eqID < _aqualink_data->total_buttons) {
+        eqName = _aqualink_data->aqbuttons[eqID].name;
+    } else if (eqID == FREEZE_PROTECT_INDEX) {
+        eqName = "FREEZE PROTECT";
+    } else if (eqID == BOOST_INDEX) {
+        eqName = "BOOST";
+    } else {
+        eqName = "UNKNOWN";
+    }
+    LOG(PDA_LOG,LOG_DEBUG, "Added equipment id %d %s to updated cycle bitmask 0x%04x\n",
+        eqID, eqName, update_equiptment_bitmask);
   } else {
-    update_equiptment_bitmask |= (1 << (eqID+1));
-    LOG(PDA_LOG,LOG_DEBUG, "Added equiptment id %d %s to updated cycle\n", eqID, _aqualink_data->aqbuttons[eqID].name);
+      LOG(PDA_LOG,LOG_ERR, "equiptment_update_cycle(%d) - Invalid eqID\n", eqID);
   }
 }
 
@@ -648,11 +668,13 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
   else if ((index = rsm_strncasestr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->frz_protect_state = ON;
+    equiptment_update_cycle(FREEZE_PROTECT_INDEX);
     LOG(PDA_LOG,LOG_DEBUG, "Freeze Protect is on\n");
   }
   else if ((index = rsm_strncasestr(msg, "BOOST", AQ_MSGLEN)) != NULL)
   {
     setSWGboost(_aqualink_data, true);
+    equiptment_update_cycle(BOOST_INDEX);
   }
   else if ((_aqualink_data->boost) && ((index = rsm_strncasestr(msg, "REMAIN", AQ_MSGLEN)) != NULL))
   {
