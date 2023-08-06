@@ -13,7 +13,7 @@ AQ_RS16 = true
 AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
-AQ_MANAGER = false
+AQ_MANAGER =false
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
 # Turn off threadded net services
