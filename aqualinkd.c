@@ -998,7 +998,7 @@ void action_delayed_request()
   {
     //LOG(AQUA_LOG,LOG_NOTICE, "SWG BOST to %d\n", _aqualink_data.unactioned.value);
     //if (_aqualink_data.ar_swg_status == SWG_STATUS_OFF) {
-    if (_aqualink_data.swg_led_state == OFF) {
+    if ((_aqualink_data.swg_led_state == OFF) && (_aqualink_data.boost == false)) {
       LOG(AQUA_LOG,LOG_ERR, "SWG is off, can't Boost pool\n");
     } else if (_aqualink_data.unactioned.value == _aqualink_data.boost ) {
       LOG(AQUA_LOG,LOG_ERR, "Request to turn Boost %s ignored, Boost is already %s\n",_aqualink_data.unactioned.value?"On":"Off", _aqualink_data.boost?"On":"Off");
