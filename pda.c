@@ -171,7 +171,7 @@ void equiptment_update_cycle(int eqID) {
   } else if ((eqID >= 0) && (eqID < 32)) {
     update_equiptment_bitmask |= (1 << (eqID));
     char *eqName = NULL;
-    if (eqID < _aqualink_data->total_buttons) {
+    if (eqID < TOTAL_BUTTONS) {
         eqName = _aqualink_data->aqbuttons[eqID].name;
     } else if (eqID == FREEZE_PROTECT_INDEX) {
         eqName = "FREEZE PROTECT";
