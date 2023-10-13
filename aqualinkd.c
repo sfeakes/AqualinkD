@@ -839,20 +839,30 @@ bool process_packet(unsigned char *packet, int length)
     //LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
     memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
     processLEDstate();
-    if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
+    if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF)
     {
-      _aqualink_data.pool_temp = TEMP_UNKNOWN;
-      _aqualink_data.spa_temp = TEMP_UNKNOWN;
-      //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
+         _aqualink_data.spa_temp = TEMP_UNKNOWN;
+         //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
     }
-    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == OFF && isSINGLE_DEV_PANEL != true)
+    if(isSINGLE_DEV_PANEL)
     {
-      //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
-      _aqualink_data.spa_temp = TEMP_UNKNOWN;
+       if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
+       {
+         _aqualink_data.pool_temp = TEMP_UNKNOWN;
+         _aqualink_data.spa_temp = TEMP_UNKNOWN;
+         //_aqualink_data.spa_temp = _aqconfig_.report_zero_spa_temp?-18:TEMP_UNKNOWN;
+       }
+       else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON)
+       {
+         _aqualink_data.pool_temp = TEMP_UNKNOWN;
+       }
     }
-    else if (_aqualink_data.aqbuttons[SPA_INDEX].led->state == ON && isSINGLE_DEV_PANEL != true)
+    else // isSINGLE_DEV_PANEL == false
     {
-      _aqualink_data.pool_temp = TEMP_UNKNOWN;
+       if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
+       {
+         _aqualink_data.pool_temp = TEMP_UNKNOWN;
+       }
     }
 
     // COLOR MODE programming relies on state changes, so let any threads know
