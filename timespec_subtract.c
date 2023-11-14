@@ -8,7 +8,7 @@
  */
 
 
-/* Based on https://www.gnu.org/software/libc/manual/html_node/Elapsed-Time.html
+/* Based on https://www.gnu.org/software/libc/manual/html_node/Calculating-Elapsed-Time.html
    Subtract the struct timespec values X and Y,
    storing the result in RESULT.
    Return 1 if the difference is negative, otherwise 0. */

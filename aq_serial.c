@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "config.h"
 #include "packetLogger.h"
+#include "timespec_subtract.h"
 
 /*
 Notes for serial usb speed 
@@ -51,6 +52,8 @@ static bool _blocking_mode = false;
 int _blocking_fds = -1;
 
 static struct termios _oldtio;
+
+static struct timespec last_serial_read_time;
 
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
@@ -725,6 +728,25 @@ void send_packet(int fd, unsigned char *packet_buffer, int length)
 void send_packet(int fd, unsigned char *packet, int length)
 {
 #endif
+  struct timespec elapsed_time;
+  struct timespec now;
+  struct timespec min_frame_wait_time = {0, 4000000}; // 4 milliseconds
+  struct timespec frame_wait_time;
+  struct timespec remainder_time;
+
+  // No spec for aqualink protocol but looking at similar RS-485 protocol
+  // https://www.tascam.eu/en/docs/MX-8A_RS-485_protocol.pdf there is a
+  // min frame to frame time of 4 milliseconds and there seems to be issues
+  // with RPi 4 sending a response too quickly
+  do {
+    clock_gettime(CLOCK_REALTIME, &now);
+    timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+    if (timespec_subtract(&frame_wait_time, &min_frame_wait_time, &elapsed_time)) {
+      break;
+    }
+  } while (nanosleep(&frame_wait_time, &remainder_time) != 0);
+
+  clock_gettime(CLOCK_REALTIME, &now);
 
   if (_blocking_mode) {
     //int nwrite = write(fd, packet, length);
@@ -783,6 +805,11 @@ void send_packet(int fd, unsigned char *packet, int length)
   }*/
 
   tcdrain(fd); // Make sure buffer has been sent.
+  timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+  LOG(RSSD_LOG, LOG_DEBUG, "Time from recv to %s send is %ld.%09ld sec\n",
+    (_blocking_mode?"blocking":"non-blocking"), elapsed_time.tv_sec,
+    elapsed_time.tv_nsec);
+
 }
 
 void _send_ack(int fd, unsigned char ack_type, unsigned char command)
@@ -1032,6 +1059,7 @@ int get_packet(int fd, unsigned char* packet)
     return AQSERR_2SMALL;
   }
 
+  clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketRead(packet, index);
