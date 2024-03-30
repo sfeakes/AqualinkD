@@ -138,8 +138,12 @@ void init_parameters (struct aqconfig * parms)
   
   parms->sync_panel_time = true;
 
+
+#ifdef AQ_RS_EXTRA_OPTS
   // Default parameters for threading and USB blocking 
   parms->readahead_b4_write = false;
+  parms->prioritize_ack = false;
+#endif
 
 #ifdef AQ_NO_THREAD_NETSERVICE
   parms->rs_poll_speed = DEFAULT_POLL_SPEED;
@@ -148,7 +152,7 @@ void init_parameters (struct aqconfig * parms)
 
   parms->enable_scheduler = true;
   parms->ftdi_low_latency = true;
-  parms->prioritize_ack = false;
+  parms->frame_delay = 0;
 
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -585,9 +589,14 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
     _aqconfig_.display_warnings_web = text2bool(value);
     rtn=true;
+#ifdef AQ_RS_EXTRA_OPTS
   } else if (strncasecmp (param, "serial_readahead_b4_write", 25) == 0) {
     _aqconfig_.readahead_b4_write = text2bool(value);
     rtn=true;
+    } else if (strncasecmp (param, "prioritize_ack", 14) == 0) {
+    _aqconfig_.prioritize_ack = text2bool(value);
+    rtn=true;
+#endif
   } else if (strncasecmp (param, "mqtt_timed_update", 17) == 0) {
     _aqconfig_.mqtt_timed_update = text2bool(value);
     rtn=true;
@@ -612,10 +621,10 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "ftdi_low_latency", 16) == 0) {
     _aqconfig_.ftdi_low_latency = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "prioritize_ack", 14) == 0) {
-    _aqconfig_.prioritize_ack = text2bool(value);
+  } else if (strncasecmp (param, "rs485_frame_delay", 17) == 0) {
+    _aqconfig_.frame_delay = strtoul(value, NULL, 10);
     rtn=true;
-  }  
+  } 
   else if (strncasecmp(param, "button_", 7) == 0) {
     // Check we have inichalized panel information, if not use any settings we may have
     if (_aqconfig_.paneltype_mask == 0)

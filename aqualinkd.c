@@ -1316,14 +1316,19 @@ int startup(char *self, char *cfgFile)
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
 
+  
+#ifdef AQ_RS_EXTRA_OPTS
   if (_aqconfig_.readahead_b4_write == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial Read Ahead Write  = %s\n", bool2text(_aqconfig_.readahead_b4_write));
+  if (_aqconfig_.prioritize_ack == true)
+    LOG(AQUA_LOG,LOG_NOTICE, "Serial Prioritize Ack    = %s\n", bool2text(_aqconfig_.prioritize_ack));
+#endif
 
   if (_aqconfig_.ftdi_low_latency == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial FTDI low latency  = %s\n", bool2text(_aqconfig_.ftdi_low_latency));
 
-  if (_aqconfig_.prioritize_ack == true)
-    LOG(AQUA_LOG,LOG_NOTICE, "Serial Prioritize Ack    = %s\n", bool2text(_aqconfig_.prioritize_ack));
+  if (_aqconfig_.frame_delay > 0)
+    LOG(AQUA_LOG,LOG_NOTICE, "RS485 Frame delay        = %dms\n", _aqconfig_.frame_delay);
 
 #ifdef AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.thread_netservices)
@@ -1335,7 +1340,9 @@ int startup(char *self, char *cfgFile)
   }
   if (_aqconfig_.rs_poll_speed != DEFAULT_POLL_SPEED)
     LOG(AQUA_LOG,LOG_NOTICE, "RS Poll Speed            = %d\n", _aqconfig_.rs_poll_speed);
+#endif
 
+#if defined AQ_RS_EXTRA_OPTS && defined AQ_NO_THREAD_NETSERVICE
   if (_aqconfig_.rs_poll_speed < 0 && _aqconfig_.readahead_b4_write) {
     LOG(AQUA_LOG,LOG_WARNING, "Serial Read Ahead Write is not valid when using Negative RS Poll Speed, turning Serial Read Ahead Write off\n");
     _aqconfig_.readahead_b4_write = false;
@@ -1628,9 +1635,10 @@ void main_loop()
   i=0;
 
   // Turn off read ahead while dealing with probes
+#ifdef AQ_RS_EXTRA_OPTS
   bool read_ahead = _aqconfig_.readahead_b4_write;
   _aqconfig_.readahead_b4_write = false;
-
+#endif
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
   while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
   {
@@ -1742,8 +1750,9 @@ void main_loop()
    */
 
 //int max_blank_read = 0;
-
+#ifdef AQ_RS_EXTRA_OPTS
   _aqconfig_.readahead_b4_write = read_ahead;
+#endif
 
   LOG(AQUA_LOG,LOG_NOTICE, "Starting communication with Control Panel\n");
 
@@ -1840,32 +1849,38 @@ void main_loop()
           LOG(AQUA_LOG,LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
           logPacketRead(packet_buffer, packet_length);
         }
-        
-        if (!_aqconfig_.prioritize_ack) {
-          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
-        } else {
-          // If we did not process the packet, above we need to record it for the caculate_ack_packet call.
+#ifdef AQ_RS_EXTRA_OPTS
+        // If we did not process the packet, above we need to record it for the caculate_ack_packet call.
           // Should find a better place to put this, but since prioritize_ack is expermental it's ok for now.
           // NSF We shouldn;t need to do the same for rssa / onetouch / iaqtouch and probably rssaadapter since they don;t queue commands & programming commands.
+        if (_aqconfig_.prioritize_ack) {
           _aqualink_data.last_packet_type = packet_buffer[PKT_CMD];
-        }
+        else
+#endif  
+          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
+
 #ifdef AQ_PDA 
         if (isPDA_PANEL)
           caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
         else
 #endif
           caculate_ack_packet(rs_fd, packet_buffer, ALLBUTTON);
-        
+
+#ifdef AQ_RS_EXTRA_OPTS       
         if (_aqconfig_.prioritize_ack)
           _aqualink_data.updated = process_packet(packet_buffer, packet_length);
-
+#endif
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AllButton Emulation Processed packet in");
       }
       else if (packet_length > 0 && isRSSA_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && getProtocolType(packet_buffer) == JANDY) {
+#ifdef AQ_RS_EXTRA_OPTS
         if (_aqconfig_.prioritize_ack) {
           caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
           _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
-        } else {
+        } 
+        else 
+#endif
+        {
           _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
           caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
         }
@@ -1873,11 +1888,15 @@ void main_loop()
       }
 #ifdef AQ_ONETOUCH
       else if (packet_length > 0 && isONET_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
+  #ifdef AQ_RS_EXTRA_OPTS
         if (_aqconfig_.prioritize_ack) {
           set_onetouch_lastmsg(packet_buffer[PKT_CMD]);
           caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
           _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        } else {
+        } 
+        else 
+  #endif
+        {
           _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
           caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
         }
@@ -1886,11 +1905,15 @@ void main_loop()
 #endif
 #ifdef AQ_IAQTOUCH
       else if (packet_length > 0 && isIAQT_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
+  #ifdef AQ_RS_EXTRA_OPTS
         if (_aqconfig_.prioritize_ack) {
           set_iaqtouch_lastmsg(packet_buffer[PKT_CMD]);
           caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
           _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        } else {
+        } 
+        else
+  #endif 
+        {
           _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
           caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
         }

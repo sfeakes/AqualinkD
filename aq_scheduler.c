@@ -133,6 +133,7 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
   int i;
   bool inarray = false;
   aqs_cron cline;
+  bool fileexists = false;
 
   if ( !_aqconfig_.enable_scheduler) {
     LOG(SCHD_LOG,LOG_WARNING, "Schedules are disabled\n");
@@ -143,6 +144,8 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
   LOG(SCHD_LOG,LOG_NOTICE, "Saving Schedule:\n");
   
   bool fs = remount_root_ro(false);
+  if (access(CRON_FILE, F_OK) == 0)
+    fileexists = true;
   fp = fopen(CRON_FILE, "w");
   if (fp == NULL) {
     LOG(SCHD_LOG,LOG_ERR, "Open file failed '%s'\n", CRON_FILE);
@@ -176,6 +179,11 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
 
   fprintf(fp, "#***** AUTO GENERATED DO NOT EDIT *****\n");
   fclose(fp);
+
+  // if we created file, change the permisions
+  if (!fileexists)
+    if ( chmod(CRON_FILE, S_IRUSR | S_IWUSR ) < 0 )
+      LOG(SCHD_LOG,LOG_ERR, "Could not change permitions on cron file %s, scheduling may not work\n",CRON_FILE);
 
   remount_root_ro(fs);
 
@@ -225,7 +233,7 @@ int build_schedules_js(char* buffer, int size)
 
   fp = fopen(CRON_FILE, "r");
   if (fp == NULL) {
-    LOG(SCHD_LOG,LOG_ERR, "Open file failed '%s'\n", CRON_FILE);
+    LOG(SCHD_LOG,LOG_WARNING, "Open file failed '%s'\n", CRON_FILE);
     length += sprintf(buffer+length,"\"message\": \"Error reading schedules\"}");
     return length;
   }

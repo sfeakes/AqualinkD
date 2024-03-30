@@ -30,6 +30,7 @@
 #include "utils.h"
 #include "config.h"
 #include "packetLogger.h"
+#include "timespec_subtract.h"
 
 /*
 Notes for serial usb speed 
@@ -51,6 +52,8 @@ static bool _blocking_mode = false;
 int _blocking_fds = -1;
 
 static struct termios _oldtio;
+
+static struct timespec last_serial_read_time;
 
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
@@ -339,18 +342,24 @@ int init_serial_port(const char* tty)
     return init_readahead_serial_port(_aqconfig_.serial_port);
   else
     return init_serial_port(_aqconfig_.serial_port);
-#else
+#elif AQ_RS_EXTRA_OPTS
   if (_aqconfig_.readahead_b4_write)
     return init_readahead_serial_port(_aqconfig_.serial_port);
   else
     return init_blocking_serial_port(_aqconfig_.serial_port);
+#else
+  return init_blocking_serial_port(_aqconfig_.serial_port);
 #endif
   
 }
+
+#ifdef AQ_RS_EXTRA_OPTS
 int init_readahead_serial_port(const char* tty)
 {
   return _init_serial_port(tty, false, true);
 }
+#endif
+
 int init_blocking_serial_port(const char* tty)
 {
   _blocking_fds = _init_serial_port(tty, true, false);
@@ -414,6 +423,8 @@ int unlock_port(int fd)
 //#define OLD_SERIAL_INIT
 #ifndef OLD_SERIAL_INIT
 
+
+// Unless AQ_RS_EXTRA_OPTS is defined, blocking will always be true
 int _init_serial_port(const char* tty, bool blocking, bool readahead)
 {
   //B1200, B2400, B4800, B9600, B19200, B38400, B57600, B115200, B230400
@@ -726,6 +737,28 @@ void send_packet(int fd, unsigned char *packet, int length)
 {
 #endif
 
+  struct timespec elapsed_time;
+  struct timespec now;
+
+  if (_aqconfig_.frame_delay > 0) {
+    struct timespec min_frame_wait_time = {0, 4000000}; // 4 milliseconds
+    struct timespec frame_wait_time;
+    struct timespec remainder_time;
+
+    min_frame_wait_time.tv_sec = 0;
+    min_frame_wait_time.tv_nsec = _aqconfig_.frame_delay * 1000000;
+
+    do {
+      clock_gettime(CLOCK_REALTIME, &now);
+      timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+      if (timespec_subtract(&frame_wait_time, &min_frame_wait_time, &elapsed_time)) {
+        break;
+      }
+    } while (nanosleep(&frame_wait_time, &remainder_time) != 0);
+  }
+
+  clock_gettime(CLOCK_REALTIME, &now);
+
   if (_blocking_mode) {
     //int nwrite = write(fd, packet, length);
     //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes of %d\n",nwrite,length);
@@ -734,13 +767,14 @@ void send_packet(int fd, unsigned char *packet, int length)
     if (nwrite != length)
         LOG(RSSD_LOG, LOG_ERR, "write to serial port failed\n");
   } else {
+#ifdef AQ_RS_EXTRA_OPTS
     if (_aqconfig_.readahead_b4_write) {
       if (cleanOutSerial(fd, false) != 0x00) {
         LOG(RSSD_LOG, LOG_ERR, "ERROR on RS485, AqualinkD was too slow in replying to message! (please check for performance issues)\n");
         cleanOutSerial(fd, true);
       }
     }
-
+#endif
     int nwrite, i;
     for (i = 0; i < length; i += nwrite) {
       nwrite = write(fd, packet + i, length - i);
@@ -783,6 +817,13 @@ void send_packet(int fd, unsigned char *packet, int length)
   }*/
 
   tcdrain(fd); // Make sure buffer has been sent.
+  //if (_aqconfig_.frame_delay > 0) {
+    timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+    LOG(RSSD_LOG, LOG_DEBUG, "Time from recv to %s send is %ld.%09ld sec\n",
+      (_blocking_mode?"blocking":"non-blocking"), elapsed_time.tv_sec,
+      elapsed_time.tv_nsec);
+  //}
+
 }
 
 void _send_ack(int fd, unsigned char ack_type, unsigned char command)
@@ -1032,6 +1073,9 @@ int get_packet(int fd, unsigned char* packet)
     return AQSERR_2SMALL;
   }
 
+  //if (_aqconfig_.frame_delay > 0) {
+    clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
+  //}
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketRead(packet, index);
