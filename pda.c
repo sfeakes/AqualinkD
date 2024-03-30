@@ -32,6 +32,12 @@
 #include "devices_jandy.h"
 #include "rs_msg_utils.h"
 
+// Used in equiptment_update_cycle() for additional items on EQUIPMENT STATUS
+// TOTAL_BUTTONS is at most 20 so bits 21-31 should be available
+#define PDA_BOOST_INDEX           21
+#define PDA_FREEZE_PROTECT_INDEX  22
+
+
 // static struct aqualinkdata _aqualink_data;
 static struct aqualinkdata *_aqualink_data;
 static unsigned char _last_packet_type;
@@ -157,13 +163,13 @@ void equiptment_update_cycle(int eqID) {
     }
 
     if ((_aqualink_data->frz_protect_state == ON) &&
-        (! (update_equiptment_bitmask & (1 << FREEZE_PROTECT_INDEX)))) {
+        (! (update_equiptment_bitmask & (1 << PDA_FREEZE_PROTECT_INDEX)))) {
         LOG(PDA_LOG,LOG_DEBUG, "Turn off freeze protect not seen in last cycle\n");
        _aqualink_data->frz_protect_state = ENABLE;
     }
 
     if ((_aqualink_data->boost) &&
-        (! (update_equiptment_bitmask & (1 << BOOST_INDEX)))) {
+        (! (update_equiptment_bitmask & (1 << PDA_BOOST_INDEX)))) {
         LOG(PDA_LOG,LOG_DEBUG, "Turn off BOOST not seen in last cycle\n");
       setSWGboost(_aqualink_data, false);
     }
@@ -173,9 +179,9 @@ void equiptment_update_cycle(int eqID) {
     char *eqName = NULL;
     if (eqID < TOTAL_BUTTONS) {
         eqName = _aqualink_data->aqbuttons[eqID].name;
-    } else if (eqID == FREEZE_PROTECT_INDEX) {
+    } else if (eqID == PDA_FREEZE_PROTECT_INDEX) {
         eqName = "FREEZE PROTECT";
-    } else if (eqID == BOOST_INDEX) {
+    } else if (eqID == PDA_BOOST_INDEX) {
         eqName = "BOOST";
     } else {
         eqName = "UNKNOWN";
@@ -668,13 +674,13 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
   else if ((index = rsm_strncasestr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->frz_protect_state = ON;
-    equiptment_update_cycle(FREEZE_PROTECT_INDEX);
+    equiptment_update_cycle(PDA_FREEZE_PROTECT_INDEX);
     LOG(PDA_LOG,LOG_DEBUG, "Freeze Protect is on\n");
   }
   else if ((index = rsm_strncasestr(msg, "BOOST", AQ_MSGLEN)) != NULL)
   {
     setSWGboost(_aqualink_data, true);
-    equiptment_update_cycle(BOOST_INDEX);
+    equiptment_update_cycle(PDA_BOOST_INDEX);
   }
   else if ((_aqualink_data->boost) && ((index = rsm_strncasestr(msg, "REMAIN", AQ_MSGLEN)) != NULL))
   {

@@ -75,9 +75,4 @@ int PANEL_SIZE();
 void initButtons_RS16(struct aqualinkdata *aqdata);
 #endif
 
-// Used in equiptment_update_cycle() for additional items on EQUIPMENT STATUS
-// TOTAL_BUTTONS is at most 20 so bits 21-31 should be available
-#define BOOST_INDEX           21
-#define FREEZE_PROTECT_INDEX  22
-
 #endif

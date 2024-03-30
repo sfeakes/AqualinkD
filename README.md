@@ -90,6 +90,7 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
   * Improve PDA panels reliability (PDA pannels are slower than RS panels)
   * Potentially fixed Pentair VSP / SWG problems since Pentair VSP use a different protocol, this will allow a timed delay for the VSP to post a status messages. Seems to only effect RS485 bus when both a Pentair VSP and Jandy SWG are present.
   * Add ```rs485_frame_delay = 4``` to /etc/aqualinkd.conf, 4 is number of milliseconds between frames, 0 will turn off ie no pause.
+* PDA Changes to support SWG and Boot.
 
 # Update in Release 2.3.2
 * Added support for VSP on panel versions REV 0.1 & 0.2
