@@ -133,27 +133,57 @@ void set_pda_led(struct aqualinkled *led, char state)
   }
 }
 
+// :TODO: Test what happens if there are more devices on than can fit on the status page
+// :TODO: If web page is up PDA will not sleep therefore there is no wake and seeing
+// the equipment page.  Need to add support for determining filter pump on/off based on home
 void equiptment_update_cycle(int eqID) {
   // If you have a -1, it's a reset to clear / update information.
+  // TOTAL_BUTTONS is 20 so bits 21-31 available for BOOST, FREEZE PROTECT, etc.
   int i;
   static uint32_t update_equiptment_bitmask = 0;
 
   if (eqID == -1) {
-    LOG(PDA_LOG,LOG_DEBUG, "Start new equiptment cycle\n");
+    LOG(PDA_LOG,LOG_DEBUG, "Start new equipment cycle bitmask 0x%04x\n",
+        update_equiptment_bitmask);
    
     for (i=0; i < _aqualink_data->total_buttons - 2 ; i++) { // total_buttons - 2 because we don't get heaters in this cycle
-      if ((update_equiptment_bitmask & (1 << (i+1))) != (1 << (i+1))) {
+      if ((update_equiptment_bitmask & (1 << (i))) != (1 << (i))) {
         if (_aqualink_data->aqbuttons[i].led->state != OFF) {
           _aqualink_data->aqbuttons[i].led->state = OFF;
           _aqualink_data->updated = true;
-          LOG(PDA_LOG,LOG_DEBUG, "Turn off equiptment id %d %s not seen in last cycle\n", i, _aqualink_data->aqbuttons[i].name);
+          LOG(PDA_LOG,LOG_DEBUG, "Turn off equipment id %d %s not seen in last cycle\n", i, _aqualink_data->aqbuttons[i].name);
         }
       }
     }
+
+    if ((_aqualink_data->frz_protect_state == ON) &&
+        (! (update_equiptment_bitmask & (1 << FREEZE_PROTECT_INDEX)))) {
+        LOG(PDA_LOG,LOG_DEBUG, "Turn off freeze protect not seen in last cycle\n");
+       _aqualink_data->frz_protect_state = ENABLE;
+    }
+
+    if ((_aqualink_data->boost) &&
+        (! (update_equiptment_bitmask & (1 << BOOST_INDEX)))) {
+        LOG(PDA_LOG,LOG_DEBUG, "Turn off BOOST not seen in last cycle\n");
+      setSWGboost(_aqualink_data, false);
+    }
     update_equiptment_bitmask = 0;
+  } else if ((eqID >= 0) && (eqID < 32)) {
+    update_equiptment_bitmask |= (1 << (eqID));
+    char *eqName = NULL;
+    if (eqID < TOTAL_BUTTONS) {
+        eqName = _aqualink_data->aqbuttons[eqID].name;
+    } else if (eqID == FREEZE_PROTECT_INDEX) {
+        eqName = "FREEZE PROTECT";
+    } else if (eqID == BOOST_INDEX) {
+        eqName = "BOOST";
+    } else {
+        eqName = "UNKNOWN";
+    }
+    LOG(PDA_LOG,LOG_DEBUG, "Added equipment id %d %s to updated cycle bitmask 0x%04x\n",
+        eqID, eqName, update_equiptment_bitmask);
   } else {
-    update_equiptment_bitmask |= (1 << (eqID+1));
-    LOG(PDA_LOG,LOG_DEBUG, "Added equiptment id %d %s to updated cycle\n", eqID, _aqualink_data->aqbuttons[eqID].name);
+      LOG(PDA_LOG,LOG_ERR, "equiptment_update_cycle(%d) - Invalid eqID\n", eqID);
   }
 }
 
@@ -237,13 +267,12 @@ void process_pda_packet_msg_long_equipment_control(const char *msg)
     {
       LOG(PDA_LOG,LOG_DEBUG, "*** Found EQ CTL Status for %s = '%.*s'\n", _aqualink_data->aqbuttons[i].label, AQ_MSGLEN, msg);
       set_pda_led(_aqualink_data->aqbuttons[i].led, msg[AQ_MSGLEN - 1]);
+      // Force SWG off if pump is off.
+      if ((i==0) && (_aqualink_data->aqbuttons[0].led->state == OFF )) {
+        setSWGoff(_aqualink_data);
+      }
     }
   }
-
-  // Force SWG off if pump is off.
-  if (_aqualink_data->aqbuttons[0].led->state == OFF )
-    setSWGoff(_aqualink_data);
-    //_aqualink_data->ar_swg_status = SWG_STATUS_OFF;
 
   // NSF I think we need to check TEMP1 and TEMP2 and set Pool HEater and Spa heater directly, to support single device.
   if (isSINGLE_DEV_PANEL){
@@ -389,29 +418,43 @@ void process_pda_packet_msg_long_freeze_protect(const char *msg)
   }
 }
 
-void process_pda_packet_msg_long_SWG(const char *msg)
+void process_pda_packet_msg_long_SWG(int index, const char *msg)
 {
-  //PDA Line 0 =   SET AquaPure
-  //PDA Line 1 =
-  //PDA Line 2 =
-  //PDA Line 3 = SET POOL TO: 45%
-  //PDA Line 4 =  SET SPA TO:  0%
+  char *ptr = NULL;
+  // Single Setpoint
+  // PDA Line 0 =   SET AquaPure
+  // PDA Line 1 =
+  // PDA Line 2 =
+  // PDA Line 3 =    SET TO 100%
 
-  // If spa is on, read SWG for spa, if not set SWG for pool
-  if (_aqualink_data->aqbuttons[SPA_INDEX].led->state != OFF) {
-    if (strncasecmp(msg, "SET SPA TO:", 11) == 0)
-    {
-      //_aqualink_data->swg_percent = atoi(msg + 13);
-      setSWGpercent(_aqualink_data, atoi(msg + 13));
+  // PDA Line 0 =   SET AquaPure
+  // PDA Line 1 =
+  // PDA Line 2 =
+  // PDA Line 3 =      SET TO: 20%
+
+  // Dual Setpoint
+  // PDA Line 0 =   SET AquaPure
+  // PDA Line 1 =
+  // PDA Line 2 =
+  // PDA Line 3 = SET POOL TO: 45%
+  // PDA Line 4 =  SET SPA TO:  0%
+
+  // Note: use pda_m_line(index) instead of msg because it is NULL terminated
+  if ((ptr = strcasestr(pda_m_line(index), "SET TO")) != NULL) {
+    setSWGpercent(_aqualink_data, atoi(ptr+7));
+    LOG(PDA_LOG,LOG_DEBUG, "swg_percent = %d\n", _aqualink_data->swg_percent);
+  } else if ((ptr = strcasestr(pda_m_line(index), "SET SPA TO")) != NULL) {
+    if (_aqualink_data->aqbuttons[SPA_INDEX].led->state != OFF) {
+      setSWGpercent(_aqualink_data, atoi(ptr+11));
       LOG(PDA_LOG,LOG_DEBUG, "SPA swg_percent = %d\n", _aqualink_data->swg_percent);
     }
-  } else {
-    if (strncasecmp(msg, "SET POOL TO:", 12) == 0)
-    {
-      //_aqualink_data->swg_percent = atoi(msg + 13);
-      setSWGpercent(_aqualink_data, atoi(msg + 13));
+  } else if ((ptr = strcasestr(pda_m_line(index), "SET POOL TO")) != NULL) {
+    if (_aqualink_data->aqbuttons[SPA_INDEX].led->state == OFF) {
+      setSWGpercent(_aqualink_data, atoi(ptr + 12));
       LOG(PDA_LOG,LOG_DEBUG, "POOL swg_percent = %d\n", _aqualink_data->swg_percent);
-    } 
+    }
+  } else if (index == 3) {
+    LOG(PDA_LOG,LOG_ERR, "process msg SWG POOL idx %d unmatched %s\n", index, pda_m_line(index));
   }
 }
 
@@ -606,6 +649,12 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
   //   FILTER PUMP
   //     CLEANER
   //
+  // EQUIPMENT STATUS
+  //
+  //      BOOST
+  //   23:59 REMAIN
+  //  SALT 25500 PPM
+  //   FILTER PUMP
 
   // VSP Pumps are not read here, since they are over multiple lines.
 
@@ -619,7 +668,17 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
   else if ((index = rsm_strncasestr(msg, "FREEZE PROTECT", AQ_MSGLEN)) != NULL)
   {
     _aqualink_data->frz_protect_state = ON;
+    equiptment_update_cycle(FREEZE_PROTECT_INDEX);
     LOG(PDA_LOG,LOG_DEBUG, "Freeze Protect is on\n");
+  }
+  else if ((index = rsm_strncasestr(msg, "BOOST", AQ_MSGLEN)) != NULL)
+  {
+    setSWGboost(_aqualink_data, true);
+    equiptment_update_cycle(BOOST_INDEX);
+  }
+  else if ((_aqualink_data->boost) && ((index = rsm_strncasestr(msg, "REMAIN", AQ_MSGLEN)) != NULL))
+  {
+    snprintf(_aqualink_data->boost_msg, sizeof(_aqualink_data->boost_msg), "%s", msg+2);
   }
   else if ((index = rsm_strncasestr(msg, MSG_SWG_PCT, AQ_MSGLEN)) != NULL)
   {
@@ -833,7 +892,7 @@ bool process_pda_packet(unsigned char *packet, int length)
             process_pda_packet_msg_long_freeze_protect(msg);
           break;
           case PM_AQUAPURE:
-            process_pda_packet_msg_long_SWG(msg);
+            process_pda_packet_msg_long_SWG(index, msg);
           break;
           case PM_AUX_LABEL_DEVICE:
             process_pda_packet_msg_long_level_aux_device(msg);

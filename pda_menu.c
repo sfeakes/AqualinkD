@@ -238,7 +238,12 @@ bool process_pda_menu_packet(unsigned char* packet, int length, bool force_print
         strncpy(_menu[index], (char*)packet+PKT_DATA+1, AQ_MSGLEN);
         _menu[index][AQ_MSGLEN] = '\0';
       }
-      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){print_menu();}
+      if ((getLogLevel(PDA_LOG) >= LOG_DEBUG) && force_print_menu ){
+        print_menu();
+        printed_page = true;
+      } else {
+        printed_page = false;
+      }
     break;
     case CMD_PDA_HIGHLIGHT:
       // when switching from hlight to hlightchars index 255 is sent to turn off hlight
@@ -252,7 +257,10 @@ bool process_pda_menu_packet(unsigned char* packet, int length, bool force_print
         _hlightcharindexstop = -1;
       }
       //if (getLogLevel(PDA_LOG) >= LOG_DEBUG){print_menu();}
-      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){print_menu();}
+      if (getLogLevel(PDA_LOG) >= LOG_DEBUG && force_print_menu ){
+        print_menu();
+        printed_page = true;
+      }
     break;
     case CMD_PDA_HIGHLIGHTCHARS:
       // pkt[4] = line, pkt[5] = startchar, pkt[6] = endchar, pkt[7] = clr/inv

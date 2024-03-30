@@ -163,6 +163,7 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
   int max_index = -1;
   int index = -1;
   int cnt = 0;
+  bool bLookingForBoost = false;
 
   LOG(PDA_LOG,LOG_DEBUG, "PDA Device programmer looking for menu text '%s' (limit=%d)\n",menuText,charlimit);
 
@@ -202,51 +203,83 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
   }
 
   if (strncasecmp(pda_m_line(9),"   ^^ MORE", 10) != 0) {
-      if (pda_m_type() == PM_HOME) {
-          min_index = 4;
-          max_index = 9;
-      } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
-          min_index = 1;
-          max_index = 9;
-      } else if (pda_m_type() == PM_MAIN) {
-        // Line 0 =    MAIN MENU
-        // Line 1 =
-        // Line 2 = HELP           >
-        // Line 3 = PROGRAM        >
-        // Line 4 = SET TEMP       >
-        // Line 5 = SET TIME       >
-        // Line 6 = PDA OPTIONS    >
-        // Line 7 = SYSTEM SETUP   >
-        // Line 8 =
-        // Line 9 =
+    if (pda_m_type() == PM_HOME) {
+        min_index = 4;
+        max_index = 9;
+    } else if (pda_m_type() == PM_EQUIPTMENT_CONTROL) {
+        min_index = 1;
+        max_index = 9;
+    } else if (pda_m_type() == PM_MAIN) {
+      // Line 0 =    MAIN MENU
+      // Line 1 =
+      // Line 2 = HELP           >
+      // Line 3 = PROGRAM        >
+      // Line 4 = SET TEMP       >
+      // Line 5 = SET TIME       >
+      // Line 6 = PDA OPTIONS    >
+      // Line 7 = SYSTEM SETUP   >
+      // Line 8 =
+      // Line 9 =
 
-        // Line 0 =    MAIN MENU
-        // Line 1 = HELP           >
-        // Line 2 = PROGRAM        >
-        // Line 3 = SET TEMP       >
-        // Line 4 = SET TIME       >
-        // Line 5 = SET AquaPure   >
-        // Line 6 = PDA OPTIONS    >
-        // Line 7 = SYSTEM SETUP   >
-        // Line 8 =
-        // Line 9 =      BOOST
+      // Line 0 =    MAIN MENU
+      // Line 1 = HELP           >
+      // Line 2 = PROGRAM        >
+      // Line 3 = SET TEMP       >
+      // Line 4 = SET TIME       >
+      // Line 5 = SET AquaPure   >
+      // Line 6 = PDA OPTIONS    >
+      // Line 7 = SYSTEM SETUP   >
+      // Line 8 =
+      // Line 9 =      BOOST
 
-        // "SET AquaPure" and "BOOST" are only present when filter pump is running
-        if (strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) {
-          min_index = 1;
-          max_index = 8; // to account for 8 missing
-          if (index == 9) { // looking for boost
-              index = 8;
-          }
-        } else {
-            min_index = 2;
-            max_index = 7;
+      // "SET AquaPure" and "BOOST" are only present when filter pump is running
+      if (strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) {
+        min_index = 1;
+        max_index = 8; // to account for 8 missing
+        if (index == 9) { // looking for boost
+          bLookingForBoost = true;
+          index = 8;
         }
+      } else {
+          min_index = 2;
+          max_index = 7;
       }
+    } else if (pda_m_type() == PM_BOOST) {
+      // PDA Line 0 =      BOOST
+      // PDA Line 1 =
+      // PDA Line 2 =   Operate the
+      // PDA Line 3 =     AquaPure
+      // PDA Line 4 =   chlorinator
+      // PDA Line 5 =     at 100%
+      // PDA Line 6 =   for 24 hrs.
+      // PDA Line 7 =
+      // PDA Line 8 =      START
+      // PDA Line 9 =     GO BACK
+
+      // PDA Line 0 =      BOOST
+      // PDA Line 1 =
+      // PDA Line 2 =
+      // PDA Line 3 =  TIME REMAINING
+      // PDA Line 4 =      23:59
+      // PDA Line 5 =
+      // PDA Line 6 =
+      // PDA Line 7 =       PAUSE
+      // PDA Line 8 =      RESTART
+      // PDA Line 9 =       STOP
+
+      if (strncasecmp(pda_m_line(9),"      STOP", 10) == 0) {
+        min_index = 7;
+        max_index = 9;
+      } else {
+        min_index = 8;
+        max_index = 9;
+
+      }
+    }
   }
 
-  LOG(PDA_LOG,LOG_DEBUG, "find_pda_menu_item i=%d idx=%d min=%d max=%d\n",
-             i, index, min_index, max_index);
+  LOG(PDA_LOG,LOG_DEBUG, "find_pda_menu_item i=%d idx=%d min=%d max=%d boost=%d\n",
+             i, index, min_index, max_index, bLookingForBoost?1:0);
 
   if (i < index) {
     if ((min_index != -1) && ((index - i) > (i - min_index + max_index - index + 1))) {
@@ -275,8 +308,7 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
       }
     }
   }
-
-  return waitForPDAMessageHighlight(aq_data, index, 10);
+  return waitForPDAMessageHighlight(aq_data, bLookingForBoost?9:index, 10);
 }
 
 bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool waitForNextMenu, bool loose);
@@ -415,7 +447,7 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
         if (pda_m_type() == PM_HOME) {
             ret = select_pda_menu_item(aq_data, "MENU", true);
         } else if (pda_m_type() == PM_MAIN) {
-            ret = select_pda_menu_item_loose(aq_data, "BOOST", true);
+            ret = select_pda_menu_item_loose(aq_data, "     BOOST", true);
         } else {
             send_cmd(KEY_PDA_BACK);
             ret = waitForPDAnextMenu(aq_data);
@@ -815,31 +847,17 @@ bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, 
 }
 
 /*
-  Use -1 for cur_val if you want this to find the delected value and change it.
+  Use -1 for cur_val if you want this to find the current value and change it.
   Use number for cur_val to  increase / decrease from known start point
 */
 bool set_PDA_numeric_field_value(struct aqualinkdata *aq_data, int val, int cur_val, char *select_label, int step) {
   int i=0;
 
+  LOG(PDA_LOG,LOG_DEBUG, "set_PDA_numeric_field_value %s from %d to %d step %d\n", select_label, cur_val, val, step);
   if (select_label != NULL) {
-    // :TODO: Should probably change below to call find_pda_menu_item(), rather than doing it here
-    // If we lease this, need to limit on the number of loops
-    //while ( strncasecmp(pda_m_hlight(), select_label, 8) != 0 ) {
-    //while ( strncasecmp(pda_m_hlight(), select_label, strlen(select_label)) != 0 ) {
-    while ( rsm_strncmp(pda_m_hlight(), select_label, strlen(select_label)) != 0 ) {
-      LOG(PDA_LOG,LOG_DEBUG, "Numeric selector selecting '%s' current selection '%s'\n", select_label, pda_m_hlight());
-      send_cmd(KEY_PDA_DOWN);
-      //delay(500);  // Last message probably was CMD_PDA_HIGHLIGHT, so wait before checking.
-      waitfor_queue2empty();
-      waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,5);
-      if (i > 10) {
-        LOG(PDA_LOG,LOG_ERR, "Numeric selector could not find string '%s'\n", select_label);
-        return false;
-      }
-      i++;
+    if ( ! select_pda_menu_item(aq_data, select_label, false) ) {
+      return false;
     }
-    LOG(PDA_LOG,LOG_DEBUG, "Numeric selector, selecting '%s'\n", pda_m_hlight());
-    send_cmd(KEY_PDA_SELECT);
   }
 
   if (cur_val == -1) {
@@ -888,15 +906,21 @@ bool set_PDA_aqualink_SWG_setpoint(struct aqualinkdata *aq_data, int val) {
     LOG(PDA_LOG,LOG_ERR, "Error finding SWG setpoints menu\n");
     return false;
   }
+  // wait for menu to display to capture current value with process_pda_packet_msg_long_SWG
+  waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS, 10);
 
-  if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) {
-    //int cur_val = atoi
+  if (pda_find_m_index("SET POOL") < 0) {
+    // Single Setpoint Screen
+    return set_PDA_numeric_field_value(aq_data, val, -1, NULL, 5);
+  } else if (aq_data->aqbuttons[SPA_INDEX].led->state != OFF) {
+    // Dual Setpoint Screen with SPA mode enabled
+    // :TODO: aq_data should have 2 swg_precent values and GUI should be updated to
+    //   display and modify both values.
     return set_PDA_numeric_field_value(aq_data, val, -1, "SET SPA", 5);
   } else {
+    // Dual Setpoint Screen with SPA mode disabled
     return set_PDA_numeric_field_value(aq_data, val, -1, "SET POOL", 5);
   }
-  
-  //return true;
 }
 
 bool set_PDA_aqualink_boost(struct aqualinkdata *aq_data, bool val)
@@ -905,38 +929,22 @@ bool set_PDA_aqualink_boost(struct aqualinkdata *aq_data, bool val)
     LOG(PDA_LOG,LOG_ERR, "Error finding BOOST menu\n");
     return false;
   }
-
-  
-
   // Should be on the START menu item
   if (val == true) { // Turn on should just be enter
-    if (strstr(pda_m_hlight(), "START") != NULL)
-      send_cmd(KEY_PDA_SELECT);
-    else {
-      LOG(PDA_LOG,LOG_ERR, "Error finding BOOST START menu\n");
-      return false;
-    }
+    select_pda_menu_item_loose(aq_data, "START", false);
   } else {
-    /*
-    // Should be select options PAUSE | RESTART | STOP
-    int i=0;
-    for (i=0; i < 6; i++) {
-      send_cmd(KEY_PDA_DOWN);
-      waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,10);
-      if (strstr(pda_m_hlight(), "STOP") != NULL) {
-        send_cmd(KEY_PDA_SELECT);
-        break;
-      }
-    }
-    if (i >= 6)
-      LOG(PDA_LOG,LOG_ERR, "Error finding BOOST STOP menu\n");
-    // Should be select options PAUSE | RESTART | STOP
-    // so press down twice then select
-    */
-     // NSF This is really crap, but can't get above to work, need to come back and check menu items against selections.
-    send_cmd(KEY_PDA_DOWN);
-    send_cmd(KEY_PDA_DOWN);
-    send_cmd(KEY_PDA_SELECT);
+    // PDA Line 0 =      BOOST
+    // PDA Line 1 =
+    // PDA Line 2 =
+    // PDA Line 3 =  TIME REMAINING
+    // PDA Line 4 =      23:59
+    // PDA Line 5 =
+    // PDA Line 6 =
+    // PDA Line 7 =       PAUSE
+    // PDA Line 8 =      RESTART
+    // PDA Line 9 =       STOP
+
+    select_pda_menu_item_loose(aq_data, "STOP", false);
   }
 
   return true;
@@ -1206,16 +1214,31 @@ PDA Line 7 =    BOOST POOL
 PDA Line 8 =
 PDA Line 9 =
 **************** OPTION 2 FOR THIS MENU ********************
-PDA Line 0 = MAIN MENU
-PDA Line 1 =
-PDA Line 2 = HELP >
-PDA Line 3 = PROGRAM >
-PDA Line 4 = SET TEMP >
-PDA Line 5 = SET TIME >
-PDA Line 6 = PDA OPTIONS >
-PDA Line 7 = SYSTEM SETUP >
+
+PDA Line 0 =    MAIN MENU
+PDA Line 1 = HELP           >
+PDA Line 2 = PROGRAM        >
+PDA Line 3 = SET TEMP       >
+PDA Line 4 = SET TIME       >
+PDA Line 5 = SET AquaPure   >
+PDA Line 6 = PDA OPTIONS    >
+PDA Line 7 = SYSTEM SETUP   >
 PDA Line 8 =
-PDA Line 9 = BOOST
+PDA Line 9 =      BOOST
+
+
+PDA Line 0 =      BOOST
+PDA Line 1 =
+PDA Line 2 =   Operate the
+PDA Line 3 =     AquaPure
+PDA Line 4 =   chlorinator
+PDA Line 5 =     at 100%
+PDA Line 6 =   for 24 hrs.
+PDA Line 7 =
+PDA Line 8 =      START
+PDA Line 9 =     GO BACK
+
+
 ********** Guess at SYSTEM SETUP Menu  (not on Rev MMM or before)************
 // PDA Line 0 =   SYSTEM SETUP
 // PDA Line 1 = LABEL AUX      >
