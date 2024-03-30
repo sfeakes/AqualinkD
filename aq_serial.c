@@ -741,7 +741,7 @@ void send_packet(int fd, unsigned char *packet, int length)
   struct timespec now;
 
   if (_aqconfig_.frame_delay > 0) {
-    struct timespec min_frame_wait_time = {0, 4000000}; // 4 milliseconds
+    struct timespec min_frame_wait_time;
     struct timespec frame_wait_time;
     struct timespec remainder_time;
 
