@@ -447,7 +447,8 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu) {
         if (pda_m_type() == PM_HOME) {
             ret = select_pda_menu_item(aq_data, "MENU", true);
         } else if (pda_m_type() == PM_MAIN) {
-            ret = select_pda_menu_item_loose(aq_data, "     BOOST", true);
+            ret = select_pda_menu_item_loose(aq_data, "BOOST", true);
+            //ret = select_pda_menu_item(aq_data, "BOOST", true);
         } else {
             send_cmd(KEY_PDA_BACK);
             ret = waitForPDAnextMenu(aq_data);

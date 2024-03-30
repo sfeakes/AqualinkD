@@ -16,7 +16,7 @@
  *  https://github.com/sfeakes/aqualinkd
  */
 
-
+#define _GNU_SOURCE 1 // for strcasestr
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -83,6 +83,7 @@ int pda_find_m_index(char *text)
   int i;
 
   for (i = 0; i < PDA_LINES; i++) {
+    //printf ("+++ pda_find_m_index() Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
     if (strncmp(pda_m_line(i), text, strlen(text)) == 0)
       return i;
   }
@@ -96,7 +97,7 @@ int pda_find_m_index_case(char *text, int limit)
   int i;
 
   for (i = 0; i < PDA_LINES; i++) {
-    //printf ("+++ Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
+    //printf ("+++ pda_find_m_index_case() Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
     if (strncasecmp(pda_m_line(i), text, limit) == 0)
       return i;
   }
@@ -110,8 +111,9 @@ int pda_find_m_index_loose(char *text)
   int i;
 
   for (i = 0; i < PDA_LINES; i++) {
-    //printf ("+++ Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
-    if (strstr(pda_m_line(i), text) != NULL)
+    //printf ("+++ pda_find_m_index_loose() Compare '%s' to '%s' index %d\n",text,pda_m_line(i),i);
+    //if (strstr(pda_m_line(i), text) != NULL)
+    if (strcasestr(pda_m_line(i), text) != NULL)
       return i;
   }
 
@@ -180,7 +182,7 @@ pda_menu_type pda_m_type()
   } else if (strncasecmp(_menu[0],"   LABEL AUX", 12) == 0 &&  // Will have number ie AUX4
              strncasecmp(_menu[2],"  CURRENT LABEL ", 16) == 0) {
     return PM_AUX_LABEL_DEVICE;
-  } else if (strstr(_menu[0],"BOOST")) { // This is bad check, but PDA menus are BOOST | BOOST POOL | BOOST SPA, need to do better.
+  } else if (strcasestr(_menu[0],"BOOST")) { // This is bad check, but PDA menus are BOOST | Boost | BOOST POOL | BOOST SPA, need to do better.
     return PM_BOOST;
   }
   return PM_UNKNOWN;
