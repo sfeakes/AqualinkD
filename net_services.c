@@ -162,7 +162,8 @@ sd_journal *open_journal() {
   // Below works for local
   //if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
   // Desting Docker install
-  if (sd_journal_open(&journal, SD_JOURNAL_ALL_NAMESPACES) < 0)
+  //if (sd_journal_open(&journal, SD_JOURNAL_ALL_NAMESPACES || SD_JOURNAL_SYSTEM) < 0)
+  if (sd_journal_open_directory(&journal, "/var/log/journal", SD_JOURNAL_SYSTEM) < 0)
   {
     LOGSystemError(errno, NET_LOG, "Failed to open journal");
     return journal;
