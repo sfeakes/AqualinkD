@@ -98,6 +98,7 @@ struct aqconfig
   int rs_poll_speed; // Need to remove
   bool thread_netservices; // Need to remove
 #endif
+  bool ignore_tty_err;
 };
 
 #ifndef CONFIG_C
