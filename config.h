@@ -54,7 +54,7 @@ struct aqconfig
   char *mqtt_server;
   char *mqtt_user;
   char *mqtt_passwd;
-  char mqtt_ID[MQTT_ID_LEN];
+  char mqtt_ID[MQTT_ID_LEN+1];
   int dzidx_air_temp;
   int dzidx_pool_water_temp;
   int dzidx_spa_water_temp;
