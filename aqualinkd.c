@@ -1051,6 +1051,7 @@ void printHelp()
   printf("\t-vv        (Serial Debug logging)\n");
   printf("\t-rsd       (RS485 debug)\n");
   printf("\t-rsrd      (RS485 raw debug)\n");
+  printf("\t-ns        (Don't terminate on serial errors like missing tty, no panel connection)\n");
 }
 
 int main(int argc, char *argv[])
@@ -1138,6 +1139,11 @@ int main(int argc, char *argv[])
     {
       _cmdln_lograwRS485 = true;
     }
+    else if (strcmp(argv[i], "-ns") == 0)
+    {
+      _aqconfig_.ignore_tty_err = true;
+    }
+      
   }
 
   // Set this here, so it doesn;t get reset if the manager restarts the AqualinkD process.
