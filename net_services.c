@@ -175,6 +175,7 @@ sd_journal *open_journal() {
     sd_journal_close(journal);
     return journal;
   }
+  /* Docker wll also have problem with this
   // Daemon will change PID after printing startup message, so don't filter on current PID
   if (_aqconfig_.deamonize != true) {
     snprintf(filter, 50, "_PID=%d",getpid());
@@ -184,7 +185,7 @@ sd_journal *open_journal() {
       sd_journal_close(journal);
       return journal;
     }  
-  }
+  }*/
 
   if (sd_journal_set_data_threshold(journal, LOGBUFFER) < 0)
   {
