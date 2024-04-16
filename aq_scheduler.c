@@ -39,7 +39,7 @@ Example /etc/cron.d/aqualinkd
 
 bool remount_root_ro(bool readonly) {
 
-#ifdev AQ_CONTAINER
+#ifdef AQ_CONTAINER
   // In container this is pointless
   return false;
 #endif
