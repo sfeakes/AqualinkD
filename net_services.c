@@ -159,11 +159,13 @@ sd_journal *open_journal() {
   sd_journal *journal;
   char filter[51];
 
+#ifndef AQ_CONTAINER
   // Below works for local
-  //if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
-  // Desting Docker install
-  //if (sd_journal_open(&journal, SD_JOURNAL_ALL_NAMESPACES || SD_JOURNAL_SYSTEM) < 0)
+  if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
+#else
+  // Container doesn't have local systemd_journal so use hosts through mapped filesystem
   if (sd_journal_open_directory(&journal, "/var/log/journal", SD_JOURNAL_SYSTEM) < 0)
+#endif
   {
     LOGSystemError(errno, NET_LOG, "Failed to open journal");
     return journal;
