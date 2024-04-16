@@ -162,6 +162,12 @@ slog:	$(SLOG)
 aqdebug: $(DEBG)
 	$(info $(DEBG) has been compiled)
 
+# Container, add container flag and compile
+container: CFLAGS := $(CFLAGS) -D AQ_CONTAINER
+container: $(MAIN) $(SLOG)
+	$(info $(MAIN) has been compiled (** For Container use **))
+	$(info $(SLOG) has been compiled (** For Container use **))
+
 #debug, Just change compile flags and call MAIN
 debug: CFLAGS = $(DFLAGS)
 debug: $(MAIN) $(SLOG)
