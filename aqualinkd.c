@@ -1051,7 +1051,6 @@ void printHelp()
   printf("\t-vv        (Serial Debug logging)\n");
   printf("\t-rsd       (RS485 debug)\n");
   printf("\t-rsrd      (RS485 raw debug)\n");
-  printf("\t-ns        (Don't terminate on serial errors like missing tty, no panel connection)\n");
 }
 
 int main(int argc, char *argv[])
@@ -1138,12 +1137,7 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
       _cmdln_lograwRS485 = true;
-    }
-    else if (strcmp(argv[i], "-ns") == 0)
-    {
-      _aqconfig_.ignore_tty_err = true;
-    }
-      
+    }    
   }
 
   // Set this here, so it doesn;t get reset if the manager restarts the AqualinkD process.
@@ -1569,9 +1563,10 @@ void main_loop()
   rs_fd = init_serial_port(_aqconfig_.serial_port);
 
   if (rs_fd == -1) {
-   LOG(AQUA_LOG,LOG_ERR, "Error Aqualink setting serial port: %s\n", _aqconfig_.serial_port);
-   if (!_aqconfig_.ignore_tty_err)
-     exit(EXIT_FAILURE); 
+    LOG(AQUA_LOG,LOG_ERR, "Error Aqualink setting serial port: %s\n", _aqconfig_.serial_port);
+#ifndef AQ_CONTAINER    
+    exit(EXIT_FAILURE);
+#endif 
   }
   LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
 
@@ -1651,9 +1646,10 @@ void main_loop()
   {
     if (blank_read == blank_read_reconnect) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
-      // Reset blank reads here if we want to ignore TTY errors.
-      if (_aqconfig_.ignore_tty_err)
+#ifdev AQ_CONTAINER
+        // Reset blank reads here, we want to ignore TTY errors in container to keep it running
         blank_read = 1;
+#endif
     } else if (blank_read == blank_read_reconnect*2) {
       LOG(AQUA_LOG,LOG_ERR, "I'm done, exiting, please check '%s'\n",_aqconfig_.serial_port);
       stopPacketLogger();
