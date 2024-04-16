@@ -15,6 +15,7 @@ AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
 AQ_MANAGER =true
 AQ_RS_EXTRA_OPTS = false
+#AQ_CONTAINER = false // this is for compiling for containers
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
 # Turn off threadded net services
