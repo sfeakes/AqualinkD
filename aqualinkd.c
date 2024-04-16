@@ -1646,7 +1646,7 @@ void main_loop()
   {
     if (blank_read == blank_read_reconnect) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
-#ifdev AQ_CONTAINER
+#ifdef AQ_CONTAINER
         // Reset blank reads here, we want to ignore TTY errors in container to keep it running
         blank_read = 1;
 #endif
