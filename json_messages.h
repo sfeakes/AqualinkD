@@ -9,6 +9,7 @@
 #define JSON_LABEL_SIZE 600
 #define JSON_BUFFER_SIZE 5120
 #define JSON_STATUS_SIZE 2048
+#define JSON_SIMULATOR_SIZE 2048
 
 #define JSON_MQTT_MSG_SIZE 100
 
@@ -57,6 +58,7 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
 //int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch, char* buffer, int size, bool homekit);
 //int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit);
 int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool homekit);
+int build_aqualink_simulator_packet_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
 
 #endif /* JSON_MESSAGES_H_ */
 

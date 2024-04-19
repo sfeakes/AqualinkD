@@ -138,6 +138,16 @@ typedef enum pump_type {
 } pump_type;
 */
 
+/*
+typedef enum simulator_type {
+  SIM_NONE,
+  SIM_ALLB,
+  SIM_ONET,
+  SIM_PDA,
+  SIM_IAQT
+} simulator_type;
+*/
+
 #define PUMP_PRIMING -1
 #define PUMP_OFFLINE -2
 #define PUMP_ERROR   -3
@@ -227,7 +237,16 @@ struct aqualinkdata
   //unsigned short total_ordered_buttons;
   unsigned char last_packet_type;
   int swg_delayed_percent;
-  bool simulate_panel;
+  //bool simulate_panel; // NSF remove in future
+  unsigned char simulator_packet[AQ_MAXPKTLEN+1];
+  bool simulator_packet_updated;
+  int simulator_packet_length;
+  
+  //bool simulator_active; // should be redundant with other two
+  unsigned char simulator_id;
+  //simulator_type simulator_active;
+  emulation_type simulator_active;
+
   bool aqManagerActive;
   int open_websockets;
   struct programmingthread active_thread;

@@ -364,9 +364,6 @@ int main(int argc, char *argv[]) {
   bool errorMonitor = false;
 
   // aq_serial.c uses the following
-#ifdef AQ_RS_EXTRA_OPTS
-  _aqconfig_.readahead_b4_write = false;
-#endif
   _aqconfig_.log_protocol_packets = false;
   _aqconfig_.log_raw_bytes = false;
   _aqconfig_.ftdi_low_latency  = true;

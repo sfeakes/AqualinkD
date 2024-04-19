@@ -50,6 +50,7 @@
 #include "version.h"
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
+#include "simulator.h"
 #include "debug_timer.h"
 
 #ifdef AQ_MANAGER
@@ -743,7 +744,8 @@ void _processMessage(char *message, bool reset)
   {
     LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "Ignoring '%s'\n", msg);
     //_aqualink_data.display_message = msg;
-    if (in_programming_mode(&_aqualink_data) == false && _aqualink_data.simulate_panel == false &&
+    //if (in_programming_mode(&_aqualink_data) == false && _aqualink_data.simulate_panel == false &&
+    if (in_programming_mode(&_aqualink_data) == false &&
         stristr(msg, "JANDY AquaLinkRS") == NULL &&
         //stristr(msg, "PUMP O") == NULL  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
         strncasecmp(msg, "PUMP O", 6) != 0  &&// Catch 'PUMP ON' and 'PUMP OFF' but not 'PUMP WILL TURN ON'
@@ -1059,7 +1061,6 @@ int main(int argc, char *argv[])
   char defaultCfg[] = "./aqualinkd.conf";
   char *cfgFile;
   
-
 //printf ("TIMER = %d\n",TIMR_LOG);
 
 #ifdef AQ_MEMCMP
@@ -1316,14 +1317,6 @@ int startup(char *self, char *cfgFile)
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
 
-  
-#ifdef AQ_RS_EXTRA_OPTS
-  if (_aqconfig_.readahead_b4_write == true)
-    LOG(AQUA_LOG,LOG_NOTICE, "Serial Read Ahead Write  = %s\n", bool2text(_aqconfig_.readahead_b4_write));
-  if (_aqconfig_.prioritize_ack == true)
-    LOG(AQUA_LOG,LOG_NOTICE, "Serial Prioritize Ack    = %s\n", bool2text(_aqconfig_.prioritize_ack));
-#endif
-
   if (_aqconfig_.ftdi_low_latency == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial FTDI low latency  = %s\n", bool2text(_aqconfig_.ftdi_low_latency));
 
@@ -1340,13 +1333,6 @@ int startup(char *self, char *cfgFile)
   }
   if (_aqconfig_.rs_poll_speed != DEFAULT_POLL_SPEED)
     LOG(AQUA_LOG,LOG_NOTICE, "RS Poll Speed            = %d\n", _aqconfig_.rs_poll_speed);
-#endif
-
-#if defined AQ_RS_EXTRA_OPTS && defined AQ_NO_THREAD_NETSERVICE
-  if (_aqconfig_.rs_poll_speed < 0 && _aqconfig_.readahead_b4_write) {
-    LOG(AQUA_LOG,LOG_WARNING, "Serial Read Ahead Write is not valid when using Negative RS Poll Speed, turning Serial Read Ahead Write off\n");
-    _aqconfig_.readahead_b4_write = false;
-  }
 #endif
 
   //for (i = 0; i < TOTAL_BUTONS; i++)
@@ -1451,6 +1437,18 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"PDA Emulation type Processed packet in");
     break;
 #endif
+    case SIMULATOR:
+      if (_aqualink_data.simulator_active == ALLBUTTON) {
+        send_extended_ack(rs_fd, (packet_buffer[PKT_CMD]==CMD_MSG_LONG?ACK_SCREEN_BUSY_SCROLL:ACK_NORMAL), pop_simulator_cmd(packet_buffer[PKT_CMD]));
+      } else if (_aqualink_data.simulator_active == ONETOUCH) {
+        send_extended_ack(rs_fd, ACK_ONETOUCH, pop_simulator_cmd(packet_buffer[PKT_CMD]));
+      } else if (_aqualink_data.simulator_active == IAQTOUCH) {
+        
+      } else {
+        // SHOW SOME ERROR
+      }
+    break;
+
     default:
       LOG(AQUA_LOG,LOG_WARNING, "Can't caculate ACK, No idea what packet this source packet was for!\n");
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Unknown Emulation type Processed packet in");
@@ -1507,7 +1505,7 @@ void main_loop()
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
 
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
-  _aqualink_data.simulate_panel = false;
+  //_aqualink_data.simulate_panel = false;
   _aqualink_data.active_thread.thread_id = 0;
   _aqualink_data.air_temp = TEMP_UNKNOWN;
   _aqualink_data.pool_temp = TEMP_UNKNOWN;
@@ -1528,6 +1526,8 @@ void main_loop()
   _aqualink_data.open_websockets = 0;
   _aqualink_data.ph = TEMP_UNKNOWN;
   _aqualink_data.orp = TEMP_UNKNOWN;
+  _aqualink_data.simulator_id = NUL;
+  _aqualink_data.simulator_active = SIM_NONE;
 
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
@@ -1636,11 +1636,6 @@ void main_loop()
   LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
   i=0;
 
-  // Turn off read ahead while dealing with probes
-#ifdef AQ_RS_EXTRA_OPTS
-  bool read_ahead = _aqconfig_.readahead_b4_write;
-  _aqconfig_.readahead_b4_write = false;
-#endif
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
   while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
   {
@@ -1755,11 +1750,6 @@ void main_loop()
    * 
    */
 
-//int max_blank_read = 0;
-#ifdef AQ_RS_EXTRA_OPTS
-  _aqconfig_.readahead_b4_write = read_ahead;
-#endif
-
   LOG(AQUA_LOG,LOG_NOTICE, "Starting communication with Control Panel\n");
 
   // Not the best way to do this, but ok for moment
@@ -1825,7 +1815,6 @@ void main_loop()
 #ifdef AQ_NO_THREAD_NETSERVICE
       if (_aqconfig_.rs_poll_speed < 0) {
 #else
-      //if (!_aqconfig_.readahead_b4_write) {
       if (serial_blockingmode() && (packet_length == AQSERR_READ || packet_length == AQSERR_TIMEOUT) ) {
 #endif
         LOG(AQUA_LOG,LOG_ERR, "Nothing read on blocking serial port\n");
@@ -1849,21 +1838,40 @@ void main_loop()
       blank_read = 0;
       //changed = false;
 
+      if (_aqualink_data.simulator_active != SIM_NONE) {
+        // Check if we have a valid connection
+        if ( _aqualink_data.simulator_id != NUL && packet_buffer[PKT_DEST] == _aqualink_data.simulator_id) {
+          // Action comand and Send to web
+          processSimulatorPacket(packet_buffer, packet_length, &_aqualink_data);
+          caculate_ack_packet(rs_fd, packet_buffer, SIMULATOR);
+          DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Simulator Emulation Processed packet in");
+        }
+        else if ( _aqualink_data.simulator_id == NUL && packet_buffer[PKT_CMD] == CMD_PROBE ) {
+          // Check it's a probe we are after
+          //if (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43 && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id) {
+          if ( (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43) ||
+               (_aqualink_data.simulator_active == ALLBUTTON && packet_buffer[PKT_DEST] >= 0x08 && packet_buffer[PKT_DEST] <= 0x0a)
+             ) {
+            _aqualink_data.simulator_id = packet_buffer[PKT_DEST];
+            // reply to probe
+            LOG(SIM_LOG,LOG_NOTICE, "Got probe on '0x%02hhx', using for simulator ID\n",packet_buffer[PKT_DEST]);
+            processSimulatorPacket(packet_buffer, packet_length, &_aqualink_data);
+            caculate_ack_packet(rs_fd, packet_buffer, SIMULATOR);
+          } else {
+            LOG(SIM_LOG,LOG_INFO, "Got probe on '0x%02hhx' Still waiting for valid simulator probe\n",packet_buffer[PKT_DEST]);
+          }
+          DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Simulator Emulation Processed packet in");
+        }
+      }
+
+
       if (packet_length > 0 && packet_buffer[PKT_DEST] == _aqconfig_.device_id && getProtocolType(packet_buffer) == JANDY)
       {
         if (getLogLevel(AQUA_LOG) >= LOG_DEBUG) {
           LOG(AQUA_LOG,LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
           logPacketRead(packet_buffer, packet_length);
         }
-#ifdef AQ_RS_EXTRA_OPTS
-        // If we did not process the packet, above we need to record it for the caculate_ack_packet call.
-          // Should find a better place to put this, but since prioritize_ack is expermental it's ok for now.
-          // NSF We shouldn;t need to do the same for rssa / onetouch / iaqtouch and probably rssaadapter since they don;t queue commands & programming commands.
-        if (_aqconfig_.prioritize_ack) {
-          _aqualink_data.last_packet_type = packet_buffer[PKT_CMD];
-        else
-#endif  
-          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
+        _aqualink_data.updated = process_packet(packet_buffer, packet_length);
 
 #ifdef AQ_PDA 
         if (isPDA_PANEL)
@@ -1872,57 +1880,24 @@ void main_loop()
 #endif
           caculate_ack_packet(rs_fd, packet_buffer, ALLBUTTON);
 
-#ifdef AQ_RS_EXTRA_OPTS       
-        if (_aqconfig_.prioritize_ack)
-          _aqualink_data.updated = process_packet(packet_buffer, packet_length);
-#endif
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AllButton Emulation Processed packet in");
       }
       else if (packet_length > 0 && isRSSA_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id && getProtocolType(packet_buffer) == JANDY) {
-#ifdef AQ_RS_EXTRA_OPTS
-        if (_aqconfig_.prioritize_ack) {
-          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
-          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
-        } 
-        else 
-#endif
-        {
-          _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
-          caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);
-        }
+        _aqualink_data.updated = process_rssadapter_packet(packet_buffer, packet_length, &_aqualink_data);
+        caculate_ack_packet(rs_fd, packet_buffer, RSSADAPTER);    
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"SerialAdapter Emulation Processed packet in");
       }
 #ifdef AQ_ONETOUCH
       else if (packet_length > 0 && isONET_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
-  #ifdef AQ_RS_EXTRA_OPTS
-        if (_aqconfig_.prioritize_ack) {
-          set_onetouch_lastmsg(packet_buffer[PKT_CMD]);
-          caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
-          _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        } 
-        else 
-  #endif
-        {
-          _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
-          caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
-        }
+        _aqualink_data.updated = process_onetouch_packet(packet_buffer, packet_length, &_aqualink_data);
+        caculate_ack_packet(rs_fd, packet_buffer, ONETOUCH);
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"OneTouch Emulation Processed packet in");
       }
 #endif
 #ifdef AQ_IAQTOUCH
       else if (packet_length > 0 && isIAQT_ENABLED && packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id && getProtocolType(packet_buffer) == JANDY) {
-  #ifdef AQ_RS_EXTRA_OPTS
-        if (_aqconfig_.prioritize_ack) {
-          set_iaqtouch_lastmsg(packet_buffer[PKT_CMD]);
-          caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
-          _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
-        } 
-        else
-  #endif 
-        {
-          _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
-          caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
-        }
+        _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+        caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
         DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation Processed packet in");
       }
 #endif

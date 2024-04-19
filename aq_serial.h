@@ -458,7 +458,7 @@ typedef enum {
 
 int init_serial_port(const char* tty);
 int init_blocking_serial_port(const char* tty);
-int init_readahead_serial_port(const char* tty);
+//int init_readahead_serial_port(const char* tty);
 
 void close_serial_port(int file_descriptor);
 void close_blocking_serial_port();

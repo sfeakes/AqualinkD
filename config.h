@@ -85,10 +85,12 @@ struct aqconfig
   bool log_raw_bytes; // Read as bytes
   unsigned char RSSD_LOG_filter;
   //bool log_raw_RS_bytes;
+  /*
 #ifdef AQ_RS_EXTRA_OPTS
   bool readahead_b4_write;
   bool prioritize_ack;
 #endif
+*/
   bool mqtt_timed_update;
   bool sync_panel_time;
   bool enable_scheduler;
