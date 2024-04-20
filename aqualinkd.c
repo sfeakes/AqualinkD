@@ -1443,9 +1443,11 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
       } else if (_aqualink_data.simulator_active == ONETOUCH) {
         send_extended_ack(rs_fd, ACK_ONETOUCH, pop_simulator_cmd(packet_buffer[PKT_CMD]));
       } else if (_aqualink_data.simulator_active == IAQTOUCH) {
-        
+        LOG(SIM_LOG,LOG_WARNING, "IAQTOUCH not implimented yet!\n");
+      } else if (_aqualink_data.simulator_active == AQUAPDA) {
+        send_extended_ack(rs_fd, ACK_PDA, pop_simulator_cmd(packet_buffer[PKT_CMD]));
       } else {
-        // SHOW SOME ERROR
+        LOG(SIM_LOG,LOG_ERR, "No idea on this protocol (%d), not implimented!!!\n",_aqualink_data.simulator_active);
       }
     break;
 
@@ -1846,11 +1848,19 @@ void main_loop()
           caculate_ack_packet(rs_fd, packet_buffer, SIMULATOR);
           DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Simulator Emulation Processed packet in");
         }
-        else if ( _aqualink_data.simulator_id == NUL && packet_buffer[PKT_CMD] == CMD_PROBE ) {
+        else if ( _aqualink_data.simulator_id == NUL  
+                  && packet_buffer[PKT_CMD] == CMD_PROBE
+                  && packet_buffer[PKT_DEST] != _aqconfig_.device_id 
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+                  && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id 
+#endif
+                  ) {
           // Check it's a probe we are after
           //if (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43 && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id) {
           if ( (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43) ||
-               (_aqualink_data.simulator_active == ALLBUTTON && packet_buffer[PKT_DEST] >= 0x08 && packet_buffer[PKT_DEST] <= 0x0a)
+               (_aqualink_data.simulator_active == ALLBUTTON && packet_buffer[PKT_DEST] >= 0x08 && packet_buffer[PKT_DEST] <= 0x0a) ||
+               (_aqualink_data.simulator_active == IAQTOUCH && packet_buffer[PKT_DEST] >= 0x30 && packet_buffer[PKT_DEST] <= 0x33) ||
+               (_aqualink_data.simulator_active == AQUAPDA && packet_buffer[PKT_DEST] >= 0x60 && packet_buffer[PKT_DEST] <= 0x63) 
              ) {
             _aqualink_data.simulator_id = packet_buffer[PKT_DEST];
             // reply to probe

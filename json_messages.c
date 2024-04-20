@@ -713,7 +713,36 @@ int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
   
   //return strlen(buffer);
 }
-
+/*
+const char* emulationtype2name(emulation_type type) {
+  switch (type) {
+    case ALLBUTTON:
+      return "allbutton";
+    break;
+    case RSSADAPTER:
+      return "allbutton";
+    break;
+    case ONETOUCH:
+      return "onetouch";
+    break;
+    case IAQTOUCH:
+      return "iaqualinktouch";
+    break;
+    case AQUAPDA:
+      return "aquapda";
+    break;
+    case JANDY_DEVICE:
+      return "jandydevice";
+    break;
+    case SIMULATOR:
+      return "allbutton";
+    break;
+    default:
+      return "none";
+    break;
+  } 
+}
+*/
 int build_aqualink_simulator_packet_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 {
   memset(&buffer[0], 0, size);
@@ -721,6 +750,20 @@ int build_aqualink_simulator_packet_JSON(struct aqualinkdata *aqdata, char* buff
   int i;
 
   length += sprintf(buffer+length, "{\"type\": \"simpacket\"");
+
+  if (aqdata->simulator_packet[PKT_DEST] >= 0x40 && aqdata->simulator_packet[PKT_DEST] <= 0x43) {
+    length += sprintf(buffer+length, ",\"simtype\": \"onetouch\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x08 && aqdata->simulator_packet[PKT_DEST] <= 0x0a) {
+    length += sprintf(buffer+length, ",\"simtype\": \"allbutton\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x30 && aqdata->simulator_packet[PKT_DEST] <= 0x33) {
+    length += sprintf(buffer+length, ",\"simtype\": \"iaqtouch\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x60 && aqdata->simulator_packet[PKT_DEST] <= 0x63) {
+    length += sprintf(buffer+length, ",\"simtype\": \"aquapda\"");
+  } else {
+    length += sprintf(buffer+length, ",\"simtype\": \"unknown\"");
+  }
+  //if (aqdata->simulator_packet[i][])
+  //length += sprintf(buffer+length, ",\"simtype\": \"onetouch\"");
 
   length += sprintf(buffer+length, ",\"raw\": [");
   for (i=0; i < aqdata->simulator_packet_length; i++) 

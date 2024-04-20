@@ -993,6 +993,14 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     LOG(NET_LOG,LOG_NOTICE, "Received request to start AllButton Simulator!\n");
     _aqualink_data->simulator_active = ALLBUTTON;
     return uSimulator;
+  } else if (strncmp(ri1, "simulator/aquapda", 17) == 0 && from == NET_WS) { // Only valid from websocket.
+    LOG(NET_LOG,LOG_NOTICE, "Received request to start PDA Simulator!\n");
+    _aqualink_data->simulator_active = AQUAPDA;
+    return uSimulator;
+  } else if (strncmp(ri1, "simulator/iaqtouch", 18) == 0 && from == NET_WS) { // Only valid from websocket.
+    LOG(NET_LOG,LOG_NOTICE, "Received request to start iAqualinkTouch Simulator!\n");
+    _aqualink_data->simulator_active = IAQTOUCH;
+    return uSimulator;
     /*
   } else if (strncmp(ri1, "simulator", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uSimulator;*/
@@ -1607,7 +1615,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       //_aqualink_data->simulate_panel = true;
       // Clear simulator ID incase sim type changes
       _aqualink_data->simulator_id = NUL;
-      LOG(NET_LOG,LOG_ERR, "Started Simulator Mode, code removed for dubug, put back in\n");
+      //LOG(NET_LOG,LOG_ERR, "Started Simulator Mode, code removed for dubug, put back in\n");
 
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];

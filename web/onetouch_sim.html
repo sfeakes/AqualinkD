@@ -76,8 +76,8 @@
             padding: 2px 2px;
             text-decoration: none;
             margin: 0px 0px;
-            min-width: 70px;
-            border-radius: 70px;
+            min-width: 60px;
+            border-radius: 60px;
         }
 
         .led {
@@ -121,6 +121,11 @@
             background-color: #8e1e1e !important;
             color: white !important;
             white-space: pre;
+        }
+
+        .version {
+            /*font-family: monospace;*/
+            font-size: x-small;
         }
 
 
@@ -309,6 +314,12 @@
 
 
         function process_packet(data) {
+
+            if (data.simtype != "onetouch") {
+                update_status_message("! Another simulator running !", true);
+                return;
+            }
+
             switch(data.dec[PKT_CMD]) {
               case CMD_PDA_CLEAR: // Clear
                 console.log("Received Clear");
@@ -358,6 +369,11 @@
                 //document.getElementById("status").innerHTML = '  !!! PDA only panels are not Supported !!!  '
                 //document.getElementById("status").classList.add("error");
                 update_status_message("PDA only panels are not Supported", true);
+            }
+
+            const versionlabel = document.getElementById("version");
+            if (versionlabel.innerHTML = "&nbsp;") {
+                versionlabel.innerHTML = "AqualinkD "+data.aqualinkd_version+"<br>"+data.panel_type+" "+data.version;
             }
         }
 
@@ -468,14 +484,14 @@
                             <td></td>
                         </tr>
                         <tr>
-                            <td><input id="Page_up" type="button" onclick="send(this);" value="Page up"></td>
+                            <td><input id="Page_up" type="button" onclick="send(this);" value="&uarr;&uarr;"></td>
                             <td class="lcd_display" id="lcd-l2"></td>
                             <td></td>
                         </tr>
                         <tr>
                             <td></td>
                             <td class="lcd_display" id="lcd-l3">&nbsp;</td>
-                            <td><input id="Up" type="button" onclick="send(this);" value="Up"></td>
+                            <td><input id="Up" type="button" onclick="send(this);" value="&uarr;"></td>
                         </tr>
                         <tr>
                             <td></td>
@@ -483,7 +499,7 @@
                             <td></td>
                         </tr>
                         <tr>
-                            <td><input id="Back" type="button" onclick="send(this);" value="Back"></td>
+                            <td><input id="Back" type="button" onclick="send(this);" value="&#8617;"></td>
                             <td class="lcd_display" id="lcd-l5">&nbsp;</td>
                             <td></td>
                         </tr>
@@ -495,10 +511,10 @@
                         <tr>
                             <td></td>
                             <td class="lcd_display" id="lcd-l7">&nbsp;</td>
-                            <td><input id="Down" type="button" onclick="send(this);" value="Down"></td>
+                            <td><input id="Down" type="button" onclick="send(this);" value="&darr;"></td>
                         </tr>
                         <tr>
-                            <td><input id="Page_down" type="button" onclick="send(this);" value="Page Down"></td>
+                            <td><input id="Page_down" type="button" onclick="send(this);" value="&darr;&darr;"></td>
                             <td class="lcd_display" id="lcd-l8">&nbsp;</td>
                             <td></td>
                         </tr>
@@ -522,11 +538,13 @@
                             <td class="lcd_display" id="lcd-l12">&nbsp;</td>
                             <td></td>
                         </tr>
-                    
                         <tr>
                             <td></td>
                             <th align="center"><input id="Select" type="button" onclick="send(this);" value="Select"></th>
                             <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" id="version" class="version">&nbsp;</td>
                         </tr>
                     </table>
                     

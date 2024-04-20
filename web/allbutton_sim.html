@@ -35,11 +35,34 @@
         table {
             background-color: rgb(221, 221, 221);
             padding: 10px;
+           /* border-collapse: collapse;*/
         }
 
-        th {         
+        th {        
+            font-weight: normal; 
             background-color: white;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            padding-left: 4px;
+            padding-right: 4px;
         }
+
+
+
+        .td_led {
+            padding-top: 3px;
+            padding-bottom: 3px;
+            padding-left: 4px;
+            padding-right: 0px;
+        }
+
+        .td_button {
+            padding-top: 3px;
+            padding-bottom: 3px;
+            padding-left: 0px;
+            padding-right: 8px;
+        }
+
 
         #title {
             background-color: rgb(200, 200, 200); 
@@ -49,6 +72,7 @@
         input[type=button],
         input[type=submit],
         input[type=reset] {
+            /*font-family: monospace;*/
             background-color: rgb(165, 165, 165);
             border: none;
             color: rgb(0, 0, 0);
@@ -70,6 +94,19 @@
             opacity: 1.0;
         }
 
+        .lcd_display {
+           /* font-family: monospace;*/
+            background-color: #2b2b2b;
+            color: white;
+            white-space: pre;
+        }
+        .lcd_history {
+           /* font-family: monospace;*/
+            background-color: #aeaeae;
+            color: white;
+            white-space: pre;
+        }
+
         .on {
             background-color: rgb(255, 0, 0);
         }
@@ -85,6 +122,11 @@
 
         .hidden {
           display: none;
+        }
+
+        .version {
+            /*font-family: monospace;*/
+            font-size: x-small;
         }
     </style>
 
@@ -258,19 +300,7 @@
                 document.getElementById("messages").innerHTML = '  !!! PDA Not Supported !!!  '
                 document.getElementById("messages").classList.add("error");
             }
-/*
-            if (document.getElementById("status").getAttribute("raw") != data.panel_message) {
-              document.getElementById("status_three").innerHTML = document.getElementById("status_two").innerHTML;
-              document.getElementById("status_two").innerHTML = document.getElementById("status").innerHTML;
-              if (data.panel_message == "") {
-                document.getElementById("status").innerHTML = "&nbsp;";
-              } else {
-                document.getElementById("status").innerHTML = data.panel_message;
-              }
-              document.getElementById("status").setAttribute("raw", data.panel_message);
-              document.getElementById("messages").innerHTML = "&nbsp;";
-            }
-*/
+
             for (var obj in data.leds) {
               if ((led = document.getElementById(obj.toString() + "_led")) == null) {
                     //console.log("Error " + obj.toString() + " LED not found");
@@ -297,6 +327,11 @@
             }
 
             set_panel_size(_panel_size);
+
+            const versionlabel = document.getElementById("version");
+            if (versionlabel.innerHTML = "&nbsp;") {
+                versionlabel.innerHTML = "AqualinkD "+data.aqualinkd_version+"<br>"+data.panel_type+" "+data.version;
+            }
         }
 
         function update_device(data) {
@@ -310,6 +345,22 @@
                 if ((button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
                     button.value = data[obj];
                 }
+            }
+        }
+
+        function update_status_message(message=null, error=false) {
+            const status = document.getElementById("status");
+
+            if (message != null) {
+              status.innerHTML = message;
+            } else {
+              status.innerHTML = "AqualinkD All Button Simulator";
+            }
+
+            if (error) {
+                status.classList.add("error");
+            } else {
+                status.classList.remove("error");
             }
         }
 
@@ -334,9 +385,9 @@
 
         function lcd_display(line, message) {
             
-            const message_lcd = document.getElementById("status");
-            const message_lcd1 = document.getElementById("status_two");
-            const message_lcd2 = document.getElementById("status_three");
+            const message_lcd = document.getElementById("lcd");
+            const message_lcd1 = document.getElementById("lcd_2");
+            const message_lcd2 = document.getElementById("lcd_3");
 
             if (message == "" || message == " "){message = "&nbsp;";}
 
@@ -346,7 +397,7 @@
         }
 
         function lcd_display_append(line, message) {
-            const message_lcd = document.getElementById("status");
+            const message_lcd = document.getElementById("lcd");
             message_lcd.innerHTML = message_lcd.innerHTML+message;
         }
 
@@ -359,6 +410,11 @@
         const CMD_MSG_LOOP_ST = 8 // pda highlight
 
         function process_packet(data) {
+            if (data.simtype != "allbutton") {
+                update_status_message("Wrong message - is Another simulator running?", true);
+                return;
+            }
+
             switch(data.dec[PKT_CMD]) {
                 case CMD_MSG: // Message
                   console.log("Received Line "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
@@ -411,7 +467,8 @@
                     get_devices();
                 }
                 socket_di.onmessage = function got_packet(msg) {
-                    document.getElementById("status").classList.remove("error");
+                    //document.getElementById("status").classList.remove("error");
+                    update_status_message();
                     var data = JSON.parse(msg.data);
                     if (data.type == 'simpacket') {
                         process_packet(data);
@@ -426,8 +483,9 @@
                 }
                 socket_di.onclose = function () {
                     // something went wrong
-                    document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
-                    document.getElementById("status").classList.add("error");
+                    //document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
+                    //document.getElementById("status").classList.add("error");
+                    update_status_message('  !!! Connection error !!!  ', true);
                     // Try to reconnect every 5 seconds.
                     setTimeout(function () {
                         startWebsockets();
@@ -443,6 +501,7 @@
                 //command: "simulator"
                 uri: "simulator/allbutton"
             };
+            document.getElementById("lcd").innerHTML = "Connecting to panel, please wait!"
             socket_di.send(JSON.stringify(msg));
         }
 
@@ -474,167 +533,166 @@
 
             <table border='0' id="deviceList">
                 <tr  style="title">
-                    <td style="title" colspan="12" align="center"><label id="title">&nbsp;&nbsp;AqualinkD All Button Simulator&nbsp;&nbsp;</label></th>
+                    <td style="title" colspan="12" align="center"><label id="status">&nbsp;&nbsp;AqualinkD All Button Simulator&nbsp;&nbsp;</label></th>
                 </tr>
                 <tr>
-                    <td colspan="12" align="center"><label id="status_three">&nbsp;</label></td>
+                    <th colspan="12" align="center" class="lcd_history"><label id="lcd_3">&nbsp;</label></th>
                 </tr>
                 <tr>
-                    <td colspan="12" align="center"><label id="status_two">&nbsp;</label></td>
-                </tr>
-            
-                <tr>
-                    <th colspan="12"><label id="status">AqualinkD</label></th>
+                    <th colspan="12" align="center" class="lcd_history"><label id="lcd_2">&nbsp;</label></th>
                 </tr>
                 <tr>
-                    <td align="right">
+                    <th colspan="12" class="lcd_display"><label id="lcd">&nbsp;</label></th>
+                </tr>
+                <tr>
+                    <td class="td_led">
                         <div id="Filter_Pump_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Filter_Pump_button" type="button" onclick="send(this);" value="Filter Pump">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Spa_Mode_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Spa_Mode_button" type="button" onclick="send(this);" value="Spa Mode">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_1_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_1_button" type="button" onclick="send(this);" value="AUX1">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_2_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_2_button" type="button" onclick="send(this);" value="AUX2">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_3_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_3_button" type="button" onclick="send(this);" value="AUX3">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_4_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_4_button" type="button" onclick="send(this);" value="AUX4">
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_5_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_5_button" type="button" onclick="send(this);" value="AUX5">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_6_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_6_button" type="button" onclick="send(this);" value="AUX6">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_7_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_7_button" type="button" onclick="send(this);" value="AUX7">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_B1_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B1_button" type="button" onclick="send(this);" value="AUXB1">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_B2_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B2_button" type="button" onclick="send(this);" value="AUXB2">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_B3_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B3_button" type="button" onclick="send(this);" value="AUXB3">
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Aux_B4_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B4_button" type="button" onclick="send(this);" value="AUXB4">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B5_button" type="button" onclick="send(this);" value="AUXB5">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B6_button" type="button" onclick="send(this);" value="AUXB6">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B7_button" type="button" onclick="send(this);" value="AUXB7">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Aux_B8_button" type="button" onclick="send(this);" value="AUXB8">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         &nbsp;
                     </td>
                 </tr>
                 <tr>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         &nbsp;
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         &nbsp;
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         &nbsp;
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         &nbsp;
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Pool_Heater_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Pool_Heater_button" type="button" onclick="send(this);" value="Pool Heater">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Spa_Heater_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Spa_Heater_button" type="button" onclick="send(this);" value="Spa Heater">
                     </td>
-                    <td align="right">
+                    <td class="td_led">
                         <div id="Solar_Heater_led" class="led off"></div>
                     </td>
-                    <td align="left">
+                    <td class="td_button">
                         <input id="Solar_Heater_button" type="button" onclick="send(this);" value="Solar Heater">
                     </td>
                 </tr>
@@ -658,8 +716,13 @@
                         <input type="button" onclick="send(this);" id="B_enter" value="Enter *">
                     </td>
                 </tr>
+                
                 <tr>
                     <td colspan="12" align="center"><label id="messages">&nbsp;</label></td>
+                </tr>
+            
+                <tr>
+                    <td colspan="12" id="version" class="version">&nbsp;</td>
                 </tr>
             </table>
         </div>
