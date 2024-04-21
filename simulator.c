@@ -69,3 +69,64 @@ bool processSimulatorPacket(unsigned char *packet, int packet_length, struct aqu
 
   return true;
 }
+
+bool start_simulator(struct aqualinkdata *aqdata, emulation_type type) {
+
+  // if type is same AND id is valid, sim is already started, their is nothing to do.
+  if (aqdata->simulator_active == type) {
+    if (aqdata->simulator_id >= 0x40 && aqdata->simulator_id <= 0x43) {
+      LOG(SIM_LOG,LOG_NOTICE, "OneTouch Simulator already active!\n");
+      return true;
+    } else if (aqdata->simulator_id >= 0x08 && aqdata->simulator_id <= 0x0a) {
+      LOG(SIM_LOG,LOG_NOTICE, "AllButton Simulator already active!\n");
+      return true;
+    } else if (aqdata->simulator_id >= 0x30 && aqdata->simulator_id <= 0x33) {
+      LOG(SIM_LOG,LOG_NOTICE, "iAqualinkTouch Simulator already active!\n");
+      return true;
+    } else if (aqdata->simulator_id >= 0x60 && aqdata->simulator_id <= 0x63) {
+      LOG(SIM_LOG,LOG_NOTICE, "PDA Simulator already active!\n");
+      return true;
+    }
+  }
+
+  // Check it's a valid request
+  if (type == ALLBUTTON) {
+    LOG(SIM_LOG,LOG_NOTICE, "Starting AllButton Simulator!\n");
+  } else if (type == ONETOUCH) {
+    LOG(SIM_LOG,LOG_NOTICE, "Starting OneTouch Simulator!\n");
+  } else if (type == AQUAPDA ) {
+    LOG(SIM_LOG,LOG_NOTICE, "Starting PDA Simulator!\n");
+  } else if (type == IAQTOUCH) {
+    LOG(SIM_LOG,LOG_NOTICE, "Starting iAqualinkTouch Simulator!\n");
+  } else {
+    LOG(SIM_LOG,LOG_ERR, "Request to start simulator of unknown type : %d", type);
+    return false;
+  }
+
+  // start the simulator
+  aqdata->simulator_active = type;
+  aqdata->simulator_id = NUL;
+
+  return true;
+}
+
+bool stop_simulator(struct aqualinkdata *aqdata) {
+  aqdata->simulator_active = SIM_NONE;
+  aqdata->simulator_id = NUL;
+
+  LOG(SIM_LOG,LOG_DEBUG, "Stoped Simulator Mode\n");
+
+  return true;
+}
+
+bool is_simulator_packet(struct aqualinkdata *aqdata, unsigned char *packet, int packet_length) {
+
+    if ( (aqdata->simulator_active == ONETOUCH && packet[PKT_DEST] >= 0x40 && packet[PKT_DEST] <= 0x43) ||
+         (aqdata->simulator_active == ALLBUTTON && packet[PKT_DEST] >= 0x08 && packet[PKT_DEST] <= 0x0a) ||
+         (aqdata->simulator_active == IAQTOUCH && packet[PKT_DEST] >= 0x30 && packet[PKT_DEST] <= 0x33) ||
+         (aqdata->simulator_active == AQUAPDA && packet[PKT_DEST] >= 0x60 && packet[PKT_DEST] <= 0x63) ) {
+      return true;
+    } else {
+      return false;
+    }
+}

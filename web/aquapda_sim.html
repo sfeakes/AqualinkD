@@ -136,12 +136,14 @@
     <script type='text/javascript'>
 
         var _socket_di;
+        var _keep_socket_alive=true;
 
         const PKT_CMD = 3;
         const PKT_DATA1 = 4;
         const PKT_DATA2 = 5;
         const PKT_DATA3 = 6;
 
+        const CMD_PROBE = 0;
         const CMD_MSG_LONG = 4;
         const CMD_PDA_CLEAR = 9;
         const CMD_PDA_HIGHLIGHT = 8;
@@ -155,6 +157,25 @@
         var _hlightcharstart = -1;
         var _hlightcharend = -1;
 
+         // See if we are in an iframe and capture focus
+        function capture_iframe_focus() {
+          var targetNode = parent.document.getElementById('aquapda_iframe');
+          if (targetNode != null) {
+            var observer = new MutationObserver(function(){
+            if(targetNode.style.display != 'none'){
+              console.log("AquaPDA sim Displaying");
+              startWebsockets();
+            } else {
+              console.log("AquaPDA sim Hiding");
+              stopWebsockets();
+            }
+            });
+            observer.observe(targetNode, { attributes: true, childList: true });
+
+            return true;
+          }
+          return false;
+        }
 
         function send(source) {
             console.log("from" + source.id);
@@ -239,18 +260,18 @@
             check_rehighlight_chrs(lineno);
         }
 
-        function lcd_display_shiftlines(first, last, shift) {
+        function lcd_display_shiftlines(first, last, direction) {
 
-            if (shift < 0) {
-                for (i = first-shift; i <= line; i++) {
-                    var line1 = document.getElementById("lcd-l" + (i + shift) );
-                    var line2 = document.getElementById("lcd-l" + last);
+            if (direction == 255) {
+                for (i = first; i <= last; i++) {
+                    var line1 = document.getElementById("lcd-l" +  i);
+                    var line2 = document.getElementById("lcd-l" + (i + 1));
                     line1.innerHTML = line2.innerHTML;
                 }
-            } else {
-                for (i = last; i >= first+shift; i--) {
+            } else if (direction == 1) {
+                for (i = last; i >= first; i--) {
                     var line1 = document.getElementById("lcd-l" + i);
-                    var line2 = document.getElementById("lcd-l" + (i - shift) );
+                    var line2 = document.getElementById("lcd-l" + (i - 1) );
                     line1.innerHTML = line2.innerHTML;
                 }
             }
@@ -346,25 +367,29 @@
             }
 
             switch (data.dec[PKT_CMD]) {
+                case CMD_PROBE:
+                    // We are about to start
+                    break;
                 case CMD_PDA_CLEAR: // Clear
-                    console.log("Received Clear");
+                    //console.log("Received Clear");
                     lcd_clear();
                     _shift_lines = false;
                     break;
                 case CMD_MSG_LONG: // Message
-                    console.log("Received Line " + data.dec[PKT_DATA1] + " = " + packet_to_ascii(data.dec));
+                    //console.log("Received Line " + data.dec[PKT_DATA1] + " = " + packet_to_ascii(data.dec));
                     lcd_display(data.dec[PKT_DATA1], packet_to_ascii(data.dec));
                     break;
                 case CMD_PDA_HIGHLIGHT:
-                    console.log("Received Highlight " + data.dec[PKT_DATA1]);
+                    //console.log("Received Highlight " + data.dec[PKT_DATA1]);
                     // We sometimes get 255 for line number, need to find out why
                     lcd_display_highlight(data.dec[PKT_DATA1]);
                     break;
                 case CMD_PDA_HIGHLIGHTCHARS:
-                    console.log("Received Highlight chars, Line=" + data.dec[PKT_DATA1] + ", Start=" + data.dec[PKT_DATA2] + ", Stop=" + data.dec[PKT_DATA3]);
+                    //console.log("Received Highlight chars, Line=" + data.dec[PKT_DATA1] + ", Start=" + data.dec[PKT_DATA2] + ", Stop=" + data.dec[PKT_DATA3]);
                     lcd_display_highlight_chrs(data.dec[PKT_DATA1], data.dec[PKT_DATA2], data.dec[PKT_DATA3]);
                     break;
                 case CMD_PDA_SHIFTLINES:
+                    //console.log("Received shift lines, Start=" + data.dec[PKT_DATA1] + ", End=" + data.dec[PKT_DATA2] + ", Direction=" + data.dec[PKT_DATA3]);
                     lcd_display_shiftlines(data.dec[PKT_DATA1], data.dec[PKT_DATA2], data.dec[PKT_DATA3]);
                     break;
                 default:
@@ -432,6 +457,7 @@
 
         function startWebsockets() {
             _socket_di = new WebSocket(get_appropriate_ws_url());
+            _keep_socket_alive = true;
             try {
                 _socket_di.onopen = function () {
                     // success!
@@ -454,12 +480,21 @@
                     update_status_message("!!! Connection error !!!", true);
                     // Try to reconnect every 5 seconds.
                     setTimeout(function () {
-                        startWebsockets();
+                        if (_keep_socket_alive == true) {
+                          startWebsockets();
+                        }
                     }, 5000);
                 }
             } catch (exception) {
                 alert('<p>Error' + exception);
             }
+        }
+
+        function stopWebsockets() {
+            if (_socket_di) {
+              _socket_di.close();
+            }
+            _keep_socket_alive = false;
         }
 
         function start_simulator() {
@@ -490,8 +525,12 @@
                 }
         */
         function init() {
-            update_status_message();
-            startWebsockets();
+            if ( capture_iframe_focus() ) {
+                // In iframe wait for focus event to start
+            } else {
+              update_status_message();
+              startWebsockets();
+            }
         }
 
     </script>
@@ -603,9 +642,9 @@
                 </tr>
                 <tr>
                     <td></td>
-                    <td align="center"><input class="button_s" id="One" type="button" onclick="send(this);" value="1"></td>
+                    <td align="center"><input class="button_s" id="Page_up" type="button" onclick="send(this);" value="1"></td>
                     <td align="center"><input class="button_s" id="Down" type="button" onclick="send(this);"value="&darr;"></td>
-                    <td align="center"><input class="button_s" id="Two" type="button" onclick="send(this);" value="2">
+                    <td align="center"><input class="button_s" id="Page_down" type="button" onclick="send(this);" value="2">
                     </td>
                     <td></td>
                 </tr>

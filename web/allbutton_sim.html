@@ -134,6 +134,27 @@
 
         var _panel_size = 6;
         var _panel_set = 0;
+        var _keep_socket_alive=true;
+
+        // See if we are in an iframe and capture focus
+        function capture_iframe_focus() {
+          var targetNode = parent.document.getElementById('allbutton_iframe');
+          if (targetNode != null) {
+            var observer = new MutationObserver(function(){
+            if(targetNode.style.display != 'none'){
+              console.log("AllButton sim Displaying");
+              startWebsockets();
+            } else {
+              console.log("AllButton sim Hiding");
+              stopWebsockets();
+            }
+            });
+            observer.observe(targetNode, { attributes: true, childList: true });
+
+            return true;
+          }
+          return false;
+        }
 
         function send(source) {
             console.log("from" + source.id);
@@ -404,6 +425,7 @@
         const PKT_CMD = 3;
         const PKT_DATA1 = 4;
 
+        const CMD_PROBE = 0;
         const CMD_STATUS      = 2
         const CMD_MSG         = 3 // message
         const CMD_MSG_LONG    = 4
@@ -416,12 +438,15 @@
             }
 
             switch(data.dec[PKT_CMD]) {
+                case CMD_PROBE:
+                    // We are about to start
+                    break;
                 case CMD_MSG: // Message
-                  console.log("Received Line "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
+                  //console.log("Received Line "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
                   lcd_display(data.dec[PKT_DATA1], packet_to_ascii(data.dec));
                 break;
                 case CMD_MSG_LONG: // Message
-                  console.log("Received Line long "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
+                  //console.log("Received Line long "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
                   lcd_display_append(data.dec[PKT_DATA1], packet_to_ascii(data.dec));
                 break;
                 
@@ -460,6 +485,7 @@
 
         function startWebsockets() {
             socket_di = new WebSocket(get_appropriate_ws_url());
+            _keep_socket_alive = true;
             try {
                 socket_di.onopen = function () {
                     // success!
@@ -488,12 +514,21 @@
                     update_status_message('  !!! Connection error !!!  ', true);
                     // Try to reconnect every 5 seconds.
                     setTimeout(function () {
-                        startWebsockets();
+                        if (_keep_socket_alive == true) {
+                          startWebsockets();
+                        }
                     }, 5000);
                 }
             } catch (exception) {
                 alert('<p>Error' + exception);
             }
+        }
+
+        function stopWebsockets() {
+            if (socket_di) {
+              socket_di.close();
+            }
+            _keep_socket_alive = false;
         }
 
         function start_simulator() {
@@ -520,8 +555,14 @@
             socket_di.send("reset\n");
         }
 */
+
         function init() {
-            startWebsockets();
+            if ( capture_iframe_focus() ) {
+                // In iframe wait for focus event to start
+            } else {
+              //update_status_message();
+              startWebsockets();
+            }
         }
 
     </script>

@@ -155,7 +155,7 @@ void _broadcast_simulator_message(struct mg_connection *nc) {
     }
   }
 
-  LOG(NET_LOG,LOG_DEBUG, "Sent to simulator '%s'\n",data);
+  //LOG(NET_LOG,LOG_DEBUG, "Sent to simulator '%s'\n",data);
 
   _aqualink_data->simulator_packet_updated = false;
 }
@@ -985,25 +985,19 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     return uSetSchedules;
   } else if (strncmp(ri1, "schedules", 9) == 0) {
     return uSchedules;
-  } else if (strncmp(ri1, "simulator/onetouch", 18) == 0 && from == NET_WS) { // Only valid from websocket.
-    LOG(NET_LOG,LOG_NOTICE, "Received request to start Onetouch Simulator!\n");
-    _aqualink_data->simulator_active = ONETOUCH;
-    return uSimulator;
-  } else if (strncmp(ri1, "simulator/allbutton", 19) == 0 && from == NET_WS) { // Only valid from websocket.
-    LOG(NET_LOG,LOG_NOTICE, "Received request to start AllButton Simulator!\n");
-    _aqualink_data->simulator_active = ALLBUTTON;
-    return uSimulator;
-  } else if (strncmp(ri1, "simulator/aquapda", 17) == 0 && from == NET_WS) { // Only valid from websocket.
-    LOG(NET_LOG,LOG_NOTICE, "Received request to start PDA Simulator!\n");
-    _aqualink_data->simulator_active = AQUAPDA;
-    return uSimulator;
-  } else if (strncmp(ri1, "simulator/iaqtouch", 18) == 0 && from == NET_WS) { // Only valid from websocket.
-    LOG(NET_LOG,LOG_NOTICE, "Received request to start iAqualinkTouch Simulator!\n");
-    _aqualink_data->simulator_active = IAQTOUCH;
-    return uSimulator;
-    /*
   } else if (strncmp(ri1, "simulator", 9) == 0 && from == NET_WS) { // Only valid from websocket.
-    return uSimulator;*/
+    if (ri2 != NULL && strncmp(ri2, "onetouch", 8) == 0) {
+      start_simulator(_aqualink_data, ONETOUCH);
+    } else if (ri2 != NULL && strncmp(ri2, "allbutton", 9) == 0) {
+      start_simulator(_aqualink_data, ALLBUTTON);
+    } else if (ri2 != NULL && strncmp(ri2, "aquapda", 7) == 0) {
+      start_simulator(_aqualink_data, AQUAPDA);
+    } else if (ri2 != NULL && strncmp(ri2, "iaqtouch", 8) == 0) {
+      start_simulator(_aqualink_data, IAQTOUCH);
+    } else  {
+      return uBad;
+    }
+    return uSimulator;
   } else if (strncmp(ri1, "simcmd", 10) == 0 && from == NET_WS) { // Only valid from websocket.
     simulator_send_cmd((unsigned char)value);
     return uActioned;
@@ -1610,13 +1604,11 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     break;
     case uSimulator:
     {
-      LOG(NET_LOG,LOG_DEBUG, "Started Simulator Mode\n");
+      LOG(NET_LOG,LOG_DEBUG, "Request to start Simulator\n");
       set_websocket_simulator(nc);
       //_aqualink_data->simulate_panel = true;
       // Clear simulator ID incase sim type changes
-      _aqualink_data->simulator_id = NUL;
-      //LOG(NET_LOG,LOG_ERR, "Started Simulator Mode, code removed for dubug, put back in\n");
-
+      //_aqualink_data->simulator_id = NUL;
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];
       build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
@@ -1759,8 +1751,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       _aqualink_data->open_websockets--;
       LOG(NET_LOG,LOG_DEBUG, "-- Websocket left\n");
       if (is_websocket_simulator(nc)) {
-        _aqualink_data->simulator_active = SIM_NONE;
-        _aqualink_data->simulator_id = NUL;
+        stop_simulator(_aqualink_data);
         LOG(NET_LOG,LOG_DEBUG, "Stoped Simulator Mode\n");
       } else if (is_websocket_aqmanager(nc)) {
         _aqualink_data->aqManagerActive = false;

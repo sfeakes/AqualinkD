@@ -1848,20 +1848,15 @@ void main_loop()
           caculate_ack_packet(rs_fd, packet_buffer, SIMULATOR);
           DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"Simulator Emulation Processed packet in");
         }
-        else if ( _aqualink_data.simulator_id == NUL  
-                  && packet_buffer[PKT_CMD] == CMD_PROBE
-                  && packet_buffer[PKT_DEST] != _aqconfig_.device_id 
+        else if ( _aqualink_data.simulator_id == NUL   
+                  && packet_buffer[PKT_CMD] == CMD_PROBE 
+                  && packet_buffer[PKT_DEST] != _aqconfig_.device_id // Check no conflicting id's
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
-                  && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id 
+                  && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id // Check no conflicting id's
 #endif
-                  ) {
-          // Check it's a probe we are after
-          //if (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43 && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id) {
-          if ( (_aqualink_data.simulator_active == ONETOUCH && packet_buffer[PKT_DEST] >= 0x40 && packet_buffer[PKT_DEST] <= 0x43) ||
-               (_aqualink_data.simulator_active == ALLBUTTON && packet_buffer[PKT_DEST] >= 0x08 && packet_buffer[PKT_DEST] <= 0x0a) ||
-               (_aqualink_data.simulator_active == IAQTOUCH && packet_buffer[PKT_DEST] >= 0x30 && packet_buffer[PKT_DEST] <= 0x33) ||
-               (_aqualink_data.simulator_active == AQUAPDA && packet_buffer[PKT_DEST] >= 0x60 && packet_buffer[PKT_DEST] <= 0x63) 
-             ) {
+                  ) 
+        {
+          if (is_simulator_packet(&_aqualink_data, packet_buffer, packet_length)) {
             _aqualink_data.simulator_id = packet_buffer[PKT_DEST];
             // reply to probe
             LOG(SIM_LOG,LOG_NOTICE, "Got probe on '0x%02hhx', using for simulator ID\n",packet_buffer[PKT_DEST]);
