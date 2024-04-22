@@ -32,6 +32,7 @@
 #include "version.h"
 #include "aq_timer.h"
 #include "aq_programmer.h"
+#include "rs_msg_utils.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -91,10 +92,12 @@ int build_logmsg_JSON(char *dest, int loglevel, const char *src, int dest_len, i
 
 const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
 {
+  /*
   if (aqdata->active_thread.thread_id != 0 && !aqdata->simulate_panel) {
     //return JSON_PROGRAMMING;
     return programtypeDisplayName(aqdata->active_thread.ptype);
   }
+  */
  
   //if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
   if (aqdata->service_mode_state == ON) {
@@ -516,6 +519,7 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += logmaskjsonobject(PROG_LOG, buffer+length);
   length += logmaskjsonobject(DBGT_LOG, buffer+length);
   length += logmaskjsonobject(TIMR_LOG, buffer+length);
+  length += logmaskjsonobject(SIM_LOG, buffer+length);
   if (buffer[length-1] == ',')
     length--;
   length += sprintf(buffer+length, "]");
@@ -708,6 +712,83 @@ int build_aux_labels_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 //printf("%s\n",buffer);
   
   //return strlen(buffer);
+}
+/*
+const char* emulationtype2name(emulation_type type) {
+  switch (type) {
+    case ALLBUTTON:
+      return "allbutton";
+    break;
+    case RSSADAPTER:
+      return "allbutton";
+    break;
+    case ONETOUCH:
+      return "onetouch";
+    break;
+    case IAQTOUCH:
+      return "iaqualinktouch";
+    break;
+    case AQUAPDA:
+      return "aquapda";
+    break;
+    case JANDY_DEVICE:
+      return "jandydevice";
+    break;
+    case SIMULATOR:
+      return "allbutton";
+    break;
+    default:
+      return "none";
+    break;
+  } 
+}
+*/
+int build_aqualink_simulator_packet_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
+{
+  memset(&buffer[0], 0, size);
+  int length = 0;
+  int i;
+
+  length += sprintf(buffer+length, "{\"type\": \"simpacket\"");
+
+  if (aqdata->simulator_packet[PKT_DEST] >= 0x40 && aqdata->simulator_packet[PKT_DEST] <= 0x43) {
+    length += sprintf(buffer+length, ",\"simtype\": \"onetouch\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x08 && aqdata->simulator_packet[PKT_DEST] <= 0x0a) {
+    length += sprintf(buffer+length, ",\"simtype\": \"allbutton\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x30 && aqdata->simulator_packet[PKT_DEST] <= 0x33) {
+    length += sprintf(buffer+length, ",\"simtype\": \"iaqtouch\"");
+  } else if (aqdata->simulator_packet[PKT_DEST] >= 0x60 && aqdata->simulator_packet[PKT_DEST] <= 0x63) {
+    length += sprintf(buffer+length, ",\"simtype\": \"aquapda\"");
+  } else {
+    length += sprintf(buffer+length, ",\"simtype\": \"unknown\"");
+  }
+  //if (aqdata->simulator_packet[i][])
+  //length += sprintf(buffer+length, ",\"simtype\": \"onetouch\"");
+
+  length += sprintf(buffer+length, ",\"raw\": [");
+  for (i=0; i < aqdata->simulator_packet_length; i++) 
+  {
+    length += sprintf(buffer+length, "\"0x%02hhx\",", aqdata->simulator_packet[i]);
+  }
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "]");
+  
+  length += sprintf(buffer+length, ",\"dec\": [");
+  for (i=0; i < aqdata->simulator_packet_length; i++) 
+  {
+    length += sprintf(buffer+length, "%d,", aqdata->simulator_packet[i]);
+  }
+  if (buffer[length-1] == ',')
+    length--;
+
+  length += sprintf(buffer+length, "]");
+
+  length += sprintf(buffer+length, "}");
+
+//printf("Buffer=%d, used=%d, OUT='%s'\n",size,length,buffer);
+
+  return length;
 }
 
 // WS Received '{"parameter":"SPA_HTR","value":99}'

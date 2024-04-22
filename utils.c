@@ -322,6 +322,9 @@ const char* logmask2name(int16_t from)
     case TIMR_LOG:
       return "Schd/Timer:";
     break;
+    case SIM_LOG:
+      return "Simulator: ";
+    break;
     case AQUA_LOG:
     default:
       return "AqualinkD: ";

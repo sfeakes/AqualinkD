@@ -43,6 +43,7 @@
 #include "aq_timer.h"
 #include "aq_scheduler.h"
 #include "rs_msg_utils.h"
+#include "simulator.h"
 #include "version.h"
 
 #ifdef AQ_PDA
@@ -141,6 +142,24 @@ void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg)
   // Maybe enhacment in future to sent error messages to MQTT
 }
 
+
+void _broadcast_simulator_message(struct mg_connection *nc) {
+  struct mg_connection *c;
+  char data[JSON_SIMULATOR_SIZE];
+
+  build_aqualink_simulator_packet_JSON(_aqualink_data, data, JSON_SIMULATOR_SIZE);
+
+  for (c = mg_next(nc->mgr, NULL); c != NULL; c = mg_next(nc->mgr, c)) {
+    if (is_websocket(c) && is_websocket_simulator(c)) {
+      ws_send(c, data);
+    }
+  }
+
+  //LOG(NET_LOG,LOG_DEBUG, "Sent to simulator '%s'\n",data);
+
+  _aqualink_data->simulator_packet_updated = false;
+}
+
 #ifdef AQ_MANAGER
 
 #define WS_LOG_LENGTH 200
@@ -159,7 +178,13 @@ sd_journal *open_journal() {
   sd_journal *journal;
   char filter[51];
 
+#ifndef AQ_CONTAINER
+  // Below works for local
   if (sd_journal_open(&journal, SD_JOURNAL_LOCAL_ONLY) < 0)
+#else
+  // Container doesn't have local systemd_journal so use hosts through mapped filesystem
+  if (sd_journal_open_directory(&journal, "/var/log/journal", SD_JOURNAL_SYSTEM) < 0)
+#endif
   {
     LOGSystemError(errno, NET_LOG, "Failed to open journal");
     return journal;
@@ -171,6 +196,7 @@ sd_journal *open_journal() {
     sd_journal_close(journal);
     return journal;
   }
+  /* Docker wll also have problem with this
   // Daemon will change PID after printing startup message, so don't filter on current PID
   if (_aqconfig_.deamonize != true) {
     snprintf(filter, 50, "_PID=%d",getpid());
@@ -180,7 +206,7 @@ sd_journal *open_journal() {
       sd_journal_close(journal);
       return journal;
     }  
-  }
+  }*/
 
   if (sd_journal_set_data_threshold(journal, LOGBUFFER) < 0)
   {
@@ -414,7 +440,8 @@ void _broadcast_aqualinkstate(struct mg_connection *nc)
 #endif
 
   for (c = mg_next(nc->mgr, NULL); c != NULL; c = mg_next(nc->mgr, c)) {
-    if (is_websocket(c))
+    //if (is_websocket(c) && !is_websocket_simulator(c)) // No need to broadcast status messages to simulator.
+    if (is_websocket(c)) // All button simulator needs status messages
       ws_send(c, data);
 #ifndef MG_DISABLE_MQTT
     else if (is_mqtt(c))
@@ -959,10 +986,25 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "schedules", 9) == 0) {
     return uSchedules;
   } else if (strncmp(ri1, "simulator", 9) == 0 && from == NET_WS) { // Only valid from websocket.
+    if (ri2 != NULL && strncmp(ri2, "onetouch", 8) == 0) {
+      start_simulator(_aqualink_data, ONETOUCH);
+    } else if (ri2 != NULL && strncmp(ri2, "allbutton", 9) == 0) {
+      start_simulator(_aqualink_data, ALLBUTTON);
+    } else if (ri2 != NULL && strncmp(ri2, "aquapda", 7) == 0) {
+      start_simulator(_aqualink_data, AQUAPDA);
+    } else if (ri2 != NULL && strncmp(ri2, "iaqtouch", 8) == 0) {
+      start_simulator(_aqualink_data, IAQTOUCH);
+    } else  {
+      return uBad;
+    }
     return uSimulator;
+  } else if (strncmp(ri1, "simcmd", 10) == 0 && from == NET_WS) { // Only valid from websocket.
+    simulator_send_cmd((unsigned char)value);
+    return uActioned;
+    /*
   } else if (strncmp(ri1, "rawcommand", 10) == 0 && from == NET_WS) { // Only valid from websocket.
     aq_send_cmd((unsigned char)value);
-    return uActioned;
+    return uActioned;*/
 #ifdef AQ_MANAGER
   } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uAQmanager;
@@ -1562,9 +1604,11 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     break;
     case uSimulator:
     {
-      LOG(NET_LOG,LOG_DEBUG, "Started Simulator Mode\n");
+      LOG(NET_LOG,LOG_DEBUG, "Request to start Simulator\n");
       set_websocket_simulator(nc);
-      _aqualink_data->simulate_panel = true;
+      //_aqualink_data->simulate_panel = true;
+      // Clear simulator ID incase sim type changes
+      //_aqualink_data->simulator_id = NUL;
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];
       build_aqualink_status_JSON(_aqualink_data, message, JSON_BUFFER_SIZE);
@@ -1706,9 +1750,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     if (is_websocket(nc)) {
       _aqualink_data->open_websockets--;
       LOG(NET_LOG,LOG_DEBUG, "-- Websocket left\n");
-      // Need something below to detect is_websocket_simulator() and turn off aq_data.simulate_panel
       if (is_websocket_simulator(nc)) {
-        _aqualink_data->simulate_panel = false;
+        stop_simulator(_aqualink_data);
         LOG(NET_LOG,LOG_DEBUG, "Stoped Simulator Mode\n");
       } else if (is_websocket_aqmanager(nc)) {
         _aqualink_data->aqManagerActive = false;
@@ -1923,9 +1966,9 @@ void *net_services_thread( void *ptr )
   while (_keepNetServicesRunning == true)
   {
     //poll_net_services(&_mgr, 10);
-    // Shorten poll cycle when logging messages to WS
-    //mg_mgr_poll(&_mgr, (_aqualink_data->aqManagerActive)?50:100);
-    mg_mgr_poll(&_mgr, 100);
+    // Shorten poll cycle when in simulator mode
+    mg_mgr_poll(&_mgr, (_aqualink_data->simulator_active != SIM_NONE)?10:100);
+    //mg_mgr_poll(&_mgr, 100);
 
     if (aqdata->updated == true /*|| _broadcast == true*/) {
       //LOG(NET_LOG,LOG_DEBUG, "********** Broadcast ************\n");
@@ -1933,10 +1976,13 @@ void *net_services_thread( void *ptr )
       aqdata->updated = false;
     }
 #ifdef AQ_MANAGER
-    if ( ! broadcast_systemd_logmessages(_aqualink_data->aqManagerActive)) {
+    if ( ! broadcast_systemd_logmessages(aqdata->aqManagerActive)) {
       LOG(AQUA_LOG,LOG_ERR, "Couldn't open systemd journal log\n");
     }
 #endif
+    if (aqdata->simulator_active != SIM_NONE && aqdata->simulator_packet_updated == true ) {
+      _broadcast_simulator_message(_mgr.active_connections);
+    } 
   }
 
 f_end:
@@ -1958,6 +2004,10 @@ void broadcast_aqualinkstate() {
 void broadcast_aqualinkstate_error(char *msg) {
   _broadcast_aqualinkstate_error(_mgr.active_connections, msg);
 }
+void broadcast_simulator_message() {
+  _aqualink_data->simulator_packet_updated = true;
+}
+
 
 void stop_net_services() {
   _keepNetServicesRunning = false;
@@ -2008,6 +2058,11 @@ void broadcast_aqualinkstate_error(/*struct mg_connection *nc,*/ char *msg)
     return _broadcast_aqualinkstate_error(_mgr.active_connections, msg);
   }
   LOG(NET_LOG,LOG_NOTICE, "Broadcast error to network\n");
+}
+void broadcast_simulator_message() {
+  if ( ! _aqconfig_.thread_netservices) {
+    return _broadcast_simulator_message();
+  }
 }
 time_t poll_net_services(/*struct mg_mgr *mgr,*/ int timeout_ms) 
 {

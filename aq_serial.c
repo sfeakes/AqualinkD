@@ -336,29 +336,14 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead);
 int init_serial_port(const char* tty)
 {
 #ifdef AQ_NO_THREAD_NETSERVICE
-  if (_aqconfig_.rs_poll_speed < 0)
+  if (_aqconfig_.rs_poll_speed < 0) {
     return init_blocking_serial_port(_aqconfig_.serial_port);
-  else if (_aqconfig_.readahead_b4_write)
-    return init_readahead_serial_port(_aqconfig_.serial_port);
-  else
-    return init_serial_port(_aqconfig_.serial_port);
-#elif AQ_RS_EXTRA_OPTS
-  if (_aqconfig_.readahead_b4_write)
-    return init_readahead_serial_port(_aqconfig_.serial_port);
-  else
-    return init_blocking_serial_port(_aqconfig_.serial_port);
+  }
 #else
   return init_blocking_serial_port(_aqconfig_.serial_port);
 #endif
   
 }
-
-#ifdef AQ_RS_EXTRA_OPTS
-int init_readahead_serial_port(const char* tty)
-{
-  return _init_serial_port(tty, false, true);
-}
-#endif
 
 int init_blocking_serial_port(const char* tty)
 {
@@ -767,14 +752,6 @@ void send_packet(int fd, unsigned char *packet, int length)
     if (nwrite != length)
         LOG(RSSD_LOG, LOG_ERR, "write to serial port failed\n");
   } else {
-#ifdef AQ_RS_EXTRA_OPTS
-    if (_aqconfig_.readahead_b4_write) {
-      if (cleanOutSerial(fd, false) != 0x00) {
-        LOG(RSSD_LOG, LOG_ERR, "ERROR on RS485, AqualinkD was too slow in replying to message! (please check for performance issues)\n");
-        cleanOutSerial(fd, true);
-      }
-    }
-#endif
     int nwrite, i;
     for (i = 0; i < length; i += nwrite) {
       nwrite = write(fd, packet + i, length - i);
@@ -1026,25 +1003,8 @@ int get_packet(int fd, unsigned char* packet)
   
   // Clean out rest of buffer, make sure their is nothing else
 /*  Doesn't work for shit due to probe message speed, need to come back and re-think
-  if (_aqconfig_.readahead_b4_write) {
-    if (endOfPacket == true) {
-      do {
-        bytesRead = read(fd, &byte, 1);
-        //if (bytesRead==1) { LOG(RSSD_LOG,LOG_ERR, "Cleanout buffer read 0x%02hhx\n",byte); }
-        if (bytesRead==1 && byte != 0x00) {
-          LOG(RSSD_LOG,LOG_ERR, "SERIOUS ERROR on RS485, AqualinkD caught packet collision on bus, ignoring!\n");
-          LOG(RSSD_LOG,LOG_ERR, "Error Cleanout read 0x%02hhx\n",byte); 
-          // Run the buffer out
-          do { 
-            bytesRead = read(fd, &byte, 1);
-            if (bytesRead==1) { LOG(RSSD_LOG,LOG_ERR, "Error Cleanout read 0x%02hhx\n",byte); }
-          } while (bytesRead==1);
-          return 0;
-        }
-      } while (bytesRead==1);
-    }
-  }
- */ 
+*/
+
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
     if (check_jandy_checksum(packet, index) != true){

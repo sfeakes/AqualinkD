@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V2.0"
+#define VERSION "serial_logger V2.1"
 
 /*
 typedef enum used {
@@ -86,7 +86,7 @@ bool _playback_file = false;
 
 int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
 
-int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs);
 
 
 #ifdef SERIAL_LOGGER
@@ -101,7 +101,7 @@ void intHandler(int dummy) {
 }
 #else
 int serial_logger (int rs_fd, char *port_name, int logLevel) {
-  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false);
+  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false, false);
 }
 #endif
 
@@ -362,11 +362,9 @@ int main(int argc, char *argv[]) {
   bool rsSerialSpeedTest = false;
   bool serialBlocking = true;
   bool errorMonitor = false;
+  bool printAllIDs = false;
 
   // aq_serial.c uses the following
-#ifdef AQ_RS_EXTRA_OPTS
-  _aqconfig_.readahead_b4_write = false;
-#endif
   _aqconfig_.log_protocol_packets = false;
   _aqconfig_.log_raw_bytes = false;
   _aqconfig_.ftdi_low_latency  = true;
@@ -391,6 +389,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\t-lpack (log RS packets to %s)\n",RS485LOGFILE);
     fprintf(stderr, "\t-lrawb (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
     fprintf(stderr, "\t-e (monitor errors)\n");
+    fprintf(stderr, "\t-a (Print all ID's the panel queried)\n");
     fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
   }
@@ -424,6 +423,8 @@ int main(int argc, char *argv[]) {
       serialBlocking = false;
     } else if (strcmp(argv[i], "-e") == 0) {
       errorMonitor = true;
+    } else if (strcmp(argv[i], "-a") == 0) {
+      printAllIDs = true;
     }
   }
 
@@ -471,7 +472,7 @@ int main(int argc, char *argv[]) {
 
   startPacketLogger();
 
-  _serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor);
+  _serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor, printAllIDs);
 
   stopPacketLogger();
 
@@ -483,7 +484,7 @@ int main(int argc, char *argv[]) {
 
 
 
-int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor) {
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs) {
   int packet_length;
   int last_packet_length = 0;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
@@ -569,6 +570,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
             }
            }
            if (found != true && sindex < SLOG_MAX) {
+            //printf("Added id 0x%02hhx\n",packet_buffer[PKT_DEST]);
             slog[sindex].ID = packet_buffer[PKT_DEST];
             slog[sindex].inuse = false;
             sindex++;
@@ -654,7 +656,8 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   for (i = 0; i < sindex; i++) {
     //LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
-    if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
+    //if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
+    if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true || printAllIDs == true) {
       LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use  " : "not used",
                (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
     }

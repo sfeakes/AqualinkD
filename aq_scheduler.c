@@ -38,7 +38,11 @@ Example /etc/cron.d/aqualinkd
 */
 
 bool remount_root_ro(bool readonly) {
-  // NSF Check if config is RO_ROOT set
+
+#ifdef AQ_CONTAINER
+  // In container this is pointless
+  return false;
+#endif
 
   if (readonly) {
     LOG(SCHD_LOG,LOG_INFO, "reMounting root RO\n");

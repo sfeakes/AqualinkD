@@ -14,7 +14,8 @@ AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
 AQ_MANAGER =true
-AQ_RS_EXTRA_OPTS = false
+#AQ_RS_EXTRA_OPTS = false
+#AQ_CONTAINER = false // this is for compiling for containers
 #AQ_MEMCMP = true // Not implimented correctly yet.
 
 # Turn off threadded net services
@@ -75,7 +76,7 @@ endif
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-       serial_logger.c mongoose.c timespec_subtract.c
+       serial_logger.c mongoose.c simulator.c timespec_subtract.c
 
 
 AQ_FLAGS =
@@ -130,6 +131,7 @@ DBG_CFLAGS = $(DBGFLAGS) $(AQ_FLAGS) $(MGFLAGS)
 # Other sources.
 DBG_SRC = $(SRCS) debug_timer.c
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c timespec_subtract.c
+#MG_SRC = mongoose.c
 
 # Build durectories
 OBJ_DIR := ./build
@@ -140,7 +142,7 @@ SL_OBJ_DIR := $(OBJ_DIR)/slog
 OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRCS))
 DBG_OBJ_FILES := $(patsubst %.c,$(DBG_OBJ_DIR)/%.o,$(DBG_SRC))
 SL_OBJ_FILES := $(patsubst %.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
-
+#MG_OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(MG_SRC))
 
 # define the executable file
 MAIN = ./release/aqualinkd
@@ -160,6 +162,12 @@ slog:	$(SLOG)
 
 aqdebug: $(DEBG)
 	$(info $(DEBG) has been compiled)
+
+# Container, add container flag and compile
+container: CFLAGS := $(CFLAGS) -D AQ_CONTAINER
+container: $(MAIN) $(SLOG)
+	$(info $(MAIN) has been compiled (** For Container use **))
+	$(info $(SLOG) has been compiled (** For Container use **))
 
 #debug, Just change compile flags and call MAIN
 debug: CFLAGS = $(DFLAGS)

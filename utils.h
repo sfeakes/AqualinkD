@@ -42,6 +42,7 @@
 #define PROG_LOG (1 << 10) // Programmer
 #define DBGT_LOG (1 << 11) // Debug Timer
 #define TIMR_LOG (1 << 12) // Timers
+#define SIM_LOG (1 << 13) // Simulator
 
 // Set scheduler log to timer log 
 #define SCHD_LOG TIMR_LOG

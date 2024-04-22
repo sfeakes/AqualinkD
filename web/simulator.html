@@ -10,590 +10,111 @@
     <meta name='apple-mobile-web-app-status-bar-style' content='black'>
     <link href="aqualinkd.png" rel="apple-touch-icon">
     <link href="aqualinkd.png" rel="icon">
+
     <style>
-        html {}
-
-        body {
-            font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
-            font-weight: 300;
-            background-color: white;
-            color: #000000;
-            margin: 0 !important;
-            padding: 0 !important;
+        /* Style the tab */
+        .tab {
+            overflow: hidden;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
         }
 
-        .wrapper {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-            /*position: absolute;
-            justify-content: center;
-            width: 100%;
-            height: 100%;*/
-        }
-
-        table {
-            background-color: rgb(221, 221, 221);
-            padding: 10px;
-        }
-
-        th {         
-            background-color: white;
-        }
-
-        #title {
-            background-color: rgb(200, 200, 200); 
-            font-weight: 600;
-        }
-
-        input[type=button],
-        input[type=submit],
-        input[type=reset] {
-            background-color: rgb(165, 165, 165);
+        /* Style the buttons that are used to open the tab content */
+        .tab button {
+            background-color: inherit;
+            float: left;
             border: none;
-            color: rgb(0, 0, 0);
-            padding: 2px 2px;
-            text-decoration: none;
-            margin: 0px 0px;
-            min-width: 70px;
-            border-radius: 70px;
+            outline: none;
+            cursor: pointer;
+            padding: 14px 16px;
+            transition: 0.3s;
         }
 
-        .led {
-            border-radius: calc(var(--tile_icon-height) / 2);
-            border-radius: 20px;
-            height: 20px;
-            width: 20px;
-            text-align: center;
-            vertical-align: middle;
-            filter: alpha(opacity=100);
-            opacity: 1.0;
+        /* Change background color of buttons on hover */
+        .tab button:hover {
+            background-color: #ddd;
         }
 
-        .on {
-            background-color: rgb(255, 0, 0);
+        /* Create an active/current tablink class */
+        .tab button.active {
+            background-color: #ccc;
         }
 
-        .off {
-            background-color: rgb(116, 116, 116);
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            /*padding: 6px 12px;*/
+            border: 1px solid #ccc;
+            border-top: none;
         }
 
-        .error {
-            background-color: rgb(255, 0, 0) !important;
-            font-weight: 600;
-        }
-
-        .hidden {
-          display: none;
+        .tabiframe {
+            width: 100%;
+            height: 500px;
         }
     </style>
 
     <script type='text/javascript'>
+        function openPage(evt, pageName) {
+            // Declare all variables
+            var i, tabcontent, tablinks;
 
-        var _panel_size = 6;
-        var _panel_set = 0;
-
-        function send(source) {
-            console.log("from" + source.id);
-
-            var cmd = {};
-            cmd.uri = "rawcommand"
-            switch (source.id) {
-                case "Filter_Pump_button":
-                    cmd.value = "0x02";
-                    break;
-                case "Spa_Mode_button":
-                    cmd.value = "0x01";
-                    break;
-                case "Aux_1_button":
-                    cmd.value = "0x05";
-                    break;
-                case "Aux_2_button":
-                    cmd.value = "0x0a";
-                    break;
-                case "Aux_3_button":
-                    cmd.value = "0x0f";
-                    break;
-                case "Aux_4_button":
-                    if (_panel_size < 12)
-                      cmd.value = "0x06"; 
-                    else
-                      cmd.value = "0x14"; //Different on RS12+ (0x14)
-                    break;
-                case "Aux_5_button":
-                    if (_panel_size < 12)
-                      cmd.value = "0x0b"; 
-                    else
-                      cmd.value = "0x03"; //Different on RS12+ (0x03)
-                    break;
-                case "Aux_6_button":
-                    if (_panel_size < 12)
-                      cmd.value = "0x10"; 
-                    else
-                      cmd.value = "0x07"; //Different on RS12+ (0x07)
-                    break;
-                case "Aux_7_button":
-                    if (_panel_size < 12)
-                      cmd.value = "0x15"; 
-                    else
-                      cmd.value = "0x06"; //Different on RS12+ (0x06)
-                    break;
-                case "Aux_B1_button":
-                    cmd.value = "0x0b";
-                    break;
-                case "Aux_B2_button":
-                    cmd.value = "0x10";
-                    break;
-                case "Aux_B3_button":
-                    cmd.value = "0x15";
-                    break;
-                case "Aux_B4_button":
-                    cmd.value = "0x1a";
-                    break;
-                case "Aux_B5_button":
-                    cmd.value = "0x04";
-                    break;
-                case "Aux_B6_button":
-                    cmd.value = "0x08";
-                    break;
-                case "Aux_B7_button":
-                    cmd.value = "0x0d";
-                    break;
-                case "Aux_B8_button":
-                    cmd.value = "0x0c";
-                    break;
-                case "Pool_Heater_button":
-                    cmd.value = "0x12";
-                    break;
-                case "Spa_Heater_button":
-                    cmd.value = "0x17";
-                    break;
-                case "Solar_Heater_button":
-                    cmd.value = "0x1c";
-                    break;
-                case "B_menu":
-                    cmd.value = "0x09";
-                    break;
-                case "B_cancel":
-                    cmd.value = "0x0e";
-                    break;
-                case "B_back":
-                    cmd.value = "0x13";
-                    break;
-                case "B_forward":
-                    cmd.value = "0x18";
-                    break;
-                case "B_enter":
-                    cmd.value = "0x1d";
-                    break;
-                case "B_hold":
-                    cmd.value = "0x19";
-                    break;
-                case "B_overide":
-                    cmd.value = "0x1c";
-                    break;
-                default:
-                    alert("Unknown button");
-                    return;
-                    break;
+            // Get all elements with class="tabcontent" and hide them
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
             }
 
-            cmd.value = todec(cmd.value);
-            send_command(cmd);
-
-            // I know we are converting hex to dec and back to hex, but here for checking.
-            document.getElementById("messages").innerHTML = "Sent "+tohex(cmd.value)+" please wait for response!";
-        }
-
-        function tohex(value) {
-           var rtn = parseInt(value).toString(16);
-           if (rtn.length <= 1)
-             return "0x0"+rtn;
-           else
-             return "0x"+rtn;
-        }
-        function todec(value) {
-           let number = parseInt(value, 16);
-           return number;
-        }
-
-        function set_panel_size(size)
-        {
-            if (_panel_set == size){
-              return;
+            // Get all elements with class="tablinks" and remove the class "active"
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
             }
 
-            _panel_set = size;
+            // Show the current tab, and add an "active" class to the button that opened the tab
+            document.getElementById(pageName).style.display = "block";
 
-            switch(size){
-              case 6:
-                document.getElementById("Aux_6_led").classList.add("hidden");
-                document.getElementById("Aux_6_button").classList.add("hidden");
-                document.getElementById("Aux_7_led").classList.add("hidden");
-                document.getElementById("Aux_7_button").classList.add("hidden");
-              case 8:
-                document.getElementById("Aux_B1_led").classList.add("hidden");
-                document.getElementById("Aux_B1_button").classList.add("hidden");
-                document.getElementById("Aux_B2_led").classList.add("hidden");
-                document.getElementById("Aux_B2_button").classList.add("hidden");
-                document.getElementById("Aux_B3_led").classList.add("hidden");
-                document.getElementById("Aux_B3_button").classList.add("hidden");
-                document.getElementById("Aux_B4_led").classList.add("hidden");
-                document.getElementById("Aux_B4_button").classList.add("hidden");
-              case 12:
-                document.getElementById("Aux_B5_button").classList.add("hidden");
-                document.getElementById("Aux_B6_button").classList.add("hidden");
-                document.getElementById("Aux_B7_button").classList.add("hidden");
-                document.getElementById("Aux_B8_button").classList.add("hidden");
-            }
-
-        }
-
-
-        function update_status(data) {
-            // Some form of error if PDA only panel.
-            if (data.panel_type.startsWith("PDA")) {
-                document.getElementById("title").innerHTML = '  !!! PDA only panels are not Supported !!!  '
-                document.getElementById("title").classList.add("error");
-                document.getElementById("messages").innerHTML = '  !!! PDA Not Supported !!!  '
-                document.getElementById("messages").classList.add("error");
-            }
-
-            if (document.getElementById("status").getAttribute("raw") != data.panel_message) {
-              document.getElementById("status_three").innerHTML = document.getElementById("status_two").innerHTML;
-              document.getElementById("status_two").innerHTML = document.getElementById("status").innerHTML;
-              if (data.panel_message == "") {
-                document.getElementById("status").innerHTML = "&nbsp;";
-              } else {
-                document.getElementById("status").innerHTML = data.panel_message;
-              }
-              document.getElementById("status").setAttribute("raw", data.panel_message);
-              document.getElementById("messages").innerHTML = "&nbsp;";
-            }
-
-            for (var obj in data.leds) {
-              if ((led = document.getElementById(obj.toString() + "_led")) == null) {
-                    //console.log("Error " + obj.toString() + " LED not found");
-                    //return;
-              } else {
-                if (data.leds[obj] == "on" || data.leds[obj] == "enabled" || data.leds[obj] == "flash") {
-                    //console.log("Set " + obj.toString() + " LED on");
-                    led.classList.add("on");
-                    led.classList.remove("off");
-                } else {
-                    //console.log("Set " + obj.toString() + " LED off");
-                    led.classList.add("off");
-                    led.classList.remove("on");
-                }
-              }
-              if (obj.toString() == "Aux_4" && _panel_size < 6)
-                _panel_size=6;
-              if (obj.toString() == "Aux_6" && _panel_size < 8)
-                _panel_size=8;
-              if (obj.toString() == "Aux_B1" && _panel_size < 12)
-                _panel_size=12;
-              if (obj.toString() == "Aux_B4")
-                _panel_size=16;
-            }
-
-            set_panel_size(_panel_size);
-        }
-
-        function update_device(data) {
-            for (var obj in data['devices']) {
-            }
-        }
-
-
-        function set_labels(data) {
-            for (var obj in data) {
-                if ((button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
-                    button.value = data[obj];
-                }
-            }
-        }
-
-        function get_appropriate_ws_url() {
-            var pcol;
-            var u = document.URL;
-            /*
-             * We open the websocket encrypted if this page came on an
-             * https:// url itself, otherwise unencrypted
-             */
-            if (u.substring(0, 5) == "https") {
-                pcol = "wss://";
-                u = u.substr(8);
+            if (evt != null) {
+              evt.currentTarget.className += " active";
             } else {
-                pcol = "ws://";
-                if (u.substring(0, 4) == "http")
-                    u = u.substr(7);
+              document.getElementById('opentab').className += " active";
             }
-            u = u.split('/');
-            //alert (pcol + u[0] + ":6500");
-            return pcol + u[0];
-        }
-        /* dumb increment protocol */
-        var socket_di;
-
-        function startWebsockets() {
-            socket_di = new WebSocket(get_appropriate_ws_url());
-            try {
-                socket_di.onopen = function () {
-                    // success!
-                    start_simulator();
-                    get_devices();
-                }
-                socket_di.onmessage = function got_packet(msg) {
-                    document.getElementById("status").classList.remove("error");
-                    var data = JSON.parse(msg.data);
-                    if (data.type == 'status') {
-                        update_status(data);
-                    } else if (data.type == 'devices') {
-                        //update_status(data);
-                        update_device(data);
-                    } else if (data.type == 'aux_labels') {
-                        set_labels(data);
-                    }
-                }
-                socket_di.onclose = function () {
-                    // something went wrong
-                    document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
-                    document.getElementById("status").classList.add("error");
-                    // Try to reconnect every 5 seconds.
-                    setTimeout(function () {
-                        startWebsockets();
-                    }, 5000);
-                }
-            } catch (exception) {
-                alert('<p>Error' + exception);
-            }
-        }
-
-        function start_simulator() {
-            var msg = {
-                //command: "simulator"
-                uri: "simulator"
-            };
-            socket_di.send(JSON.stringify(msg));
-        }
-
-        function get_devices() {
-            var msg = {
-                uri: "devices"
-            };
-            socket_di.send(JSON.stringify(msg));
-        }
-
-        function send_command(cmd) {
-            socket_di.send(JSON.stringify(cmd));
-        }
-/*
-        function reset() {
-            socket_di.send("reset\n");
-        }
-*/
-        function init() {
-            startWebsockets();
         }
 
     </script>
 
-
-
-    <body onload="init();">
-        <div class="wrapper">
-
-            <table border='0' id="deviceList">
-                <tr  style="title">
-                    <td style="title" colspan="12" align="center"><label id="title">&nbsp;&nbsp;AqualinkD All Button Simulator&nbsp;&nbsp;</label></th>
-                </tr>
-                <tr>
-                    <td colspan="12" align="center"><label id="status_three">&nbsp;</label></td>
-                </tr>
-                <tr>
-                    <td colspan="12" align="center"><label id="status_two">&nbsp;</label></td>
-                </tr>
-            
-                <tr>
-                    <th colspan="12"><label id="status">AqualinkD</label></th>
-                </tr>
-                <tr>
-                    <td align="right">
-                        <div id="Filter_Pump_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Filter_Pump_button" type="button" onclick="send(this);" value="Filter Pump">
-                    </td>
-                    <td align="right">
-                        <div id="Spa_Mode_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Spa_Mode_button" type="button" onclick="send(this);" value="Spa Mode">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_1_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_1_button" type="button" onclick="send(this);" value="AUX1">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_2_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_2_button" type="button" onclick="send(this);" value="AUX2">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_3_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_3_button" type="button" onclick="send(this);" value="AUX3">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_4_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_4_button" type="button" onclick="send(this);" value="AUX4">
-                    </td>
-                </tr>
-                <tr>
-                    <td align="right">
-                        <div id="Aux_5_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_5_button" type="button" onclick="send(this);" value="AUX5">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_6_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_6_button" type="button" onclick="send(this);" value="AUX6">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_7_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_7_button" type="button" onclick="send(this);" value="AUX7">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_B1_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B1_button" type="button" onclick="send(this);" value="AUXB1">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_B2_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B2_button" type="button" onclick="send(this);" value="AUXB2">
-                    </td>
-                    <td align="right">
-                        <div id="Aux_B3_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B3_button" type="button" onclick="send(this);" value="AUXB3">
-                    </td>
-                </tr>
-                <tr>
-                    <td align="right">
-                        <div id="Aux_B4_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B4_button" type="button" onclick="send(this);" value="AUXB4">
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B5_button" type="button" onclick="send(this);" value="AUXB5">
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B6_button" type="button" onclick="send(this);" value="AUXB6">
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B7_button" type="button" onclick="send(this);" value="AUXB7">
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        <input id="Aux_B8_button" type="button" onclick="send(this);" value="AUXB8">
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        &nbsp;
-                    </td>
-                </tr>
-                <tr>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        &nbsp;
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        &nbsp;
-                    </td>
-                    <td align="right">
-                        &nbsp;
-                    </td>
-                    <td align="left">
-                        &nbsp;
-                    </td>
-                    <td align="right">
-                        <div id="Pool_Heater_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Pool_Heater_button" type="button" onclick="send(this);" value="Pool Heater">
-                    </td>
-                    <td align="right">
-                        <div id="Spa_Heater_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Spa_Heater_button" type="button" onclick="send(this);" value="Spa Heater">
-                    </td>
-                    <td align="right">
-                        <div id="Solar_Heater_led" class="led off"></div>
-                    </td>
-                    <td align="left">
-                        <input id="Solar_Heater_button" type="button" onclick="send(this);" value="Solar Heater">
-                    </td>
-                </tr>
-                <tr>
-                    <TD>&nbsp;</TD>
-                </tr>
-                <tr>
-                    <td align="center" colspan="2">
-                        <input type="button" onclick="send(this);" id="B_menu" value="Menu">
-                    </td>
-                    <td align="center" colspan="2">
-                        <input type="button" onclick="send(this);" id="B_cancel" value="Cancel">
-                    </td>
-                    <td align="center" colspan="2">
-                        <input type="button" onclick="send(this);" id="B_back" value="Back <">
-                    </td>
-                    <td align="center" colspan="2">
-                        <input type="button" onclick="send(this);" id="B_forward" value="Forward >">
-                    </td>
-                    <td align="center" colspan="2">
-                        <input type="button" onclick="send(this);" id="B_enter" value="Enter *">
-                    </td>
-                </tr>
-                <tr>
-                    <td colspan="12" align="center"><label id="messages">&nbsp;</label></td>
-                </tr>
-            </table>
+<body onload="openPage(null, 'aqualinka_iframe');">
+    <div class="wrapper">
+        <div class="tab">
+            <button id="opentab" class="tablinks" onclick="openPage(event, 'aqualinka_iframe')">AqualinkD</button>
+            <button class="tablinks" onclick="openPage(event, 'allbutton_iframe')">Allbutton Simulator</button>
+            <button class="tablinks" onclick="openPage(event, 'onetouch_iframe')">One Touch Simulator</button>
+            <!--<button class="tablinks" onclick="openPage(event, 'iaqtouch')">iAqualink Touch Simulator</button>-->
+            <button class="tablinks" onclick="openPage(event, 'aquapda_iframe')">PDA Simulator</button>
         </div>
-    </body>
+
+        <!-- Tab content -->
+        <div id="aqualinka_iframe" class="tabcontent">
+            <iframe id="aqd" src="/" class="tabiframe"></iframe>
+        </div>
+
+        <div id="allbutton_iframe" class="tabcontent">
+            <iframe id="aqd" src="/allbutton_sim.html" class="tabiframe"></iframe>
+        </div>
+
+        <div id="onetouch_iframe" class="tabcontent">
+            <iframe id="aqd" src="/onetouch_sim.html" class="tabiframe"></iframe>
+        </div>
+
+        <div id="aquapda_iframe" class="tabcontent">
+            <iframe id="aqd" src="/aquapda_sim.html" class="tabiframe"></iframe>
+        </div>
+
+        <div id="iaqtouch_iframe" class="tabcontent">
+            <iframe id="aqd" src="/iaqtouch_sim.html" class="tabiframe"></iframe>
+        </div>
+
+    </div>
+</body>
 
 </html>

@@ -29,12 +29,14 @@
 #define LIGHT_MODE_BUFER PTHREAD_ARG
 
 typedef enum emulation_type{
+  SIM_NONE = -1,
   ALLBUTTON,
   RSSADAPTER,
   ONETOUCH,
   IAQTOUCH,
   AQUAPDA,  // AQUAPALM and PDA are taken as specific type.
-  JANDY_DEVICE // Very rarley used.
+  JANDY_DEVICE, // Very rarley used.
+  SIMULATOR
 } emulation_type;
 
 typedef enum {

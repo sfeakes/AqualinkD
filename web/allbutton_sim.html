@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta http-equiv='Content-Type' content='text/html; charset=windows-1252'>
+    <title>AqualinkD Simulator</title>
+    <meta name='viewport' content='width=device-width'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <meta name='apple-mobile-web-app-status-bar-style' content='black'>
+    <link href="aqualinkd.png" rel="apple-touch-icon">
+    <link href="aqualinkd.png" rel="icon">
+    <style>
+        html {}
+
+        body {
+            font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+            font-weight: 300;
+            background-color: white;
+            color: #000000;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            /*position: absolute;
+            justify-content: center;
+            width: 100%;
+            height: 100%;*/
+        }
+
+        table {
+            background-color: rgb(221, 221, 221);
+            padding: 10px;
+           /* border-collapse: collapse;*/
+        }
+
+        th {        
+            font-weight: normal; 
+            background-color: white;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            padding-left: 4px;
+            padding-right: 4px;
+        }
+
+
+
+        .td_led {
+            padding-top: 3px;
+            padding-bottom: 3px;
+            padding-left: 4px;
+            padding-right: 0px;
+        }
+
+        .td_button {
+            padding-top: 3px;
+            padding-bottom: 3px;
+            padding-left: 0px;
+            padding-right: 8px;
+        }
+
+
+        #title {
+            background-color: rgb(200, 200, 200); 
+            font-weight: 600;
+        }
+
+        input[type=button],
+        input[type=submit],
+        input[type=reset] {
+            /*font-family: monospace;*/
+            background-color: rgb(165, 165, 165);
+            border: none;
+            color: rgb(0, 0, 0);
+            padding: 2px 2px;
+            text-decoration: none;
+            margin: 0px 0px;
+            min-width: 70px;
+            border-radius: 70px;
+        }
+
+        .led {
+            border-radius: calc(var(--tile_icon-height) / 2);
+            border-radius: 20px;
+            height: 20px;
+            width: 20px;
+            text-align: center;
+            vertical-align: middle;
+            filter: alpha(opacity=100);
+            opacity: 1.0;
+        }
+
+        .lcd_display {
+           /* font-family: monospace;*/
+            background-color: #2b2b2b;
+            color: white;
+            white-space: pre;
+        }
+        .lcd_history {
+           /* font-family: monospace;*/
+            background-color: #aeaeae;
+            color: white;
+            white-space: pre;
+        }
+
+        .on {
+            background-color: rgb(255, 0, 0);
+        }
+
+        .off {
+            background-color: rgb(116, 116, 116);
+        }
+
+        .error {
+            background-color: rgb(255, 0, 0) !important;
+            font-weight: 600;
+        }
+
+        .hidden {
+          display: none;
+        }
+
+        .version {
+            /*font-family: monospace;*/
+            font-size: x-small;
+        }
+    </style>
+
+    <script type='text/javascript'>
+
+        var _panel_size = 6;
+        var _panel_set = 0;
+        var _keep_socket_alive=true;
+
+        // See if we are in an iframe and capture focus
+        function capture_iframe_focus() {
+          var targetNode = parent.document.getElementById('allbutton_iframe');
+          if (targetNode != null) {
+            var observer = new MutationObserver(function(){
+            if(targetNode.style.display != 'none'){
+              console.log("AllButton sim Displaying");
+              startWebsockets();
+            } else {
+              console.log("AllButton sim Hiding");
+              stopWebsockets();
+            }
+            });
+            observer.observe(targetNode, { attributes: true, childList: true });
+
+            return true;
+          }
+          return false;
+        }
+
+        function send(source) {
+            console.log("from" + source.id);
+
+            var cmd = {};
+            cmd.uri = "simcmd"
+            switch (source.id) {
+                case "Filter_Pump_button":
+                    cmd.value = "0x02";
+                    break;
+                case "Spa_Mode_button":
+                    cmd.value = "0x01";
+                    break;
+                case "Aux_1_button":
+                    cmd.value = "0x05";
+                    break;
+                case "Aux_2_button":
+                    cmd.value = "0x0a";
+                    break;
+                case "Aux_3_button":
+                    cmd.value = "0x0f";
+                    break;
+                case "Aux_4_button":
+                    if (_panel_size < 12)
+                      cmd.value = "0x06"; 
+                    else
+                      cmd.value = "0x14"; //Different on RS12+ (0x14)
+                    break;
+                case "Aux_5_button":
+                    if (_panel_size < 12)
+                      cmd.value = "0x0b"; 
+                    else
+                      cmd.value = "0x03"; //Different on RS12+ (0x03)
+                    break;
+                case "Aux_6_button":
+                    if (_panel_size < 12)
+                      cmd.value = "0x10"; 
+                    else
+                      cmd.value = "0x07"; //Different on RS12+ (0x07)
+                    break;
+                case "Aux_7_button":
+                    if (_panel_size < 12)
+                      cmd.value = "0x15"; 
+                    else
+                      cmd.value = "0x06"; //Different on RS12+ (0x06)
+                    break;
+                case "Aux_B1_button":
+                    cmd.value = "0x0b";
+                    break;
+                case "Aux_B2_button":
+                    cmd.value = "0x10";
+                    break;
+                case "Aux_B3_button":
+                    cmd.value = "0x15";
+                    break;
+                case "Aux_B4_button":
+                    cmd.value = "0x1a";
+                    break;
+                case "Aux_B5_button":
+                    cmd.value = "0x04";
+                    break;
+                case "Aux_B6_button":
+                    cmd.value = "0x08";
+                    break;
+                case "Aux_B7_button":
+                    cmd.value = "0x0d";
+                    break;
+                case "Aux_B8_button":
+                    cmd.value = "0x0c";
+                    break;
+                case "Pool_Heater_button":
+                    cmd.value = "0x12";
+                    break;
+                case "Spa_Heater_button":
+                    cmd.value = "0x17";
+                    break;
+                case "Solar_Heater_button":
+                    cmd.value = "0x1c";
+                    break;
+                case "B_menu":
+                    cmd.value = "0x09";
+                    break;
+                case "B_cancel":
+                    cmd.value = "0x0e";
+                    break;
+                case "B_back":
+                    cmd.value = "0x13";
+                    break;
+                case "B_forward":
+                    cmd.value = "0x18";
+                    break;
+                case "B_enter":
+                    cmd.value = "0x1d";
+                    break;
+                case "B_hold":
+                    cmd.value = "0x19";
+                    break;
+                case "B_overide":
+                    cmd.value = "0x1c";
+                    break;
+                default:
+                    alert("Unknown button");
+                    return;
+                    break;
+            }
+
+            cmd.value = todec(cmd.value);
+            send_command(cmd);
+
+            // I know we are converting hex to dec and back to hex, but here for checking.
+            //document.getElementById("messages").innerHTML = "Sent "+tohex(cmd.value)+" please wait for response!";
+        }
+
+        function tohex(value) {
+           var rtn = parseInt(value).toString(16);
+           if (rtn.length <= 1)
+             return "0x0"+rtn;
+           else
+             return "0x"+rtn;
+        }
+        function todec(value) {
+           let number = parseInt(value, 16);
+           return number;
+        }
+
+        function set_panel_size(size)
+        {
+            if (_panel_set == size){
+              return;
+            }
+
+            _panel_set = size;
+
+            switch(size){
+              case 6:
+                document.getElementById("Aux_6_led").classList.add("hidden");
+                document.getElementById("Aux_6_button").classList.add("hidden");
+                document.getElementById("Aux_7_led").classList.add("hidden");
+                document.getElementById("Aux_7_button").classList.add("hidden");
+              case 8:
+                document.getElementById("Aux_B1_led").classList.add("hidden");
+                document.getElementById("Aux_B1_button").classList.add("hidden");
+                document.getElementById("Aux_B2_led").classList.add("hidden");
+                document.getElementById("Aux_B2_button").classList.add("hidden");
+                document.getElementById("Aux_B3_led").classList.add("hidden");
+                document.getElementById("Aux_B3_button").classList.add("hidden");
+                document.getElementById("Aux_B4_led").classList.add("hidden");
+                document.getElementById("Aux_B4_button").classList.add("hidden");
+              case 12:
+                document.getElementById("Aux_B5_button").classList.add("hidden");
+                document.getElementById("Aux_B6_button").classList.add("hidden");
+                document.getElementById("Aux_B7_button").classList.add("hidden");
+                document.getElementById("Aux_B8_button").classList.add("hidden");
+            }
+
+        }
+
+
+        function update_status(data) {
+            // Some form of error if PDA only panel.
+            if (data.panel_type.startsWith("PDA")) {
+                document.getElementById("title").innerHTML = '  !!! PDA only panels are not Supported !!!  '
+                document.getElementById("title").classList.add("error");
+                document.getElementById("messages").innerHTML = '  !!! PDA Not Supported !!!  '
+                document.getElementById("messages").classList.add("error");
+            }
+
+            for (var obj in data.leds) {
+              if ((led = document.getElementById(obj.toString() + "_led")) == null) {
+                    //console.log("Error " + obj.toString() + " LED not found");
+                    //return;
+              } else {
+                if (data.leds[obj] == "on" || data.leds[obj] == "enabled" || data.leds[obj] == "flash") {
+                    //console.log("Set " + obj.toString() + " LED on");
+                    led.classList.add("on");
+                    led.classList.remove("off");
+                } else {
+                    //console.log("Set " + obj.toString() + " LED off");
+                    led.classList.add("off");
+                    led.classList.remove("on");
+                }
+              }
+              if (obj.toString() == "Aux_4" && _panel_size < 6)
+                _panel_size=6;
+              if (obj.toString() == "Aux_6" && _panel_size < 8)
+                _panel_size=8;
+              if (obj.toString() == "Aux_B1" && _panel_size < 12)
+                _panel_size=12;
+              if (obj.toString() == "Aux_B4")
+                _panel_size=16;
+            }
+
+            set_panel_size(_panel_size);
+
+            const versionlabel = document.getElementById("version");
+            if (versionlabel.innerHTML = "&nbsp;") {
+                versionlabel.innerHTML = "AqualinkD "+data.aqualinkd_version+"<br>"+data.panel_type+" "+data.version;
+            }
+        }
+
+        function update_device(data) {
+            for (var obj in data['devices']) {
+            }
+        }
+
+
+        function set_labels(data) {
+            for (var obj in data) {
+                if ((button = document.getElementById(obj + "_button")) != null && data[obj] != "NONE") {
+                    button.value = data[obj];
+                }
+            }
+        }
+
+        function update_status_message(message=null, error=false) {
+            const status = document.getElementById("status");
+
+            if (message != null) {
+              status.innerHTML = message;
+            } else {
+              status.innerHTML = "AqualinkD All Button Simulator";
+            }
+
+            if (error) {
+                status.classList.add("error");
+            } else {
+                status.classList.remove("error");
+            }
+        }
+
+        function packet_to_ascii(packet) {
+            var msg="";
+
+            for (i=5; i <= 20; i++) {
+              if (packet[i] >= 31 && packet[i] <= 127) {
+                msg=msg+String.fromCharCode(packet[i]);
+                //console.log("char ("+packet[i]+") = "+msg);
+              } else if (packet[i] == 223) {
+                msg=msg+"&deg";
+              } else if (packet[i] == 0) {
+                break; // End on a nul
+              } else {
+                console.log("Bad char in string '"+msg+"' next ("+packet[i]+") from ["+packet+"]" );
+              }
+            }
+
+            return msg;
+        }
+
+        function lcd_display(line, message) {
+            
+            const message_lcd = document.getElementById("lcd");
+            const message_lcd1 = document.getElementById("lcd_2");
+            const message_lcd2 = document.getElementById("lcd_3");
+
+            if (message == "" || message == " "){message = "&nbsp;";}
+
+            message_lcd2.innerHTML = message_lcd1.innerHTML;
+            message_lcd1.innerHTML = message_lcd.innerHTML;
+            message_lcd.innerHTML = message;
+        }
+
+        function lcd_display_append(line, message) {
+            const message_lcd = document.getElementById("lcd");
+            message_lcd.innerHTML = message_lcd.innerHTML+message;
+        }
+
+        const PKT_CMD = 3;
+        const PKT_DATA1 = 4;
+
+        const CMD_PROBE = 0;
+        const CMD_STATUS      = 2
+        const CMD_MSG         = 3 // message
+        const CMD_MSG_LONG    = 4
+        const CMD_MSG_LOOP_ST = 8 // pda highlight
+
+        function process_packet(data) {
+            if (data.simtype != "allbutton") {
+                update_status_message("Wrong message - is Another simulator running?", true);
+                return;
+            }
+
+            switch(data.dec[PKT_CMD]) {
+                case CMD_PROBE:
+                    // We are about to start
+                    break;
+                case CMD_MSG: // Message
+                  //console.log("Received Line "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
+                  lcd_display(data.dec[PKT_DATA1], packet_to_ascii(data.dec));
+                break;
+                case CMD_MSG_LONG: // Message
+                  //console.log("Received Line long "+data.dec[PKT_DATA1]+" = "+packet_to_ascii(data.dec));
+                  lcd_display_append(data.dec[PKT_DATA1], packet_to_ascii(data.dec));
+                break;
+                
+                case CMD_MSG_LOOP_ST:
+                case CMD_STATUS:
+                  // Nothing to do for these messages
+                break;
+                
+                default:
+                  console.log("Received unknown command "+data.dec[PKT_CMD]+" "+tohex(data.dec[PKT_CMD]));
+                break;
+            }
+        }
+
+        function get_appropriate_ws_url() {
+            var pcol;
+            var u = document.URL;
+            /*
+             * We open the websocket encrypted if this page came on an
+             * https:// url itself, otherwise unencrypted
+             */
+            if (u.substring(0, 5) == "https") {
+                pcol = "wss://";
+                u = u.substr(8);
+            } else {
+                pcol = "ws://";
+                if (u.substring(0, 4) == "http")
+                    u = u.substr(7);
+            }
+            u = u.split('/');
+            //alert (pcol + u[0] + ":6500");
+            return pcol + u[0];
+        }
+        /* dumb increment protocol */
+        var socket_di;
+
+        function startWebsockets() {
+            socket_di = new WebSocket(get_appropriate_ws_url());
+            _keep_socket_alive = true;
+            try {
+                socket_di.onopen = function () {
+                    // success!
+                    start_simulator();
+                    get_devices();
+                }
+                socket_di.onmessage = function got_packet(msg) {
+                    //document.getElementById("status").classList.remove("error");
+                    update_status_message();
+                    var data = JSON.parse(msg.data);
+                    if (data.type == 'simpacket') {
+                        process_packet(data);
+                    } else if (data.type == 'status') {
+                        update_status(data);
+                    } else if (data.type == 'devices') {
+                        //update_status(data);
+                        update_device(data);
+                    } else if (data.type == 'aux_labels') {
+                        set_labels(data);
+                    }
+                }
+                socket_di.onclose = function () {
+                    // something went wrong
+                    //document.getElementById("status").innerHTML = '  !!! Connection error !!!  '
+                    //document.getElementById("status").classList.add("error");
+                    update_status_message('  !!! Connection error !!!  ', true);
+                    // Try to reconnect every 5 seconds.
+                    setTimeout(function () {
+                        if (_keep_socket_alive == true) {
+                          startWebsockets();
+                        }
+                    }, 5000);
+                }
+            } catch (exception) {
+                alert('<p>Error' + exception);
+            }
+        }
+
+        function stopWebsockets() {
+            if (socket_di) {
+              socket_di.close();
+            }
+            _keep_socket_alive = false;
+        }
+
+        function start_simulator() {
+            var msg = {
+                //command: "simulator"
+                uri: "simulator/allbutton"
+            };
+            document.getElementById("lcd").innerHTML = "Connecting to panel, please wait!"
+            socket_di.send(JSON.stringify(msg));
+        }
+
+        function get_devices() {
+            var msg = {
+                uri: "devices"
+            };
+            socket_di.send(JSON.stringify(msg));
+        }
+
+        function send_command(cmd) {
+            socket_di.send(JSON.stringify(cmd));
+        }
+/*
+        function reset() {
+            socket_di.send("reset\n");
+        }
+*/
+
+        function init() {
+            if ( capture_iframe_focus() ) {
+                // In iframe wait for focus event to start
+            } else {
+              //update_status_message();
+              startWebsockets();
+            }
+        }
+
+    </script>
+
+
+
+    <body onload="init();">
+        <div class="wrapper">
+
+            <table border='0' id="deviceList">
+                <tr  style="title">
+                    <td style="title" colspan="12" align="center"><label id="status">&nbsp;&nbsp;AqualinkD All Button Simulator&nbsp;&nbsp;</label></th>
+                </tr>
+                <tr>
+                    <th colspan="12" align="center" class="lcd_history"><label id="lcd_3">&nbsp;</label></th>
+                </tr>
+                <tr>
+                    <th colspan="12" align="center" class="lcd_history"><label id="lcd_2">&nbsp;</label></th>
+                </tr>
+                <tr>
+                    <th colspan="12" class="lcd_display"><label id="lcd">&nbsp;</label></th>
+                </tr>
+                <tr>
+                    <td class="td_led">
+                        <div id="Filter_Pump_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Filter_Pump_button" type="button" onclick="send(this);" value="Filter Pump">
+                    </td>
+                    <td class="td_led">
+                        <div id="Spa_Mode_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Spa_Mode_button" type="button" onclick="send(this);" value="Spa Mode">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_1_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_1_button" type="button" onclick="send(this);" value="AUX1">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_2_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_2_button" type="button" onclick="send(this);" value="AUX2">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_3_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_3_button" type="button" onclick="send(this);" value="AUX3">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_4_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_4_button" type="button" onclick="send(this);" value="AUX4">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="td_led">
+                        <div id="Aux_5_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_5_button" type="button" onclick="send(this);" value="AUX5">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_6_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_6_button" type="button" onclick="send(this);" value="AUX6">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_7_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_7_button" type="button" onclick="send(this);" value="AUX7">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_B1_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B1_button" type="button" onclick="send(this);" value="AUXB1">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_B2_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B2_button" type="button" onclick="send(this);" value="AUXB2">
+                    </td>
+                    <td class="td_led">
+                        <div id="Aux_B3_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B3_button" type="button" onclick="send(this);" value="AUXB3">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="td_led">
+                        <div id="Aux_B4_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B4_button" type="button" onclick="send(this);" value="AUXB4">
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B5_button" type="button" onclick="send(this);" value="AUXB5">
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B6_button" type="button" onclick="send(this);" value="AUXB6">
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B7_button" type="button" onclick="send(this);" value="AUXB7">
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        <input id="Aux_B8_button" type="button" onclick="send(this);" value="AUXB8">
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        &nbsp;
+                    </td>
+                </tr>
+                <tr>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        &nbsp;
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        &nbsp;
+                    </td>
+                    <td class="td_led">
+                        &nbsp;
+                    </td>
+                    <td class="td_button">
+                        &nbsp;
+                    </td>
+                    <td class="td_led">
+                        <div id="Pool_Heater_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Pool_Heater_button" type="button" onclick="send(this);" value="Pool Heater">
+                    </td>
+                    <td class="td_led">
+                        <div id="Spa_Heater_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Spa_Heater_button" type="button" onclick="send(this);" value="Spa Heater">
+                    </td>
+                    <td class="td_led">
+                        <div id="Solar_Heater_led" class="led off"></div>
+                    </td>
+                    <td class="td_button">
+                        <input id="Solar_Heater_button" type="button" onclick="send(this);" value="Solar Heater">
+                    </td>
+                </tr>
+                <tr>
+                    <TD>&nbsp;</TD>
+                </tr>
+                <tr>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_menu" value="Menu">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_cancel" value="Cancel">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_back" value="Back <">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_forward" value="Forward >">
+                    </td>
+                    <td align="center" colspan="2">
+                        <input type="button" onclick="send(this);" id="B_enter" value="Enter *">
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td colspan="12" align="center"><label id="messages">&nbsp;</label></td>
+                </tr>
+            
+                <tr>
+                    <td colspan="12" id="version" class="version">&nbsp;</td>
+                </tr>
+            </table>
+        </div>
+    </body>
+
+</html>
