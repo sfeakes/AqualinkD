@@ -119,6 +119,8 @@
         .lcd_highlight {
             font-family: monospace;
             background-color: #8e1e1e !important;
+            /*background-color: #8b7d7d !important;*/
+            /*background-color: #868383 !important;*/
             color: white !important;
             white-space: pre;
         }
@@ -133,7 +135,7 @@
     </style>
 
     <script type='text/javascript'>
-
+console.log("SIM LOAD");
         var _socket_di;
         var _keep_socket_alive=true;
 
@@ -158,7 +160,13 @@
 
         // See if we are in an iframe and capture focus
         function capture_iframe_focus() {
+
           var targetNode = parent.document.getElementById('onetouch_iframe');
+          /*
+          if (targetNode == null)
+            targetNode = parent.document.getElementById('simulator_iframe');*/
+
+          console.log("OneTouch checking if iframe");
           if (targetNode != null) {
             var observer = new MutationObserver(function(){
             if(targetNode.style.display != 'none'){
@@ -170,9 +178,10 @@
             }
             });
             observer.observe(targetNode, { attributes: true, childList: true });
-
+            console.log("OneTouch in iframe");
             return true;
           }
+          console.log("OneTouch no iframe");
           return false;
         }
 
@@ -529,6 +538,17 @@
             }
         }
 
+// Print all events
+/*
+    Object.keys(window).forEach(key => {
+    if (/^on/.test(key)) {
+        window.addEventListener(key.slice(2), event => {
+            console.log(event);
+            
+        });
+      }
+    });
+*/
     </script>
 
 

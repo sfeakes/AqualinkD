@@ -1879,8 +1879,12 @@ void main_loop()
         _aqualink_data.updated = process_packet(packet_buffer, packet_length);
 
 #ifdef AQ_PDA 
-        if (isPDA_PANEL)
-          caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
+        if (isPDA_PANEL) {
+          // If we are in simulator mode, the sim has already send the ack
+          if (_aqualink_data.simulator_active == SIM_NONE) {
+            caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
+          }
+        }
         else
 #endif
           caculate_ack_packet(rs_fd, packet_buffer, ALLBUTTON);

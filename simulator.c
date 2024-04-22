@@ -72,6 +72,13 @@ bool processSimulatorPacket(unsigned char *packet, int packet_length, struct aqu
 
 bool start_simulator(struct aqualinkdata *aqdata, emulation_type type) {
 
+  // If we are a PDA panel and PDA sim, we are connected, so just set that
+  // since PDA only panel can only handle one remote ID.
+  if (isPDA_PANEL && type == AQUAPDA) {
+    aqdata->simulator_active = type;
+    aqdata->simulator_id = _aqconfig_.device_id;
+  }
+
   // if type is same AND id is valid, sim is already started, their is nothing to do.
   if (aqdata->simulator_active == type) {
     if (aqdata->simulator_id >= 0x40 && aqdata->simulator_id <= 0x43) {

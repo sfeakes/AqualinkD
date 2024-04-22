@@ -24,10 +24,15 @@
             flex-direction: column;
         }
 
+        .inner {
+            display: inline;
+        }
+
         .wrapper {
             display: flex;
             justify-content: center;
             width: 100%;
+            align-items: center;
             /*position: absolute;
             justify-content: center;
             width: 100%;
@@ -131,6 +136,14 @@
             /*font-family: monospace;*/
             font-size: x-small;
         }
+
+        .hide {
+            display: none;
+            /*
+            filter: alpha(opacity=0);
+            opacity: 0.0;
+            */
+        }
     </style>
 
     <script type='text/javascript'>
@@ -156,6 +169,8 @@
         var _hlightcharline = "";
         var _hlightcharstart = -1;
         var _hlightcharend = -1;
+
+        var _initial_click=false;
 
          // See if we are in an iframe and capture focus
         function capture_iframe_focus() {
@@ -417,12 +432,18 @@
             }
         }
 
+
         function update_status(data) {
             // Some form of error if PDA only panel.
+            
             if (data.panel_type.startsWith("PDA")) {
-                //document.getElementById("status").innerHTML = '  !!! PDA only panels are not Supported !!!  '
-                //document.getElementById("status").classList.add("error");
-                update_status_message("PDA only panels are not Supported", true);
+                // If we are a PDA only panel, we are already connected, send the back command to get some PDA clar
+                // message to reset the screen.
+                if (_initial_click == false) {
+                  document.getElementById("pdaWarning").style.display = 'block';
+                  document.getElementById("Back").click();
+                  _initial_click = true;
+                }
             }
 
             const versionlabel = document.getElementById("version");
@@ -541,7 +562,7 @@
     <div class="wrapper">
 
         <div class="inner">
-
+<div>
             <table border='0' id="deviceList">
                 <tr>
                     <th id="status" align="center" colspan="5">&nbsp;</th>
@@ -652,9 +673,11 @@
                     <td colspan="5" id="version" class="version">&nbsp;</td>
                 </tr>
             </table>
-
+</div>
             <!--<div class="inner">END</div>-->
-
+            <div id="pdaWarning" class='hide'>
+                Warning<br>AqualinkD will not respond to commands while this window is open,<br>Please close when finished.
+            </div>
         </div>
 
     </div>

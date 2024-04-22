@@ -56,9 +56,10 @@ https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
    </td></tr>
  </table>
 
-### Simulator
-Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to fully configure the master control panel<br>
-<img src="extras/simulator.png?raw=true" width="550">
+### Simulators
+Designed to mimic AqualinkRS devices, used to fully configure the master control panel<br>
+<img src="extras/onetouch_sim.png?raw=true">
+<img src="extras/allbutton_sim.png?raw=true">
 
 ### In Apple Home app.
 <img src="extras/HomeKit2.png?raw=true" width="800"></img>
@@ -71,13 +72,26 @@ Designed to mimic AqualinkRS6 All Button keypad and (like the keypad) is used to
 ## All Web interfaces.
 * http://aqualink.ip/     <- (Standard WEB UI
 * http://aqualink.ip/simple.html   <- (Simple opion if you don't like the above)
-* http://aqualink.ip/simulator.html  <- (RS8 All Button Control Panel simulator)
-* http://aqualink.ip/debug.html  <- (Turn on/off debug/serial debug & download logs)
+* http://aqualink.ip/simulator.html  <- (Displays all simulators in one page with tabs)
+* http://aqualink.ip/aqmanager.html  <- (Manage AqualinkD configuration & runtime)
+* http://aqualink.ip/allbutton_sim.html  <- (All Button Simulator)
+* http://aqualink.ip/onetouch_sim.html  <- (One Touch Simulator)
+* http://aqualink.ip/aquapda_sim.html  <- (PDA simulator)
 #<a name="release"></a>
 # ToDo (future release)
 * Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
 * Add set time to OneTouch protocol.
-* Publish AqualinkD Management console. (Configure, Restart, run serial_logger) within AqualinkD.
+* Update AqualinkD Management console to manage configuration
+* Create iAqualink Touch Simulator
+
+# Update in Release 2.3.4
+* Changes for Docker
+* Updated simulator code base and added new simulators for AllButton, OneTouch & PDA.
+  * <aqualinkd.ip>/allbutton_sim.html
+  * <aqualinkd.ip>/onetouch_sim.html
+  * <aqualinkd.ip>/aquapda_sim.html
+    * On PDA only panel AqualinkD has to share the same ID with the PDA simulator. There for AqualinkD will not respond to commands while simulator is active.
+* Now you can completley program the control panel with the simulators removing the need to have Jandy device.   
 
 # Update in Release 2.3.3
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
