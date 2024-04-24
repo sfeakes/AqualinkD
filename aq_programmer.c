@@ -747,9 +747,16 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
     }
   }
 #endif
+
+
+
 #ifdef AQ_PDA
   // Check we are doing something valid request
-  if (isPDA_PANEL) {
+  if (isPDA_PANEL
+#ifdef AQ_IAQTOUCH
+  && _aqconfig_.extended_device_id_programming == false && _aqconfig_.extended_device_id == 0x00
+#endif
+  ) {
     pda_reset_sleep();
     if (type != AQ_PDA_INIT && 
         type != AQ_PDA_WAKE_INIT &&

@@ -337,7 +337,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_POLL          0x30  // Poll message or ready to receive command
 #define CMD_IAQ_CTRL_READY    0x31  // Get this when we can send big control command
 #define CMD_IAQ_PAGE_CONTINUE 0x40  // Seems we get this on AUX device page when there is another page, keeps circuling through pages.
-
+#define CMD_IAQ_TITLE_MESSAGE 0x2d  // This is what the product name is set to (Jandy RS) usually
 //#define CMD_IAQ_VSP_ERROR     0x2c  // Error when setting speed too high
 #define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
 /*

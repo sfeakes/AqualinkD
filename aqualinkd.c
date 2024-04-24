@@ -1578,7 +1578,7 @@ void main_loop()
 #ifdef AQ_PDA
   if (isPDA_PANEL) {
     init_pda(&_aqualink_data);
-    if (_aqconfig_.extended_device_id != 0x00)
+    if (_aqconfig_.extended_device_id != 0x00 && _aqconfig_.extended_device_id != 0x33)
     {
       LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon can't use extended_device_id in PDA mode, ignoring value '0x%02hhx' from cfg\n",_aqconfig_.extended_device_id);
       _aqconfig_.extended_device_id = 0x00;

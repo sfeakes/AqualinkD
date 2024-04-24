@@ -421,13 +421,14 @@ console.log("SIM LOAD");
                 status.classList.remove("error");
             }
         }
+        
 
         function update_status(data) {
             // Some form of error if PDA only panel.
             if (data.panel_type.startsWith("PDA")) {
                 //document.getElementById("status").innerHTML = '  !!! PDA only panels are not Supported !!!  '
                 //document.getElementById("status").classList.add("error");
-                update_status_message("PDA only panels are not Supported", true);
+                update_status_message("Some PDA panels do not support OneTouch", true);
             }
 
             const versionlabel = document.getElementById("version");

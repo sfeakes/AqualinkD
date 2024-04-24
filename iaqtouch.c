@@ -537,6 +537,12 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     if (gotStatus == false)
       gotStatus = true;
     //[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
+
+    if (isPDA_PANEL && !in_iaqt_programming_mode(aq_data) ) {
+      printf("********* NEXT PAGE **********\n");
+      iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
+    }
+    
   } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_END) {
     set_iaq_cansend(true);
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND on\n");

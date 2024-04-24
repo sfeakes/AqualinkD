@@ -98,6 +98,12 @@ void waitfor_iaqt_queue2empty()
     delay(PROGRAMMING_POLL_DELAY_TIME);
   }
 
+  // Initial startup can take some time, _cansend should be false during this time.
+  // If we start programming before we receive the first status page, nothing works, this forces that wait
+  while(_cansend == false) {
+    delay(PROGRAMMING_POLL_DELAY_TIME * 2);
+  }
+
   if (_iaqt_pgm_command != NUL) {
       // Wait for longer interval
       while ( (_iaqt_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER * 2 ) ) {

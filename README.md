@@ -84,6 +84,10 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Update AqualinkD Management console to manage configuration
 * Create iAqualink Touch Simulator
 
+# Update in Release 2.3.5
+* Added iAqualinkTouch support for PDA only panels that can use that protocol.
+  * This makes the PDA only panels quicker and less error prone.
+
 # Update in Release 2.3.4
 * Changes for Docker
 * Updated simulator code base and added new simulators for AllButton, OneTouch & PDA.
