@@ -487,8 +487,8 @@ void processPage(struct aqualinkdata *aq_data)
           printf("********* NEXT PAGE FROM DEVICES **********\n");
           iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
         } else {
-          printf("********* HOME FROM DEVICES **********\n");
-          iaqt_queue_cmd(KEY_IAQTCH_HOME);
+          printf("********* STATUS FROM DEVICES **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_STATUS);
         }
       }
     break;
@@ -504,8 +504,8 @@ void processPage(struct aqualinkdata *aq_data)
           printf("********* NEXT PAGE FROM DEVICES2 **********\n");
           iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
         } else {
-          printf("********* HOME FROM DEVICES2 **********\n");
-          iaqt_queue_cmd(KEY_IAQTCH_HOME);
+          printf("********* STATUS FROM DEVICES2 **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_STATUS);
         }
       }
     break;
@@ -623,7 +623,11 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
     // Load status page every 50 messages
     if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
-      iaqt_queue_cmd(KEY_IAQTCH_STATUS);
+      if (isPDA) {
+        iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
+      } else {
+        iaqt_queue_cmd(KEY_IAQTCH_STATUS);
+      }
       gotStatus = false; // Reset if we got status page, for fix panel bug.
       //aq_programmer(AQ_GET_IAQTOUCH_VSP_ASSIGNMENT, NULL, aq_data);
       cnt = 0;
@@ -631,7 +635,12 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
       // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
       LOG(IAQT_LOG,LOG_INFO, "Overcomming Jandy control panel bug, (missing status, goto menu)\n",cnt);
       iaqt_queue_cmd(KEY_IAQTCH_HOME);
-      iaqt_queue_cmd(KEY_IAQTCH_STATUS);
+      
+      if (isPDA) {
+        iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
+      } else {
+        iaqt_queue_cmd(KEY_IAQTCH_STATUS);
+      }
     } else if (in_programming_mode(aq_data) == true) {
       // Set count to something close to above, so we will pull latest info once programming has finished.
       // This is goot for VSP GPM programming as it takes number of seconds to register once finished programming.
