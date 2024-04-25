@@ -453,6 +453,7 @@ void debugPrintButtons(struct iaqt_page_button buttons[])
 
 void processPage(struct aqualinkdata *aq_data)
 {
+  //static int _home_cnt = 0;
   int i;
 
   LOG(IAQT_LOG,LOG_INFO, "Page: %s | 0x%02hhx\n",iaqt_page_name(_currentPage),_currentPage);
@@ -476,10 +477,37 @@ void processPage(struct aqualinkdata *aq_data)
     case IAQ_PAGE_DEVICES:
       //LOG(IAQT_LOG,LOG_INFO, "Devices Page #1:-\n");
       debugPrintButtons(_devicePageButtons);
+
+
+      // If Button 15 has type 0x02 then we have previous, if 0x00 nothing (previous send code KEY_IAQTCH_PREV_PAGE)
+      // If Button 16 has type 0x03 then we have next, if 0x00 nothing (next send code KEY_IAQTCH_NEXT_PAGE)
+      if (isPDA_PANEL && !in_iaqt_programming_mode(aq_data) ) {
+        printf("********* button 16 type = 0x%02hhx **********\n",_devicePageButtons[16].type);
+        if (_devicePageButtons[16].type == 0x03) {
+          printf("********* NEXT PAGE FROM DEVICES **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
+        } else {
+          printf("********* HOME FROM DEVICES **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_HOME);
+        }
+      }
     break;
     case IAQ_PAGE_DEVICES2:
       //LOG(IAQT_LOG,LOG_INFO, "Devices Page #2:-\n");
       debugPrintButtons(_devicePage2Buttons);
+
+      // If Button 15 has type 0x02 then we have previous, if 0x00 nothing (previous send code KEY_IAQTCH_PREV_PAGE)
+      // If Button 16 has type 0x03 then we have next, if 0x00 nothing (next send code KEY_IAQTCH_NEXT_PAGE)
+      if (isPDA_PANEL && !in_iaqt_programming_mode(aq_data) ) {
+        printf("********* button 16 type = 0x%02hhx **********\n",_devicePage2Buttons[16].type);
+        if (_devicePage2Buttons[16].type == 0x03) {
+          printf("********* NEXT PAGE FROM DEVICES2 **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
+        } else {
+          printf("********* HOME FROM DEVICES2 **********\n");
+          iaqt_queue_cmd(KEY_IAQTCH_HOME);
+        }
+      }
     break;
     case IAQ_PAGE_COLOR_LIGHT:
       //LOG(IAQT_LOG,LOG_INFO, "Color Light Page :-\n");
@@ -491,7 +519,7 @@ void processPage(struct aqualinkdata *aq_data)
         if (_deviceStatus[i][0] != 0)
           LOG(IAQT_LOG,LOG_INFO, "Status page %.2d| %s\n",i,_deviceStatus[i]);
 
-      debugPrintButtons(_pageButtons);
+      debugPrintButtons(_pageButtons);    
     break;
     case IAQ_PAGE_SYSTEM_SETUP:
       //LOG(IAQT_LOG,LOG_INFO, "System Setup :-\n");
@@ -537,12 +565,6 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     if (gotStatus == false)
       gotStatus = true;
     //[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
-
-    if (isPDA_PANEL && !in_iaqt_programming_mode(aq_data) ) {
-      printf("********* NEXT PAGE **********\n");
-      iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
-    }
-    
   } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_END) {
     set_iaq_cansend(true);
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND on\n");
@@ -593,6 +615,9 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
     //aq_programmer(AQ_SET_IAQTOUCH_SET_TIME, NULL, aq_data);
   }
+  /*
+  NEED TO ALTERNATE SEND KEY_IAQTCH_HOMEP_KEY08 KEY and KEY_IAQTCH_STATUS BELOW FOR PDA
+  */
   // Standard ack/poll not interested in printing or kicking threads
   if (packet[3] == 0x30) {
     //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
