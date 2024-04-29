@@ -40,10 +40,10 @@
 #define PENTAIR_DEC_PUMP_MAX  111   // 0x6F
 #define JANDY_DEC_PUMP_MIN    120   // 0x80
 #define JANDY_DEC_PUMP_MAX    123   // 0x83
-#define JANDY_DEC_LX_MIN       56   // 0x40
-#define JANDY_DEC_LX_MAX       59   // 0x43
-#define JANDY_DEC_LXI_MIN     104   // 0x60
-#define JANDY_DEC_LXI_MAX     107   // 0x6B 
+#define JANDY_DEC_JXI_MIN     104   // 0x68
+#define JANDY_DEC_JXI_MAX     107   // 0x6B
+#define JANDY_DEC_LX_MIN     56   // 0x38
+#define JANDY_DEC_LX_MAX     59   // 0x3B 
 
 
 // PACKET DEFINES Jandy
@@ -124,6 +124,10 @@
 #define CMD_GETID       0x14  // May be remote control control
 #define CMD_PERCENT     0x11  // Set Percent
 #define CMD_PPM         0x16  // Received PPM
+
+/* LXi Heater commands */
+#define CMD_JXI_PING     0x0c
+#define CMD_JXI_STATUS   0x0d
 
 /* PDA KEY CODES */  // Just plating at the moment
 #define KEY_PDA_UP     0x06
@@ -390,6 +394,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_STATUS2         0x2a // Something get this for Status rather than 0x5b
 #define IAQ_PAGE_DEVICES         0x36
 #define IAQ_PAGE_DEVICES2        0x35
+#define IAQ_PAGE_DEVICES3        0x51
 #define IAQ_PAGE_SET_TEMP        0x39
 #define IAQ_PAGE_MENU            0x0f
 #define IAQ_PAGE_SET_VSP         0x1e
@@ -426,7 +431,8 @@ typedef enum {
   DRS_NONE,
   DRS_SWG,
   DRS_EPUMP,
-  DRS_LXI
+  DRS_JXI,
+  DRS_LX
 } rsDeviceType;
 
 typedef enum {

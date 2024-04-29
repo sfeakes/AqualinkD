@@ -168,6 +168,19 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_EPUMP_WATTS:
       return "ePump get Watts";
     break;
+    case CMD_JXI_PING:
+      if (packet[4] == 0x19)
+        return "LXi heater on";
+      else // 0x11 is normal off
+        return "LXi heater ping";
+    break;
+    case CMD_JXI_STATUS:
+      if (packet[6] == 0x10)
+        return "LXi error";
+      else
+        return "LXi status";
+    break;
+
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;

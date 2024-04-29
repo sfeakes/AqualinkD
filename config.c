@@ -552,11 +552,17 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_LXi", 14) == 0) {
+  } else if (strncasecmp (param, "read_RS485_JXi", 14) == 0) {
     if (text2bool(value))
-      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LXI;
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_JXI;
     else
-      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LXI;
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_JXI;
+    rtn=true;
+   } else if (strncasecmp (param, "read_RS485_LX", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LX;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LX;
     rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);

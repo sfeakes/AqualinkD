@@ -685,7 +685,11 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   const char *status;
 
   if (_aqconfig_.mqtt_timed_update) {
+#ifdef AQ_NO_THREAD_NETSERVICE
     if (cnt > 300) {  // 100 = about every 2 minutes.
+#else
+    if (cnt > 30) {  // 30 = about every 2 minutes.
+#endif
       reset_last_mqtt_status();
       cnt = 0;
     } else {
@@ -831,9 +835,10 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       int dzalert;
     
       get_swg_status_mqtt(_aqualink_data, message, &status, &dzalert);
-      send_domoticz_mqtt_status_message(nc, _aqconfig_.dzidx_swg_status, dzalert, &message[9]);
 
+      send_domoticz_mqtt_status_message(nc, _aqconfig_.dzidx_swg_status, dzalert, &message[9]);
       send_mqtt_int_msg(nc, SWG_EXTENDED_TOPIC, (int)_aqualink_data->ar_swg_device_status);
+      send_mqtt_string_msg(nc, SWG_STATUS_MSG_TOPIC, message);
 
       _last_mqtt_aqualinkdata.ar_swg_device_status = _aqualink_data->ar_swg_device_status;
       //LOG(NET_LOG,LOG_DEBUG, "SWG Extended sending cur=%d sent=%d\n",_aqualink_data->ar_swg_device_status,_last_mqtt_aqualinkdata.ar_swg_device_status);
@@ -842,6 +847,22 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     }
   } else {
     //LOG(NET_LOG,LOG_DEBUG, "SWG Extended unknown\n");
+  }
+
+  if (READ_RSDEV_JXI && _aqualink_data->heater_err_status != _last_mqtt_aqualinkdata.heater_err_status) {
+    char message[30];
+
+    if (_aqualink_data->heater_err_status == NUL) {
+      send_mqtt_int_msg(nc, LXI_ERROR_CODE, (int)_aqualink_data->heater_err_status);
+      send_mqtt_string_msg(nc, LXI_ERROR_MESSAGE, "");
+    } else {
+      //send_mqtt_int_msg(nc, LXI_STATUS, (int)_aqualink_data->heater_err_status);
+      send_mqtt_int_msg(nc, LXI_ERROR_CODE, (int)_aqualink_data->heater_err_status);
+      getJandyHeaterErrorMQTT(_aqualink_data, message);
+      send_mqtt_string_msg(nc, LXI_ERROR_MESSAGE, status);
+    }
+
+    _last_mqtt_aqualinkdata.heater_err_status = _aqualink_data->heater_err_status;
   }
 
   // LOG(NET_LOG,LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -1876,6 +1897,7 @@ void reset_last_mqtt_status()
   _last_mqtt_aqualinkdata.boost = -1;
   _last_mqtt_aqualinkdata.swg_percent = -1;
   _last_mqtt_aqualinkdata.swg_ppm = -1;
+  _last_mqtt_aqualinkdata.heater_err_status = NUL; // 0x00
 
 }
 

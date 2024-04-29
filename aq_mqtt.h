@@ -24,11 +24,18 @@
 #define SWG_EXTENDED_TOPIC SWG_TOPIC "/fullstatus"
 #define SWG_BOOST_TOPIC SWG_TOPIC "/Boost"
 
+#define SWG_STATUS_MSG_TOPIC SWG_TOPIC "/Display_Message"
+
 #define CHEM_TOPIC "CHEM"
 #define CHEM_PH_TOPIC CHEM_TOPIC "/pH"
 #define CHRM_PH_F_TOPIC CHEM_TOPIC "/pH_f"
 #define CHEM_ORP_TOPIC CHEM_TOPIC "/ORP"
 #define CHRM_ORP_F_TOPIC CHEM_TOPIC "/ORP_f"
+
+#define LXI_TOPIC "LXi"
+#define LXI_STATUS LXI_TOPIC "/Status"
+#define LXI_ERROR_CODE LXI_TOPIC "/Error"
+#define LXI_ERROR_MESSAGE LXI_TOPIC "/Error_Message"
 
 #define FREEZE_PROTECT "Freeze_Protect"
 #define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT

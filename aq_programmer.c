@@ -397,8 +397,15 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
       }
     }
 #ifdef AQ_PDA
-  } else if ( source_type == AQUAPDA) {
+  } else if ( isPDA_PANEL && source_type == AQUAPDA) {
     aq_programmer(AQ_PDA_INIT, NULL, aq_data);
+  } else if ( isPDA_PANEL && source_type == IAQTOUCH) {
+    //aq_programmer(AQ_PDA_INIT, NULL, aq_data);
+    if (_aqconfig_.use_panel_aux_labels) {
+      aq_programmer(AQ_GET_AUX_LABELS, NULL, aq_data);
+    }
+    aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data);
+    
 #endif
   } else { // Must be all button only
     aq_programmer(AQ_GET_POOL_SPA_HEATER_TEMPS, NULL, aq_data);
@@ -527,7 +534,8 @@ bool in_iaqt_programming_mode(struct aqualinkdata *aq_data)
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_POOL_HEATER_TEMP ||
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SPA_HEATER_TEMP ||
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SET_TIME ||
-         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM)
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_DEVICE_ON_OFF)
      ) {
      return true;
   }
@@ -719,7 +727,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
   }
 #endif
 #ifdef AQ_IAQTOUCH
-  else if (isIAQT_ENABLED && isEXTP_ENABLED) {
+  else if ((isIAQT_ENABLED && isEXTP_ENABLED) || isPDA_IAQT) {
     // IAQ Touch programming modes that should overite standard ones.
     switch (r_type){
       case AQ_GET_POOL_SPA_HEATER_TEMPS:
@@ -741,6 +749,11 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       case AQ_SET_TIME:
         type = AQ_SET_IAQTOUCH_SET_TIME;
       break;
+      case AQ_PDA_DEVICE_ON_OFF:
+        if (isPDA_IAQT) {
+          type = AQ_SET_IAQTOUCH_DEVICE_ON_OFF;
+        }
+      break;
       default:
         type = r_type;
       break;
@@ -752,11 +765,8 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
 
 #ifdef AQ_PDA
   // Check we are doing something valid request
-  if (isPDA_PANEL
-#ifdef AQ_IAQTOUCH
-  && _aqconfig_.extended_device_id_programming == false && _aqconfig_.extended_device_id == 0x00
-#endif
-  ) {
+  if (isPDA_PANEL && !isPDA_IAQT)
+  {
     pda_reset_sleep();
     if (type != AQ_PDA_INIT && 
         type != AQ_PDA_WAKE_INIT &&
@@ -1057,6 +1067,12 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       break;
     case AQ_PDA_DEVICE_ON_OFF:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_PDA_device_on_off, (void*)programmingthread) < 0) {
+        LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_device_on_off, (void*)programmingthread) < 0) {
         LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
         return;
       }
@@ -2622,6 +2638,9 @@ const char *ptypeName(program_type type)
     case AQ_SET_IAQTOUCH_SET_TIME:
       return "Set iAqualink Set Time";
     break;
+    case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
+    return "Set iAqualink Device On/Off";
+    break;
 #endif
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
@@ -2715,6 +2734,9 @@ const char *programtypeDisplayName(program_type type)
     break;
     case AQ_GET_IAQTOUCH_VSP_ASSIGNMENT:
       return "Get Pump Assignment";
+    break;
+    case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
+      return "Programming: setting device on/off";
     break;
 #ifdef AQ_PDA
     case AQ_PDA_DEVICE_STATUS:

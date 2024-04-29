@@ -807,6 +807,9 @@ bool process_packet(unsigned char *packet, int length)
 #ifdef AQ_PDA
   if (isPDA_PANEL)
   {
+    if (isPDA_IAQT) {
+      return false;
+    }
     return process_pda_packet(packet, length);
   }
 #endif
@@ -1168,7 +1171,7 @@ int startup(char *self, char *cfgFile)
       return EXIT_FAILURE;
     }
   } else if (isPDA_PANEL) {
-    if (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) {
+    if ( (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) || _aqconfig_.device_id == 0x33 ) {
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match PDA panel, please check config!\n", _aqconfig_.device_id);
@@ -1519,6 +1522,7 @@ void main_loop()
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
   _aqualink_data.ar_swg_device_status = SWG_STATUS_UNKNOWN;
+  _aqualink_data.heater_err_status = NUL; // 0x00 is no error
   _aqualink_data.swg_led_state = LED_S_UNKNOWN;
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
@@ -1578,7 +1582,7 @@ void main_loop()
 #ifdef AQ_PDA
   if (isPDA_PANEL) {
     init_pda(&_aqualink_data);
-    if (_aqconfig_.extended_device_id != 0x00 && _aqconfig_.extended_device_id != 0x33)
+    if (_aqconfig_.extended_device_id != 0x00)
     {
       LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon can't use extended_device_id in PDA mode, ignoring value '0x%02hhx' from cfg\n",_aqconfig_.extended_device_id);
       _aqconfig_.extended_device_id = 0x00;
@@ -1881,6 +1885,12 @@ void main_loop()
 #ifdef AQ_PDA 
         if (isPDA_PANEL) {
           // If we are in simulator mode, the sim has already send the ack
+          if (isPDA_IAQT) {
+            //printf("****PDA IAQT Code\n");
+            _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+            _aqualink_data.updated = true; // FORCE UPDATE SINCE THIS IS NOT WORKING YET
+            caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+          }
           if (_aqualink_data.simulator_active == SIM_NONE) {
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
           }

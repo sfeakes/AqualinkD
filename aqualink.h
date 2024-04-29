@@ -220,6 +220,7 @@ struct aqualinkdata
   int swg_percent;
   int swg_ppm;
   unsigned char ar_swg_device_status; // Actual state 
+  unsigned char heater_err_status;
   aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;

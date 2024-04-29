@@ -85,9 +85,12 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Create iAqualink Touch Simulator
 
 # Update in Release 2.3.5
+* Added support for reading extended information for Jandy JXi heaters
 * Added iAqualinkTouch support for PDA only panels that can use that protocol.
+  * PDA panel needs to be Rev 6.0 or newer.
   * This makes the PDA only panels quicker and less error prone.
-
+* Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
+  
 # Update in Release 2.3.4
 * Changes for Docker
 * Updated simulator code base and added new simulators for AllButton, OneTouch & PDA.

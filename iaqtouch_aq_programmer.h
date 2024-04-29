@@ -20,6 +20,8 @@ void *set_aqualink_iaqtouch_pool_heater_temp( void *ptr );
 void *set_aqualink_iaqtouch_time( void *ptr );
 void *set_aqualink_iaqtouch_pump_vs_program( void *ptr );
 
+void *set_aqualink_iaqtouch_device_on_off( void *ptr ); // For PDA only
+
 int ref_iaqt_control_cmd(unsigned char **cmd);
 void rem_iaqt_control_cmd(unsigned char *cmd);
 

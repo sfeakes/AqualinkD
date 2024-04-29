@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "aq_serial.h"
 #include "aqualink.h"
@@ -69,13 +70,15 @@ unsigned char _lastMsgType = 0x00;
 //unsigned char _last_kick_type = -1;
 
 int _deviceStatusLines = 0;
+char _homeStatus[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
 char _deviceStatus[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
 char _tableInformation[IAQ_MSG_TABLE_LINES][IAQT_TABLE_MSGLEN+1];
 struct iaqt_page_button _pageButtons[IAQ_PAGE_BUTTONS];
+struct iaqt_page_button _homeButtons[IAQ_PAGE_BUTTONS];
 
 // Need to cache these two pages, as only get updates after initial load.
 struct iaqt_page_button _devicePageButtons[IAQ_PAGE_BUTTONS];
-struct iaqt_page_button _devicePage2Buttons[IAQ_PAGE_BUTTONS];
+//struct iaqt_page_button _devicePage2Buttons[IAQ_PAGE_BUTTONS];
 struct iaqt_page_button _deviceSystemSetupButtons[IAQ_PAGE_BUTTONS];
 
 unsigned char iaqtLastMsg()
@@ -129,12 +132,18 @@ struct iaqt_page_button *iaqtFindButtonByIndex(int index) {
   struct iaqt_page_button *buttons;
 
   // NSF Need to merge this from iaqtFindButtonByLabel function
-  if (_currentPage == IAQ_PAGE_DEVICES )
+  if (_currentPage == IAQ_PAGE_DEVICES ||
+      _currentPage == IAQ_PAGE_DEVICES2 ||
+      _currentPage == IAQ_PAGE_DEVICES3)
     buttons = _devicePageButtons;
+    /*
   else if (_currentPage == IAQ_PAGE_DEVICES2 )
     buttons = _devicePage2Buttons;
+    */
   else if (_currentPage == IAQ_PAGE_SYSTEM_SETUP )
     buttons = _deviceSystemSetupButtons;
+  else if (_currentPage == IAQ_PAGE_HOME )
+    buttons = _homeButtons;
   else
     buttons = _pageButtons;
 
@@ -149,12 +158,16 @@ struct iaqt_page_button *iaqtFindButtonByLabel(char *label) {
   int i;
   struct iaqt_page_button *buttons;
 
-  if (_currentPage == IAQ_PAGE_DEVICES )
+  if (_currentPage == IAQ_PAGE_DEVICES ||
+      _currentPage == IAQ_PAGE_DEVICES2 ||
+      _currentPage == IAQ_PAGE_DEVICES3)
     buttons = _devicePageButtons;
-  else if (_currentPage == IAQ_PAGE_DEVICES2 )
-    buttons = _devicePage2Buttons;
+  //else if (_currentPage == IAQ_PAGE_DEVICES2 )
+  //  buttons = _devicePage2Buttons;
   else if (_currentPage == IAQ_PAGE_SYSTEM_SETUP )
     buttons = _deviceSystemSetupButtons;
+  else if (_currentPage == IAQ_PAGE_HOME )
+    buttons = _homeButtons;
   else
     buttons = _pageButtons;
 
@@ -237,8 +250,10 @@ void processPageMessage(unsigned char *message, int length)
     LOG(IAQT_LOG,LOG_ERR, "Run out of IAQT message buffer, need %d have %d\n",(int)message[PKT_IAQT_MSGINDX],IAQ_STATUS_PAGE_LINES);
     return;
   }
-  // 2nd page of device status doesn;t gine us new page message
-  if (_currentPageLoading == IAQ_PAGE_STATUS || _currentPage == IAQ_PAGE_STATUS) {
+  
+  if (_currentPageLoading == IAQ_PAGE_HOME || _currentPage == IAQ_PAGE_HOME) {
+    rsm_strncpy(_homeStatus[(int)message[PKT_IAQT_MSGINDX]], &message[PKT_IAQT_MSGDATA], AQ_MSGLEN, length-PKT_IAQT_MSGDATA-3);
+  } else if (_currentPageLoading == IAQ_PAGE_STATUS || _currentPage == IAQ_PAGE_STATUS) { // 2nd page of device status doesn;t gine us new page message
     //sprintf(_deviceStatus[(int)message[4]], message[5], AQ_MSGLEN);
     //strncpy(_deviceStatus[(int)message[PKT_IAQT_MSGINDX]], (char *)message + PKT_IAQT_MSGDATA, AQ_MSGLEN);
     rsm_strncpy(_deviceStatus[(int)message[PKT_IAQT_MSGINDX]], &message[PKT_IAQT_MSGDATA], AQ_MSGLEN, length-PKT_IAQT_MSGDATA-3);
@@ -259,19 +274,25 @@ void processTableMessage(unsigned char *message, int length)
     LOG(IAQT_LOG,LOG_ERR, "Run out of IAQT table buffer, need %d have %d\n",(int)message[5],IAQ_MSG_TABLE_LINES);
 }
 
-void processPageButton(unsigned char *message, int length)
+void processPageButton(unsigned char *message, int length, struct aqualinkdata *aq_data)
 {
   struct iaqt_page_button *button;
   int index = (int)message[PKT_IAQT_BUTINDX];
 
-  if (_currentPageLoading == IAQ_PAGE_DEVICES )
+  if (_currentPageLoading == IAQ_PAGE_DEVICES ||
+      _currentPageLoading == IAQ_PAGE_DEVICES2 ||
+      _currentPageLoading == IAQ_PAGE_DEVICES3 )
     button = &_devicePageButtons[index];
-  else if (_currentPageLoading == IAQ_PAGE_DEVICES2 )
-    button = &_devicePage2Buttons[index];
+  //else if (_currentPageLoading == IAQ_PAGE_DEVICES2 )
+  //  button = &_devicePage2Buttons[index];
   else if (_currentPageLoading == IAQ_PAGE_SYSTEM_SETUP )
     button = &_deviceSystemSetupButtons[index];
-  else
+  else if (_currentPageLoading == IAQ_PAGE_HOME )
+    button = &_homeButtons[index];
+  else {
     button = &_pageButtons[index];
+    LOG(IAQT_LOG,LOG_WARNING, "Not sure where to add Button %d %s - LoadingPage=%s\n",index,button->name,iaqt_page_name(_currentPageLoading));
+  }
 
   button->state  = message[PKT_IAQT_BUTSTATE];
   button->type  = message[PKT_IAQT_BUTTYPE];
@@ -285,9 +306,52 @@ void processPageButton(unsigned char *message, int length)
   // This doesn't work with return which is 0x00
   
   //strncpy(&button->name, (char *)message + PKT_IAQT_BUTDATA, AQ_MSGLEN);
+  memset(button->name, 0, sizeof(button->name));
   rsm_strncpy_nul2sp((char *)button->name, &message[PKT_IAQT_BUTDATA], IAQT_MSGLEN, length-PKT_IAQT_BUTDATA-3);
 
-  LOG(IAQT_LOG,LOG_DEBUG, "Added Button %d %s\n",index,button->name);
+  LOG(IAQT_LOG,LOG_DEBUG, "Added Button %d %s - LoadingPage=%s\n",index,button->name,iaqt_page_name(_currentPageLoading));
+
+  // This get's called or every device state change in PDA mode, since we page over all the devices.
+  // So capture and update the device state
+
+  if (isPDA_PANEL) {
+    for (int i = 0; i < aq_data->total_buttons; i++)
+    {
+      if (rsm_strmatch(button->name, aq_data->aqbuttons[i].label) == 0)
+      {
+        LOG(IAQT_LOG,LOG_DEBUG, "*** Found Status for %s state 0x%02hhx\n", aq_data->aqbuttons[i].label, button->state);
+        switch(button->state) {
+          case 0x00:
+            if (aq_data->aqbuttons[i].led->state != OFF) {
+              aq_data->aqbuttons[i].led->state = OFF;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x01:
+            if (aq_data->aqbuttons[i].led->state != ON) {
+              aq_data->aqbuttons[i].led->state = ON;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x02:
+            if (aq_data->aqbuttons[i].led->state != FLASH) {
+              aq_data->aqbuttons[i].led->state = FLASH;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x03:
+            if (aq_data->aqbuttons[i].led->state != ENABLE) {
+              aq_data->aqbuttons[i].led->state = ENABLE;
+              aq_data->updated = true;
+            }
+          break;
+          default:
+            LOG(IAQT_LOG,LOG_NOTICE, "Unknown state 0x%02hhx for button %s\n",button->state,button->name); 
+          break;
+        }
+      }
+    }
+  } 
 
 /*
   _pageButtons[index].state = (int)message[5];
@@ -367,39 +431,45 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
       continue;
 
     } else if (rsm_strcmp(_deviceStatus[i],"RPM:") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->rpm = rsm_atoi(&_deviceStatus[i][9]);
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"GPM:") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->gpm = rsm_atoi(&_deviceStatus[i][9]);
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"Watts:") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->watts = rsm_atoi(&_deviceStatus[i][9]);
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"*** Priming ***") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->rpm = PUMP_PRIMING;
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Offline)") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->rpm = PUMP_OFFLINE;
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Priming Error)") == 0) {
-      if (pump != NULL)
+      if (pump != NULL) {
         pump->rpm = PUMP_ERROR;
-      else
+        aq_data->updated = true;
+      } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
       // Need to catch messages like 
@@ -422,6 +492,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
           aq_data->ph = ph;
           aq_data->orp = orp;
         }
+        aq_data->updated = true;
         LOG(IAQT_LOG,LOG_INFO, "Set Cemlink ORP = %d PH = %f from message '%s'\n",orp,ph,_deviceStatus[i]);
       }
     }
@@ -432,9 +503,11 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_DEBUG, "Set swg %% to %d from message'%s'\n",aq_data->swg_percent,_deviceStatus[i]);
     } else if (rsm_strcmp(_deviceStatus[i],"salt") == 0) {
       aq_data->swg_ppm = rsm_atoi(&_deviceStatus[i][5]);
+      aq_data->updated = true;
       LOG(IAQT_LOG,LOG_DEBUG, "Set swg PPM to %d from message'%s'\n",aq_data->swg_ppm,_deviceStatus[i]);
     } else if (rsm_strcmp(_deviceStatus[i],"Boost Pool") == 0) {
       aq_data->boost = true;
+      aq_data->updated = true;
       // Let RS pickup time remaing message.
     }  
 #endif
@@ -469,15 +542,20 @@ void processPage(struct aqualinkdata *aq_data)
       debugPrintButtons(_pageButtons);
       passDeviceStatusPage(aq_data);
       // If button 1 is type 0x02 then there is a next page.  Since status page isn't used for programming, hit the next page button.
-      if (_pageButtons[1].type == 0x02)
+      if (_pageButtons[1].type == 0x02) {
         iaqt_queue_cmd(KEY_IAQTCH_KEY02);
-      else
+      } else {
         iaqt_pump_update(aq_data, -1); // Reset pumps.
+        if (isPDA_PANEL && !in_iaqt_programming_mode(aq_data) ) {
+          iaqt_queue_cmd(KEY_IAQTCH_HOME);
+        } 
+      }
     break;
     case IAQ_PAGE_DEVICES:
+    case IAQ_PAGE_DEVICES2:
+    case IAQ_PAGE_DEVICES3:
       //LOG(IAQT_LOG,LOG_INFO, "Devices Page #1:-\n");
       debugPrintButtons(_devicePageButtons);
-
 
       // If Button 15 has type 0x02 then we have previous, if 0x00 nothing (previous send code KEY_IAQTCH_PREV_PAGE)
       // If Button 16 has type 0x03 then we have next, if 0x00 nothing (next send code KEY_IAQTCH_NEXT_PAGE)
@@ -492,6 +570,7 @@ void processPage(struct aqualinkdata *aq_data)
         }
       }
     break;
+    /*
     case IAQ_PAGE_DEVICES2:
       //LOG(IAQT_LOG,LOG_INFO, "Devices Page #2:-\n");
       debugPrintButtons(_devicePage2Buttons);
@@ -508,7 +587,7 @@ void processPage(struct aqualinkdata *aq_data)
           iaqt_queue_cmd(KEY_IAQTCH_STATUS);
         }
       }
-    break;
+    break;*/
     case IAQ_PAGE_COLOR_LIGHT:
       //LOG(IAQT_LOG,LOG_INFO, "Color Light Page :-\n");
       debugPrintButtons(_pageButtons);
@@ -519,7 +598,33 @@ void processPage(struct aqualinkdata *aq_data)
         if (_deviceStatus[i][0] != 0)
           LOG(IAQT_LOG,LOG_INFO, "Status page %.2d| %s\n",i,_deviceStatus[i]);
 
-      debugPrintButtons(_pageButtons);    
+      for (i=0; i <IAQ_STATUS_PAGE_LINES; i++ )
+        if (_homeStatus[i][0] != 0)
+          LOG(IAQT_LOG,LOG_INFO, "Home Status page %.2d| %s\n",i,_homeStatus[i]);
+
+//Info:    iAQ Touch: Home Status page 00| 65  
+//Info:    iAQ Touch: Home Status page 01| 72  
+//Info:    iAQ Touch: Home Status page 04| Spa Temp
+//Info:    iAQ Touch: Home Status page 05| Air Temp
+      if (isPDA_PANEL) {
+       if (rsm_strcmp(_homeStatus[5],"Air Temp") == 0) {
+        aq_data->air_temp = atoi(_homeStatus[1]);
+        LOG(IAQT_LOG,LOG_DEBUG, "Air Temp set to %d\n",aq_data->air_temp);
+        aq_data->updated = true;
+       }
+       if (rsm_strcmp(_homeStatus[4],"Pool Temp") == 0) {
+        aq_data->pool_temp = atoi(_homeStatus[0]);
+        LOG(IAQT_LOG,LOG_DEBUG, "Pool Temp set to %d\n",aq_data->air_temp);
+        aq_data->updated = true;
+       } else if (rsm_strcmp(_homeStatus[4],"Spa Temp") == 0) {
+        aq_data->pool_temp = atoi(_homeStatus[0]);
+        LOG(IAQT_LOG,LOG_DEBUG, "Spa Temp set to %d\n",aq_data->air_temp);
+        aq_data->updated = true;
+       }
+      }
+
+      //passHomePage(aq_data);
+      debugPrintButtons(_homeButtons);    
     break;
     case IAQ_PAGE_SYSTEM_SETUP:
       //LOG(IAQT_LOG,LOG_INFO, "System Setup :-\n");
@@ -549,9 +654,16 @@ void processPage(struct aqualinkdata *aq_data)
 
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
+  static bool gotInit = false; 
   static int cnt = 0;
   static bool gotStatus = true;
   //char buff[1024];
+  // NSF Take this out
+  if ( packet[3] != CMD_IAQ_POLL && getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
+    char buff[1000];
+    beautifyPacket(buff, packet, length, false);
+    LOG(IAQT_LOG,LOG_DEBUG, "Received message : %s", buff);
+  }
   
   if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND off\n");
@@ -561,6 +673,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     memset(_pageButtons, 0, IAQ_PAGE_BUTTONS * sizeof(struct iaqt_page_button));
     memset(_deviceStatus, 0, sizeof(char) * IAQ_STATUS_PAGE_LINES * AQ_MSGLEN+1 );
     memset(_tableInformation, 0, sizeof(char) * IAQ_MSG_TABLE_LINES * AQ_MSGLEN+1 );
+    memset(_devicePageButtons, 0, IAQ_PAGE_BUTTONS * sizeof(struct iaqt_page_button));
     // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
     if (gotStatus == false)
       gotStatus = true;
@@ -580,7 +693,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_MSG) {
     processPageMessage(packet, length);
   } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_BUTTON) {
-    processPageButton(packet, length);
+    processPageButton(packet, length, aq_data);
     // Second page on status doesn't send start & end, but button is message, so use that to kick off next page. 
     if (_currentPage == IAQ_PAGE_STATUS) {
       /* Notice: Added Button 1 
@@ -610,8 +723,11 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   
   if (packet[3] == 0x29) {
     //printf("*****  iAqualink Touch STARTUP Message ******* \n");
-    LOG(IAQT_LOG,LOG_DEBUG, "STARTUP Message\n");
-    queueGetProgramData(IAQTOUCH, aq_data);
+    if (gotInit == false) {
+      LOG(IAQT_LOG,LOG_DEBUG, "STARTUP Message\n");
+      //queueGetProgramData(IAQTOUCH, aq_data);
+      gotInit = true;
+    }
 
     //aq_programmer(AQ_SET_IAQTOUCH_SET_TIME, NULL, aq_data);
   }
@@ -619,11 +735,11 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   NEED TO ALTERNATE SEND KEY_IAQTCH_HOMEP_KEY08 KEY and KEY_IAQTCH_STATUS BELOW FOR PDA
   */
   // Standard ack/poll not interested in printing or kicking threads
-  if (packet[3] == 0x30) {
+  if (packet[3] == CMD_IAQ_POLL) {
     //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
     // Load status page every 50 messages
     if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
-      if (isPDA) {
+      if (isPDA_PANEL) {
         iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
       } else {
         iaqt_queue_cmd(KEY_IAQTCH_STATUS);
@@ -635,12 +751,14 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
       // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
       LOG(IAQT_LOG,LOG_INFO, "Overcomming Jandy control panel bug, (missing status, goto menu)\n",cnt);
       iaqt_queue_cmd(KEY_IAQTCH_HOME);
-      
-      if (isPDA) {
+      cnt = REQUEST_STATUS_POLL_COUNT - 5;
+     /* 
+      if (isPDA_PANEL) {
         iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
       } else {
         iaqt_queue_cmd(KEY_IAQTCH_STATUS);
       }
+     */
     } else if (in_programming_mode(aq_data) == true) {
       // Set count to something close to above, so we will pull latest info once programming has finished.
       // This is goot for VSP GPM programming as it takes number of seconds to register once finished programming.
@@ -663,7 +781,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
   kick_aq_program_thread(aq_data, IAQTOUCH);
 
-  return false;
+  return true;
 }
 
 
@@ -683,6 +801,9 @@ const char *iaqt_page_name(const unsigned char page)
       return "Devices #1";
     break;
     case IAQ_PAGE_DEVICES2:
+      return "Devices #2";
+    break;
+    case IAQ_PAGE_DEVICES3:
       return "Devices #2";
     break;
     case IAQ_PAGE_SET_TEMP:

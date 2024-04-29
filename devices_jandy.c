@@ -50,9 +50,9 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     {
       rtn = processPacketFromJandyPump(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
-    else if (interestedInNextAck == DRS_LXI)
+    else if (interestedInNextAck == DRS_JXI)
     {
-      rtn = processPacketFromJandyHeater(packet_buffer, packet_length, aqdata, previous_packet_to);
+      rtn = processPacketFromJandyJXiHeater(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
@@ -83,11 +83,16 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     rtn = processPacketToJandyPump(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
-  else if (READ_RSDEV_LXI && (   (packet_buffer[PKT_DEST] >= JANDY_DEC_LX_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LX_MAX)
-                              || (packet_buffer[PKT_DEST] >= JANDY_DEC_LXI_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LXI_MAX)))
+  else if (READ_RSDEV_JXI && packet_buffer[PKT_DEST] >= JANDY_DEC_LX_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LX_MAX)
   {
-    interestedInNextAck = DRS_LXI;
-    rtn = processPacketToJandyHeater(packet_buffer, packet_length, aqdata);
+    interestedInNextAck = DRS_JXI;
+    rtn = processPacketToJandyJXiHeater(packet_buffer, packet_length, aqdata);
+    previous_packet_to = packet_buffer[PKT_DEST];
+  }
+  else if (READ_RSDEV_LX && packet_buffer[PKT_DEST] >= JANDY_DEC_LX_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LX_MAX)
+  {
+    interestedInNextAck = DRS_LX;
+    rtn = processPacketToJandyLXHeater(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
   else
@@ -572,13 +577,158 @@ void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqua
 
 
 
-bool processPacketToJandyHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
+  if (packet_buffer[3] != CMD_JXI_PING) {
+    // Not sure what this message is, so ignore
+    // Maybe print a messsage.
+    return false;
+  }
+  /*
+  Below counfing first as bit 0
+  4th bit 0x00 no pump on (nothing)
+        0x10 seems to be JXi came online. nothing more
+        0x11 (pool mode)
+        0x12 (spa mode)
+        0x19 heat pool
+        0x1a heat spa
+  5th bit 0x55 = 85 deg. (current pool setpoint)
+  6th bit 0x66 = 102 deg. (current spa setpoint)
+  7th bit 0x4f = current water temp 79 (0xFF is off / 255)
+  */
+ 
+  if (packet_buffer[5] != aqdata->pool_htr_set_point) {
+    LOG(DJAN_LOG, LOG_DEBUG, "LXi pool setpoint %d, Pool heater sp %s (changing to LXi)\n", packet_buffer[5], aqdata->pool_htr_set_point);
+    aqdata->pool_htr_set_point = packet_buffer[5];
+  }
+
+  if (packet_buffer[6] != aqdata->spa_htr_set_point) {
+    LOG(DJAN_LOG, LOG_DEBUG, "LXi spa setpoint %d, Spa heater sp %s (changing to LXi)\n", packet_buffer[5], aqdata->spa_htr_set_point);
+    aqdata->spa_htr_set_point = packet_buffer[5];
+  }
+
+  if (packet_buffer[7] != 0xff && packet_buffer[4] != 0x00) {
+    if (packet_buffer[4] == 0x11 || packet_buffer[4] == 0x19) {
+      if (aqdata->pool_temp != packet_buffer[7]) {
+        LOG(DJAN_LOG, LOG_DEBUG, "LXi pool water temp %d, pool water temp %s (changing to LXi)\n", packet_buffer[7], aqdata->pool_temp);
+        aqdata->pool_temp = packet_buffer[7];
+      }
+    } else if (packet_buffer[4] == 0x12 || packet_buffer[4] == 0x1a) {
+      if (aqdata->spa_temp != packet_buffer[7]) {
+        LOG(DJAN_LOG, LOG_DEBUG, "LXi spa water temp %d, spa water temp %s (changing to LXi)\n", packet_buffer[7], aqdata->spa_temp);
+        aqdata->spa_temp = packet_buffer[7];
+      }
+    }
+  }
+
+  switch (packet_buffer[4]) {
+    case 0x11:  // Pool heat off or enabled
+    break;
+    case 0x12:  // Pool Heat enabled or heating
+    break;
+    case 0x19:  // Spa heat off or enabled
+    break;
+    case 0x1a:  // Spa Hear Heat enabled or heating
+    break;
+  }
+
+  /*
   char msg[1000];
   int length = 0;
 
   beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_INFO, "To   Heater: %s\n", msg);
+  LOG(DJAN_LOG, LOG_INFO, "To   JXi Heater: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  for (int i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Pool Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+    if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Spa Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+  }
+
+  length += sprintf(msg+length, ", Pool SP=%d, Spa SP=%d",aqdata->pool_htr_set_point, aqdata->spa_htr_set_point);
+  length += sprintf(msg+length, ", Pool temp=%d, Spa temp=%d",aqdata->pool_temp, aqdata->spa_temp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+  
+  return false;
+  */
+   
+  return true;
+}
+
+void getJandyHeaterError(struct aqualinkdata *aqdata, char *message) 
+{
+  if (aqdata->heater_err_status == NUL) {
+    return;
+  }
+
+  int size = sprintf(message, "JXi Heater ");
+  getJandyHeaterErrorMQTT(aqdata, message+size);
+}
+
+void getJandyHeaterErrorMQTT(struct aqualinkdata *aqdata, char *message) 
+{
+  switch (aqdata->heater_err_status) {
+      case 0x00:
+        //sprintf(message,  "");
+      break;
+      case 0x10:
+        sprintf(message,  "FAULT HIGH LIMIT");
+      break;
+      case 0x02:
+        sprintf(message,  "FAULT H20 SENSOR");
+      break;
+      case 0x08:
+        sprintf(message,  "FAULT AUX MONITOR");
+      break;
+      default:
+      //
+      /*  Error we haven't decoded yet
+       ?x?? check flow
+       0x10 Fault high limit
+       ?x?? Fault High Flu temp
+       ?x?? Fault Check Igntion Control
+       0x02 Fault Short H20 sensor (or Fault open water sensor)
+       ?x?? Pump fault
+       0x08 AUX Monitor
+      */
+        sprintf(message,  "FAULT");
+      break;
+    } 
+}
+
+bool processPacketFromJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
+{
+  if (packet_buffer[3] != CMD_JXI_STATUS) {
+    // Not sure what this message is, so ignore
+    // Maybe print a messsage.
+    return false;
+  }
+  
+  // No error is 0x00, so blindly set it.
+  aqdata->heater_err_status = packet_buffer[6];
+   // Check if error first
+  if (packet_buffer[6] != 0x00) {
+    
+  } else if (packet_buffer[4] == 0x00) {
+    // Not heating.
+    // Heater off or enabeled
+  } else if (packet_buffer[4] == 0x08) {
+    // Heating
+    // Heater on of enabled
+  }
+  /*
+  char msg[1000];
+  int length = 0;   
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "From JXi Heater: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
 
@@ -598,15 +748,47 @@ bool processPacketToJandyHeater(unsigned char *packet_buffer, int packet_length,
   LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
 
   return false;
+  */
+ return true;
 }
 
-bool processPacketFromJandyHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
+bool processPacketToJandyLXHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  
+  char msg[1000];
+  int length = 0;
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "To   LX Heater: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  for (int i=0; i < aqdata->total_buttons; i++) 
+  {
+    if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Pool Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+    if ( strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name) == 0) {
+      length += sprintf(msg+length, ", Spa Heat LED=%d ",aqdata->aqbuttons[i].led->state);
+    }
+  }
+
+  length += sprintf(msg+length, ", Pool SP=%d, Spa SP=%d",aqdata->pool_htr_set_point, aqdata->spa_htr_set_point);
+  length += sprintf(msg+length, ", Pool temp=%d, Spa temp=%d",aqdata->pool_temp, aqdata->spa_temp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+
+  return false;
+  
+}
+
+bool processPacketFromJandyLXHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   char msg[1000];
   int length = 0;   
 
   beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_INFO, "From Heater: %s\n", msg);
+  LOG(DJAN_LOG, LOG_INFO, "From LX Heater: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
 
@@ -628,4 +810,55 @@ bool processPacketFromJandyHeater(unsigned char *packet_buffer, int packet_lengt
   return false;
 }
 
+/*
 
+// JXi Heater
+
+// Normal ping and return
+5th bit 0x00 no pump on (nothing)
+        0x10 seems to be JXi came online. nothing more
+        0x11 (pool mode)
+        0x12 (spa mode)
+        0x19 heat pool
+        0x1a heat spa
+6th bit 0x55 = 85 deg. (current pool setpoint)
+7th bit 0x66 = 102 deg. (current spa setpoint)
+8th bit 0x4f = current water temp 79 (0xFF is off / 255)
+
+Jandy     To 0x68 of type   Unknown '0x0c' | HEX: 0x10|0x02|0x68|0x0c|0x11|0x55|0x66|0x4f|0xa1|0x10|0x03|
+Jandy   From 0x68 of type   Unknown '0x0d' | HEX: 0x10|0x02|0x00|0x0d|0x00|0x00|0x00|0x1f|0x10|0x03|
+
+Request to turn on 85  
+5th bit 0x19 looks like turn on
+6th bit 0x55 = 85 deg.
+7th bit 0x4f = current temp 79
+Jandy     To 0x68 of type   Unknown '0x0c' | HEX: 0x10|0x02|0x68|0x0c|0x19|0x55|0x66|0x4f|0xa9|0x10|0x03|
+Jandy   From 0x68 of type   Unknown '0x0d' | HEX: 0x10|0x02|0x00|0x0d|0x08|0x00|0x00|0x27|0x10|0x03|
+
+Request to turn on 90
+5th bit 0x19 looks like turn on
+6th bit 0x5a = 90 deg.
+Jandy     To 0x68 of type   Unknown '0x0c' | HEX: 0x10|0x02|0x68|0x0c|0x19|0x5a|0x66|0x4f|0xae|0x10|0x03|
+Jandy   From 0x68 of type   Unknown '0x0d' | HEX: 0x10|0x02|0x00|0x0d|0x08|0x00|0x00|0x27|0x10|0x03|
+
+Request to turn off (standard ping)  // return had hi limit error in it
+Jandy     To 0x68 of type   Unknown '0x0c' | HEX: 0x10|0x02|0x68|0x0c|0x11|0x55|0x66|0x4f|0xa1|0x10|0x03|
+Jandy   From 0x68 of type   Unknown '0x0d' | HEX: 0x10|0x02|0x00|0x0d|0x00|0x00|0x10|0x2f|0x10|0x03|
+
+Returns
+
+5th bit is type 0x00 nothing (or enabeled) - 0x08 looks like heat 
+Hi limit error return
+7th bit 0x10 looks like the error
+Jandy     To 0x68 of type   Unknown '0x0c' | HEX: 0x10|0x02|0x68|0x0c|0x19|0x5a|0x66|0x4f|0xae|0x10|0x03|
+Jandy   From 0x68 of type   Unknown '0x0d' | HEX: 0x10|0x02|0x00|0x0d|0x08|0x00|0x10|0x37|0x10|0x03|
+
+Errors are ->
+check flow
+Fault high limit -> 0x10
+Fault High Flu temp
+Fault Check Igntion Control
+Fault Short H20 sensor (or Fault open water sensor) -> 0x02
+Pump fault
+AUX Monitor -> 0x08
+*/

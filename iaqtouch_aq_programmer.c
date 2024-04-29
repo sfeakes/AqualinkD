@@ -412,6 +412,65 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
   return false;
 }
 
+void *set_aqualink_iaqtouch_device_on_off( void *ptr )
+{
+struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  char *buf = (char*)threadCtrl->thread_args;
+  //char device_name[15];
+  struct iaqt_page_button *button;
+
+  unsigned int device = atoi(&buf[0]);
+  unsigned int state = atoi(&buf[5]);
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_DEVICE_ON_OFF);
+
+  if (device > aq_data->total_buttons) {
+    LOG(IAQT_LOG,LOG_ERR, "(PDA mode) Device On/Off :- bad device number '%d'\n",device);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  LOG(IAQT_LOG,LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].label,state);
+
+  // See if it's on the current page
+  button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
+  
+  if (button == NULL) {
+    // No luck, go to the device page
+    if ( goto_iaqt_page(IAQ_PAGE_DEVICES, aq_data) == false )
+      goto f_end;
+
+    button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
+ 
+  // If not found see if page hax next
+    if (button == NULL && iaqtFindButtonByIndex(16)->type == 0x03 ) {
+      iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
+      waitfor_iaqt_nextPage(aq_data);
+    // This will fail, since not looking at device page 2 buttons
+      button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
+    }
+  }
+
+  if (button == NULL) {  
+    LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find '%s' button on device list\n", aq_data->aqbuttons[device].label);
+    goto f_end;
+  }
+
+  send_aqt_cmd(button->keycode);
+
+  // NSF NEED TO CHECK FOR POPUP MESSAGE, AND KILL IT.
+
+  f_end:
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
+
+
 void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
