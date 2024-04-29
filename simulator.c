@@ -9,7 +9,7 @@
 
 #define MAX_STACK 20
 int _sim_stack_place = 0;
-unsigned char _commands[MAX_STACK];
+static unsigned char _commands[MAX_STACK];
 
 bool push_simulator_cmd(unsigned char cmd);
 
