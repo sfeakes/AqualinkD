@@ -88,7 +88,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
 
 #define MAX_STACK 20
 int _stack_place = 0;
-unsigned char _commands[MAX_STACK];
+static unsigned char _commands[MAX_STACK];
 //unsigned char pgm_commands[MAX_STACK];
 unsigned char _pgm_command = NUL;
 //unsigned char _ot_pgm_command = NUL;
