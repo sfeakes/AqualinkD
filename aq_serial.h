@@ -360,6 +360,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define KEY_IAQTCH_PREV_PAGE     0x20
 #define KEY_IAQTCH_NEXT_PAGE     0x21
 
+#define KEY_IAQTCH_PREV_PAGE_ALTERNATE   0x1d // System setup prev
+#define KEY_IAQTCH_NEXT_PAGE_ALTERNATE   0x1e // System setup next
+
 // PAGE1 (Horosontal keys) (These are duplicate so probable delete)
 #define KEY_IAQTCH_HOMEP_KEY01   0x11
 #define KEY_IAQTCH_HOMEP_KEY02   0x12
@@ -406,10 +409,13 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_ONETOUCH        0x4d
 #define IAQ_PAGE_COLOR_LIGHT     0x48
 #define IAQ_PAGE_SYSTEM_SETUP    0x14
+#define IAQ_PAGE_SYSTEM_SETUP2   0x49
+#define IAQ_PAGE_SYSTEM_SETUP3   0x4a
 #define IAQ_PAGE_VSP_SETUP       0x2d
 #define IAQ_PAGE_FREEZE_PROTECT  0x11
 #define IAQ_PAGE_LABEL_AUX       0x32
 //#define IAQ_PAGE_START_BOOST     0x3f
+#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
 
 
 

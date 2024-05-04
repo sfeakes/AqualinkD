@@ -323,7 +323,8 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     LOG(IAQT_LOG, LOG_DEBUG, "IAQ Touch got to Device page\n");
     return true;
   } else if (pageID == IAQ_PAGE_MENU || pageID == IAQ_PAGE_SET_TEMP || pageID == IAQ_PAGE_SET_TIME || pageID == IAQ_PAGE_SET_SWG ||
-             pageID == IAQ_PAGE_SYSTEM_SETUP || pageID == IAQ_PAGE_FREEZE_PROTECT || pageID == IAQ_PAGE_LABEL_AUX || pageID == IAQ_PAGE_VSP_SETUP) {
+             pageID == IAQ_PAGE_SYSTEM_SETUP || pageID == IAQ_PAGE_FREEZE_PROTECT || pageID == IAQ_PAGE_LABEL_AUX || 
+             pageID == IAQ_PAGE_VSP_SETUP || pageID == IAQ_PAGE_DEGREES) {
     // All other pages require us to go to Menu page
     send_aqt_cmd(KEY_IAQTCH_MENU);
     if (waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_MENU) {
@@ -386,6 +387,9 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     case IAQ_PAGE_VSP_SETUP:
       menuText = "VSP Setup";
       break;
+    case IAQ_PAGE_DEGREES:
+      menuText = "Degrees";
+      break;
     default:
       LOG(IAQT_LOG, LOG_ERR, "IAQ Touch unknown menu '0x%02hhx'\n", pageID);
       return false;
@@ -394,8 +398,14 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
 
     button = iaqtFindButtonByLabel(menuText);
     if (button == NULL) {
-      LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find '%s' button on page setup\n", menuText);
-      return false;
+      //send_aqt_cmd(KEY_IAQTCH_NEXT_PAGE);
+      // Try Next Page
+      //unsigned char page = waitfor_iaqt_nextPage(aq_data);
+      //LOG(IAQT_LOG, LOG_ERR, "PAGE RETURN IS 0x%02hhx\n",page);
+      //if (waitfor_iaqt_nextPage(aq_data) != pageID) {
+        LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find '%s' button on page setup\n", menuText);
+        return false;
+      //}
     }
     // send_aqt_cmd(KEY_IAQTCH_KEY01);
     send_aqt_cmd(button->keycode);
@@ -444,7 +454,7 @@ struct programmingThreadCtrl *threadCtrl;
 
     button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
  
-  // If not found see if page hax next
+  // If not found see if page has next
     if (button == NULL && iaqtFindButtonByIndex(16)->type == 0x03 ) {
       iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
       waitfor_iaqt_nextPage(aq_data);
@@ -699,6 +709,40 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
   if (frz >= 0) {
     aq_data->frz_protect_set_point = frz;
     LOG(IAQT_LOG,LOG_NOTICE, "IAQ Touch Freeze Protection setpoint %d\n",frz);
+  }
+
+  // Get the temperature units if we are in iaq touch PDA mode 
+  if (isPDA_PANEL) {
+    // If we are here, hit back then next button to get button with degrees on it.
+    // Only if in PDA mode
+    send_aqt_cmd(KEY_IAQTCH_BACK); // Clear the feeze protect menu and go back to system setup
+
+    if ( waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_SYSTEM_SETUP )
+    {
+      LOG(IAQT_LOG,LOG_ERR, "Couldn't get back to setup page, Temperature units unknown, default to DegF\n");
+      aq_data->temp_units = FAHRENHEIT;
+      goto f_end;
+    }
+
+    send_aqt_cmd(KEY_IAQTCH_NEXT_PAGE_ALTERNATE); // Go to page 2
+
+    if ( waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_SYSTEM_SETUP2 )
+    {
+      LOG(IAQT_LOG,LOG_ERR, "Couldn't get back to setup page, Temperature units unknown, default to DegF\n");
+      aq_data->temp_units = FAHRENHEIT;
+      goto f_end;
+    }
+
+    button = iaqtFindButtonByLabel("Degrees");
+
+    if (button != NULL) {
+      LOG(IAQT_LOG,LOG_NOTICE, "Temperature units are '%s'\n",button->name);
+      if (button->name[8] == 'C') {
+        aq_data->temp_units = CELSIUS;
+      } else {
+        aq_data->temp_units = FAHRENHEIT;
+      }
+    }
   }
 
   // Need to run over table messages and check ens with X for on off.

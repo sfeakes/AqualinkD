@@ -1891,7 +1891,7 @@ void main_loop()
             _aqualink_data.updated = true; // FORCE UPDATE SINCE THIS IS NOT WORKING YET
             caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
           }
-          if (_aqualink_data.simulator_active == SIM_NONE) {
+          else /*if (_aqualink_data.simulator_active == SIM_NONE)*/ {
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
           }
         }

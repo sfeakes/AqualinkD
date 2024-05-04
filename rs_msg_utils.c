@@ -203,6 +203,8 @@ int rsm_strcmp(const char *haystack, const char *needle)
 // so 'spa' !- 'spa mode'
 int rsm_strmatch(const char *haystack, const char *needle)
 {
+  return rsm_strmatch_ignore(haystack, needle, 0);
+  /*
   char *sp1 = (char *)haystack;
   char *sp2 = (char *)needle;
 
@@ -219,6 +221,44 @@ int rsm_strmatch(const char *haystack, const char *needle)
   int l2 = ep2 - sp2 +1;
 
   //printf("***** rsm_strmatch Compare %d chars of '%s' to %d chars in '%s'\n",l2,sp2,l1,sp1);
+
+  if ( l1 != l2 || (ep1 - sp1) <= 0 || (ep2 - sp2) <= 0 ) {
+    return -1;
+  }
+  // Need to write this myself for speed
+  //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
+  
+  return strncasecmp(sp1, sp2, l2);
+  */
+}
+
+// Match two strings, used for button labels
+// exact character length once white space removed is used for match
+// ignore_chars will delete the last X chars from haystack.
+// use case insensative for match.
+// so 'spa' !- 'spa mode'
+int rsm_strmatch_ignore(const char *haystack, const char *needle, int ignore_chars)
+{
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
+
+  char *ep1 = (char *)sp1 + strlen(sp1) - 1;
+  char *ep2 = (char *)sp2 + strlen(sp2) - 1;
+  //int i=0;
+  // Get rid of all padding
+  while(isspace(*sp1)) sp1++;
+  while(isspace(*sp2)) sp2++;
+  while(isspace(*ep2) && (ep2 >= sp2)) ep2--;
+  if (ignore_chars > 0)
+    ep1 = ep1 - ignore_chars;
+  else
+    while(isspace(*ep1) && (ep1 >= sp1)) ep1--;
+  
+
+  int l1 = ep1 - sp1 +1;
+  int l2 = ep2 - sp2 +1;
+
+  //printf("***** %s() Compare %d chars of '%s' to %d chars in '%s'\n",(ignore_chars==0?"rsm_strmatch":"rsm_strmatch_ignore"),l2,sp2,l1,sp1);
 
   if ( l1 != l2 || (ep1 - sp1) <= 0 || (ep2 - sp2) <= 0 ) {
     return -1;

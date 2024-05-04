@@ -9,7 +9,7 @@
 
 #define MAX_STACK 20
 int _sim_stack_place = 0;
-unsigned char _commands[MAX_STACK];
+unsigned char _sim_commands[MAX_STACK];
 
 bool push_simulator_cmd(unsigned char cmd);
 
@@ -27,7 +27,7 @@ void simulator_send_cmd(unsigned char cmd)
 bool push_simulator_cmd(unsigned char cmd)
 {
   if (_sim_stack_place < MAX_STACK) {
-    _commands[_sim_stack_place] = cmd;
+    _sim_commands[_sim_stack_place] = cmd;
     _sim_stack_place++;
   } else {
     LOG(SIM_LOG, LOG_ERR, "Command queue overflow, too many unsent commands to RS control panel\n");
@@ -42,9 +42,9 @@ unsigned char pop_simulator_cmd(unsigned char receive_type)
   unsigned char cmd = NUL;
 
   if (_sim_stack_place > 0 && receive_type == CMD_STATUS ) {
-    cmd = _commands[0];
+    cmd = _sim_commands[0];
     _sim_stack_place--;
-    memmove(&_commands[0], &_commands[1], sizeof(unsigned char) * _sim_stack_place ) ;
+    memmove(&_sim_commands[0], &_sim_commands[1], sizeof(unsigned char) * _sim_stack_place ) ;
   }
 
   LOG(SIM_LOG,LOG_DEBUG, "Sending '0x%02hhx' to controller\n", cmd);
