@@ -525,9 +525,14 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON)
     LOG(AQUA_LOG, LOG_INFO, "received '%s' for '%s', turning '%s'\n", (isON == false ? "OFF" : "ON"), button->name, (isON == false ? "OFF" : "ON"));
 #ifdef AQ_PDA
     if (isPDA_PANEL) {
-      char msg[PTHREAD_ARG];
-      sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
-      aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+      if (button->special_mask & PROGRAM_LIGHT && isPDA_IAQT) {
+        // AqualinkTouch in PDA mode, we can program light. (if turing off, use standard AQ_PDA_DEVICE_ON_OFF below)
+        programDeviceLightMode(aqdata, (isON?0:-1), deviceIndex); // -1 means off 0 means use current light mode
+      } else {
+        char msg[PTHREAD_ARG];
+        sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+        aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+      }
     } else
 #endif
     {
@@ -598,7 +603,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
   int i;
   clight_detail *light = NULL;
 #ifdef AQ_PDA
-  if (isPDA_PANEL) {
+  if (isPDA_PANEL && !isPDA_IAQT) {
     LOG(AQUA_LOG,LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
@@ -642,7 +647,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
 //bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, int subIndex, bool fromMQTT)
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source)
 {
-  //LOG(AQUA_LOG,LOG_NOTICE, "Device request type %d for deviceindex %d of value %d from %d\n",type,deviceIndex, value, source);
+  LOG(AQUA_LOG,LOG_INFO, "Device request type %d for deviceindex %d of value %d from %d\n",type,deviceIndex, value, source);
   switch (type) {
     case ON_OFF:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], value<=0?false:true, deviceIndex );

@@ -15,6 +15,7 @@ struct iaqt_page_button {
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data);
 unsigned char iaqtThreadKickType();
 unsigned char iaqtCurrentPage();
+unsigned char iaqtCurrentPageLoading();
 bool wasiaqtThreadKickTypePage();
 struct iaqt_page_button *iaqtFindButtonByLabel(char *label);
 struct iaqt_page_button *iaqtFindButtonByIndex(int index);

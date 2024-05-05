@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <regex.h>
 
 #include "utils.h"
 #include "rs_msg_utils.h"
@@ -82,6 +83,42 @@ bool rsm_get_revision(char *dest, const char *src, int src_len)
   dest[len] = '\0';
 
   return true;
+}
+/*
+pull board CPU from strings line
+   ' CPU p/n: B0029221'
+   'B0029221 REV T.0.1'
+   'E0260801 REV. O.2'
+*/
+int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len)
+{
+  //char *regexString="/\\w\\d{4,10}/gi";
+  //char *regexString="/[[:alpha:]][[:digit:]]{4,10}/gi";
+  char *regexString="[[:alpha:]][[:digit:]]{4,10}";
+  regex_t regexCompiled;
+  regmatch_t match;
+  int rc, begin, end, len;
+
+  if (0 != (rc = regcomp(&regexCompiled, regexString, REG_EXTENDED))) {
+     LOG(AQUA_LOG,LOG_ERR, "regcomp() failed, returning nonzero (%d)\n", rc);
+     return 0;
+  }
+
+  if ((regexec(&regexCompiled,src,1,&match,0)) != 0) {
+    regfree(&regexCompiled);
+    printf("********** ERROR didn;t line match \n");
+    return 0;
+  }
+
+  begin = (int)match.rm_so;
+  end = (int)match.rm_eo;
+  len = MIN((end-begin), dest_len);
+
+  strncpy(dest, src+match.rm_so, len );
+
+  regfree(&regexCompiled);
+
+  return len;
 }
 
 /*

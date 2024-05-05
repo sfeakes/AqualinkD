@@ -50,8 +50,8 @@ const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] 
   },
   { // Color Logic
         "Voodoo Lounge",
-        "Blue Sea",
-        "Royal Blue",
+        "Deep Blue Sea",
+        //"Royal Blue",
         "Afternoon Skies",
         //"Aqua Green",
         "Emerald",

@@ -359,6 +359,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define KEY_IAQTCH_STATUS        0x06
 #define KEY_IAQTCH_PREV_PAGE     0x20
 #define KEY_IAQTCH_NEXT_PAGE     0x21
+#define KEY_IAQTCH_OK            0x01 //HEX: 0x10|0x02|0x00|0x01|0x00|0x01|0x14|0x10|0x03|. OK BUTTON
 
 #define KEY_IAQTCH_PREV_PAGE_ALTERNATE   0x1d // System setup prev
 #define KEY_IAQTCH_NEXT_PAGE_ALTERNATE   0x1e // System setup next
@@ -414,8 +415,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_VSP_SETUP       0x2d
 #define IAQ_PAGE_FREEZE_PROTECT  0x11
 #define IAQ_PAGE_LABEL_AUX       0x32
+#define IAQ_PAGE_HELP            0x0c
 //#define IAQ_PAGE_START_BOOST     0x3f
-#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
+//#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
 
 
 

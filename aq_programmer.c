@@ -475,7 +475,8 @@ bool in_light_programming_mode(struct aqualinkdata *aq_data)
 {
   if ( ( aq_data->active_thread.thread_id != 0 ) &&
        ( aq_data->active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE ||
-         aq_data->active_thread.ptype == AQ_SET_LIGHTCOLOR_MODE)
+         aq_data->active_thread.ptype == AQ_SET_LIGHTCOLOR_MODE ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE)
   ) {
     return true;
   }
@@ -535,7 +536,8 @@ bool in_iaqt_programming_mode(struct aqualinkdata *aq_data)
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SPA_HEATER_TEMP ||
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_SET_TIME ||
          aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM ||
-         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_DEVICE_ON_OFF)
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_DEVICE_ON_OFF ||
+         aq_data->active_thread.ptype == AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE) 
      ) {
      return true;
   }
@@ -753,6 +755,9 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
         if (isPDA_IAQT) {
           type = AQ_SET_IAQTOUCH_DEVICE_ON_OFF;
         }
+      break;
+      case AQ_SET_LIGHTCOLOR_MODE:
+        type = AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE;
       break;
       default:
         type = r_type;
@@ -1041,6 +1046,12 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       break;
     case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
       if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_pump_vs_program, (void*)programmingthread) < 0) {
+        LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
+        return;
+      }
+      break;
+    case AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE:
+      if( pthread_create( &programmingthread->thread_id , NULL ,  set_aqualink_iaqtouch_light_colormode, (void*)programmingthread) < 0) {
         LOG(PROG_LOG, LOG_ERR, "could not create thread\n");
         return;
       }
@@ -2639,7 +2650,10 @@ const char *ptypeName(program_type type)
       return "Set iAqualink Set Time";
     break;
     case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
-    return "Set iAqualink Device On/Off";
+      return "Set iAqualink Device On/Off";
+    break;
+    case AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE:
+      return "Set iAqualink Light Color (using panel)";
     break;
 #endif
 #ifdef AQ_PDA
@@ -2706,6 +2720,7 @@ const char *programtypeDisplayName(program_type type)
     break;
     case AQ_SET_LIGHTPROGRAM_MODE:
     case AQ_SET_LIGHTCOLOR_MODE:
+    case AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE:
       return "Programming: setting light color";
     break;
     case AQ_SET_SWG_PERCENT:

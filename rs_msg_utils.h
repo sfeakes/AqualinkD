@@ -1,8 +1,11 @@
 #ifndef RS_MSG_UTILS_H_
 #define RS_MSG_UTILS_H_
 
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 bool rsm_get_revision(char *dest, const char *src, int src_len);
+int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len);
+
 char *rsm_charafterstr(const char *haystack, const char *needle, int length);
 
 char *rsm_strstr(const char *haystack, const char *needle);

@@ -32,6 +32,7 @@
 #include "config.h"
 #include "devices_jandy.h"
 #include "packetLogger.h"
+#include "color_lights.h"
 
 // System Page is obfiously fixed and not dynamic loaded, so set buttons to stop confustion.
 
@@ -173,9 +174,64 @@ bool waitfor_iaqt_ctrl_queue2empty()
   }
   return true;
 }
+/*
+unsigned const char _waitfor_iaqt_nextPage(struct aqualinkdata *aq_data, int numMessageReceived) {
+  
+  waitfor_iaqt_queue2empty();
 
+  int i=0;
+
+  pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
+
+  while( ++i <= numMessageReceived)
+  {
+    //LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage (%d of %d)\n",i,numMessageReceived);
+    pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
+    if(wasiaqtThreadKickTypePage()) break;
+  }
+
+  LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage finished in (%d of %d)\n",i,numMessageReceived);
+
+  pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
+
+  if(wasiaqtThreadKickTypePage())
+    return iaqtCurrentPage();
+  else
+    return NUL;
+
+}
+
+unsigned const char shortwaitfor_iaqt_nextPage(struct aqualinkdata *aq_data) {
+  return _waitfor_iaqt_nextPage(aq_data, 3);
+}
+*/
+unsigned const char waitfor_iaqt_messages(struct aqualinkdata *aq_data, int numMessageReceived) {
+  //return _waitfor_iaqt_nextPage(aq_data, 30);
+  
+  waitfor_iaqt_queue2empty();
+
+  int i=0;
+
+  LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_messages (%d of %d)\n",i,numMessageReceived);
+
+  pthread_mutex_lock(&aq_data->active_thread.thread_mutex);
+
+  while( ++i <= numMessageReceived)
+  {
+    //LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_nextPage (%d of %d)\n",i,numMessageReceived);
+    pthread_cond_wait(&aq_data->active_thread.thread_cond, &aq_data->active_thread.thread_mutex);
+    
+  }
+
+  LOG(IAQT_LOG,LOG_DEBUG, "waitfor_iaqt_messages finished in (%d of %d)\n",i,numMessageReceived);
+
+  pthread_mutex_unlock(&aq_data->active_thread.thread_mutex);
+
+  return iaqtLastMsg();
+}
 
 unsigned const char waitfor_iaqt_nextPage(struct aqualinkdata *aq_data) {
+  //return _waitfor_iaqt_nextPage(aq_data, 30);
   
   waitfor_iaqt_queue2empty();
 
@@ -199,8 +255,9 @@ unsigned const char waitfor_iaqt_nextPage(struct aqualinkdata *aq_data) {
     return iaqtCurrentPage();
   else
     return NUL;
-
 }
+
+
 
 unsigned const char waitfor_iaqt_nextMessage(struct aqualinkdata *aq_data, const unsigned char msg_type) {
   
@@ -324,7 +381,7 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     return true;
   } else if (pageID == IAQ_PAGE_MENU || pageID == IAQ_PAGE_SET_TEMP || pageID == IAQ_PAGE_SET_TIME || pageID == IAQ_PAGE_SET_SWG ||
              pageID == IAQ_PAGE_SYSTEM_SETUP || pageID == IAQ_PAGE_FREEZE_PROTECT || pageID == IAQ_PAGE_LABEL_AUX || 
-             pageID == IAQ_PAGE_VSP_SETUP || pageID == IAQ_PAGE_DEGREES) {
+             pageID == IAQ_PAGE_VSP_SETUP) {
     // All other pages require us to go to Menu page
     send_aqt_cmd(KEY_IAQTCH_MENU);
     if (waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_MENU) {
@@ -387,9 +444,6 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     case IAQ_PAGE_VSP_SETUP:
       menuText = "VSP Setup";
       break;
-    case IAQ_PAGE_DEGREES:
-      menuText = "Degrees";
-      break;
     default:
       LOG(IAQT_LOG, LOG_ERR, "IAQ Touch unknown menu '0x%02hhx'\n", pageID);
       return false;
@@ -424,7 +478,7 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
 
 void *set_aqualink_iaqtouch_device_on_off( void *ptr )
 {
-struct programmingThreadCtrl *threadCtrl;
+  struct programmingThreadCtrl *threadCtrl;
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aq_data = threadCtrl->aq_data;
   char *buf = (char*)threadCtrl->thread_args;
@@ -469,9 +523,150 @@ struct programmingThreadCtrl *threadCtrl;
   }
 
   send_aqt_cmd(button->keycode);
-
+  //LOG(IAQT_LOG, LOG_ERR, "******* CURRENT MENU '0x%02hhx' *****\n",iaqtCurrentPage());
   // NSF NEED TO CHECK FOR POPUP MESSAGE, AND KILL IT.
+  //page IAQ_PAGE_SET_TEMP hit button 0
+  //page IAQ_PAGE_COLOR_LIGHT hit button ???????
+  // Heater popup can be cleared with a home button and still turn on.
+  // Color light can be cleared with a home button, but won;t turn on.
 
+  waitfor_iaqt_queue2empty();
+  //waitfor_iaqt_messages(aq_data,1);
+
+  // OR maybe use waitfor_iaqt_messages(aq_data,1)
+
+  // Turn spa on when pump off, ned to remove message "spa will turn on after safty delay", home doesn't clear.
+  send_aqt_cmd(KEY_IAQTCH_HOME);
+
+  // Turn spa off need to read message if heater is on AND hit ok......
+
+  f_end:
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  cleanAndTerminateThread(threadCtrl);
+
+  // just stop compiler error, ptr is not valid as it's just been freed
+  return ptr;
+}
+
+void *set_aqualink_iaqtouch_light_colormode( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  char *buf = (char*)threadCtrl->thread_args;
+  //char device_name[15];
+  struct iaqt_page_button *button;
+  const char *mode_name;
+  int val = atoi(&buf[0]);
+  int btn = atoi(&buf[5]);
+  int typ = atoi(&buf[10]);
+  bool use_current_mode = false;
+  bool turn_off = false;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE);
+
+  //char *buf = (char*)threadCtrl->thread_args;
+  
+
+  if (btn < 0 || btn >= aq_data->total_buttons ) {
+    LOG(IAQT_LOG, LOG_ERR, "Can't program light mode on button %d\n", btn);
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
+
+  aqkey *key = &aq_data->aqbuttons[btn];
+  //unsigned char code = key->code;
+  
+  // We also need to cater for light being ON AND changing the color mode.  we have extra OK to hit.
+  if (val == 0) {
+    use_current_mode = true;
+    LOG(IAQT_LOG, LOG_INFO, "Light Programming #: %d, button: %s, color light type: %d, using current mode\n", val, key->label, typ);
+    // NOT SURE WHAT TO DO HERE..... No color mode and iaatouch doesn;t support last color in PDA mode.
+  } else if (val == -1) {
+    turn_off = true;
+    LOG(IAQT_LOG, LOG_INFO, "Light Programming #: %d, button: %s, color light type: %d, Turning off\n", val, key->label, typ);
+  } else {
+    mode_name = light_mode_name(typ, val-1);
+    use_current_mode = false;
+    if (mode_name == NULL) {
+      LOG(IAQT_LOG, LOG_ERR, "Light Programming #: %d, button: %s, color light type: %d, couldn't find mode name '%s'\n", val, key->label, typ, mode_name);
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    } else {
+      LOG(IAQT_LOG, LOG_INFO, "Light Programming #: %d, button: %s, color light type: %d, name '%s'\n", val, key->label, typ, mode_name);
+    }
+  }
+  
+  // See if it's on the current page
+  button = iaqtFindButtonByLabel(key->label);
+  
+  if (button == NULL) {
+    // No luck, go to the device page
+    if ( goto_iaqt_page(IAQ_PAGE_DEVICES, aq_data) == false )
+      goto f_end;
+
+    button = iaqtFindButtonByLabel(key->label);
+ 
+  // If not found see if page has next
+    if (button == NULL && iaqtFindButtonByIndex(16)->type == 0x03 ) {
+      iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
+      waitfor_iaqt_nextPage(aq_data);
+    // This will fail, since not looking at device page 2 buttons
+      button = iaqtFindButtonByLabel(key->label);
+    }
+  }
+
+  if (button == NULL) {  
+    LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find '%s' button on device list\n", key->label);
+    goto f_end;
+  }
+  // WE have a iaqualink button, press it.
+  send_aqt_cmd(button->keycode);
+
+  // See if we want to use the last color, or turn it off
+  if (use_current_mode || turn_off) {
+    // After pressing the button, Just need to wait for 5 seconds and it will :- 
+    // a) if off turn on and default to last color.
+    // b) if on, turn off. (pain that we need to wait 5 seconds.)
+    waitfor_iaqt_queue2empty();
+    waitfor_iaqt_nextPage(aq_data);
+    if (use_current_mode) {
+      // Their is no message for this, so give one.
+      sprintf(aq_data->last_display_message, "Light will turn on in 5 seconds");
+      aq_data->updated = true;
+    }
+    // Wait for next page maybe?
+    // Below needs a timeout.
+    while (waitfor_iaqt_nextPage(aq_data) == IAQ_PAGE_COLOR_LIGHT);
+    goto f_end;
+  }
+
+  // BELOW WE NEED TO CATER FOR OK POPUP IF LIGHT IS ALREADY ON
+  if (button->state == 0x01) { // Light is on, need to select the BUTTON
+    waitfor_iaqt_queue2empty();
+    // We Should wait for popup message, before sending code
+    send_aqt_cmd(KEY_IAQTCH_OK);
+  }
+
+  if (waitfor_iaqt_nextPage(aq_data) != IAQ_PAGE_COLOR_LIGHT) {
+    LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not color light page\n");
+    goto f_end;
+  }
+
+  button = iaqtFindButtonByLabel(mode_name);
+  
+  if (button == NULL) {
+    LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did find color '%s' in color light page\n",mode_name);
+    goto f_end;
+  }
+
+  //LOG(IAQT_LOG, LOG_ERR, "IAQ Touch WAIYING FOR 1 MESSAGES\n");
+  //waitfor_iaqt_messages(aq_data, 1);
+
+  // Finally found the color.  select it
+  send_aqt_cmd(button->keycode);
+  waitfor_iaqt_nextPage(aq_data);
+  
   f_end:
   goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
   cleanAndTerminateThread(threadCtrl);
@@ -662,6 +857,10 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_GET_IAQTOUCH_SETPOINTS);
 
+  // Get product info.
+  send_aqt_cmd(KEY_IAQTCH_HELP);
+  unsigned char page = waitfor_iaqt_nextPage(aq_data);
+  
   if ( goto_iaqt_page(IAQ_PAGE_SET_TEMP, aq_data) == false )
     goto f_end;
 

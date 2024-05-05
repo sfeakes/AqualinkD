@@ -180,6 +180,12 @@ bool checkAqualinkTime()
     LOG(AQUA_LOG,LOG_DEBUG, "time not checked, will check in %d seconds\n", TIME_CHECK_INTERVAL - time_difference);
     return true;
   }
+  else if (strlen(_aqualink_data.date) <=0 ||
+           strlen(_aqualink_data.time) <=0) 
+  {
+    LOG(AQUA_LOG,LOG_DEBUG, "time not checked, no time from panel\n");
+    return true;
+  }
   else
   {
     last_checked = now;
@@ -188,7 +194,7 @@ bool checkAqualinkTime()
 
   char datestr[DATE_STRING_LEN];
 #ifdef AQ_PDA
-  if (isPDA_PANEL) {
+  if (isPDA_PANEL && !isPDA_IAQT) {
     LOG(AQUA_LOG,LOG_DEBUG, "PDA Time Check\n");
     // date is simply a day or week for PDA.
     localtime_r(&now, &aq_tm);
@@ -1890,6 +1896,8 @@ void main_loop()
             _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
             _aqualink_data.updated = true; // FORCE UPDATE SINCE THIS IS NOT WORKING YET
             caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+            if (checkAqualinkTime() == false) // Need to do this better.
+            {aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);}
           }
           else /*if (_aqualink_data.simulator_active == SIM_NONE)*/ {
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
