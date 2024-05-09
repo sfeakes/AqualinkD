@@ -83,11 +83,15 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Add set time to OneTouch protocol.
 * Update AqualinkD Management console to manage configuration
 * Create iAqualink Touch Simulator
+* Probably decoded enough protocols for AuqlinkD to self configure.
 
 # Update in Release 2.3.5
 * NEED TO FIX
   * Not saying programming mode
   * Not always doing on/off
+  * Heaters are slow to turn on, need to hit extra button
+  * Spa turns on Spa Heat (first button on home page ???)
+  * SWG Stays on
   * serial_logger
   * Add wiki documentation 
     * about Heat vs Heater

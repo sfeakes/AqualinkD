@@ -681,7 +681,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
     else if (r_type == AQ_SET_SPA_HEATER_TEMP)
       type = AQ_SET_RSSADAPTER_SPA_HEATER_TEMP;
   } else if (r_type == AQ_SET_PUMP_RPM) {
-    if (isONET_ENABLED)
+    if (isONET_ENABLED || isPDA_IAQT)
       type = AQ_SET_ONETOUCH_PUMP_RPM;
     else if (isIAQT_ENABLED)
       type = AQ_SET_IAQTOUCH_PUMP_RPM;
