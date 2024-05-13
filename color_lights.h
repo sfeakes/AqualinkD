@@ -3,6 +3,7 @@
 #define COLOR_LIGHTS_H_
 
 #include "aqualink.h"
+#include "aq_programmer.h"
 
 #define LIGHT_COLOR_NAME    16
 #define LIGHT_COLOR_OPTIONS 17
@@ -19,7 +20,8 @@ typedef enum clight_type {
   LC_INTELLIB
 } clight_type;
 */
-const char *light_mode_name(clight_type type, int index);
+//const char *light_mode_name(clight_type type, int index);
+const char *light_mode_name(clight_type type, int index, emulation_type protocol);
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
 
 

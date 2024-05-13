@@ -1516,6 +1516,7 @@ void main_loop()
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
 
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
+  _aqualink_data.is_display_message_programming = false;
   //_aqualink_data.simulate_panel = false;
   _aqualink_data.active_thread.thread_id = 0;
   _aqualink_data.air_temp = TEMP_UNKNOWN;

@@ -6,6 +6,7 @@
 //#define COLOR_LIGHTS_C_
 #include "color_lights.h"
 
+
 /****** This list MUST be in order of clight_type enum *******/
 const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
 {
@@ -52,7 +53,7 @@ const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] 
         "Voodoo Lounge",
         "Deep Blue Sea",
         //"Royal Blue",
-        "Afternoon Skies",
+        "Afternoon Skies", // 'Afternoon Sky' on allbutton, Skies on iaqtouch
         //"Aqua Green",
         "Emerald",
         "Sangria",
@@ -91,8 +92,15 @@ const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] 
 };
 
 
-const char *light_mode_name(clight_type type, int index)
+const char *light_mode_name(clight_type type, int index, emulation_type protocol)
 {
+  // Rename any modes depending on emulation type
+  if (protocol == ALLBUTTON) {
+    if (strcmp(_color_light_options[type][index],"Afternoon Skies") == 0) {
+      return "Afternoon Sky";
+    }
+  }
+
   return _color_light_options[type][index];
 }
 

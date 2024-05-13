@@ -35,8 +35,8 @@
         "Spa_Water",
         "Freeze_Protect",
         "CHEM/pH",
-        "CHEM/ORP"
-        //"Solar_Heater",
+        "CHEM/ORP",
+        "Solar_Heater",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0

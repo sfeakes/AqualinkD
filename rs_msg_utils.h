@@ -8,6 +8,7 @@ int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len);
 
 char *rsm_charafterstr(const char *haystack, const char *needle, int length);
 
+bool rsm_isempy(const char *src, int length);
 char *rsm_strstr(const char *haystack, const char *needle);
 //char *rsm_strnstr(const char *haystack, const char *needle, int length);
 char *rsm_strnstr(const char *haystack, const char *needle, size_t slen);

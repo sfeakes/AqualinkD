@@ -98,6 +98,11 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return programtypeDisplayName(aqdata->active_thread.ptype);
   }
   */
+ if (aqdata->active_thread.thread_id != 0) {
+   if (!aqdata->is_display_message_programming || rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))){
+     return programtypeDisplayName(aqdata->active_thread.ptype);
+   }
+ }
  
   //if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
   if (aqdata->service_mode_state == ON) {

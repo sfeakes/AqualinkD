@@ -205,6 +205,7 @@ struct aqualinkdata
   char time[AQ_MSGLEN];
   char last_message[AQ_MSGLONGLEN+1]; // Last ascii message from panel - allbutton (or PDA) protocol
   char last_display_message[AQ_MSGLONGLEN+1]; // Last message to display in web UI
+  bool is_display_message_programming;
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
   unsigned short total_buttons;

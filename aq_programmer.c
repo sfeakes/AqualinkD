@@ -756,8 +756,11 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
           type = AQ_SET_IAQTOUCH_DEVICE_ON_OFF;
         }
       break;
+      // This isn;t going to work outside of PDA mode, if the labels are incorrect.
       case AQ_SET_LIGHTCOLOR_MODE:
-        type = AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE;
+        if (isPDA_IAQT) {
+          type = AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE;
+        }
       break;
       default:
         type = r_type;
@@ -1556,7 +1559,7 @@ void *set_aqualink_light_colormode( void *ptr )
     use_current_mode = true;
     LOG(PROG_LOG, LOG_INFO, "Light Programming #: %d, on button: %s, color light type: %d, using current mode\n", val, button->label, typ);
   } else {
-    mode_name = light_mode_name(typ, val-1);
+    mode_name = light_mode_name(typ, val-1, ALLBUTTON);
     use_current_mode = false;
     if (mode_name == NULL) {
       LOG(PROG_LOG, LOG_ERR, "Light Programming #: %d, on button: %s, color light type: %d, couldn't find mode name '%s'\n", val, button->label, typ, mode_name);

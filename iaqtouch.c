@@ -718,6 +718,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     // Reset and messages on new page
     aq_data->last_display_message[0] = ' ';
     aq_data->last_display_message[1] = '\0';
+    aq_data->is_display_message_programming = false;
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND off\n");
     set_iaq_cansend(false);
     _currentPageLoading = packet[PKT_IAQT_PAGTYPE];
@@ -789,11 +790,25 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
       }
     }
   } else if (isPDA_PANEL && packet[PKT_CMD] == CMD_IAQ_MSG_LONG) {
+    char *sp;
     // Set disply message if PDA panel
     memset(message, 0, AQ_MSGLONGLEN + 1);
     rsm_strncpy(message, packet + 6, AQ_MSGLONGLEN, length-9);
     LOG(IAQT_LOG,LOG_NOTICE, "Popup message '%s'\n",message);
+    
+    // Change this message, since you can't press OK.  'Light will turn off in 5 seconds. To change colors press Ok now.'
+     if ((sp = rsm_strncasestr(message, "To change colors press Ok now", strlen(message))) != NULL)
+     {
+       *sp = '\0';
+     }
+
     strcpy(aq_data->last_display_message, message); // Also display the message on web UI
+   
+    if (in_programming_mode(aq_data)) {
+      aq_data->is_display_message_programming = true;
+    } else {
+      aq_data->is_display_message_programming = false;
+    }
     /*
     for(int i=0; i<length; i++) {
       printf("0x%02hhx|",packet[i]);

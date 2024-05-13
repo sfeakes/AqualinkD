@@ -148,6 +148,18 @@ char *rsm_charafterstr(const char *haystack, const char *needle, int length)
 }
 
 /*
+  Check if string has printable chars and is not empty
+*/
+bool rsm_isempy(const char *src, int length)
+{
+  int i;
+  for(i=0; i < length; i++) {
+    if  (src[i] > 32 && src[i] < 127) // 32 is space
+      return true;
+  }
+  return false;
+}
+/*
   Can probably replace this with rsm_strncasestr in all code.
 */
 char *rsm_strstr(const char *haystack, const char *needle)

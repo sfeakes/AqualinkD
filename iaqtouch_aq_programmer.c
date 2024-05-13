@@ -586,7 +586,7 @@ void *set_aqualink_iaqtouch_light_colormode( void *ptr )
     turn_off = true;
     LOG(IAQT_LOG, LOG_INFO, "Light Programming #: %d, button: %s, color light type: %d, Turning off\n", val, key->label, typ);
   } else {
-    mode_name = light_mode_name(typ, val-1);
+    mode_name = light_mode_name(typ, val-1, IAQTOUCH);
     use_current_mode = false;
     if (mode_name == NULL) {
       LOG(IAQT_LOG, LOG_ERR, "Light Programming #: %d, button: %s, color light type: %d, couldn't find mode name '%s'\n", val, key->label, typ, mode_name);
@@ -633,6 +633,7 @@ void *set_aqualink_iaqtouch_light_colormode( void *ptr )
     if (use_current_mode) {
       // Their is no message for this, so give one.
       sprintf(aq_data->last_display_message, "Light will turn on in 5 seconds");
+      aq_data->is_display_message_programming = true;
       aq_data->updated = true;
     }
     // Wait for next page maybe?
@@ -756,7 +757,9 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   //send_aqt_cmd(0x80);
 
   // Go to status page on startup to read devices
-  goto_iaqt_page(IAQ_PAGE_STATUS, aq_data);
+  // This is too soon
+  //goto_iaqt_page(IAQ_PAGE_STATUS, aq_data);
+  //waitfor_iaqt_nextPage(aq_data);
 
   f_end:
   goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
