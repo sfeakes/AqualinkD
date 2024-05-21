@@ -31,6 +31,11 @@ void broadcast_aqualinkstate();
 void broadcast_aqualinkstate_error(char *msg);
 void broadcast_simulator_message();
 
+
+
+// NSF Need to find a better way, this is not thread safe, so don;t like exposting it.
+//void send_mqtt(struct mg_connection *nc, const char *toppic, const char *message);
+
 // superseded with systemd/sd-journal
 //void broadcast_log(char *msg);
 //#endif

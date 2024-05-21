@@ -590,12 +590,12 @@ void kick_aq_program_thread(struct aqualinkdata *aq_data, emulation_type source_
       LOG(ONET_LOG, LOG_DEBUG, "Kicking OneTouch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);   
     } 
-    else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data)) {
-      LOG(PROG_LOG, LOG_DEBUG, "Kicking RS thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
-      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
-    }
     else if (source_type == IAQTOUCH && in_iaqt_programming_mode(aq_data)) {
       LOG(IAQT_LOG, LOG_DEBUG, "Kicking IAQ Touch thread %d,%p\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id);
+      pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
+    }
+    else if (source_type == ALLBUTTON && !in_ot_programming_mode(aq_data) && !in_iaqt_programming_mode(aq_data)) {
+      LOG(PROG_LOG, LOG_DEBUG, "Kicking RS Allbutton thread %d,%p message '%s'\n",aq_data->active_thread.ptype, aq_data->active_thread.thread_id,aq_data->last_message);
       pthread_cond_broadcast(&aq_data->active_thread.thread_cond);  
     }
 #ifdef AQ_PDA

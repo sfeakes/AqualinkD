@@ -231,6 +231,7 @@ struct aqualinkdata
   clight_detail lights[MAX_LIGHTS];
   bool boost;
   char boost_msg[10];
+  int boost_duration; // need to remove boost message and use this
   float ph;
   int orp;
 

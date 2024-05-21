@@ -72,6 +72,8 @@
          32: "Low volts",
          64: "Low temp",
         128: "Check PCB",
+        253: "General Fault",
+        254: "Unknown",
         255: "Off"
       }
 

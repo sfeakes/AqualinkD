@@ -364,6 +364,7 @@ int16_t  RS16_endswithLEDstate(char *msg)
 #endif
 
 
+
 void _processMessage(char *message, bool reset);
 
 void processMessage(char *message)
@@ -460,6 +461,7 @@ void _processMessage(char *message, bool reset)
     if ((msg_loop & MSG_BOOST) != MSG_BOOST) {
       _aqualink_data.boost = false;
       _aqualink_data.boost_msg[0] = '\0';
+      _aqualink_data.boost_duration = 0;
       //if (_aqualink_data.swg_percent >= 101)
       //  _aqualink_data.swg_percent = 0;
     }
@@ -625,7 +627,8 @@ void _processMessage(char *message, bool reset)
       else if (strcasestr(msg, MSG_SWG_HIGH_SALT) != NULL)
         setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_HI_SALT);
       else if (strcasestr(msg, MSG_SWG_FAULT) != NULL)
-        setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_CHECK_PCB);
+        setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_GENFAULT);
+        //setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_CHECK_PCB);
       
       // Any of these messages want to display.
       strcpy(_aqualink_data.last_display_message, msg);
@@ -736,9 +739,11 @@ void _processMessage(char *message, bool reset)
     // Ignore messages if in programming mode.  We get one of these turning off for some strange reason.
     if (in_programming_mode(&_aqualink_data) == false) {
       snprintf(_aqualink_data.boost_msg, 6, "%s", &msg[11]);
+      _aqualink_data.boost_duration = rsm_HHMM2min(_aqualink_data.boost_msg);
       _aqualink_data.boost = true;
       msg_loop |= MSG_BOOST;
       msg_loop |= MSG_SWG;
+      //convert_boost_to_duration(_aqualink_data.boost_msg)
       //if (_aqualink_data.ar_swg_status != SWG_STATUS_ON) {_aqualink_data.ar_swg_status = SWG_STATUS_ON;}
       if (_aqualink_data.swg_percent != 101) {changeSWGpercent(&_aqualink_data, 101);}
       //boost_msg_count = 0;
@@ -996,7 +1001,7 @@ void action_delayed_request()
       }
       else
       {
-        LOG(AQUA_LOG,LOG_NOTICE, "SWG % is already %d, not changing\n", _aqualink_data.unactioned.value);
+        LOG(AQUA_LOG,LOG_NOTICE, "SWG %% is already %d, not changing\n", _aqualink_data.unactioned.value);
       }
     }
     // Let's just tell everyone we set it, before we actually did.  Makes homekit happy, and it will re-correct on error.
@@ -1322,6 +1327,8 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read SWG direct          = %s\n", bool2text(READ_RSDEV_SWG));
   LOG(AQUA_LOG,LOG_NOTICE, "Read ePump direct        = %s\n", bool2text(READ_RSDEV_ePUMP));
   LOG(AQUA_LOG,LOG_NOTICE, "Read vsfPump direct      = %s\n", bool2text(READ_RSDEV_vsfPUMP));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
 
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
@@ -1541,6 +1548,8 @@ void main_loop()
   _aqualink_data.orp = TEMP_UNKNOWN;
   _aqualink_data.simulator_id = NUL;
   _aqualink_data.simulator_active = SIM_NONE;
+  _aqualink_data.boost_duration = 0;
+  _aqualink_data.boost = false;
 
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
@@ -1556,6 +1565,11 @@ void main_loop()
     _aqualink_data.swg_led_state = OFF;
     _aqualink_data.swg_percent = 0;
     _aqualink_data.swg_ppm = 0;
+  }
+
+  if (_aqconfig_.force_chem_feeder == true) {
+    _aqualink_data.ph = 0;
+    _aqualink_data.orp = 0;
   }
 
   signal(SIGINT, intHandler);

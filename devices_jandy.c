@@ -218,6 +218,7 @@ bool isSWGDeviceErrorState(unsigned char status)
       status == SWG_STATUS_LOW_TEMP ||
       status == SWG_STATUS_HIGH_CURRENT ||
       status == SWG_STATUS_NO_FLOW)
+      // Maybe add CLEAN_CELL and GENFAULT here
     return true;
   else
     return false;
@@ -225,6 +226,17 @@ bool isSWGDeviceErrorState(unsigned char status)
 
 void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, unsigned char status) {
   static unsigned char last_status = SWG_STATUS_UNKNOWN;
+  /* This is only needed for DEBUG
+  static bool haveSeenRSSWG = false;
+
+  if (requester == JANDY_DEVICE) {
+    haveSeenRSSWG = true;
+  }
+  */
+   // If we are reading state directly from RS458, then ignore everything else.
+  if ( READ_RSDEV_SWG && requester != JANDY_DEVICE ) {
+    return;
+  }
 
   if ((aqdata->ar_swg_device_status == status) || (last_status == status)) {
     //LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
@@ -232,10 +244,15 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
   }
   last_status = status;
 
-  // If we get (ALLBUTTON, SWG_STATUS_CHECK_PCB), it sends this for many status, like clean cell.
+  // If we get (ALLBUTTON, SWG_STATUS_CHECK_PCB // GENFAULT), it sends this for many status, like clean cell.
   // So if we are in one of those states, don't use it.
 
-  if (requester == ALLBUTTON && status == SWG_STATUS_CHECK_PCB ) {
+  // Need to rethink this.  Use general fault only if we are not reading SWG status direct from device
+  //if ( READ_RSDEV_SWG && requester == ALLBUTTON && status == SWG_STATUS_GENFAULT ) {
+
+  // SWG_STATUS_GENFAULT is shown on panels for many reasons, if we are NOT reading the status directly from the SWG
+  // then use it, otherwise disguard it as we will have a better status
+  if (requester == ALLBUTTON && status == SWG_STATUS_GENFAULT ) {
     if (aqdata->ar_swg_device_status > SWG_STATUS_ON && 
         aqdata->ar_swg_device_status < SWG_STATUS_TURNING_OFF) {
           LOG(DJAN_LOG, LOG_DEBUG, "Ignoring set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
@@ -255,6 +272,7 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
   case SWG_STATUS_LOW_VOLTS:
   case SWG_STATUS_LOW_TEMP:
   case SWG_STATUS_CHECK_PCB:
+  case SWG_STATUS_GENFAULT:
     aqdata->ar_swg_device_status = status;
     aqdata->swg_led_state = isSWGDeviceErrorState(status)?ENABLE:ON;
     break;
@@ -398,6 +416,9 @@ aqledstate get_swg_led_state(struct aqualinkdata *aqdata)
   case SWG_STATUS_OFF: // THIS IS OUR OFF STATUS, NOT AQUAPURE
     return OFF;
     break;
+  case SWG_STATUS_GENFAULT:
+    return ENABLE;
+  break;
   default:
     return (aqdata->swg_percent > 0?ON:ENABLE);
     break;
@@ -470,6 +491,11 @@ void get_swg_status_mqtt(struct aqualinkdata *aqdata, char *message, int *status
     *status = SWG_OFF;
     sprintf(message, "AQUAPURE OFF");
     *dzalert = 0;
+    break;
+  case SWG_STATUS_GENFAULT:
+    *status = (aqdata->swg_percent > 0?SWG_ON:SWG_OFF);
+    sprintf(message, "AQUAPURE GENERAL FAULT");
+    *dzalert = 2;
     break;
   default:
     *status = (aqdata->swg_percent > 0?SWG_ON:SWG_OFF);

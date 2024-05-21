@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <regex.h>
+#include <limits.h>
 
 #include "utils.h"
 #include "rs_msg_utils.h"
@@ -112,7 +113,7 @@ int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len)
 
   begin = (int)match.rm_so;
   end = (int)match.rm_eo;
-  len = MIN((end-begin), dest_len);
+  len = AQ_MIN((end-begin), dest_len);
 
   strncpy(dest, src+match.rm_so, len );
 
@@ -340,8 +341,7 @@ char *rsm_lastindexof(const char *haystack, const char *needle, size_t length)
   return NULL;
 }
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 
 int rsm_strncmp(const char *haystack, const char *needle, int length)
 {
@@ -363,7 +363,27 @@ int rsm_strncmp(const char *haystack, const char *needle, int length)
   //LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
   // Need to write this myself for speed
   // Need to check if full length string (no space on end), that the +1 is accurate. MIN should do it
-  return strncasecmp(sp1, sp2, MIN((ep1-sp1)+1,length));
+  return strncasecmp(sp1, sp2, AQ_MIN((ep1-sp1)+1,length));
+}
+
+
+char *rsm_char_replace(char *replaced , char *search,  char *find,  char *replace)
+{
+  int len;
+  int i;
+  char *fp = find;
+  char *rp = replace;
+
+  len = strlen(search);
+  for(i = 0; i < len; i++){
+    if (search[i] == *fp)
+      replaced[i] = *rp;
+    else
+      replaced[i] = search[i];
+  }
+  replaced[i] = '\0';
+
+  return replaced;
 }
 
 // NSF Check is this works correctly.
@@ -375,7 +395,7 @@ char *rsm_strncpycut(char *dest, const char *src, int dest_len, int src_len)
   while(isspace(*sp)) sp++;
   while(isspace(*ep)) ep--;
 
-  int length=MIN((ep-sp)+1,dest_len);
+  int length=AQ_MIN((ep-sp)+1,dest_len);
 
   memset(dest, '\0',dest_len);
   return strncpy(dest, sp, length);
@@ -426,8 +446,6 @@ int rsm_strncpy_nul2sp(char *dest, const unsigned char *src, int dest_len, int s
   return _rsm_strncpy(dest, src, dest_len, src_len, true);
 }
 
-#define INT_MAX +2147483647
-#define INT_MIN -2147483647
 
 // atoi that can have blank start
 int rsm_atoi(const char* str) 
@@ -465,4 +483,14 @@ float rsm_atof(const char* str)
   }
 
   return atof(&str[i]);
+}
+
+// MEssages as HH:MM ie 01:23
+int rsm_HHMM2min(char *message) {
+  char *ptr;
+
+  int hour = strtoul(message, &ptr, 10);
+  int min = strtoul(message+3, &ptr, 10);
+
+  return (hour*60)+min;
 }

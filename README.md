@@ -67,7 +67,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Full support for homekit scenes: ie: Create a "Spa scene" to: "turn spa on, set spa heater to X temperature and turn spa blower on", etc etc).
 
 ### In Home Assistant 
-<img src="extras/HomeAssistant2.png?raw=true" width="800"></img>
+<img src="extras/HASSIO.png?raw=true" width="800"></img>
 
 ## All Web interfaces.
 * http://aqualink.ip/     <- (Standard WEB UI
@@ -87,7 +87,6 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 # Update in Release 2.3.5
 * NEED TO FIX
-  * Not saying programming mode
   * Not always doing on/off
   * Heaters are slow to turn on, need to hit extra button
   * Spa turns on Spa Heat (first button on home page ???)
@@ -98,6 +97,9 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
     * Panel version
     * can't use iaquatouch panel / wireless
 
+* Added Home Assistant integration through MQTT discover
+  * Please read the Wiki section on this [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
+  * There are still some enhacments to come on this.
 * Added support for reading extended information for Jandy JXi heaters.
 * Added Color Light to iAqualinkTouch protocol.
 * Added iAqualinkTouch support for PDA only panels that can use that protocol.
@@ -119,11 +121,11 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 # Update in Release 2.3.3
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
-  * [AqualinkD Manager](#AQManager)
+  * [AqualinkD Manager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
 * Moved logging into systemd/journal (journalctl) from syslog
-  * [AqualinkD Log](#Log)
+  * [AqualinkD Log](https://github.com/sfeakes/AqualinkD/wiki#Log)
 * Updated to scheduler
-  * [AqualinkD Scheduler](#Scheduler)
+  * [AqualinkD Scheduler](https://github.com/sfeakes/AqualinkD/wiki#Scheduler)
 * Introduced RS485 frame delay / timer. 
   * Improve PDA panels reliability (PDA pannels are slower than RS panels)
   * Potentially fixed Pentair VSP / SWG problems since Pentair VSP use a different protocol, this will allow a timed delay for the VSP to post a status messages. Seems to only effect RS485 bus when both a Pentair VSP and Jandy SWG are present.

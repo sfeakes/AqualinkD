@@ -23,6 +23,7 @@
 #define SWG_SETPOINT_TOPIC SWG_TOPIC "/setpoint"
 #define SWG_EXTENDED_TOPIC SWG_TOPIC "/fullstatus"
 #define SWG_BOOST_TOPIC SWG_TOPIC "/Boost"
+#define SWG_BOOST_DURATION_TOPIC SWG_BOOST_TOPIC "/duration"
 
 #define SWG_STATUS_MSG_TOPIC SWG_TOPIC "/Display_Message"
 
@@ -42,8 +43,8 @@
 
 #define BATTERY_STATE "Battery"
 
-#define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
-#define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
+//#define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
+//#define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
 
 //#define PUMP_TOPIC "Pump_"
 #define PUMP_RPM_TOPIC "/RPM"

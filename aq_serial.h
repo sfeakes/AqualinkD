@@ -298,8 +298,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 //#define SWG_STATUS_OFFLINE 0xFE
 
 //#define SWG_STATUS_UNKNOWN -128 // Idiot.  unsigned char....Derr.
-#define SWG_STATUS_OFF     0xFF // Documented this as off in API, so don't change.
-#define SWG_STATUS_UNKNOWN 0xFE 
+#define SWG_STATUS_OFF      0xFF // Documented this as off in API, so don't change.
+#define SWG_STATUS_UNKNOWN  0xFE 
+#define SWG_STATUS_GENFAULT 0xFD //This is displayed in the panel, so adding it
 // These are actual from RS485
 
 #define SWG_STATUS_ON           0x00

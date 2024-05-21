@@ -47,6 +47,16 @@
 // Set scheduler log to timer log 
 #define SCHD_LOG TIMR_LOG
 
+
+/*
+#define INT_MAX +2147483647
+#define INT_MIN -2147483647
+*/
+
+#define AQ_MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define AQ_MIN(x, y) (((x) < (y)) ? (x) : (y))
+
+
 /*
 typedef enum
 {

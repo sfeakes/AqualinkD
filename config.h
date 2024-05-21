@@ -15,6 +15,7 @@
 #define DEFAULT_DEVICE_ID    "0x0a"
 #define DEFAULT_MQTT_DZ_IN   NULL
 #define DEFAULT_MQTT_DZ_OUT  NULL
+#define DEFAULT_HASS_DISCOVER NULL
 #define DEFAULT_MQTT_AQ_TP   NULL
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
@@ -51,6 +52,7 @@ struct aqconfig
   char *mqtt_dz_sub_topic;
   char *mqtt_dz_pub_topic;
   char *mqtt_aq_topic;
+  char *mqtt_hass_discover_topic;
   char *mqtt_server;
   char *mqtt_user;
   char *mqtt_passwd;
@@ -79,6 +81,7 @@ struct aqconfig
   bool force_swg;
   bool force_ps_setpoints;
   bool force_frzprotect_setpoints;
+  bool force_chem_feeder;
   int swg_zero_ignore;
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets

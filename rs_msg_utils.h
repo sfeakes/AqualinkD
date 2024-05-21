@@ -1,7 +1,7 @@
 #ifndef RS_MSG_UTILS_H_
 #define RS_MSG_UTILS_H_
 
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+//#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 bool rsm_get_revision(char *dest, const char *src, int src_len);
 int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len);
@@ -25,6 +25,8 @@ int rsm_strncpy_nul2sp(char *dest, const unsigned char *src, int dest_len, int s
 int rsm_atoi(const char* str);
 float rsm_atof(const char* str);
 char *rsm_strncpycut(char *dest, const char *src, int dest_len, int src_len);
-
+//char *rsm_char_replace(char *replaced , char *search, const char find, const char replace);
+char *rsm_char_replace(char *replaced , char *search,  char *find,  char *replace);
+int rsm_HHMM2min(char *message);
 
 #endif //RS_MSG_UTILS_H_

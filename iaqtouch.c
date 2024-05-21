@@ -306,7 +306,7 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
   else {
     button = &_pageButtons[index];
     // if _currentPageLoading = 0x00 then we should use current page
-    LOG(IAQT_LOG,LOG_NOTICE, "Not sure where to add Button %d %s - LoadingPage = %s\n",index,button->name,iaqt_page_name(_currentPageLoading));
+    LOG(IAQT_LOG,LOG_INFO, "Not sure where to add Button %d %s - LoadingPage = %s\n",index,button->name,iaqt_page_name(_currentPageLoading));
   }
 
   button->state  = message[PKT_IAQT_BUTSTATE];
