@@ -14,6 +14,7 @@ AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
 AQ_MANAGER =true
+
 #AQ_RS_EXTRA_OPTS = false
 #AQ_CONTAINER = false // this is for compiling for containers
 #AQ_MEMCMP = true // Not implimented correctly yet.
@@ -76,7 +77,7 @@ endif
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-       serial_logger.c mongoose.c simulator.c timespec_subtract.c
+       serial_logger.c mongoose.c hassio.c simulator.c timespec_subtract.c
 
 
 AQ_FLAGS =

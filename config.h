@@ -15,6 +15,7 @@
 #define DEFAULT_DEVICE_ID    "0x0a"
 #define DEFAULT_MQTT_DZ_IN   NULL
 #define DEFAULT_MQTT_DZ_OUT  NULL
+#define DEFAULT_HASS_DISCOVER NULL
 #define DEFAULT_MQTT_AQ_TP   NULL
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
@@ -27,8 +28,9 @@
 #define READ_RS485_SWG      (1 << 0) // 1   SWG
 #define READ_RS485_JAN_PUMP (1 << 1) // 2   Jandy Pump
 #define READ_RS485_PEN_PUMP (1 << 2) // 4   Pentair Pump
-#define READ_RS485_JAN_LXI   (1 << 3) //    Jandy LX & LXi heater
-//#define READ_RS485_JAN_LXI  (1 << 4) //     Jandy LXi heater
+#define READ_RS485_JAN_JXI  (1 << 3) //    Jandy JX & LXi heater
+#define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
+#define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
 
 struct aqconfig
 {
@@ -51,6 +53,7 @@ struct aqconfig
   char *mqtt_dz_sub_topic;
   char *mqtt_dz_pub_topic;
   char *mqtt_aq_topic;
+  char *mqtt_hass_discover_topic;
   char *mqtt_server;
   char *mqtt_user;
   char *mqtt_passwd;
@@ -79,6 +82,7 @@ struct aqconfig
   bool force_swg;
   bool force_ps_setpoints;
   bool force_frzprotect_setpoints;
+  bool force_chem_feeder;
   int swg_zero_ignore;
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
@@ -112,8 +116,11 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_SWG ((_aqconfig_.read_RS485_devmask & READ_RS485_SWG) == READ_RS485_SWG)
 #define READ_RSDEV_ePUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_PUMP) == READ_RS485_JAN_PUMP)
 #define READ_RSDEV_vsfPUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_PEN_PUMP) == READ_RS485_PEN_PUMP)
-#define READ_RSDEV_LXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LXI) == READ_RS485_JAN_LXI)
+#define READ_RSDEV_JXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_JXI) == READ_RS485_JAN_JXI)
+#define READ_RSDEV_LX ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LX) == READ_RS485_JAN_LX)
+#define READ_RSDEV_CHEM ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_CHEM) == READ_RS485_JAN_CHEM)
 
+#define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
 
 

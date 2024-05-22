@@ -20,6 +20,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <regex.h>
+#include <limits.h>
 
 #include "utils.h"
 #include "rs_msg_utils.h"
@@ -83,6 +85,42 @@ bool rsm_get_revision(char *dest, const char *src, int src_len)
 
   return true;
 }
+/*
+pull board CPU from strings line
+   ' CPU p/n: B0029221'
+   'B0029221 REV T.0.1'
+   'E0260801 REV. O.2'
+*/
+int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len)
+{
+  //char *regexString="/\\w\\d{4,10}/gi";
+  //char *regexString="/[[:alpha:]][[:digit:]]{4,10}/gi";
+  char *regexString="[[:alpha:]][[:digit:]]{4,10}";
+  regex_t regexCompiled;
+  regmatch_t match;
+  int rc, begin, end, len;
+
+  if (0 != (rc = regcomp(&regexCompiled, regexString, REG_EXTENDED))) {
+     LOG(AQUA_LOG,LOG_ERR, "regcomp() failed, returning nonzero (%d)\n", rc);
+     return 0;
+  }
+
+  if ((regexec(&regexCompiled,src,1,&match,0)) != 0) {
+    regfree(&regexCompiled);
+    printf("********** ERROR didn;t line match \n");
+    return 0;
+  }
+
+  begin = (int)match.rm_so;
+  end = (int)match.rm_eo;
+  len = AQ_MIN((end-begin), dest_len);
+
+  strncpy(dest, src+match.rm_so, len );
+
+  regfree(&regexCompiled);
+
+  return len;
+}
 
 /*
 Find first char after a space in haystack after searching needle.
@@ -110,6 +148,18 @@ char *rsm_charafterstr(const char *haystack, const char *needle, int length)
   return ++sp;
 }
 
+/*
+  Check if string has printable chars and is not empty
+*/
+bool rsm_isempy(const char *src, int length)
+{
+  int i;
+  for(i=0; i < length; i++) {
+    if  (src[i] > 32 && src[i] < 127) // 32 is space
+      return true;
+  }
+  return false;
+}
 /*
   Can probably replace this with rsm_strncasestr in all code.
 */
@@ -193,7 +243,80 @@ int rsm_strcmp(const char *haystack, const char *needle)
     return -1;
   // Need to write this myself for speed
   //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
+  //printf("***** rsm_strcmp Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
   return strncasecmp(sp1, sp2, strlen(sp2));
+}
+
+// Match two strings, used for button labels
+// exact character length once white space removed is used for match
+// use case insensative for match.
+// so 'spa' !- 'spa mode'
+int rsm_strmatch(const char *haystack, const char *needle)
+{
+  return rsm_strmatch_ignore(haystack, needle, 0);
+  /*
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
+
+  char *ep1 = (char *)sp1 + strlen(sp1) - 1;
+  char *ep2 = (char *)sp2 + strlen(sp2) - 1;
+  //int i=0;
+  // Get rid of all padding
+  while(isspace(*sp1)) sp1++;
+  while(isspace(*sp2)) sp2++;
+  while(isspace(*ep1) && (ep1 >= sp1)) ep1--;
+  while(isspace(*ep2) && (ep2 >= sp2)) ep2--;
+
+  int l1 = ep1 - sp1 +1;
+  int l2 = ep2 - sp2 +1;
+
+  //printf("***** rsm_strmatch Compare %d chars of '%s' to %d chars in '%s'\n",l2,sp2,l1,sp1);
+
+  if ( l1 != l2 || (ep1 - sp1) <= 0 || (ep2 - sp2) <= 0 ) {
+    return -1;
+  }
+  // Need to write this myself for speed
+  //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
+  
+  return strncasecmp(sp1, sp2, l2);
+  */
+}
+
+// Match two strings, used for button labels
+// exact character length once white space removed is used for match
+// ignore_chars will delete the last X chars from haystack.
+// use case insensative for match.
+// so 'spa' !- 'spa mode'
+int rsm_strmatch_ignore(const char *haystack, const char *needle, int ignore_chars)
+{
+  char *sp1 = (char *)haystack;
+  char *sp2 = (char *)needle;
+
+  char *ep1 = (char *)sp1 + strlen(sp1) - 1;
+  char *ep2 = (char *)sp2 + strlen(sp2) - 1;
+  //int i=0;
+  // Get rid of all padding
+  while(isspace(*sp1)) sp1++;
+  while(isspace(*sp2)) sp2++;
+  while(isspace(*ep2) && (ep2 >= sp2)) ep2--;
+  if (ignore_chars > 0)
+    ep1 = ep1 - ignore_chars;
+  else
+    while(isspace(*ep1) && (ep1 >= sp1)) ep1--;
+  
+
+  int l1 = ep1 - sp1 +1;
+  int l2 = ep2 - sp2 +1;
+
+  //printf("***** %s() Compare %d chars of '%s' to %d chars in '%s'\n",(ignore_chars==0?"rsm_strmatch":"rsm_strmatch_ignore"),l2,sp2,l1,sp1);
+
+  if ( l1 != l2 || (ep1 - sp1) <= 0 || (ep2 - sp2) <= 0 ) {
+    return -1;
+  }
+  // Need to write this myself for speed
+  //LOG(AQUA_LOG,LOG_DEBUG, "Compare (reset)%d chars of '%s' to '%s'\n",strlen(sp2),sp1,sp2);
+  
+  return strncasecmp(sp1, sp2, l2);
 }
 
 
@@ -218,8 +341,7 @@ char *rsm_lastindexof(const char *haystack, const char *needle, size_t length)
   return NULL;
 }
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 
 int rsm_strncmp(const char *haystack, const char *needle, int length)
 {
@@ -241,7 +363,27 @@ int rsm_strncmp(const char *haystack, const char *needle, int length)
   //LOG(AQUA_LOG,LOG_DEBUG, "CHECK haystack SP1='%c' EP1='%c' SP2='%c' '%.*s' for '%s' length=%d\n",*sp1,*ep1,*sp2,(ep1-sp1)+1,sp1,sp2,(ep1-sp1)+1);
   // Need to write this myself for speed
   // Need to check if full length string (no space on end), that the +1 is accurate. MIN should do it
-  return strncasecmp(sp1, sp2, MIN((ep1-sp1)+1,length));
+  return strncasecmp(sp1, sp2, AQ_MIN((ep1-sp1)+1,length));
+}
+
+
+char *rsm_char_replace(char *replaced , char *search,  char *find,  char *replace)
+{
+  int len;
+  int i;
+  char *fp = find;
+  char *rp = replace;
+
+  len = strlen(search);
+  for(i = 0; i < len; i++){
+    if (search[i] == *fp)
+      replaced[i] = *rp;
+    else
+      replaced[i] = search[i];
+  }
+  replaced[i] = '\0';
+
+  return replaced;
 }
 
 // NSF Check is this works correctly.
@@ -253,7 +395,7 @@ char *rsm_strncpycut(char *dest, const char *src, int dest_len, int src_len)
   while(isspace(*sp)) sp++;
   while(isspace(*ep)) ep--;
 
-  int length=MIN((ep-sp)+1,dest_len);
+  int length=AQ_MIN((ep-sp)+1,dest_len);
 
   memset(dest, '\0',dest_len);
   return strncpy(dest, sp, length);
@@ -304,8 +446,6 @@ int rsm_strncpy_nul2sp(char *dest, const unsigned char *src, int dest_len, int s
   return _rsm_strncpy(dest, src, dest_len, src_len, true);
 }
 
-#define INT_MAX +2147483647
-#define INT_MIN -2147483647
 
 // atoi that can have blank start
 int rsm_atoi(const char* str) 
@@ -343,4 +483,14 @@ float rsm_atof(const char* str)
   }
 
   return atof(&str[i]);
+}
+
+// MEssages as HH:MM ie 01:23
+int rsm_HHMM2min(char *message) {
+  char *ptr;
+
+  int hour = strtoul(message, &ptr, 10);
+  int min = strtoul(message+3, &ptr, 10);
+
+  return (hour*60)+min;
 }

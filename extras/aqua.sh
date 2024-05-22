@@ -182,32 +182,11 @@ function check_git_installed {
 function check_curl_installed {
   command -v curl >/dev/null 2>&1 || { echoerr "curl is not installed.  Installing"; exit 1; }
 }
-
-#
-# Main
-#
-
-# Check we are on a arm 32 bit machine.
-
-# below is compatable on all linux.
-#if file -Lb /usr/bin/ld | grep -s -i armhf > /dev/null; then 
-# dpkg is good for debain distros.
-if dpkg --print-architecture | grep -s -i armhf > /dev/null; then 
-  echo "Architecture is armhf"; 
-else 
-  echo "Architecture is '`dpkg --print-architecture`'"
-  echo "This does not look like linux running on a arm 32 platform"
-  echo "Please use another install method"
-  echo "https://github.com/sfeakes/AqualinkD/wiki#Install"
-  exit
-fi
-
 # Check something was passed
 if [[ $# -eq 0 ]]; then
     print_usage
     exit
 fi
-
 
 # Pass command line
 if [ "$1" == "release" ]; then

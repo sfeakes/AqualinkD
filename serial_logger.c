@@ -117,7 +117,7 @@ int serial_logger (int rs_fd, char *port_name, int logLevel) {
 #define PDA " <-- PDA Remote"
 #define EPUMP " <-- Jandy VSP ePump"
 #define CHEM " <-- Chemlink"
-#define LXI_LRZ_HEATER " <-- LXi / LRZ Heater"
+#define JXI_HEATER " <-- LXi / LRZ Heater"
 
 #define UNKNOWN " <-- Unknown Device"
 
@@ -151,7 +151,7 @@ const char *getDevice(unsigned char ID) {
   if (ID >= 0x60 && ID <= 0x63)
     return PDA;
   if (ID >= 0x68 && ID <= 0x6B)
-    return LXI_LRZ_HEATER;
+    return JXI_HEATER;
   //if (ID >= 0x70 && ID <= 0x73)
   if (ID >= 0x78 && ID <= 0x7B)
     return EPUMP;

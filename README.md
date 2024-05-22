@@ -67,7 +67,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Full support for homekit scenes: ie: Create a "Spa scene" to: "turn spa on, set spa heater to X temperature and turn spa blower on", etc etc).
 
 ### In Home Assistant 
-<img src="extras/HomeAssistant2.png?raw=true" width="800"></img>
+<img src="extras/HASSIO.png?raw=true" width="800"></img>
 
 ## All Web interfaces.
 * http://aqualink.ip/     <- (Standard WEB UI
@@ -83,7 +83,39 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Add set time to OneTouch protocol.
 * Update AqualinkD Management console to manage configuration
 * Create iAqualink Touch Simulator
+* Probably decoded enough protocols for AuqlinkD to self configure.
 
+<!--
+* NEED TO FIX for PDA and iAQT protocol.
+  * Not always doing on/off
+  * Heaters are slow to turn on, need to hit extra button
+  * Spa turns on Spa Heat (first button on home page ???)
+  * SWG Stays on
+  * serial_logger
+  * Add wiki documentation 
+    * about Heat vs Heater
+    * Panel version
+    * can't use iaquatouch panel / wireless
+
+* Added iAqualinkTouch support for PDA only panels that can use that protocol.
+  * PDA panel needs to be Rev 6.0 or newer.
+  * This makes the PDA only panels quicker and less error prone.
+  * Introduces color light support and VSP
+  * Consider this PDA support Beta.
+  * Read PDA Wiki
+-->
+
+# Call for Help.
+* The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
+
+# Update in Release 2.3.5
+* Added Home Assistant integration through MQTT discover
+  * Please read the Wiki section on this [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
+  * There are still some enhacments to come on this.
+* Added support for reading extended information for Jandy JXi heaters.
+* Added Color Light to iAqualinkTouch protocol.
+* Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
+  
 # Update in Release 2.3.4
 * Changes for Docker
 * Updated simulator code base and added new simulators for AllButton, OneTouch & PDA.
@@ -95,11 +127,11 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 # Update in Release 2.3.3
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
-  * [AqualinkD Manager](#AQManager)
+  * [AqualinkD Manager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
 * Moved logging into systemd/journal (journalctl) from syslog
-  * [AqualinkD Log](#Log)
+  * [AqualinkD Log](https://github.com/sfeakes/AqualinkD/wiki#Log)
 * Updated to scheduler
-  * [AqualinkD Scheduler](#Scheduler)
+  * [AqualinkD Scheduler](https://github.com/sfeakes/AqualinkD/wiki#Scheduler)
 * Introduced RS485 frame delay / timer. 
   * Improve PDA panels reliability (PDA pannels are slower than RS panels)
   * Potentially fixed Pentair VSP / SWG problems since Pentair VSP use a different protocol, this will allow a timed delay for the VSP to post a status messages. Seems to only effect RS485 bus when both a Pentair VSP and Jandy SWG are present.

@@ -23,6 +23,9 @@
 #define SWG_SETPOINT_TOPIC SWG_TOPIC "/setpoint"
 #define SWG_EXTENDED_TOPIC SWG_TOPIC "/fullstatus"
 #define SWG_BOOST_TOPIC SWG_TOPIC "/Boost"
+#define SWG_BOOST_DURATION_TOPIC SWG_BOOST_TOPIC "/duration"
+
+#define SWG_STATUS_MSG_TOPIC SWG_TOPIC "/Display_Message"
 
 #define CHEM_TOPIC "CHEM"
 #define CHEM_PH_TOPIC CHEM_TOPIC "/pH"
@@ -30,13 +33,18 @@
 #define CHEM_ORP_TOPIC CHEM_TOPIC "/ORP"
 #define CHRM_ORP_F_TOPIC CHEM_TOPIC "/ORP_f"
 
+#define LXI_TOPIC "LXi"
+#define LXI_STATUS LXI_TOPIC "/Status"
+#define LXI_ERROR_CODE LXI_TOPIC "/Error"
+#define LXI_ERROR_MESSAGE LXI_TOPIC "/Error_Message"
+
 #define FREEZE_PROTECT "Freeze_Protect"
 #define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT
 
 #define BATTERY_STATE "Battery"
 
-#define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
-#define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
+//#define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
+//#define SPA_THERMO_TEMP_TOPIC BTN_SPA_HTR "/Temperature"
 
 //#define PUMP_TOPIC "Pump_"
 #define PUMP_RPM_TOPIC "/RPM"

@@ -687,6 +687,7 @@ void process_pda_packet_msg_long_equiptment_status(const char *msg_line, int lin
     //snprintf(_aqualink_data->boost_msg, sizeof(_aqualink_data->boost_msg), "%s", msg+2);
     //Message is '  23:21 Remain', we only want time part 
     snprintf(_aqualink_data->boost_msg, 6, "%s", msg);
+    _aqualink_data->boost_duration = rsm_HHMM2min(_aqualink_data->boost_msg);
   }
   else if ((index = rsm_strncasestr(msg, MSG_SWG_PCT, AQ_MSGLEN)) != NULL)
   {

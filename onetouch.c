@@ -589,8 +589,8 @@ bool log_qeuiptment_status_VP2(struct aqualinkdata *aq_data)
     } else if (PANEL_SIZE() >= 16 ) {
       // Loop over RS 16 buttons.
       get_RS16buttoninfo_from_menu(aq_data, i);
-#endif
     }
+#endif
   }
 
   return rtn;

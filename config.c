@@ -92,6 +92,7 @@ void init_parameters (struct aqconfig * parms)
 
   parms->mqtt_dz_sub_topic = DEFAULT_MQTT_DZ_OUT;
   parms->mqtt_dz_pub_topic = DEFAULT_MQTT_DZ_IN;
+  parms->mqtt_hass_discover_topic = DEFAULT_HASS_DISCOVER;
   parms->mqtt_aq_topic = DEFAULT_MQTT_AQ_TP;
   parms->mqtt_server = DEFAULT_MQTT_SERVER;
   parms->mqtt_user = DEFAULT_MQTT_USER;
@@ -129,6 +130,7 @@ void init_parameters (struct aqconfig * parms)
   parms->force_swg = false;
   parms->force_ps_setpoints = false;
   parms->force_frzprotect_setpoints = false;
+  parms->force_chem_feeder = false;
   //parms->swg_pool_and_spa = false;
   parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
@@ -442,6 +444,15 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "mqtt_dz_pub_topic", 17) == 0) {
     _aqconfig_.mqtt_dz_pub_topic = cleanalloc(value);
     rtn=true;
+  } else if (strncasecmp(param, "mqtt_hassio_discover_topic", 26) == 0) {
+    _aqconfig_.mqtt_hass_discover_topic = cleanalloc(value);
+    /*  It might also make sence to also set these to true. Since aqualinkd does not know the state at the time discover topics are published.
+      _aqconfig_.force_swg;
+      _aqconfig_.force_ps_setpoints;
+      _aqconfig_.force_frzprotect_setpoints;
+      force_chem_feeder
+    */
+    rtn=true;
   } else if (strncasecmp(param, "mqtt_aq_topic", 13) == 0) {
     _aqconfig_.mqtt_aq_topic = cleanalloc(value);
     rtn=true;
@@ -552,11 +563,23 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_LXi", 14) == 0) {
+  } else if (strncasecmp (param, "read_RS485_JXi", 14) == 0) {
     if (text2bool(value))
-      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LXI;
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_JXI;
     else
-      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LXI;
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_JXI;
+    rtn=true;
+   } else if (strncasecmp (param, "read_RS485_LX", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LX;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LX;
+    rtn=true;
+  } else if (strncasecmp (param, "read_RS485_Chem", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_CHEM;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_CHEM;
     rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
@@ -569,6 +592,9 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp (param, "force_frzprotect_setpoints", 26) == 0) {
     _aqconfig_.force_frzprotect_setpoints = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "force_chem_feeder", 17) == 0) {
+    _aqconfig_.force_chem_feeder = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
     _aqconfig_.log_raw_bytes = text2bool(value);

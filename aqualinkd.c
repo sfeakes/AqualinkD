@@ -180,6 +180,12 @@ bool checkAqualinkTime()
     LOG(AQUA_LOG,LOG_DEBUG, "time not checked, will check in %d seconds\n", TIME_CHECK_INTERVAL - time_difference);
     return true;
   }
+  else if (strlen(_aqualink_data.date) <=0 ||
+           strlen(_aqualink_data.time) <=0) 
+  {
+    LOG(AQUA_LOG,LOG_DEBUG, "time not checked, no time from panel\n");
+    return true;
+  }
   else
   {
     last_checked = now;
@@ -188,7 +194,7 @@ bool checkAqualinkTime()
 
   char datestr[DATE_STRING_LEN];
 #ifdef AQ_PDA
-  if (isPDA_PANEL) {
+  if (isPDA_PANEL && !isPDA_IAQT) {
     LOG(AQUA_LOG,LOG_DEBUG, "PDA Time Check\n");
     // date is simply a day or week for PDA.
     localtime_r(&now, &aq_tm);
@@ -358,6 +364,7 @@ int16_t  RS16_endswithLEDstate(char *msg)
 #endif
 
 
+
 void _processMessage(char *message, bool reset);
 
 void processMessage(char *message)
@@ -454,6 +461,7 @@ void _processMessage(char *message, bool reset)
     if ((msg_loop & MSG_BOOST) != MSG_BOOST) {
       _aqualink_data.boost = false;
       _aqualink_data.boost_msg[0] = '\0';
+      _aqualink_data.boost_duration = 0;
       //if (_aqualink_data.swg_percent >= 101)
       //  _aqualink_data.swg_percent = 0;
     }
@@ -619,7 +627,8 @@ void _processMessage(char *message, bool reset)
       else if (strcasestr(msg, MSG_SWG_HIGH_SALT) != NULL)
         setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_HI_SALT);
       else if (strcasestr(msg, MSG_SWG_FAULT) != NULL)
-        setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_CHECK_PCB);
+        setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_GENFAULT);
+        //setSWGdeviceStatus(&_aqualink_data, ALLBUTTON, SWG_STATUS_CHECK_PCB);
       
       // Any of these messages want to display.
       strcpy(_aqualink_data.last_display_message, msg);
@@ -730,9 +739,11 @@ void _processMessage(char *message, bool reset)
     // Ignore messages if in programming mode.  We get one of these turning off for some strange reason.
     if (in_programming_mode(&_aqualink_data) == false) {
       snprintf(_aqualink_data.boost_msg, 6, "%s", &msg[11]);
+      _aqualink_data.boost_duration = rsm_HHMM2min(_aqualink_data.boost_msg);
       _aqualink_data.boost = true;
       msg_loop |= MSG_BOOST;
       msg_loop |= MSG_SWG;
+      //convert_boost_to_duration(_aqualink_data.boost_msg)
       //if (_aqualink_data.ar_swg_status != SWG_STATUS_ON) {_aqualink_data.ar_swg_status = SWG_STATUS_ON;}
       if (_aqualink_data.swg_percent != 101) {changeSWGpercent(&_aqualink_data, 101);}
       //boost_msg_count = 0;
@@ -807,6 +818,9 @@ bool process_packet(unsigned char *packet, int length)
 #ifdef AQ_PDA
   if (isPDA_PANEL)
   {
+    if (isPDA_IAQT) {
+      return false;
+    }
     return process_pda_packet(packet, length);
   }
 #endif
@@ -987,7 +1001,7 @@ void action_delayed_request()
       }
       else
       {
-        LOG(AQUA_LOG,LOG_NOTICE, "SWG % is already %d, not changing\n", _aqualink_data.unactioned.value);
+        LOG(AQUA_LOG,LOG_NOTICE, "SWG %% is already %d, not changing\n", _aqualink_data.unactioned.value);
       }
     }
     // Let's just tell everyone we set it, before we actually did.  Makes homekit happy, and it will re-correct on error.
@@ -1168,7 +1182,7 @@ int startup(char *self, char *cfgFile)
       return EXIT_FAILURE;
     }
   } else if (isPDA_PANEL) {
-    if (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) {
+    if ( (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) || _aqconfig_.device_id == 0x33 ) {
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match PDA panel, please check config!\n", _aqconfig_.device_id);
@@ -1313,6 +1327,9 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read SWG direct          = %s\n", bool2text(READ_RSDEV_SWG));
   LOG(AQUA_LOG,LOG_NOTICE, "Read ePump direct        = %s\n", bool2text(READ_RSDEV_ePUMP));
   LOG(AQUA_LOG,LOG_NOTICE, "Read vsfPump direct      = %s\n", bool2text(READ_RSDEV_vsfPUMP));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
+  LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
 
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
@@ -1507,6 +1524,7 @@ void main_loop()
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
 
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
+  _aqualink_data.is_display_message_programming = false;
   //_aqualink_data.simulate_panel = false;
   _aqualink_data.active_thread.thread_id = 0;
   _aqualink_data.air_temp = TEMP_UNKNOWN;
@@ -1519,6 +1537,7 @@ void main_loop()
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
   _aqualink_data.ar_swg_device_status = SWG_STATUS_UNKNOWN;
+  _aqualink_data.heater_err_status = NUL; // 0x00 is no error
   _aqualink_data.swg_led_state = LED_S_UNKNOWN;
   _aqualink_data.swg_delayed_percent = TEMP_UNKNOWN;
   _aqualink_data.temp_units = UNKNOWN;
@@ -1530,6 +1549,8 @@ void main_loop()
   _aqualink_data.orp = TEMP_UNKNOWN;
   _aqualink_data.simulator_id = NUL;
   _aqualink_data.simulator_active = SIM_NONE;
+  _aqualink_data.boost_duration = 0;
+  _aqualink_data.boost = false;
 
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
@@ -1545,6 +1566,11 @@ void main_loop()
     _aqualink_data.swg_led_state = OFF;
     _aqualink_data.swg_percent = 0;
     _aqualink_data.swg_ppm = 0;
+  }
+
+  if (_aqconfig_.force_chem_feeder == true) {
+    _aqualink_data.ph = 0;
+    _aqualink_data.orp = 0;
   }
 
   signal(SIGINT, intHandler);
@@ -1881,7 +1907,15 @@ void main_loop()
 #ifdef AQ_PDA 
         if (isPDA_PANEL) {
           // If we are in simulator mode, the sim has already send the ack
-          if (_aqualink_data.simulator_active == SIM_NONE) {
+          if (isPDA_IAQT) {
+            //printf("****PDA IAQT Code\n");
+            _aqualink_data.updated = process_iaqtouch_packet(packet_buffer, packet_length, &_aqualink_data);
+            _aqualink_data.updated = true; // FORCE UPDATE SINCE THIS IS NOT WORKING YET
+            caculate_ack_packet(rs_fd, packet_buffer, IAQTOUCH);
+            if (checkAqualinkTime() == false) // Need to do this better.
+            {aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);}
+          }
+          else /*if (_aqualink_data.simulator_active == SIM_NONE)*/ {
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
           }
         }

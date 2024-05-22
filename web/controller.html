@@ -590,6 +590,21 @@
     var _scheduler_devices_json= [];
 
 
+    var _swgALLStatus = {
+          0: "On",
+          1: "No flow",
+          2: "Low salt",
+          4: "High salt",
+          8: "Clean cell",
+          9: "Turning off",
+         16: "High current",
+         32: "Low volts",
+         64: "Low temp",
+        128: "Check PCB",
+        253: "General Fault",
+        254: "Unknown",
+        255: "Off"
+    }
 
     if (typeof show_vsp_gpm !== 'undefined' && show_vsp_gpm == false)
       var _show_vsp_gpm=false;
@@ -605,19 +620,7 @@
     if (typeof swgStatus !== 'undefined') {
       var _swgStatus = swgStatus;
     } else {
-      var _swgStatus = {
-          0: "On",
-          1: "No flow",
-          2: "Low salt",
-          4: "High salt",
-          8: "Clean cell",
-          9: "Turning off",
-         16: "High current",
-         32: "Low volts",
-         64: "Low temp",
-        128: "Check PCB",
-        255: "Off"
-      }
+      var _swgStatus = _swgALLStatus
     }
 
     function init() {
@@ -1100,6 +1103,9 @@
             if (exstatus > 0 && exstatus < 255) {// Not off or on
               //text = swgFullstatus2String(exstatus);
               text = _swgStatus[exstatus];
+              if (typeof text == 'undefined') {
+                text = _swgALLStatus[exstatus];
+              }
             } else if (tile.getAttribute('Boost') == 'on')
               text = "Boost";
             else if (status == 'enabled')

@@ -205,6 +205,7 @@ struct aqualinkdata
   char time[AQ_MSGLEN];
   char last_message[AQ_MSGLONGLEN+1]; // Last ascii message from panel - allbutton (or PDA) protocol
   char last_display_message[AQ_MSGLONGLEN+1]; // Last message to display in web UI
+  bool is_display_message_programming;
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
   unsigned short total_buttons;
@@ -220,6 +221,7 @@ struct aqualinkdata
   int swg_percent;
   int swg_ppm;
   unsigned char ar_swg_device_status; // Actual state 
+  unsigned char heater_err_status;
   aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
@@ -229,6 +231,7 @@ struct aqualinkdata
   clight_detail lights[MAX_LIGHTS];
   bool boost;
   char boost_msg[10];
+  int boost_duration; // need to remove boost message and use this
   float ph;
   int orp;
 

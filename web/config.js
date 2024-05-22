@@ -35,8 +35,8 @@
         "Spa_Water",
         "Freeze_Protect",
         "CHEM/pH",
-        "CHEM/ORP"
-        //"Solar_Heater",
+        "CHEM/ORP",
+        "Solar_Heater",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0
@@ -72,6 +72,8 @@
          32: "Low volts",
          64: "Low temp",
         128: "Check PCB",
+        253: "General Fault",
+        254: "Unknown",
         255: "Off"
       }
 

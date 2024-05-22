@@ -44,6 +44,7 @@
 #include "aq_scheduler.h"
 #include "rs_msg_utils.h"
 #include "simulator.h"
+#include "hassio.h"
 #include "version.h"
 
 #ifdef AQ_PDA
@@ -685,14 +686,17 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   const char *status;
 
   if (_aqconfig_.mqtt_timed_update) {
+#ifdef AQ_NO_THREAD_NETSERVICE
     if (cnt > 300) {  // 100 = about every 2 minutes.
+#else
+    if (cnt > 30) {  // 30 = about every 2 minutes.
+#endif
       reset_last_mqtt_status();
       cnt = 0;
     } else {
       cnt++;
     }
   }
-  
 
 //LOG(NET_LOG,LOG_INFO, "mqtt_broadcast_aqualinkstate: START\n");
 
@@ -819,6 +823,12 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_mqtt_int_msg(nc, SWG_BOOST_TOPIC, _aqualink_data->boost);
       _last_mqtt_aqualinkdata.boost = _aqualink_data->boost;
     }
+
+    if ( _aqualink_data->boost_duration != _last_mqtt_aqualinkdata.boost_duration ) {
+      send_mqtt_int_msg(nc, SWG_BOOST_DURATION_TOPIC, _aqualink_data->boost_duration);
+      _last_mqtt_aqualinkdata.boost_duration = _aqualink_data->boost_duration;
+    }
+    
   } else {
     //LOG(NET_LOG,LOG_DEBUG, "SWG status unknown\n");
   }
@@ -831,9 +841,10 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       int dzalert;
     
       get_swg_status_mqtt(_aqualink_data, message, &status, &dzalert);
-      send_domoticz_mqtt_status_message(nc, _aqconfig_.dzidx_swg_status, dzalert, &message[9]);
 
+      send_domoticz_mqtt_status_message(nc, _aqconfig_.dzidx_swg_status, dzalert, &message[9]);
       send_mqtt_int_msg(nc, SWG_EXTENDED_TOPIC, (int)_aqualink_data->ar_swg_device_status);
+      send_mqtt_string_msg(nc, SWG_STATUS_MSG_TOPIC, message);
 
       _last_mqtt_aqualinkdata.ar_swg_device_status = _aqualink_data->ar_swg_device_status;
       //LOG(NET_LOG,LOG_DEBUG, "SWG Extended sending cur=%d sent=%d\n",_aqualink_data->ar_swg_device_status,_last_mqtt_aqualinkdata.ar_swg_device_status);
@@ -842,6 +853,22 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     }
   } else {
     //LOG(NET_LOG,LOG_DEBUG, "SWG Extended unknown\n");
+  }
+
+  if (READ_RSDEV_JXI && _aqualink_data->heater_err_status != _last_mqtt_aqualinkdata.heater_err_status) {
+    char message[30];
+
+    if (_aqualink_data->heater_err_status == NUL) {
+      send_mqtt_int_msg(nc, LXI_ERROR_CODE, (int)_aqualink_data->heater_err_status);
+      send_mqtt_string_msg(nc, LXI_ERROR_MESSAGE, "");
+    } else {
+      //send_mqtt_int_msg(nc, LXI_STATUS, (int)_aqualink_data->heater_err_status);
+      send_mqtt_int_msg(nc, LXI_ERROR_CODE, (int)_aqualink_data->heater_err_status);
+      getJandyHeaterErrorMQTT(_aqualink_data, message);
+      send_mqtt_string_msg(nc, LXI_ERROR_MESSAGE, status);
+    }
+
+    _last_mqtt_aqualinkdata.heater_err_status = _aqualink_data->heater_err_status;
   }
 
   // LOG(NET_LOG,LOG_INFO, "mqtt_broadcast_aqualinkstate: START LEDs\n");
@@ -952,6 +979,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   char *ri1 = (char *)URI;
   char *ri2 = NULL;
   char *ri3 = NULL;
+  //bool charvalue=false;
   //char *ri4 = NULL;
 
   LOG(NET_LOG,LOG_DEBUG, "%s: URI Request '%.*s': value %.2f\n", actionName[from], uri_length, URI, value);
@@ -1325,7 +1353,21 @@ void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) 
   strncpy(tmp, msg->payload.p, msg->payload.len);
   tmp[msg->payload.len] = '\0';
 
-  float value = atof(tmp);
+  //float value = atof(tmp);
+
+  // Check value like on/off/heat/cool and convery to int.
+  // HASSIO doesn't support `mode_command_template` so easier to code around their limotation here.
+  char *end;
+  float value = strtof(tmp, &end);
+  if (tmp == end) { // Not a number
+    // See if any test resembeling 1, of not leave at zero.
+    if (rsm_strcmp(tmp, "on")==0 || rsm_strcmp(tmp, "heat")==0 || rsm_strcmp(tmp, "cool")==0)
+      value = 1;
+
+    LOG(NET_LOG,LOG_NOTICE, "MQTT: converted value from '%s' to '%.0f', from message '%.*s'\n",tmp,value,msg->topic.len, msg->topic.p);
+  } 
+
+
   //int val = _aqualink_data->unactioned.value = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp) ? round(degCtoF(value)) : round(value);
   bool convert = (_aqualink_data->temp_units != CELSIUS && _aqconfig_.convert_mqtt_temp)?true:false;
   int offset = strlen(_aqconfig_.mqtt_aq_topic)+1;
@@ -1821,6 +1863,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         mg_mqtt_subscribe(nc, topics, 1, 42);
         LOG(NET_LOG,LOG_INFO, "MQTT: Subscribing to '%s'\n", _aqconfig_.mqtt_dz_sub_topic);
       }
+
+      publish_mqtt_hassio_discover( _aqualink_data, nc);
     }
     break;
   case MG_EV_MQTT_PUBACK:
@@ -1876,6 +1920,13 @@ void reset_last_mqtt_status()
   _last_mqtt_aqualinkdata.boost = -1;
   _last_mqtt_aqualinkdata.swg_percent = -1;
   _last_mqtt_aqualinkdata.swg_ppm = -1;
+  _last_mqtt_aqualinkdata.heater_err_status = NUL; // 0x00
+
+  for (i=0; i < _aqualink_data->num_pumps; i++) {
+    _last_mqtt_aqualinkdata.pumps[i].gpm = -1;
+    _last_mqtt_aqualinkdata.pumps[i].rpm = -1;
+    _last_mqtt_aqualinkdata.pumps[i].watts = -1;
+  }
 
 }
 

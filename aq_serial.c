@@ -140,6 +140,12 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_IAQ_STARTUP:
       return "iAq init";
     break;
+    case CMD_IAQ_TITLE_MESSAGE:
+      return "iAq ProductName";
+    break;
+    case CMD_IAQ_MSG_LONG:
+      return "iAq Popup message";
+    break;
     case RSSA_DEV_STATUS:
       // This is a fail reply 0x10|0x02|0x48|0x13|0x02|0x00|0x10|0x00|0x7f|0x10|0x03|
        // Rather than check all, just check 0x02 and checksum sin't I'm not sure 0x10 means faiure without 0x00 around it.
@@ -165,6 +171,19 @@ const char* get_packet_type(unsigned char* packet , int length)
     case CMD_EPUMP_WATTS:
       return "ePump get Watts";
     break;
+    case CMD_JXI_PING:
+      if (packet[4] == 0x19)
+        return "LXi heater on";
+      else // 0x11 is normal off
+        return "LXi heater ping";
+    break;
+    case CMD_JXI_STATUS:
+      if (packet[6] == 0x10)
+        return "LXi error";
+      else
+        return "LXi status";
+    break;
+
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;

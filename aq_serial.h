@@ -38,12 +38,16 @@
 */
 #define PENTAIR_DEC_PUMP_MIN   96   // 0x60
 #define PENTAIR_DEC_PUMP_MAX  111   // 0x6F
-#define JANDY_DEC_PUMP_MIN    120   // 0x80
-#define JANDY_DEC_PUMP_MAX    123   // 0x83
-#define JANDY_DEC_LX_MIN       56   // 0x40
-#define JANDY_DEC_LX_MAX       59   // 0x43
-#define JANDY_DEC_LXI_MIN     104   // 0x60
-#define JANDY_DEC_LXI_MAX     107   // 0x6B 
+#define JANDY_DEC_SWG_MIN      80   // 0x50
+#define JANDY_DEC_SWG_MAX      83   // 0x53
+#define JANDY_DEC_PUMP_MIN    120   // 0x78
+#define JANDY_DEC_PUMP_MAX    123   // 0x7b
+#define JANDY_DEC_JXI_MIN     104   // 0x68
+#define JANDY_DEC_JXI_MAX     107   // 0x6B
+#define JANDY_DEC_LX_MIN       56   // 0x38
+#define JANDY_DEC_LX_MAX       59   // 0x3B 
+#define JANDY_DEC_CHEM_MIN    128   // 0x80
+#define JANDY_DEC_CHEM_MAX    131   // 0x83
 
 
 // PACKET DEFINES Jandy
@@ -124,6 +128,10 @@
 #define CMD_GETID       0x14  // May be remote control control
 #define CMD_PERCENT     0x11  // Set Percent
 #define CMD_PPM         0x16  // Received PPM
+
+/* LXi Heater commands */
+#define CMD_JXI_PING     0x0c
+#define CMD_JXI_STATUS   0x0d
 
 /* PDA KEY CODES */  // Just plating at the moment
 #define KEY_PDA_UP     0x06
@@ -294,8 +302,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 //#define SWG_STATUS_OFFLINE 0xFE
 
 //#define SWG_STATUS_UNKNOWN -128 // Idiot.  unsigned char....Derr.
-#define SWG_STATUS_OFF     0xFF // Documented this as off in API, so don't change.
-#define SWG_STATUS_UNKNOWN 0xFE 
+#define SWG_STATUS_OFF      0xFF // Documented this as off in API, so don't change.
+#define SWG_STATUS_UNKNOWN  0xFE 
+#define SWG_STATUS_GENFAULT 0xFD //This is displayed in the panel, so adding it
 // These are actual from RS485
 
 #define SWG_STATUS_ON           0x00
@@ -337,7 +346,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_POLL          0x30  // Poll message or ready to receive command
 #define CMD_IAQ_CTRL_READY    0x31  // Get this when we can send big control command
 #define CMD_IAQ_PAGE_CONTINUE 0x40  // Seems we get this on AUX device page when there is another page, keeps circuling through pages.
-
+#define CMD_IAQ_TITLE_MESSAGE 0x2d  // This is what the product name is set to (Jandy RS) usually
 //#define CMD_IAQ_VSP_ERROR     0x2c  // Error when setting speed too high
 #define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
 /*
@@ -355,6 +364,10 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define KEY_IAQTCH_STATUS        0x06
 #define KEY_IAQTCH_PREV_PAGE     0x20
 #define KEY_IAQTCH_NEXT_PAGE     0x21
+#define KEY_IAQTCH_OK            0x01 //HEX: 0x10|0x02|0x00|0x01|0x00|0x01|0x14|0x10|0x03|. OK BUTTON
+
+#define KEY_IAQTCH_PREV_PAGE_ALTERNATE   0x1d // System setup prev
+#define KEY_IAQTCH_NEXT_PAGE_ALTERNATE   0x1e // System setup next
 
 // PAGE1 (Horosontal keys) (These are duplicate so probable delete)
 #define KEY_IAQTCH_HOMEP_KEY01   0x11
@@ -390,6 +403,7 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_STATUS2         0x2a // Something get this for Status rather than 0x5b
 #define IAQ_PAGE_DEVICES         0x36
 #define IAQ_PAGE_DEVICES2        0x35
+#define IAQ_PAGE_DEVICES3        0x51
 #define IAQ_PAGE_SET_TEMP        0x39
 #define IAQ_PAGE_MENU            0x0f
 #define IAQ_PAGE_SET_VSP         0x1e
@@ -401,10 +415,14 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_ONETOUCH        0x4d
 #define IAQ_PAGE_COLOR_LIGHT     0x48
 #define IAQ_PAGE_SYSTEM_SETUP    0x14
+#define IAQ_PAGE_SYSTEM_SETUP2   0x49
+#define IAQ_PAGE_SYSTEM_SETUP3   0x4a
 #define IAQ_PAGE_VSP_SETUP       0x2d
 #define IAQ_PAGE_FREEZE_PROTECT  0x11
 #define IAQ_PAGE_LABEL_AUX       0x32
+#define IAQ_PAGE_HELP            0x0c
 //#define IAQ_PAGE_START_BOOST     0x3f
+//#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
 
 
 
@@ -426,7 +444,9 @@ typedef enum {
   DRS_NONE,
   DRS_SWG,
   DRS_EPUMP,
-  DRS_LXI
+  DRS_JXI,
+  DRS_LX,
+  DRS_CHEM
 } rsDeviceType;
 
 typedef enum {
