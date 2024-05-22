@@ -85,8 +85,8 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Create iAqualink Touch Simulator
 * Probably decoded enough protocols for AuqlinkD to self configure.
 
-# Update in Release 2.3.5
-* NEED TO FIX
+<!--
+* NEED TO FIX for PDA and iAQT protocol.
   * Not always doing on/off
   * Heaters are slow to turn on, need to hit extra button
   * Spa turns on Spa Heat (first button on home page ???)
@@ -96,7 +96,9 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
     * about Heat vs Heater
     * Panel version
     * can't use iaquatouch panel / wireless
+-->
 
+# Update in Release 2.3.5
 * Added Home Assistant integration through MQTT discover
   * Please read the Wiki section on this [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
   * There are still some enhacments to come on this.
