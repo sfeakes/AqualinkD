@@ -160,7 +160,7 @@ struct iaqt_page_button *iaqtFindButtonByIndex(int index) {
   return NULL;
 }
 
-struct iaqt_page_button *iaqtFindButtonByLabel(char *label) {
+struct iaqt_page_button *iaqtFindButtonByLabel(const char *label) {
   int i;
   struct iaqt_page_button *buttons;
 

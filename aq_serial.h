@@ -38,12 +38,16 @@
 */
 #define PENTAIR_DEC_PUMP_MIN   96   // 0x60
 #define PENTAIR_DEC_PUMP_MAX  111   // 0x6F
-#define JANDY_DEC_PUMP_MIN    120   // 0x80
-#define JANDY_DEC_PUMP_MAX    123   // 0x83
+#define JANDY_DEC_SWG_MIN      80   // 0x50
+#define JANDY_DEC_SWG_MAX      83   // 0x53
+#define JANDY_DEC_PUMP_MIN    120   // 0x78
+#define JANDY_DEC_PUMP_MAX    123   // 0x7b
 #define JANDY_DEC_JXI_MIN     104   // 0x68
 #define JANDY_DEC_JXI_MAX     107   // 0x6B
-#define JANDY_DEC_LX_MIN     56   // 0x38
-#define JANDY_DEC_LX_MAX     59   // 0x3B 
+#define JANDY_DEC_LX_MIN       56   // 0x38
+#define JANDY_DEC_LX_MAX       59   // 0x3B 
+#define JANDY_DEC_CHEM_MIN    128   // 0x80
+#define JANDY_DEC_CHEM_MAX    131   // 0x83
 
 
 // PACKET DEFINES Jandy
@@ -441,7 +445,8 @@ typedef enum {
   DRS_SWG,
   DRS_EPUMP,
   DRS_JXI,
-  DRS_LX
+  DRS_LX,
+  DRS_CHEM
 } rsDeviceType;
 
 typedef enum {

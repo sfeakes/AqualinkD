@@ -24,11 +24,20 @@
 #include "aq_serial.h"
 #include "devices_pentair.h"
 #include "utils.h"
+#include "packetLogger.h"
 
 bool processPentairPacket(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) 
 {
   bool changedAnything = false;
   int i;
+
+  // Only log if we are pentair debug move and not serial (otherwise it'll print twice)
+  if (getLogLevel(DPEN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
+    char buff[1024];
+    beautifyPacket(buff, packet, packet_length, true);
+    LOG(DPEN_LOG,LOG_DEBUG, "%s", buff);
+  }
+
   //ID's 96 to 111 = Pentair (or 0x60 to 0x6F)
 
   // Need to find a better way to support pump index

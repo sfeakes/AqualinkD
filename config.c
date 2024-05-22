@@ -575,6 +575,12 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LX;
     rtn=true;
+  } else if (strncasecmp (param, "read_RS485_Chem", 14) == 0) {
+    if (text2bool(value))
+      _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_CHEM;
+    else
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_CHEM;
+    rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;

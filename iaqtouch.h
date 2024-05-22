@@ -17,7 +17,7 @@ unsigned char iaqtThreadKickType();
 unsigned char iaqtCurrentPage();
 unsigned char iaqtCurrentPageLoading();
 bool wasiaqtThreadKickTypePage();
-struct iaqt_page_button *iaqtFindButtonByLabel(char *label);
+struct iaqt_page_button *iaqtFindButtonByLabel(const char *label);
 struct iaqt_page_button *iaqtFindButtonByIndex(int index);
 const char *iaqtGetMessageLine(int index);
 const char *iaqtGetTableInfoLine(int index);

@@ -862,7 +862,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
 
   // Get product info.
   send_aqt_cmd(KEY_IAQTCH_HELP);
-  unsigned char page = waitfor_iaqt_nextPage(aq_data);
+  waitfor_iaqt_nextPage(aq_data);
   
   if ( goto_iaqt_page(IAQ_PAGE_SET_TEMP, aq_data) == false )
     goto f_end;
@@ -939,7 +939,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
 
     if (button != NULL) {
       LOG(IAQT_LOG,LOG_NOTICE, "Temperature units are '%s'\n",button->name);
-      if (button->name[8] == 'C') {
+      if (*button->name[8] == 'C') {
         aq_data->temp_units = CELSIUS;
       } else {
         aq_data->temp_units = FAHRENHEIT;

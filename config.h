@@ -30,6 +30,7 @@
 #define READ_RS485_PEN_PUMP (1 << 2) // 4   Pentair Pump
 #define READ_RS485_JAN_JXI  (1 << 3) //    Jandy JX & LXi heater
 #define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
+#define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
 
 struct aqconfig
 {
@@ -117,7 +118,7 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_vsfPUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_PEN_PUMP) == READ_RS485_PEN_PUMP)
 #define READ_RSDEV_JXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_JXI) == READ_RS485_JAN_JXI)
 #define READ_RSDEV_LX ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LX) == READ_RS485_JAN_LX)
-
+#define READ_RSDEV_CHEM ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_CHEM) == READ_RS485_JAN_CHEM)
 
 #define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

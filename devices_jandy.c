@@ -39,6 +39,7 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   static rsDeviceType interestedInNextAck = DRS_NONE;
   static unsigned char previous_packet_to = NUL; // bad name, it's not previous, it's previous that we were interested in.
   int rtn = false;
+
   // We received the ack from a Jandy device we are interested in
   if (packet_buffer[PKT_DEST] == DEV_MASTER && interestedInNextAck != DRS_NONE)
   {
@@ -53,6 +54,14 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     else if (interestedInNextAck == DRS_JXI)
     {
       rtn = processPacketFromJandyJXiHeater(packet_buffer, packet_length, aqdata, previous_packet_to);
+    }
+    else if (interestedInNextAck == DRS_LX)
+    {
+      rtn = processPacketFromJandyLXHeater(packet_buffer, packet_length, aqdata, previous_packet_to);
+    }
+    else if (interestedInNextAck == DRS_CHEM)
+    {
+      rtn = processPacketFromJandyChemFeeder(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
@@ -71,7 +80,7 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
   }
-  else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] == SWG_DEV_ID)
+  else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] >= JANDY_DEC_SWG_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_SWG_MAX)
   {
     interestedInNextAck = DRS_SWG;
     rtn = processPacketToSWG(packet_buffer, packet_length, aqdata, _aqconfig_.swg_zero_ignore);
@@ -83,7 +92,7 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     rtn = processPacketToJandyPump(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
-  else if (READ_RSDEV_JXI && packet_buffer[PKT_DEST] >= JANDY_DEC_LX_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_LX_MAX)
+  else if (READ_RSDEV_JXI && packet_buffer[PKT_DEST] >= JANDY_DEC_JXI_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_JXI_MAX)
   {
     interestedInNextAck = DRS_JXI;
     rtn = processPacketToJandyJXiHeater(packet_buffer, packet_length, aqdata);
@@ -93,6 +102,12 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   {
     interestedInNextAck = DRS_LX;
     rtn = processPacketToJandyLXHeater(packet_buffer, packet_length, aqdata);
+    previous_packet_to = packet_buffer[PKT_DEST];
+  }
+  else if (READ_RSDEV_CHEM && packet_buffer[PKT_DEST] >= JANDY_DEC_CHEM_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_CHEM_MAX)
+  {
+    interestedInNextAck = DRS_CHEM;
+    rtn = processPacketToJandyChemFeeder(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
   else
@@ -114,12 +129,12 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
   static int swg_zero_cnt = 0;
   bool changedAnything = false;
 
-  if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
+    // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
-    beautifyPacket(buff, packet, packet_length, false);
-    LOG(DJAN_LOG,LOG_DEBUG, "%s", buff);
+    beautifyPacket(buff, packet, packet_length, true);
+    LOG(DJAN_LOG,LOG_DEBUG, "To     SWG: %s", buff);
   }
-
 
   // Only read message from controller to SWG to set SWG Percent if we are not programming, as we might be changing this
   if (packet[3] == CMD_PERCENT && aqdata->active_thread.thread_id == 0 && packet[4] != 0xFF) {
@@ -166,10 +181,11 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
   bool changedAnything = false;
   _swg_noreply_cnt = 0;
 
-  if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
+  // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
     beautifyPacket(buff, packet, packet_length, true);
-    LOG(DJAN_LOG,LOG_DEBUG, "%s", buff);
+    LOG(DJAN_LOG,LOG_DEBUG, "From   SWG: %s", buff);
   }
 
   if (packet[PKT_CMD] == CMD_PPM) {
@@ -529,6 +545,12 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
 
   Type 0x1F and cmd 0x45 is RPM = 39 * (256) + 96 / 4 = 2520  or  Byte 8 * 265 + Byte 7 / 4
  */
+   // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
+    char msg[1000];
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
+  }
 
   // If type 0x45 and 0x44 set to interested in next command.
   if (packet_buffer[3] == CMD_EPUMP_RPM) {
@@ -537,11 +559,8 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
   } else if (packet_buffer[3] == CMD_EPUMP_WATTS) {
     LOG(DJAN_LOG, LOG_DEBUG, "ControlPanel request Pump ID 0x%02hhx get watts\n",packet_buffer[PKT_DEST]);
   }
-
-  if (getLogLevel(DJAN_LOG) >= LOG_DEBUG) {
-    char msg[1000];
-    beautifyPacket(msg, packet_buffer, packet_length, true);
-    LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
+    
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
   //find pump for message
     for (int i=0; i < aqdata->num_pumps; i++) {
       if (aqdata->pumps[i].pumpID == packet_buffer[PKT_DEST]) {
@@ -557,6 +576,14 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   bool found=false;
+
+  // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
+    char msg[1000];
+    //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
+  }
 
   if (packet_buffer[3] == CMD_EPUMP_STATUS && packet_buffer[4] == CMD_EPUMP_RPM) {
     for (int i = 0; i < MAX_PUMPS; i++) {
@@ -583,12 +610,7 @@ bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length,
       LOG(DJAN_LOG, LOG_NOTICE, "Jandy Pump found at ID 0x%02hhx with WATTS %d, but not configured, information ignored!\n",previous_packet_to, (packet_buffer[EP_HI_B_WAT] * 256) + packet_buffer[EP_LO_B_WAT]);
   }
 
-  if (getLogLevel(DJAN_LOG) >= LOG_DEBUG) {
-    char msg[1000];
-    //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-    beautifyPacket(msg, packet_buffer, packet_length, true);
-    LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
-  }
+  
   return false;
 }
 
@@ -605,6 +627,14 @@ void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqua
 
 bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
+
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
+    char msg[1000];
+    //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "To     JXi: %s\n", msg);
+  }
+
   if (packet_buffer[3] != CMD_JXI_PING) {
     // Not sure what this message is, so ignore
     // Maybe print a messsage.
@@ -624,24 +654,24 @@ bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_leng
   */
  
   if (packet_buffer[5] != aqdata->pool_htr_set_point) {
-    LOG(DJAN_LOG, LOG_DEBUG, "LXi pool setpoint %d, Pool heater sp %s (changing to LXi)\n", packet_buffer[5], aqdata->pool_htr_set_point);
+    LOG(DJAN_LOG, LOG_DEBUG, "JXi pool setpoint %d, Pool heater sp %d (changing to LXi)\n", packet_buffer[5], aqdata->pool_htr_set_point);
     aqdata->pool_htr_set_point = packet_buffer[5];
   }
 
   if (packet_buffer[6] != aqdata->spa_htr_set_point) {
-    LOG(DJAN_LOG, LOG_DEBUG, "LXi spa setpoint %d, Spa heater sp %s (changing to LXi)\n", packet_buffer[5], aqdata->spa_htr_set_point);
-    aqdata->spa_htr_set_point = packet_buffer[5];
+    LOG(DJAN_LOG, LOG_DEBUG, "JXi spa setpoint %d, Spa heater sp %d (changing to LXi)\n", packet_buffer[6], aqdata->spa_htr_set_point);
+    aqdata->spa_htr_set_point = packet_buffer[6];
   }
 
   if (packet_buffer[7] != 0xff && packet_buffer[4] != 0x00) {
     if (packet_buffer[4] == 0x11 || packet_buffer[4] == 0x19) {
       if (aqdata->pool_temp != packet_buffer[7]) {
-        LOG(DJAN_LOG, LOG_DEBUG, "LXi pool water temp %d, pool water temp %s (changing to LXi)\n", packet_buffer[7], aqdata->pool_temp);
+        LOG(DJAN_LOG, LOG_DEBUG, "JXi pool water temp %d, pool water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->pool_temp);
         aqdata->pool_temp = packet_buffer[7];
       }
     } else if (packet_buffer[4] == 0x12 || packet_buffer[4] == 0x1a) {
       if (aqdata->spa_temp != packet_buffer[7]) {
-        LOG(DJAN_LOG, LOG_DEBUG, "LXi spa water temp %d, spa water temp %s (changing to LXi)\n", packet_buffer[7], aqdata->spa_temp);
+        LOG(DJAN_LOG, LOG_DEBUG, "JXi spa water temp %d, spa water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->spa_temp);
         aqdata->spa_temp = packet_buffer[7];
       }
     }
@@ -724,13 +754,20 @@ void getJandyHeaterErrorMQTT(struct aqualinkdata *aqdata, char *message)
        ?x?? Pump fault
        0x08 AUX Monitor
       */
-        sprintf(message,  "FAULT");
+        sprintf(message,  "FAULT 0x%02hhx",aqdata->heater_err_status);
       break;
     } 
 }
 
 bool processPacketFromJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
+  if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
+    char msg[1000];
+    //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
+    beautifyPacket(msg, packet_buffer, packet_length, true);
+    LOG(DJAN_LOG, LOG_DEBUG, "From   JXi: %s\n", msg);
+  }
+
   if (packet_buffer[3] != CMD_JXI_STATUS) {
     // Not sure what this message is, so ignore
     // Maybe print a messsage.
@@ -785,7 +822,7 @@ bool processPacketToJandyLXHeater(unsigned char *packet_buffer, int packet_lengt
   int length = 0;
 
   beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_INFO, "To   LX Heater: %s\n", msg);
+  LOG(DJAN_LOG, LOG_INFO, "To      LX: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
 
@@ -814,7 +851,7 @@ bool processPacketFromJandyLXHeater(unsigned char *packet_buffer, int packet_len
   int length = 0;   
 
   beautifyPacket(msg, packet_buffer, packet_length, true);
-  LOG(DJAN_LOG, LOG_INFO, "From LX Heater: %s\n", msg);
+  LOG(DJAN_LOG, LOG_INFO, "From    LX: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
 
@@ -835,6 +872,43 @@ bool processPacketFromJandyLXHeater(unsigned char *packet_buffer, int packet_len
 
   return false;
 }
+
+
+bool processPacketToJandyChemFeeder(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  char msg[1000];
+  int length = 0;
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "To    Chem: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  length += sprintf(msg+length, ", pH=%f, ORP=%d",aqdata->ph, aqdata->orp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+
+  return false;
+}
+
+bool processPacketFromJandyChemFeeder(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to){
+  char msg[1000];
+  int length = 0;
+
+  beautifyPacket(msg, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "From  Chem: %s\n", msg);
+
+  length += sprintf(msg+length, "Last panel info ");
+
+  length += sprintf(msg+length, ", pH=%f, ORP=%d",aqdata->ph, aqdata->orp);
+
+  LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
+
+  return false;
+}
+
+
+
 
 /*
 

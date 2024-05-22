@@ -1,5 +1,8 @@
 #!/bin/bash
 
+
+# Script to start AqualinkD inside container.
+
 CONFDIR=/aquadconf
 AQUA_CONF=$CONFDIR/aqualinkd.conf
 

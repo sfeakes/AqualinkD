@@ -17,12 +17,20 @@
 // NSF Need to find a better way, this is not thread safe, so don;t want to expost it from net_services.h.
 void send_mqtt(struct mg_connection *nc, const char *toppic, const char *message);
 
-#define HASS_DEVICE "\"identifiers\": [\"" AQUALINKD_SHORT_NAME "\"], \"sw_version\": \"" AQUALINKD_VERSION "\", \"model\": \"" AQUALINKD_NAME "\", \"name\": \"AqualinkD\", \"manufacturer\": \"" AQUALINKD_SHORT_NAME "\", \"suggested_area\": \"pool\""
+#define HASS_DEVICE "\"identifiers\": " \
+                        "[\"" AQUALINKD_SHORT_NAME "\"]," \
+                        " \"sw_version\": \"" AQUALINKD_VERSION "\"," \
+                        " \"model\": \"" AQUALINKD_NAME "\"," \
+                        " \"name\": \"AqualinkD\"," \
+                        " \"manufacturer\": \"" AQUALINKD_SHORT_NAME "\"," \
+                        " \"suggested_area\": \"pool\""
 
-#define HASS_AVAILABILITY "\"payload_available\" : \"1\",\"payload_not_available\" : \"0\",\"topic\": \"%s/" MQTT_LWM_TOPIC "\""
+#define HASS_AVAILABILITY "\"payload_available\" : \"1\"," \
+                          "\"payload_not_available\" : \"0\"," \
+                          "\"topic\": \"%s/" MQTT_LWM_TOPIC "\""
   
 
-char *HASSIO_CLIMATE_DISCOVER = "{"
+const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"climate\","
@@ -47,7 +55,7 @@ char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"retain\": false"
 "}";
 
-char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
+const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"climate\","
@@ -68,7 +76,7 @@ char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"temperature_state_template\": \"{{ value_json }}\""
 "}";
 
-char *HASSIO_SWG_DISCOVER = "{"
+const char *HASSIO_SWG_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"humidifier\","
@@ -91,7 +99,7 @@ char *HASSIO_SWG_DISCOVER = "{"
 // Need to add timer attributes to the switches, once figure out how to use in homeassistant
 // ie aqualinkd/Filter_Pump/timer/duration
 
-char *HASSIO_SWITCH_DISCOVER = "{"
+const char *HASSIO_SWITCH_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"switch\","
@@ -108,7 +116,7 @@ char *HASSIO_SWITCH_DISCOVER = "{"
     "\"retain\": false"
 "}";
 
-char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
+const char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
@@ -121,7 +129,7 @@ char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
     "\"icon\": \"%s\""
 "}";
 
-char *HASSIO_SENSOR_DISCOVER = "{"
+const char *HASSIO_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
@@ -133,7 +141,7 @@ char *HASSIO_SENSOR_DISCOVER = "{"
     "\"icon\": \"%s\""
 "}";
 
-char *HASSIO_ONOFF_SENSOR_DISCOVER = "{"
+const char *HASSIO_ONOFF_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
@@ -146,7 +154,7 @@ char *HASSIO_ONOFF_SENSOR_DISCOVER = "{"
     "\"icon\": \"%s\""
 "}";
 
-char *HASSIO_PUMP_SENSOR_DISCOVER = "{"
+const char *HASSIO_PUMP_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
@@ -158,7 +166,7 @@ char *HASSIO_PUMP_SENSOR_DISCOVER = "{"
     "\"icon\": \"mdi:pump\""
 "}";
 
-char *HASSIO_TEXT_SENSOR_DISCOVER = "{"
+const char *HASSIO_TEXT_SENSOR_DISCOVER = "{"
    "\"device\": {" HASS_DEVICE "},"
    "\"availability\": {" HASS_AVAILABILITY "},"
    "\"type\": \"sensor\","
@@ -168,7 +176,7 @@ char *HASSIO_TEXT_SENSOR_DISCOVER = "{"
    "\"icon\": \"mdi:card-text\""
 "}";
 
-char *HASSIO_SWG_TEXT_SENSOR_DISCOVER = "{"
+const char *HASSIO_SWG_TEXT_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
