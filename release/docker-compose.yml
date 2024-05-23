@@ -1,0 +1,32 @@
+services:
+  aqualinkd:
+    #image: sfeakes/aqualinkd:latest
+    build:
+      context: https://github.com/sfeakes/AqualinkD-Docker.git#main
+    ports:
+      - "6171:80"
+    volumes:
+      - type: bind  # AqualinkD config directory
+        source: ./config
+        target: /aquadconf
+        read_only: false
+      - type: bind  # systemd logging
+        source: /var/run/systemd/journal/socket
+        target: /var/run/systemd/journal/socket
+        read_only: false
+      - type: bind  # systemd logging
+        source: /var/log/journal
+        target: /var/log/journal
+        read_only: true
+      - type: bind  # time
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+      - type: bind # timezone
+        source: /etc/timezone
+        target: /etc/timezone
+        read_only: true
+    devices: # Map 
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    logging:
+      driver: journald
