@@ -110,8 +110,10 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 # Update in Release 2.3.5
 * Added Home Assistant integration through MQTT discover
-  * Please read the Wiki section on this [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
+  * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
   * There are still some enhacments to come on this.
+* Included Docker into main releases
+  * Please read Docker section of the  [Wiki - Docker](https://github.com/sfeakes/AqualinkD/wiki#Docker)
 * Added support for reading extended information for Jandy JXi heaters.
 * Added Color Light to iAqualinkTouch protocol.
 * Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
