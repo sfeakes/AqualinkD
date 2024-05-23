@@ -569,7 +569,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_JXI;
     rtn=true;
-   } else if (strncasecmp (param, "read_RS485_LX", 14) == 0) {
+   } else if (strncasecmp (param, "read_RS485_LX", 13) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LX;
     else
