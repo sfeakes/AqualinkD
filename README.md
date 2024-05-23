@@ -1,7 +1,7 @@
 # Aqualinkd  
-Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equiptment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Samsung, Alexa, Google, etc.
+Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equiptment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Home Assistant, Samsung, Alexa, Google, etc.
 <br>
-Binaries are supplied for Raspberry Pi, Has bean, and can be compiled for many different SBC's. 
+Binaries are supplied for Raspberry Pi, Has bean, and can be compiled for many different SBC's, and a Docker is also abailable.
 
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world; only indirectly through the use of Home Automation hub's or other security measures. e.g. VPNs.
 
@@ -21,8 +21,10 @@ https://github.com/sfeakes/AqualinkD/issues
 ## Please see Wiki for installation instructions
 https://github.com/sfeakes/AqualinkD/wiki
 
+<!--
 For information on Control panel versions and upgrading the chips.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
+-->
 <!--
 Here's where I started to document what I know about the Jandy RS485 protocol.<br>
 https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
@@ -96,20 +98,26 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
     * about Heat vs Heater
     * Panel version
     * can't use iaquatouch panel / wireless
--->
 
-# Update in Release 2.3.5
-* Added Home Assistant integration through MQTT discover
-  * Please read the Wiki section on this [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
-  * There are still some enhacments to come on this.
-* Added support for reading extended information for Jandy JXi heaters.
-* Added Color Light to iAqualinkTouch protocol.
 * Added iAqualinkTouch support for PDA only panels that can use that protocol.
   * PDA panel needs to be Rev 6.0 or newer.
   * This makes the PDA only panels quicker and less error prone.
   * Introduces color light support and VSP
   * Consider this PDA support Beta.
   * Read PDA Wiki
+-->
+
+# Call for Help.
+* The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
+
+# Update in Release 2.3.5
+* Added Home Assistant integration through MQTT discover
+  * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
+  * There are still some enhacments to come on this.
+* Included Docker into main releases
+  * Please read Docker section of the  [Wiki - Docker](https://github.com/sfeakes/AqualinkD/wiki#Docker)
+* Added support for reading extended information for Jandy JXi heaters.
+* Added Color Light to iAqualinkTouch protocol.
 * Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
   
 # Update in Release 2.3.4
