@@ -6,13 +6,6 @@
 
 FROM debian:bookworm AS aqualinkd-build
 
-#ARG AQUALINKD_VERSION=2.3.3
-ARG AQUALINKD_VERSION
-ARG AQUALINKD_SOURCE
-
-RUN test -n "$AQUALINKD_VERSION" || (echo "AQUALINKD_VERSION not set" && false)
-RUN test -n "$AQUALINKD_SOURCE" || (echo "AQUALINKD_SOURCE not set" && false)
-
 #VOLUME ["/aqualinkd-build"]
 
 RUN apt-get update && \
