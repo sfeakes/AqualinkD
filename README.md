@@ -110,6 +110,13 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Call for Help.
 * The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
 
+# Update in Release 2.3.6
+* No functionality changes
+* Build & Docker changes
+* Going forward AqualinkD will release binaries for both armhf & arm64
+  * armhf = any Pi (or equiv board) running 32 bit Debain based OS, stretch or newer
+  * arm64 = Pi3/4/2w running 64 bit Debain based OS, buster or newer
+
 # Update in Release 2.3.5
 * Added Home Assistant integration through MQTT discover
   * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)

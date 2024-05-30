@@ -37,7 +37,10 @@ else
   AQUA_CONF="/etc/aqualinkd.conf"
 fi
 
-
+# See if we have any execpre files to run.
+if [[ -x "$CONFDIR/aqexec-pre.sh" ]]; then
+  "$CONFDIR/aqexec-pre.sh"
+fi
 
 # Start cron
 service cron start

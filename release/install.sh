@@ -5,6 +5,7 @@
 
 
 BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PARENT_COMMAND=$(ps -o comm= $PPID)
 
 SERVICE="aqualinkd"
 
@@ -21,6 +22,8 @@ DEFLocation="/etc/default"
 WEBLocation="/var/www/aqualinkd/"
 MDNSLocation="/etc/avahi/services/"
 
+SOURCEBIN=$BIN
+
 if [[ $EUID -ne 0 ]]; then
    echo "This script must be run as root" 
    exit 1
@@ -28,6 +31,49 @@ fi
 
 if [[ $(mount | grep " / " | grep "(ro,") ]]; then
   echo "Root filesystem is readonly, can't install" 
+  exit 1
+fi
+
+# Figure out what system we are on and set correct binary.
+# If we have been called from make, this is a custom build and install, so ignore check.
+if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "ignorearch" ]; then
+  # Use arch or uname -a to get above.
+  # dpkg --print-architecture
+
+  # Exit if we can't find systemctl
+  command -v dpkg >/dev/null 2>&1 || { echo -e "Can't detect system architecture, Please check path to 'dpkg' or install manually.\n"\
+                                               "Or run '$0 ignorearch'" >&2; exit 1; }
+
+  ARCH=$(dpkg --print-architecture)
+  BINEXT=""
+
+  case $ARCH in 
+    arm64)
+      echo "Arch is $ARCH, Using 64bit AqualinkD"
+      BINEXT="-arm64"
+    ;;
+    armhf)
+      echo "Arch is $ARCH, Using 32bit AqualinkD"
+      BINEXT="-armhf"
+    ;;
+    *)
+      echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
+      BINEXT=""
+    ;;
+  esac
+
+  # Need to check BINEXISTS
+  if [ -f $BUILD/$SOURCEBIN$BINEXT ]; then
+    SOURCEBIN=$BIN$BINEXT
+  elif [ -f $BUILD/$SOURCEBIN ]; then
+    # Not good
+    echo "Can't find correct aqualnkd binary for $ARCH, '$BUILD/$SOURCEBIN$BINEXT' using '$BUILD/$SOURCEBIN' ";
+  fi
+fi
+
+# Exit if we can't find binary
+if [ ! -f $BUILD/$SOURCEBIN ]; then
+  echo "Can't find aqualnkd binary `$BUILD/$SOURCEBIN` ";
   exit 1
 fi
 
@@ -80,7 +126,7 @@ fi
 
 # copy files to locations, but only copy cfg if it doesn;t already exist
 
-cp $BUILD/$BIN $BINLocation/$BIN
+cp $BUILD/$SOURCEBIN $BINLocation/$BIN
 cp $BUILD/$SRV $SRVLocation/$SRV
 
 if [ -f $CFGLocation/$CFG ]; then
