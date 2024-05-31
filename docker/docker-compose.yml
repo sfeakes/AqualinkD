@@ -1,13 +1,13 @@
 services:
   aqualinkd:
-    #image: sfeakes/aqualinkd:latest
-    build:
-      context: https://github.com/sfeakes/AqualinkD.git#master:docker
-      args:
-        AQUALINKD_VERSION: v2.3.6 # Make sure to change to correct version
-      tags:
-        - aqualinkd:v2.3.6
-      container_name: aqualinkd
+    image: sfeakes/aqualinkd:latest
+    #build:
+    #  context: https://github.com/sfeakes/AqualinkD.git#master:docker
+    #  args:
+    #    AQUALINKD_VERSION: v2.3.6 # Make sure to change to correct version
+    #  tags:
+    #    - aqualinkd:v2.3.6
+    container_name: aqualinkd
     ports:
       - "6171:80"
     volumes:

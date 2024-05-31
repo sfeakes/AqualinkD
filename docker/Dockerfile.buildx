@@ -1,0 +1,105 @@
+#####################################
+#
+# Create AqualinkD container for release (includes AMD64 and ARM64 for >Pi4 with 64 bit os and Linux PC)
+# Build container for buildx
+# This should support building on any host platform, but only supports output platform of amd64 & arm64
+#
+# Enable multi platform
+# docker buildx create --use --platform=linux/arm64,linux/amd64 --name multi-platform-builder
+# docker buildx inspect --bootstrap
+#
+# Build
+# docker buildx build --platform=linux/amd64,linux/arm64 --output=./crap --file /Dockerfile.test -t aqualinkd-test .
+# docker buildx build --platform=linux/amd64,linux/arm64  --file Dockerfile.test --output type=docker -t aqualinkd-test .
+# docker build --file Dockerfile.test --progress=plain -t aqualinkd-test .
+#
+# adding --progress=plain helps with debug
+#
+# Clean the build env and start again
+# docker buildx prune
+#
+#
+#  docker build -f ./Dockerfile.buildrelease  .
+#
+#####################################
+
+
+# Starting with base debian:bookworm and installing build-essential seems to be quicker than starting with gcc:bookworm
+#FROM --platform=$BUILDPLATFORM gcc:12-bookworm AS aqualinkd-build
+FROM --platform=$BUILDPLATFORM debian:bookworm AS aqualinkd-build
+
+ARG BUILDARCH
+ARG TARGETARCH
+
+# Print all buildx variables 
+RUN echo "Build Arch $BUILDARCH" && \
+    echo "Tagert OS $TARGETOS"
+
+# Setup build env, using toolchain for all builds, even native, since make this Dockerfile cleaner
+# and no need to use bash if statments.
+# Need to be careful on install order, so using two commands
+
+RUN apt-get update && \
+    apt-get install -y \
+            make \
+            curl \
+            gcc-aarch64-linux-gnu \
+            gcc-x86-64-linux-gnu
+
+RUN dpkg --add-architecture arm64 && \
+    dpkg --add-architecture amd64 && \
+    apt-get update && \
+    apt-get install -y \
+            libsystemd-dev:arm64 \
+            libsystemd-dev:amd64
+            
+
+RUN mkdir /home/AqualinkD
+WORKDIR /home/AqualinkD
+    
+
+ARG AQUALINKD_VERSION
+RUN curl -sL "https://github.com/sfeakes/AqualinkD/archive/refs/tags/$AQUALINKD_VERSION.tar.gz" | tar xz --strip-components=1
+# Get latest release
+#RUN curl -sL $(curl -s https://api.github.com/repos/sfeakes/AqualinkD/releases/latest | grep "tarball_url" | cut -d'"' -f4) | tar xz --strip-components=1   
+
+
+# Make AqualinkD
+RUN make clean && \
+    make container-$TARGETARCH;
+
+#####################################
+#
+# Runtime container(s)
+#
+#####################################
+
+FROM debian:bookworm-slim AS aqualinkd
+
+RUN apt-get update \
+  && apt-get install -y cron curl socat
+ 
+# Set cron to read local.d
+RUN sed -i '/EXTRA_OPTS=.-l./s/^#//g' /etc/default/cron
+
+#Add Open Container Initiative (OCI) annotations.
+#See: https://github.com/opencontainers/image-spec/blob/main/annotations.md
+
+LABEL org.opencontainers.image.title="AqualinkD"
+LABEL org.opencontainers.image.url="https://hub.docker.com/repository/docker/sfeakes/aqualinkd/general"
+LABEL org.opencontainers.image.source="https://github.com/sfeakes/AqualinkD"
+LABEL org.opencontainers.image.documentation="https://github.com/sfeakes/AqualinkD"
+LABEL org.opencontainers.image.version=$AQUALINKD_VERSION
+
+EXPOSE 80/tcp
+
+COPY --from=aqualinkd-build /home/AqualinkD/release/aqualinkd /usr/local/bin/aqualinkd                        
+COPY --from=aqualinkd-build /home/AqualinkD/release/serial_logger /usr/local/bin/serial_logger
+COPY --from=aqualinkd-build /home/AqualinkD/web/ /var/www/aqualinkd/
+COPY --from=aqualinkd-build /home/AqualinkD/release/aqualinkd.conf /etc/aqualinkd.conf
+
+COPY --from=aqualinkd-build /home/AqualinkD/docker/aqualinkd-docker.cmd /usr/local/bin/aqualinkd-docker
+
+RUN chmod +x /usr/local/bin/aqualinkd-docker
+
+CMD ["sh", "-c", "/usr/local/bin/aqualinkd-docker"]

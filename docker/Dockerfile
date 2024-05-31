@@ -1,7 +1,10 @@
 #####################################
 #
 # Build container
-# The most basic build for aqualinkd latest version
+# The most basic build for aqualinkd 
+#
+# env AQUALINKD_VERSION must be passed to this
+#
 #####################################
 
 FROM debian:bookworm AS aqualinkd-build
