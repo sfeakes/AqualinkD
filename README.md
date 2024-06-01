@@ -1,7 +1,7 @@
 # Aqualinkd  
-Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equiptment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Home Assistant, Samsung, Alexa, Google, etc.
+Linux daemon to control Aqualink RS pool controllers. Provides web UI, MQTT client & HTTP API endpoints. Control your pool equipment from any phone/tablet or computer.  Is also compatible with most Home control systems including Apple HomeKit, Home Assistant, Samsung, Alexa, Google, etc.
 <br>
-Binaries are supplied for Raspberry Pi, Has bean, and can be compiled for many different SBC's, and a Docker is also abailable.
+Binaries are supplied for Raspberry Pi both 32 & 64 bit OS, Has been, and can be compiled for many different SBC's, and a Docker is also available.
 
 ### It does not, and will never provide any layer of security. NEVER directly expose the device running this software to the outside world; only indirectly through the use of Home Automation hub's or other security measures. e.g. VPNs.
 
@@ -13,7 +13,7 @@ If you like this project, you can buy me a cup of coffee :)
 
 ## AqualinkD discussions
 
-* Please use github Discussions for for questions / issues / problems (Link at top of page).
+* Please use github Discussions for questions (Link at top of page).
 https://github.com/sfeakes/AqualinkD/discussions
 * For Bugs, please use issues link on top of page. ( please add AqualinkD version to posts )
 https://github.com/sfeakes/AqualinkD/issues
@@ -133,8 +133,8 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
   * <aqualinkd.ip>/allbutton_sim.html
   * <aqualinkd.ip>/onetouch_sim.html
   * <aqualinkd.ip>/aquapda_sim.html
-    * On PDA only panel AqualinkD has to share the same ID with the PDA simulator. There for AqualinkD will not respond to commands while simulator is active.
-* Now you can completley program the control panel with the simulators removing the need to have Jandy device.   
+    * On PDA only panel AqualinkD has to share the same ID with the PDA simulator. Therefore for AqualinkD will not respond to commands while simulator is active.
+* Now you can completely program the control panel with the simulators removing the need to have Jandy device.   
 
 # Update in Release 2.3.3
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
