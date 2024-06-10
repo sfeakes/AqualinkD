@@ -939,7 +939,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
 
     if (button != NULL) {
       LOG(IAQT_LOG,LOG_NOTICE, "Temperature units are '%s'\n",button->name);
-      if (*button->name[8] == 'C') {
+      if (button->name[8] == 'C') {
         aq_data->temp_units = CELSIUS;
       } else {
         aq_data->temp_units = FAHRENHEIT;
