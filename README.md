@@ -115,9 +115,10 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Added more VSP data (Mode, Status, Pressure Curve, both RPM & GPM) for all Pentair Pumps (VS/VF/VSF).
 * Few updates to HomeAssistant integration.
 * Updates to serial_logger.
-* Few updates to AQmanager UI.
+* Few updates to UI.
   * Will display both RPM & GPM for VSP (space providing)
   * Fix freeze protect button in UI not showing enabled.
+* Few updates to AQmanager UI.
 
 # Update in Release 2.3.6
 * No functionality changes
