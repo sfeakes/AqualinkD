@@ -1,6 +1,7 @@
 #include <syslog.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <time.h>
 
 #ifndef UTILS_H_
 #define UTILS_H_
@@ -24,12 +25,13 @@
 //#define round(a) (int) (a+0.5) // 0 decimal places (doesn't work for negative numbers)
 #define round(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))  
 #define roundf(a) (float) ((a*100)/100) // 2 decimal places
+#define roundf3(a) (float) ((a*1000)/1000) // 3 decimal places
 
 // Defined as int16_t so 16 bits to mask
 #define AQUA_LOG (1 << 0) // Aqualink Generic / catchall
 #define NET_LOG  (1 << 1) // Network
 // Control protocols
-#define AQRS_LOG (1 << 2) // Allbutton RS Keypad
+#define ALLB_LOG (1 << 2) // Allbutton RS Keypad
 #define ONET_LOG (1 << 3) // OneTouch
 #define IAQT_LOG (1 << 4) // iAqualinkTouch
 #define PDA_LOG  (1 << 5) // PDA
@@ -40,13 +42,14 @@
 // misc
 #define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB?
 #define PROG_LOG (1 << 10) // Programmer
-#define DBGT_LOG (1 << 11) // Debug Timer
-#define TIMR_LOG (1 << 12) // Timers
+#define SCHD_LOG (1 << 11) // Scheduler Timer
+#define RSTM_LOG (1 << 12) // RS packet Time
 #define SIM_LOG (1 << 13) // Simulator
 
-// Set scheduler log to timer log 
-#define SCHD_LOG TIMR_LOG
+#define DBGT_LOG (1 << 14) // Debug Timer
 
+#define TIMR_LOG SCHD_LOG
+#define PANL_LOG PROG_LOG
 
 /*
 #define INT_MAX +2147483647
@@ -116,7 +119,7 @@ char* stristr(const char* haystack, const char* needle);
 char *prittyString(char *str);
 //void writePacketLog(char *buff);
 //void closePacketLog();
-
+float timespec2float(const struct timespec *elapsed);
 
 #ifdef AQ_MANAGER
 //void startInlineLog2File();

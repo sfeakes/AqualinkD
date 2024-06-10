@@ -50,6 +50,9 @@
 #define PUMP_RPM_TOPIC "/RPM"
 #define PUMP_GPM_TOPIC "/GPM"
 #define PUMP_WATTS_TOPIC "/Watts"
+#define PUMP_MODE_TOPIC "/Mode"
+#define PUMP_STATUS_TOPIC "/Status"
+#define PUMP_PPC_TOPIC "/PPC"
 /*
 #define AIR_TEMPERATURE   "Air"
 #define POOL_TEMPERATURE  "Pool_Water"

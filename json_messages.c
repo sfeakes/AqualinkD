@@ -513,7 +513,7 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += sprintf(buffer+length, ",\"debugmasks\":[");
   length += logmaskjsonobject(AQUA_LOG, buffer+length);
   length += logmaskjsonobject(NET_LOG, buffer+length);
-  length += logmaskjsonobject(AQRS_LOG, buffer+length);
+  length += logmaskjsonobject(ALLB_LOG, buffer+length);
   length += logmaskjsonobject(ONET_LOG, buffer+length);
   length += logmaskjsonobject(IAQT_LOG, buffer+length);
   length += logmaskjsonobject(PDA_LOG, buffer+length);
@@ -522,9 +522,10 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += logmaskjsonobject(DPEN_LOG, buffer+length);
   length += logmaskjsonobject(RSSD_LOG, buffer+length);
   length += logmaskjsonobject(PROG_LOG, buffer+length);
-  length += logmaskjsonobject(DBGT_LOG, buffer+length);
-  length += logmaskjsonobject(TIMR_LOG, buffer+length);
+  length += logmaskjsonobject(SCHD_LOG, buffer+length);
+  length += logmaskjsonobject(RSTM_LOG, buffer+length);
   length += logmaskjsonobject(SIM_LOG, buffer+length);
+  // DBGT_LOG is a compile time only, so don;t include
   if (buffer[length-1] == ',')
     length--;
   length += sprintf(buffer+length, "]");

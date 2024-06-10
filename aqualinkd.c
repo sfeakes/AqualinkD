@@ -385,6 +385,7 @@ void _processMessage(char *message, bool reset)
   //static int swg_msg_count = 0;
   //static int boost_msg_count = 0;
   static int16_t msg_loop = 0;
+  static aqledstate default_frz_protect_state = OFF;
   // NSF replace message with msg
 #ifdef AQ_RS16
   int16_t rs16;
@@ -392,7 +393,7 @@ void _processMessage(char *message, bool reset)
 
   //msg = stripwhitespace(message);
   //strcpy(_aqualink_data.last_message, msg);
-  //LOG(AQRS_LOG,LOG_INFO, "RS Message :- '%s'\n", msg);
+  //LOG(ALLB_LOG,LOG_INFO, "RS Message :- '%s'\n", msg);
 
   
 
@@ -404,7 +405,7 @@ void _processMessage(char *message, bool reset)
   if (!reset) {
     msg = stripwhitespace(message);
     strcpy(_aqualink_data.last_message, msg);
-    LOG(AQRS_LOG,LOG_INFO, "RS Message :- '%s'\n", msg);
+    LOG(ALLB_LOG,LOG_INFO, "RS Message :- '%s'\n", msg);
     // Just set this to off, it will re-set since it'll be the only message we get if on
     _aqualink_data.service_mode_state = OFF;
   } else {
@@ -414,7 +415,7 @@ void _processMessage(char *message, bool reset)
 
     // Anything that wasn't on during the last set of messages, turn off
     if ((msg_loop & MSG_FREEZE) != MSG_FREEZE)
-       _aqualink_data.frz_protect_state = OFF;
+       _aqualink_data.frz_protect_state = default_frz_protect_state;
 
     if ((msg_loop & MSG_SERVICE) != MSG_SERVICE &&
         (msg_loop & MSG_TIMEOUT) != MSG_TIMEOUT ) {
@@ -434,16 +435,16 @@ void _processMessage(char *message, bool reset)
       if (_aqualink_data.swg_percent != 0 || _aqualink_data.swg_led_state == ON) {
         // Something is wrong here.  Let's check pump, if on set SWG to 0, if off turn SWE off
         if ( _aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF) {
-          LOG(AQRS_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is off so setting SWG to off\n");
+          LOG(ALLB_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is off so setting SWG to off\n");
           setSWGoff(&_aqualink_data);
         } else {
-          LOG(AQRS_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is on so setting SWG to 0%%\n");
+          LOG(ALLB_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is on so setting SWG to 0%%\n");
           changeSWGpercent(&_aqualink_data, 0);
         }
       } else if (isIAQT_ENABLED == false && isONET_ENABLED == false && READ_RSDEV_SWG == false ) {
         //We have no other way to read SWG %=0, so turn SWG on with pump
         if ( _aqualink_data.aqbuttons[PUMP_INDEX].led->state == ON) {
-           LOG(AQRS_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is off so setting SWG to off\n");
+           LOG(ALLB_LOG,LOG_INFO, "No AQUAPURE message in cycle, pump is off so setting SWG to off\n");
            //changeSWGpercent(&_aqualink_data, 0);
            setSWGenabled(&_aqualink_data);  
         }
@@ -515,6 +516,7 @@ void _processMessage(char *message, bool reset)
     //LOG(AQUA_LOG,LOG_DEBUG, "frz protect long message: %s", &message[28]);
     _aqualink_data.frz_protect_set_point = atoi(message + 28);
     _aqualink_data.frz_protect_state = ENABLE;
+    default_frz_protect_state = ENABLE;
 
     if (_aqualink_data.temp_units == UNKNOWN)
       setUnits(msg);
@@ -551,7 +553,7 @@ void _processMessage(char *message, bool reset)
     if (isSINGLE_DEV_PANEL != true)
     {
       changePanelToMode_Only();
-      LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+      LOG(ALLB_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
     }
   }
   else if (stristr(msg, LNG_MSG_WATER_TEMP1_SET) != NULL)
@@ -564,7 +566,7 @@ void _processMessage(char *message, bool reset)
     if (isSINGLE_DEV_PANEL != true)
     {
       changePanelToMode_Only();
-      LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+      LOG(ALLB_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
     }
   }
   else if (stristr(msg, LNG_MSG_WATER_TEMP2_SET) != NULL)
@@ -577,13 +579,13 @@ void _processMessage(char *message, bool reset)
     if (isSINGLE_DEV_PANEL != true)
     {
       changePanelToMode_Only();
-      LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+      LOG(ALLB_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
     }
   }
   else if (stristr(msg, LNG_MSG_SERVICE_ACTIVE) != NULL)
   {
     if (_aqualink_data.service_mode_state == OFF)
-      LOG(AQRS_LOG,LOG_NOTICE, "AqualinkD set to Service Mode\n");
+      LOG(ALLB_LOG,LOG_NOTICE, "AqualinkD set to Service Mode\n");
     _aqualink_data.service_mode_state = ON;
      msg_loop |= MSG_SERVICE;
     //service_msg_count = 0;
@@ -591,7 +593,7 @@ void _processMessage(char *message, bool reset)
   else if (stristr(msg, LNG_MSG_TIMEOUT_ACTIVE) != NULL)
   {
     if (_aqualink_data.service_mode_state == OFF)
-      LOG(AQRS_LOG,LOG_NOTICE, "AqualinkD set to Timeout Mode\n");
+      LOG(ALLB_LOG,LOG_NOTICE, "AqualinkD set to Timeout Mode\n");
     _aqualink_data.service_mode_state = FLASH;
      msg_loop |= MSG_TIMEOUT;
     //service_msg_count = 0;
@@ -648,16 +650,16 @@ void _processMessage(char *message, bool reset)
     // Setting time takes a long time, so don't try until we have all other programmed data.
     if (_initWithRS == true && strlen(_aqualink_data.date) > 1 && checkAqualinkTime() != true)
     {
-      LOG(AQRS_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data.time, _aqualink_data.date);
+      LOG(ALLB_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data.time, _aqualink_data.date);
       aq_programmer(AQ_SET_TIME, NULL, &_aqualink_data);
     }
     else if (_initWithRS == false || _aqconfig_.sync_panel_time == false)
     {
-      LOG(AQRS_LOG,LOG_DEBUG, "RS time '%s %s' not checking\n", _aqualink_data.time, _aqualink_data.date);
+      LOG(ALLB_LOG,LOG_DEBUG, "RS time '%s %s' not checking\n", _aqualink_data.time, _aqualink_data.date);
     }
     else if (_initWithRS == true)
     {
-      LOG(AQRS_LOG,LOG_DEBUG, "RS time is accurate '%s %s'\n", _aqualink_data.time, _aqualink_data.date);
+      LOG(ALLB_LOG,LOG_DEBUG, "RS time is accurate '%s %s'\n", _aqualink_data.time, _aqualink_data.date);
     }
     // If we get a time message before REV, the controller didn't see us as we started too quickly.
     /* Don't need to check this anymore with the check for probe before startup.
@@ -675,8 +677,8 @@ void _processMessage(char *message, bool reset)
     strcpy(_aqualink_data.version, msg);
     rsm_get_revision(_aqualink_data.revision, _aqualink_data.version, strlen(_aqualink_data.version));
     //_gotREV = true;
-    LOG(AQRS_LOG,LOG_NOTICE, "Control Panel version %s\n", _aqualink_data.version);
-    LOG(AQRS_LOG,LOG_NOTICE, "Control Panel revision %s\n", _aqualink_data.revision);
+    LOG(ALLB_LOG,LOG_NOTICE, "Control Panel version %s\n", _aqualink_data.version);
+    LOG(ALLB_LOG,LOG_NOTICE, "Control Panel revision %s\n", _aqualink_data.revision);
     if (_initWithRS == false)
     {
       //LOG(ALLBUTTON,LOG_NOTICE, "Standard protocol initialization complete\n");
@@ -687,7 +689,7 @@ void _processMessage(char *message, bool reset)
   }
   else if (stristr(msg, " TURNS ON") != NULL)
   {
-    LOG(AQRS_LOG,LOG_NOTICE, "Program data '%s'\n", msg);
+    LOG(ALLB_LOG,LOG_NOTICE, "Program data '%s'\n", msg);
   }
   else if (_aqconfig_.override_freeze_protect == TRUE && strncasecmp(msg, "Press Enter* to override Freeze Protection with", 47) == 0)
   {
@@ -727,9 +729,9 @@ void _processMessage(char *message, bool reset)
       // Aux1: on panel = Button 3 in aqualinkd  (button 2 in array)
       if (strncasecmp(msg+ni+3, "No Label", 8) != 0) {
         _aqualink_data.aqbuttons[labelid].label = prittyString(cleanalloc(msg+ni+2));
-        LOG(AQRS_LOG,LOG_NOTICE, "AUX ID %s label set to '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
+        LOG(ALLB_LOG,LOG_NOTICE, "AUX ID %s label set to '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
       } else {
-        LOG(AQRS_LOG,LOG_NOTICE, "AUX ID %s has no control panel label using '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
+        LOG(ALLB_LOG,LOG_NOTICE, "AUX ID %s has no control panel label using '%s'\n", _aqualink_data.aqbuttons[labelid].name, _aqualink_data.aqbuttons[labelid].label);
       }
       //_aqualink_data.aqbuttons[labelid + 1].label = cleanalloc(msg + 5);
     }
@@ -753,7 +755,7 @@ void _processMessage(char *message, bool reset)
   }
   else
   {
-    LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "Ignoring '%s'\n", msg);
+    LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "Ignoring '%s'\n", msg);
     //_aqualink_data.display_message = msg;
     //if (in_programming_mode(&_aqualink_data) == false && _aqualink_data.simulate_panel == false &&
     if (in_programming_mode(&_aqualink_data) == false &&
@@ -780,7 +782,7 @@ void _processMessage(char *message, bool reset)
     //ascii(_aqualink_data.last_display_message, msg);
 
 
-  //LOG(AQRS_LOG,LOG_INFO, "RS Message loop :- '%d'\n", msg_loop);
+  //LOG(ALLB_LOG,LOG_INFO, "RS Message loop :- '%d'\n", msg_loop);
 
   // We processed the next message, kick any threads waiting on the message.
 //printf ("Message kicking\n");
@@ -797,12 +799,14 @@ bool process_packet(unsigned char *packet, int length)
   static char message[AQ_MSGLONGLEN + 1];
   static int processing_long_msg = 0;
 
+  LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "process_packer()\n", length);
+
   // Check packet against last check if different.
   // Should only use the checksum, not whole packet since it's status messages.
   /*
   if ( packet[PKT_CMD] == CMD_STATUS && (memcmp(packet, last_packet, length) == 0))
   {
-    LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
+    LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
     return rtn;
   }
   else
@@ -827,7 +831,7 @@ bool process_packet(unsigned char *packet, int length)
 
   if ( packet[PKT_CMD] == CMD_STATUS && packet[length-3] == last_checksum && ! in_programming_mode(&_aqualink_data) )
   {
-    LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
+    LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received duplicate, ignoring.\n", length);
     return false;
   }
   else
@@ -844,15 +848,15 @@ bool process_packet(unsigned char *packet, int length)
     processMessage(message);
   }
 
-  LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received packet type 0x%02hhx length %d.\n", packet[PKT_CMD], length);
+  LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received packet type 0x%02hhx length %d.\n", packet[PKT_CMD], length);
 
   switch (packet[PKT_CMD])
   {
   case CMD_ACK:
-    //LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received ACK length %d.\n", length);
+    //LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received ACK length %d.\n", length);
     break;
   case CMD_STATUS:
-    //LOG(AQRS_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
+    //LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
     memcpy(_aqualink_data.raw_status, packet + 4, AQ_PSTLEN);
     processLEDstate();
     if (_aqualink_data.aqbuttons[PUMP_INDEX].led->state == OFF)
@@ -887,14 +891,14 @@ bool process_packet(unsigned char *packet, int length)
          //strncpy(message, (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
          rsm_strncpy(message, packet + PKT_DATA + 1, AQ_MSGLONGLEN, AQ_MSGLEN);
          processing_long_msg = index;
-         //LOG(AQRS_LOG,LOG_ERR, "Message %s\n",message);
+         //LOG(ALLB_LOG,LOG_ERR, "Message %s\n",message);
        } else {
          //strncpy(&message[(processing_long_msg * AQ_MSGLEN)], (char *)packet + PKT_DATA + 1, AQ_MSGLEN);
          //rsm_strncpy(&message[(processing_long_msg * AQ_MSGLEN)], (unsigned char *)packet + PKT_DATA + 1, AQ_MSGLONGLEN, AQ_MSGLEN);
          rsm_strncpy(&message[( (index-1) * AQ_MSGLEN)], (unsigned char *)packet + PKT_DATA + 1, AQ_MSGLONGLEN, AQ_MSGLEN);
-         //LOG(AQRS_LOG,LOG_ERR, "Long Message %s\n",message);
+         //LOG(ALLB_LOG,LOG_ERR, "Long Message %s\n",message);
          if (++processing_long_msg != index) {
-           LOG(AQRS_LOG,LOG_DEBUG, "Long message index %d doesn't match buffer %d\n",index,processing_long_msg);
+           LOG(ALLB_LOG,LOG_DEBUG, "Long message index %d doesn't match buffer %d\n",index,processing_long_msg);
            //printf("RSM Long message index %d doesn't match buffer %d\n",index,processing_long_msg);
          }
          #ifdef  PROCESS_INCOMPLETE_MESSAGES
@@ -908,24 +912,24 @@ bool process_packet(unsigned char *packet, int length)
          // MOVED FROM LINE 701 see if less errors
          //kick_aq_program_thread(&_aqualink_data, ALLBUTTON);
 
-         LOG(AQRS_LOG,LOG_DEBUG, "Processing Message - '%s'\n",message);
+         LOG(ALLB_LOG,LOG_DEBUG, "Processing Message - '%s'\n",message);
          processMessage(message); // This will kick thread
        }
        
      }
     break;
   case CMD_PROBE:
-    LOG(AQRS_LOG,LOG_DEBUG, "RS Received PROBE length %d.\n", length);
+    LOG(ALLB_LOG,LOG_DEBUG, "RS Received PROBE length %d.\n", length);
     //LOG(AQUA_LOG,LOG_INFO, "Synch'ing with Aqualink master device...\n");
     rtn = false;
     break;
   case CMD_MSG_LOOP_ST:
-    LOG(AQRS_LOG,LOG_INFO, "RS Received message loop start\n");
+    LOG(ALLB_LOG,LOG_INFO, "RS Received message loop start\n");
     processMessageReset();
     rtn = false;
     break;
   default:
-    LOG(AQRS_LOG,LOG_INFO, "RS Received unknown packet, 0x%02hhx\n", packet[PKT_CMD]);
+    LOG(ALLB_LOG,LOG_INFO, "RS Received unknown packet, 0x%02hhx\n", packet[PKT_CMD]);
     rtn = false;
     break;
   }
@@ -1091,7 +1095,7 @@ int main(int argc, char *argv[])
   // Any debug logging masks
   //addDebugLogMask(IAQT_LOG);
   //addDebugLogMask(ONET_LOG);
-  //addDebugLogMask(AQRS_LOG);
+  //addDebugLogMask(ALLB_LOG);
   //addDebugLogMask(PDA_LOG);
   //addDebugLogMask(NET_LOG);
   //addDebugLogMask(AQUA_LOG);
@@ -1559,6 +1563,10 @@ void main_loop()
     _aqualink_data.pumps[i].rpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].gpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].watts = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].mode = TEMP_UNKNOWN;
+    //_aqualink_data.pumps[i].driveState = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].status = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].pressureCurve = TEMP_UNKNOWN;
   }
 
   if (_aqconfig_.force_swg == true) {
@@ -1900,7 +1908,7 @@ void main_loop()
       {
         if (getLogLevel(AQUA_LOG) >= LOG_DEBUG) {
           LOG(AQUA_LOG,LOG_DEBUG, "RS received packet of type %s length %d\n", get_packet_type(packet_buffer, packet_length), packet_length);
-          logPacketRead(packet_buffer, packet_length);
+          //logPacketRead(packet_buffer, packet_length);
         }
         _aqualink_data.updated = process_packet(packet_buffer, packet_length);
 

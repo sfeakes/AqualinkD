@@ -26,7 +26,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <time.h>
+//#include <time.h>
 #include <ctype.h>
 #include <fcntl.h>
 
@@ -289,8 +289,8 @@ const char* logmask2name(int16_t from)
     case NET_LOG:
       return "NetService:";
     break;
-    case AQRS_LOG:
-      return "RS Allbtn: ";
+    case ALLB_LOG:
+      return "AllButton: ";
     break;
     case RSSA_LOG:
       return "RS SAdptr: ";
@@ -314,13 +314,16 @@ const char* logmask2name(int16_t from)
       return "RS Serial: ";
     break;
     case PROG_LOG:
-      return "Panl Prog: ";
+      return "Panl&Prog: ";
     break;
     case DBGT_LOG:
-      return "AQ Timing: ";
+      return "DebugTimer:";
     break;
-    case TIMR_LOG:
-      return "Schd/Timer:";
+    case SCHD_LOG:
+      return "Sched/Timr:";
+    break;
+    case RSTM_LOG:
+      return "RS Timings:";
     break;
     case SIM_LOG:
       return "Simulator: ";
@@ -776,6 +779,11 @@ float degFtoC(float degF)
 float degCtoF(float degC)
 {
   return (degC * 1.8 + 32);
+}
+
+
+float timespec2float(const struct timespec *elapsed) {
+  return ((float)elapsed->tv_nsec / 1000000000L) + elapsed->tv_sec;
 }
 
 #include <time.h>

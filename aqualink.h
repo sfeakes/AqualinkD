@@ -167,6 +167,11 @@ typedef struct pumpd
   protocolType prclType;
   aqkey *button;
   //bool updated;
+  // Other VSP values read directly from RS485
+  int mode;  // 0 local control, 1 remote control
+  //int driveState; // Haven't figured out what this is yet
+  int status;
+  int pressureCurve;
 } pump_detail;
 
 // color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
@@ -185,7 +190,9 @@ typedef enum {
   NET_MQTT=0, 
   NET_API, 
   NET_WS, 
-  NET_DZMQTT} request_source;
+  NET_DZMQTT,
+  NET_TIMER       // Not used yet, need to change aq_timer.c
+} request_source;
 
 typedef struct clightd
 {

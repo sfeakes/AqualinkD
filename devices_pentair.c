@@ -44,6 +44,7 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
 
   //static int pumpIndex = 1;
   
+  // Status from pump
   if ( packet[PEN_PKT_CMD] == PEN_CMD_STATUS && packet[PEN_PKT_FROM] >= PENTAIR_DEC_PUMP_MIN &&  packet[PEN_PKT_FROM] <= PENTAIR_DEC_PUMP_MAX ){
     // We have Pentair Pump packet, let's see if it's configured.
     //printf("PUMP\n");
@@ -51,28 +52,92 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
     for (i = 0; i < MAX_PUMPS; i++) {
       if ( aqdata->pumps[i].prclType == PENTAIR && aqdata->pumps[i].pumpID == packet[PEN_PKT_FROM] ) {
         // We found the pump.
-        LOG(DPEN_LOG, LOG_INFO, "Pentair Pump Status message = RPM %d | WATTS %d\n",
+        LOG(DPEN_LOG, LOG_INFO, "Pentair Pump 0x%02hhx Status message = RPM %d | WATTS %d | GPM %d | Mode %d | DriveState %d | Status %d | PresureCurve %d\n",
+          packet[PEN_PKT_FROM],
           (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
-          (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
+          (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT],
+          packet[PEN_FLOW],
+          packet[PEN_MODE],
+          packet[PEN_DRIVE_STATE],
+          (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS],
+          packet[PEN_PPC]);
 
         aqdata->pumps[i].rpm = (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM];
         aqdata->pumps[i].watts = (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT];
+        aqdata->pumps[i].gpm = packet[PEN_FLOW];
+        aqdata->pumps[i].mode = packet[PEN_MODE];
+        //aqdata->pumps[i].driveState = packet[PEN_DRIVE_STATE];
+        aqdata->pumps[i].status = (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS];
+        aqdata->pumps[i].pressureCurve = packet[PEN_PPC];
 
         changedAnything = true;
         break;
       }
-      if (changedAnything != true)
-        LOG(DPEN_LOG, LOG_NOTICE, "Pentair Pump found at ID 0x%02hhx with RPM %d | WATTS %d, but not configured, information ignored!\n",
+      if (changedAnything != true) {
+        LOG(DPEN_LOG, LOG_NOTICE, "Pentair Pump found at ID 0x%02hhx values RPM %d | WATTS %d | PGM %d | Mode %d | DriveState %d | Status %d | PresureCurve %d\n",
                                packet[PEN_PKT_FROM],
                                (packet[PEN_HI_B_RPM] * 256) + packet[PEN_LO_B_RPM],
-                               (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT]);
+                               (packet[PEN_HI_B_WAT] * 256) + packet[PEN_LO_B_WAT],
+                               packet[PEN_FLOW],
+                               packet[PEN_MODE],
+                               packet[PEN_DRIVE_STATE],
+                              (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS],
+                               packet[PEN_PPC]);
+      }
     }
     // 
+  }
+  // Set RPM/GPM to pump 
+  else if (packet[PEN_PKT_CMD] == PEN_CMD_SPEED && packet[PEN_PKT_DEST] >= PENTAIR_DEC_PUMP_MIN &&  packet[PEN_PKT_DEST] <= PENTAIR_DEC_PUMP_MAX) {
+
+    //(msg.extractPayloadByte(2) & 32) >> 5 === 0 ? 'RPM' : 'GPM';
+
+    bool isRPM = (packet[11] & 32) >> 5 == 0?true:false;
+
+    if (isRPM) {
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request to set RPM to %d\n",packet[PEN_PKT_DEST], (packet[11] * 256) + packet[12]);
+    } else {
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request to set GPM to %d\n",packet[PEN_PKT_DEST],packet[11]);
+    }
+  }
+  // Set power to pump 
+  else if (packet[PEN_PKT_CMD] == PEN_CMD_POWER && packet[PEN_PKT_DEST] >= PENTAIR_DEC_PUMP_MIN &&  packet[PEN_PKT_DEST] <= PENTAIR_DEC_PUMP_MAX) {
+    if (packet[9] == 0x0A) {
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power ON\n");
+    } else {
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power OFF\n");
+    }
   }
   
   return changedAnything;
 }
+/*
+  VSP Pump Status.
 
+  (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS];
+
+  // Below was pulled from another project.  0 doesn;t seem to be accurate.
+  [0, { name: 'off', desc: 'Off' }], // When the pump is disconnected or has no power then we simply report off as the status.  This is not the recommended wiring
+        // for a VS/VF pump as is should be powered at all times.  When it is, the status will always report a value > 0.
+  [1, { name: 'ok', desc: 'Ok' }], // Status is always reported when the pump is not wired to a relay regardless of whether it is on or not
+        // as is should be if this is a VS / VF pump.  However if it is wired to a relay most often filter, the pump will report status
+        // 0 if it is not running.  Essentially this is no error but it is not a status either.
+  [2, { name: 'filter', desc: 'Filter warning' }],
+  [3, { name: 'overcurrent', desc: 'Overcurrent condition' }],
+  [4, { name: 'priming', desc: 'Priming' }],
+  [5, { name: 'blocked', desc: 'System blocked' }],
+  [6, { name: 'general', desc: 'General alarm' }],
+  [7, { name: 'overtemp', desc: 'Overtemp condition' }],
+  [8, { name: 'power', dec: 'Power outage' }],
+  [9, { name: 'overcurrent2', desc: 'Overcurrent condition 2' }],
+  [10, { name: 'overvoltage', desc: 'Overvoltage condition' }],
+  [11, { name: 'error11', desc: 'Unspecified Error 11' }],
+  [12, { name: 'error12', desc: 'Unspecified Error 12' }],
+  [13, { name: 'error13', desc: 'Unspecified Error 13' }],
+  [14, { name: 'error14', desc: 'Unspecified Error 14' }],
+  [15, { name: 'error15', desc: 'Unspecified Error 15' }],
+  [16, { name: 'commfailure', desc: 'Communication failure' }]
+*/
 
 
 

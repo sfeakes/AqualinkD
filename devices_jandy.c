@@ -45,7 +45,7 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   {
     if (interestedInNextAck == DRS_SWG)
     {
-      rtn = processPacketFromSWG(packet_buffer, packet_length, aqdata);
+      rtn = processPacketFromSWG(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
     else if (interestedInNextAck == DRS_EPUMP)
     {
@@ -71,11 +71,11 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   {
     if (interestedInNextAck == DRS_SWG && aqdata->ar_swg_device_status != SWG_STATUS_OFF)
     { // SWG Offline
-      processMissingAckPacketFromSWG(previous_packet_to, aqdata);
+      processMissingAckPacketFromSWG(previous_packet_to, aqdata, previous_packet_to);
     }
     else if (interestedInNextAck == DRS_EPUMP)
     { // ePump offline
-      processMissingAckPacketFromJandyPump(previous_packet_to, aqdata);
+      processMissingAckPacketFromJandyPump(previous_packet_to, aqdata, previous_packet_to);
     }
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
@@ -177,9 +177,19 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
   return changedAnything;
 }
 
-bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata) {
+unsigned char _SWG_ID = NUL;
+
+bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to) {
   bool changedAnything = false;
   _swg_noreply_cnt = 0;
+
+  // Capture the SWG ID.  We could have more than one, but for the moment AqualinkD only supports one so we'll pick the first one.
+  if (_SWG_ID == NUL) {
+    _SWG_ID = previous_packet_to;
+  } else if (_SWG_ID != NUL && _SWG_ID != previous_packet_to) {
+    LOG(DJAN_LOG, LOG_WARNING, "We have two SWG, AqualinkD only supports one. using ID 0x%02hhx, ignoring 0x%02hhx\n", _SWG_ID, previous_packet_to);
+    return changedAnything;
+  }
 
   // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
@@ -211,11 +221,16 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
   return changedAnything;
 }
 
-void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata)
+void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   // SWG_STATUS_UNKNOWN means we have never seen anything from SWG, so leave as is. 
   // IAQTOUCH & ONETOUCH give us AQUAPURE=0 but ALLBUTTON doesn't, so only turn off if we are not in extra device mode.
   // NSF Need to check that we actually use 0 from IAQTOUCH & ONETOUCH
+  if (_SWG_ID != previous_packet_to) {
+    //LOG(DJAN_LOG, LOG_DEBUG, "Ignoring SWG no reply from 0x%02hhx\n", previous_packet_to);
+    return;
+  }
+
   if ( aqdata->ar_swg_device_status != SWG_STATUS_UNKNOWN && isIAQT_ENABLED == false && isONET_ENABLED == false )
   { 
     if ( _swg_noreply_cnt < 3 ) {
@@ -250,9 +265,9 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
   }
   */
    // If we are reading state directly from RS458, then ignore everything else.
-  if ( READ_RSDEV_SWG && requester != JANDY_DEVICE ) {
-    return;
-  }
+  //if ( READ_RSDEV_SWG && requester != JANDY_DEVICE ) {
+  //  return;
+  //}
 
   if ((aqdata->ar_swg_device_status == status) || (last_status == status)) {
     //LOG(DJAN_LOG, LOG_DEBUG, "Set SWG device state to '0x%02hhx', request from %d\n", aqdata->ar_swg_device_status, requester);
@@ -614,7 +629,7 @@ bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length,
   return false;
 }
 
-void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata)
+void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   // Do nothing for the moment.
   return;

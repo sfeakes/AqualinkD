@@ -5,11 +5,15 @@
 
 IMAGE=aqualinkd
 
+DOCKER_HUB_NAME="docker.io/sfeakes"
+LATEST_TAG=""
+
 if [ $# -eq 0 ]
   then
     # Below is safer, but not supported on all platforms.
     #VERSION=$(curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tag_name": "[^0-9|v|V]*\K.*?(?=")')
     VERSION=$(curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep  "tag_name" | awk -F'"' '$0=$4')
+    LATEST_TAG="-t ${DOCKER_HUB_NAME}/${IMAGE}:latest"
   else
     VERSION=$1
 fi
@@ -37,10 +41,23 @@ if ! curl --output /dev/null --silent --location --head --fail "$URL"; then
   fi
 fi
 
+# Check we are building a version not already on docker hub
+
+DOCKER_TAGS=$(wget -q -O - "https://hub.docker.com/v2/namespaces/sfeakes/repositories/aqualinkd/tags" | grep -o '"name": *"[^"]*' | grep -o '[^"]*$')
+
+if echo $DOCKER_TAGS | grep -q $VERSION; then
+  echo "AqualinkD version $VERSION already exists on docker.io, are you sure you want to overide"
+  read -p "Are you sure? " -n 1 -r
+  echo ""
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    exit
+  fi
+fi
+
 echo "Building Docker container for $IMAGE using branch $VERSION"
 docker buildx build --platform=linux/amd64,linux/arm64 \
                     --file Dockerfile.buildx \
-                    -t docker.io/sfeakes/${IMAGE}:${VERSION} \
-                    -t docker.io/sfeakes/${IMAGE}:latest \
+                    -t ${DOCKER_HUB_NAME}/${IMAGE}:${VERSION} \
+                    $LATEST_TAG \
                     --build-arg AQUALINKD_VERSION=${VERSION} \
                     --push .

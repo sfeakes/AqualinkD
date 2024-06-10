@@ -640,7 +640,8 @@
       document.getElementById('vspswitch_options').classList.remove("hide");
       document.getElementById('timer_options').classList.remove("hide");
       document.getElementById('scheduler_options').classList.remove("hide");
-      //document.getElementById('simulator_iframe').classList.remove("hide");
+      //document.getElementById('simulator_options').classList.remove("hide");
+      document.getElementById('simulator_iframe').classList.remove("hide");
       setColors();
       load_background();
       showTileOptions(false);
@@ -1301,7 +1302,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
           active_option = document.getElementById('pswitch_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1309,7 +1310,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1317,7 +1318,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_freeze') {
           active_option = document.getElementById('swg_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1325,7 +1326,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_vsp') {
           active_option = document.getElementById('vspswitch_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1333,7 +1334,7 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_timer') {
           active_option = document.getElementById('timer_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1341,7 +1342,7 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
+          document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'scheduler') {
           active_option = document.getElementById('scheduler_options');
           document.getElementById('thermostat_options').style.display = 'none';
@@ -1349,8 +1350,8 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
-          //document.getElementById('simulator_iframe').style.display = 'none';
-        } /*else if (id != null && document.getElementById(id).getAttribute('type') == 'simulator') {
+          document.getElementById('simulator_iframe').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'simulator') {
           active_option = document.getElementById('simulator_iframe');
           document.getElementById('thermostat_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
@@ -1358,7 +1359,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
-        }*/
+        }
 
         active_option.style.display = 'flex';
         /*
@@ -1393,7 +1394,7 @@
         document.getElementById('vspswitch_options').style.display = 'none';
         document.getElementById('timer_options').style.display = 'none';
         document.getElementById('scheduler_options').style.display = 'none';
-        //document.getElementById('simulator_iframe').style.display = 'none';
+        document.getElementById('simulator_iframe').style.display = 'none';
         document.getElementById('wrapper').classList.remove("opaque");
         return;
       }
@@ -1447,8 +1448,8 @@
         } else if (type == 'scheduler') {
           title = document.getElementById("scheduler_options_title");
           close_button = document.getElementById("scheduler_options_close");
-        //} else if (type == 'simulator') {
-        //  close_button = document.getElementById("simulator_iframe_close");
+        } else if (type == 'simulator') {
+          close_button = document.getElementById("simulator_iframe_close");
         } else {
           slider = document.getElementById("option_slider_range");
           slider_output = document.getElementById("option_slider_text_value");
@@ -2525,7 +2526,8 @@
   <div id='body_wrap' class='body_wrap'>
     <!-- <div id='body_wrap' class='body_wrap' onmousedown='showTileOptions(false);'> -->
     <div id='wrapper' class="wrapper">
-      <div id="header" class="head" onclick="showBackground();">
+      <!--<div id="header" class="head" onclick="showBackground();">-->
+      <div id="header" class="head" onclick="event.stopPropagation();showSimulator(this);">
         <table border='0' width='100%' cellpadding='0' cellspacing='0'>
           <tr>
             <td width="70px" align='left' id='td_name'><span class='title' id='name'
@@ -2757,14 +2759,14 @@
       </div>
     </div>
 
-<!--
+
     <div id="simulator_iframe" class='options hide'>
       <div id="onetouch_iframe" class="simulator_pane" onclick='event.stopPropagation();''>
         <iframe id="simulatoriframe" src="/onetouch_sim.html" class="simiframe"></iframe>
         <input type="button" class="options_button" id="simulator_iframe_close" value="Close">
       </div>
     </div>
-  -->
+
     <div id='scheduler_options' class='options hide'>
       <div id='scheduler_options_pane' class='scheduler_pane' onclick='event.stopPropagation();'>
         <table id="cronschedules" border="0">

@@ -267,10 +267,12 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   LOG(NET_LOG,LOG_INFO, "MQTT: Publishing discover messages to '%s'\n", _aqconfig_.mqtt_hass_discover_topic);
 
   for (i=0; i < aqdata->total_buttons; i++) 
-  { // Heaters
-    if ( (strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (_aqconfig_.force_ps_setpoints || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) ||
-         (strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (_aqconfig_.force_ps_setpoints || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) ) {
-      sprintf(msg,HASSIO_CLIMATE_DISCOVER,
+  { 
+    if (strcmp("NONE",aqdata->aqbuttons[i].label) != 0 ) {
+      // Heaters
+      if ( (strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (_aqconfig_.force_ps_setpoints || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) ||
+           (strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (_aqconfig_.force_ps_setpoints || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) ) {
+        sprintf(msg,HASSIO_CLIMATE_DISCOVER,
              _aqconfig_.mqtt_aq_topic,
              aqdata->aqbuttons[i].name, 
              aqdata->aqbuttons[i].label,
@@ -280,12 +282,12 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name);
-      sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
-      send_mqtt(nc, topic, msg);     
-    } else if (strcmp("NONE",aqdata->aqbuttons[i].label) != 0 ) {
+        sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
+        send_mqtt(nc, topic, msg);     
+      } else {
       // Switches
       //sprintf(msg,"{\"type\": \"switch\",\"unique_id\": \"%s\",\"name\": \"%s\",\"state_topic\": \"aqualinkd/%s\",\"command_topic\": \"aqualinkd/%s/set\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\",\"payload_on\": \"1\",\"payload_off\": \"0\",\"qos\": 1,\"retain\": false}" ,
-      sprintf(msg, HASSIO_SWITCH_DISCOVER,
+        sprintf(msg, HASSIO_SWITCH_DISCOVER,
              _aqconfig_.mqtt_aq_topic,
              aqdata->aqbuttons[i].name, 
              aqdata->aqbuttons[i].label, 
@@ -293,8 +295,9 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name);
-      sprintf(topic, "%s/switch/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
-      send_mqtt(nc, topic, msg);
+        sprintf(topic, "%s/switch/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
+        send_mqtt(nc, topic, msg);
+      }
     }
   }
   

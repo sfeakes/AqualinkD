@@ -16,6 +16,7 @@ struct timerthread {
   pthread_mutex_t thread_mutex;
   pthread_cond_t thread_cond;
   aqkey *button;
+  int deviceIndex;
   struct aqualinkdata *aq_data;
   int duration_min;
   struct timespec timeout;
@@ -56,9 +57,10 @@ int get_timer_left(aqkey *button)
   return 0;
 }
 
-void clear_timer(struct aqualinkdata *aq_data, aqkey *button)
+void clear_timer(struct aqualinkdata *aq_data, /*aqkey *button,*/ int deviceIndex)
 {
-  struct timerthread *t_ptr = find_timerthread(button);
+  //struct timerthread *t_ptr = find_timerthread(button);
+  struct timerthread *t_ptr = find_timerthread(&aq_data->aqbuttons[deviceIndex]);
 
   if (t_ptr != NULL) {
     LOG(TIMR_LOG, LOG_INFO, "Clearing timer for '%s'\n",t_ptr->button->name);
@@ -67,8 +69,9 @@ void clear_timer(struct aqualinkdata *aq_data, aqkey *button)
   }
 }
 
-void start_timer(struct aqualinkdata *aq_data, aqkey *button, int duration)
+void start_timer(struct aqualinkdata *aq_data, /*aqkey *button,*/ int deviceIndex, int duration)
 {
+  aqkey *button = &aq_data->aqbuttons[deviceIndex];
   struct timerthread *t_ptr = find_timerthread(button);
 
   if (t_ptr != NULL) {
@@ -77,23 +80,11 @@ void start_timer(struct aqualinkdata *aq_data, aqkey *button, int duration)
     pthread_cond_broadcast(&t_ptr->thread_cond);
     return;
   }
-  /*
-  struct timerthread *t_ptr;
-
-  if (_timerthread_ll != NULL) {
-    for (t_ptr = _timerthread_ll; t_ptr != NULL; t_ptr = t_ptr->next) {
-      if (t_ptr->button == button) {
-        LOG(TIMR_LOG, LOG_INFO, "already active for '%s', resetting\n",t_ptr->button->name);
-        t_ptr->duration_min = duration;
-        pthread_cond_broadcast(&t_ptr->thread_cond);
-        return;
-      }
-    }
-  }*/
 
   struct timerthread *tmthread = calloc(1, sizeof(struct timerthread));
   tmthread->aq_data = aq_data;
   tmthread->button = button;
+  tmthread->deviceIndex = deviceIndex;
   tmthread->thread_id = 0;
   tmthread->duration_min = duration;
   tmthread->next = NULL;
@@ -147,7 +138,8 @@ void *timer_worker( void *ptr )
     } else {
     // crap way to do this, need to use net_service logic in teh future, but should never actually get here
       LOG(TIMR_LOG, LOG_NOTICE, "turning on '%s'\n",tmthread->button->name);
-      aq_send_cmd(tmthread->button->code);
+      //aq_send_cmd(tmthread->button->code);
+      panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
     }
   }
 
@@ -173,13 +165,16 @@ void *timer_worker( void *ptr )
   LOG(TIMR_LOG, LOG_NOTICE, "End timer for '%s'\n",tmthread->button->name);    
 
   if (tmthread->button->led->state != OFF) {
-    LOG(TIMR_LOG, LOG_INFO, "Timer waking turning '%s' off\n",tmthread->button->name);    
+    LOG(TIMR_LOG, LOG_INFO, "Timer waking turning '%s' off\n",tmthread->button->name);
+/*
 #ifdef AQ_PDA
     if (isPDA_PANEL)
       create_PDA_on_off_request(tmthread->button, false);
     else
 #endif
       aq_send_cmd(tmthread->button->code);
+*/
+      panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
   } else {
     LOG(TIMR_LOG, LOG_INFO, "Timer waking '%s' is already off\n",tmthread->button->name);
   }
