@@ -5,7 +5,7 @@
 #define IAQT_MSGLEN 21
 
 struct iaqt_page_button {
-  char *name[IAQT_MSGLEN];
+  char name[IAQT_MSGLEN];
   unsigned char type;    // 0x01 box, 0x08 icon wirlpool, 0x0b icon heater, 0x01 icon (main page), 0x07 light
   unsigned char state;
   unsigned char keycode;

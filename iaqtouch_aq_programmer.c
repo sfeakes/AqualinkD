@@ -938,7 +938,8 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
     button = iaqtFindButtonByLabel("Degrees");
 
     if (button != NULL) {
-      if (rsm_strmatch(*button->name, "Degrees F") == 0) {
+      LOG(IAQT_LOG,LOG_NOTICE, "Temperature units are '%s'\n",button->name);
+      if (button->name[8] == 'C') {
         LOG(IAQT_LOG,LOG_NOTICE, "Temperature unit message is '%s' set to degC\n",button->name);
         aq_data->temp_units = CELSIUS;
       } else {
