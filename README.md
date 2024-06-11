@@ -114,6 +114,8 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.
 * Added more VSP data (Mode, Status, Pressure Curve, both RPM & GPM) for all Pentair Pumps (VS/VF/VSF).
 * Few updates to HomeAssistant integration.
+  * Will now convert from C to F so setting `convert_mqtt_temp_to_c` doesn't effect hassio anymore
+  * Added VSP support to change RPM/GPM (uses fan type since hassio doesn't support RPM, so it's a % setting or the full RPM or GPM range of your pump) 
 * Updates to serial_logger.
 * Few updates to UI.
   * Will display both RPM & GPM for VSP (space providing)

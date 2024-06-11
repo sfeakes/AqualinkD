@@ -50,7 +50,8 @@ const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'heat'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
     "\"temperature_state_topic\": \"%s/%s/setpoint\","
-    "\"temperature_state_template\": \"{{ value_json }}\","
+    /*"\"temperature_state_template\": \"{{ value_json }}\","*/
+    "%s,"
     "\"qos\": 1,"
     "\"retain\": false"
 "}";
@@ -73,8 +74,15 @@ const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'auto'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
     "\"temperature_state_topic\": \"%s/%s/setpoint\","
-    "\"temperature_state_template\": \"{{ value_json }}\""
+    /*"\"temperature_state_template\": \"{{ value_json }}\""*/
+     "%s"
 "}";
+
+const char *HASSIO_CONVERT_CLIMATE_TOF = "\"temperature_state_template\": \"{{ (value | float(0) * 1.8 + 32 + 0.5) | int }}\","
+                           "\"current_temperature_template\": \"{{ (value | float(0) * 1.8 + 32 + 0.5 ) | int }}\","
+                           "\"temperature_command_template\": \"{{ ((value | float(0) -32 ) / 1.8 + 0.5) | int }}\"";
+
+const char *HASSIO_NO_CONVERT_CLIMATE = "\"temperature_state_template\": \"{{ value_json }}\"";
 
 const char *HASSIO_SWG_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
@@ -94,6 +102,29 @@ const char *HASSIO_SWG_DISCOVER = "{"
     "\"min_humidity\":0,"
     "\"max_humidity\":100,"
     "\"optimistic\": false"
+"}";
+
+// Use Fan for VSP
+const char *HASSIO_VSP_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"fan\","
+    "\"unique_id\": \"aqualinkd_%s_%s\","   // filter_pump, RPM|GPM
+    "\"name\": \"%s Speed\","               // filter_pump
+    "\"state_topic\": \"%s/%s\","          // aqualinkd,filter_pump
+    "\"command_topic\": \"%s/%s/set\","    // aqualinkd,filter_pump
+    "\"json_attributes_topic\": \"%s/%s/delay\","  // aqualinkd,filter_pump
+    "\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\","
+    "\"payload_on\": \"1\","
+    "\"payload_off\": \"0\","
+    "\"percentage_command_topic\": \"%s/%s/%s/set\","       // aqualinkd,filter_pump , RPM|GPM
+    "\"percentage_state_topic\":  \"%s/%s/%s\","   // aqualinkd,filter_pump , RPM|GPM
+    "\"percentage_value_template\": \"{{ ((value | float(0) / %d) * 100) | int }}\","     // 3450|130
+    "\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) | int }}\","   // 3450|130
+    "\"speed_range_max\": \"100\","
+    "\"speed_range_min\": \"%d\"," //  18|12  600rpm|15gpm
+    "\"qos\": 1,"
+    "\"retain\": false"
 "}";
 
 // Need to add timer attributes to the switches, once figure out how to use in homeassistant
@@ -124,7 +155,8 @@ const char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
     "\"name\": \"%s Temp\","
     "\"state_topic\": \"%s/%s\","
     "\"value_template\": \"{{ value_json }}\","
-    "\"unit_of_measurement\": \"°F\","
+    /*"\"unit_of_measurement\": \"°F\","*/
+    "\"unit_of_measurement\": \"%s\","
     "\"device_class\": \"temperature\","
     "\"icon\": \"%s\""
 "}";
@@ -281,7 +313,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
-             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name);
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
         sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg);     
       } else {
@@ -310,9 +343,39 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT_ENABELED,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
-            _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT
-            );
+            (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
     sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, FREEZE_PROTECT);
+    send_mqtt(nc, topic, msg);
+  }
+
+  // VSP
+  for (i=0; i < aqdata->num_pumps; i++)
+  {
+    int maxspeed=3450;   // Min is 600
+    int percent_min=18;  // 600 as % of max
+    char units[4];
+    sprintf(units, "RPM");
+
+    if ( aqdata->pumps[i].pumpType == VFPUMP ) {
+      maxspeed=130; // Min is 15
+      percent_min=12;   // 15 as % of max
+      sprintf(units, "GPM");
+    }
+
+    sprintf(msg, HASSIO_VSP_DISCOVER,
+            _aqconfig_.mqtt_aq_topic,
+            aqdata->pumps[i].button->name,units,
+            aqdata->pumps[i].button->label,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
+            maxspeed,
+            maxspeed,
+            percent_min);
+
+    sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
     send_mqtt(nc, topic, msg);
   }
   
@@ -368,15 +431,15 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   }
 
   // Temperatures
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Pool","Pool",_aqconfig_.mqtt_aq_topic,POOL_TEMP_TOPIC,"mdi:water-thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Pool","Pool",_aqconfig_.mqtt_aq_topic,POOL_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pool");
   send_mqtt(nc, topic, msg);
 
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Spa","Spa",_aqconfig_.mqtt_aq_topic,SPA_TEMP_TOPIC,"mdi:water-thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Spa","Spa",_aqconfig_.mqtt_aq_topic,SPA_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Spa");
   send_mqtt(nc, topic, msg);
 
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Air","Air",_aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,"mdi:thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Air","Air",_aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Air");
   send_mqtt(nc, topic, msg);
   
