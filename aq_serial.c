@@ -1100,7 +1100,8 @@ int get_packet(int fd, unsigned char* packet)
     LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
     log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
     return 0;
-  } else*/ if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
+  } else*/ 
+  if (index < AQ_MINPKTLEN && (jandyPacketStarted || pentairPacketStarted) ) { //NSF. Sometimes we get END sequence only, so just ignore.
     LOG(RSSD_LOG,LOG_WARNING, "Serial read too small\n");
     logPacketError(packet, index);
     //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);

@@ -587,7 +587,7 @@ const char* getActionName(action_type type)
 
 
 //bool setDeviceState(aqkey *button, bool isON)
-bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON)
+bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, request_source source)
 {
   aqkey *button = &aqdata->aqbuttons[deviceIndex];
 
@@ -622,6 +622,10 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON)
           //set_light_mode("0", deviceIndex); // 0 means use current light mode
           programDeviceLightMode(aqdata, 0, deviceIndex); // 0 means use current light mode
         }
+      } else if ( source == NET_DZMQTT && isRSSA_ENABLED ) {
+        // Domoticz has a bad habbit of resending the same state back to us, when we use the PRESTATE_ONOFF option
+        // since allbutton (default) is stateless, and rssaadapter is statefull, use rssaadapter for any domoricz requests
+        set_aqualink_rssadapter_aux_state(deviceIndex, isON);
       } else {
         aq_send_cmd(button->code);
       }
@@ -716,21 +720,30 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
 /*
    deviceIndex = button index on button list (or pumpIndex for VSP action_types)
    value = value to set (0=off 1=on, or value for setpoints / rpm / timer) action_type will depend on this value 
-   subIndex = index of pump if required
    source = This will delay request to allow for multiple messages and only execute the last. (ie this stops multiple programming mode threads when setpoint changes are stepped)
 */
 //bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, int subIndex, bool fromMQTT)
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source)
 {
-  LOG(PANL_LOG,LOG_INFO, "Device request type '%s' for deviceindex %d '%s' of value %d from '%s'\n",
+
+  if (type == PUMP_RPM || type == PUMP_VSPROGRAM ){
+    LOG(PANL_LOG,LOG_INFO, "Device request type '%s' for 'Pump#%d' of value %d from '%s'\n",
+                          getActionName(type),
+                          deviceIndex,
+                          value,
+                          getRequestName(source));
+  } else {
+    LOG(PANL_LOG,LOG_INFO, "Device request type '%s' for deviceindex %d '%s' of value %d from '%s'\n",
                           getActionName(type),
                           deviceIndex,aqdata->aqbuttons[deviceIndex].label, 
                           value, 
                           getRequestName(source));
+  }
+
   switch (type) {
     case ON_OFF:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], value<=0?false:true, deviceIndex );
-      setDeviceState(aqdata, deviceIndex, value<=0?false:true );
+      setDeviceState(aqdata, deviceIndex, value<=0?false:true, source );
       // Clear timer if off request and timer is active
       if (value<=0 && (aqdata->aqbuttons[deviceIndex].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE ) {
         //clear_timer(aqdata, &aqdata->aqbuttons[deviceIndex]);
@@ -739,7 +752,7 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
     break;
     case TIMER:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], true);
-      setDeviceState(aqdata, deviceIndex, true);
+      setDeviceState(aqdata, deviceIndex, true, source);
       //start_timer(aqdata, &aqdata->aqbuttons[deviceIndex], deviceIndex, value);
       start_timer(aqdata, deviceIndex, value);
     break;
