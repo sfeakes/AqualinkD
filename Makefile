@@ -146,8 +146,10 @@ SL_OBJ_DIR := $(OBJ_DIR)/slog
 
 OBJ_DIR_ARMHF := $(OBJ_DIR)/armhf
 OBJ_DIR_ARM64 := $(OBJ_DIR)/arm64
+OBJ_DIR_AMD64 := $(OBJ_DIR)/amd64
 SL_OBJ_DIR_ARMHF := $(OBJ_DIR_ARMHF)/slog
 SL_OBJ_DIR_ARM64 := $(OBJ_DIR_ARM64)/slog
+SL_OBJ_DIR_AMD64 := $(OBJ_DIR_AMD64)/slog
 
 # Object files
 OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRCS))
@@ -156,8 +158,11 @@ SL_OBJ_FILES := $(patsubst %.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
 
 OBJ_FILES_ARMHF := $(patsubst %.c,$(OBJ_DIR_ARMHF)/%.o,$(SRCS))
 OBJ_FILES_ARM64 := $(patsubst %.c,$(OBJ_DIR_ARM64)/%.o,$(SRCS))
+OBJ_FILES_AMD64 := $(patsubst %.c,$(OBJ_DIR_AMD64)/%.o,$(SRCS))
+
 SL_OBJ_FILES_ARMHF := $(patsubst %.c,$(SL_OBJ_DIR_ARMHF)/%.o,$(SL_SRC))
 SL_OBJ_FILES_ARM64 := $(patsubst %.c,$(SL_OBJ_DIR_ARM64)/%.o,$(SL_SRC))
+SL_OBJ_FILES_AMD64 := $(patsubst %.c,$(SL_OBJ_DIR_AMD64)/%.o,$(SL_SRC))
 #MG_OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(MG_SRC))
 
 # define the executable file
@@ -167,21 +172,30 @@ DEBG = ./release/aqualinkd-debug
 
 MAIN_ARM64 = ./release/aqualinkd-arm64
 MAIN_ARMHF = ./release/aqualinkd-armhf
+MAIN_AMD64 = ./release/aqualinkd-amd64
 
 SLOG_ARM64 = ./release/serial_logger-arm64
 SLOG_ARMHF = ./release/serial_logger-armhf
+SLOG_AMD64 = ./release/serial_logger-amd64
+
 #LOGR = ./release/log_reader
 #PLAY = ./release/aqualinkd-player
+
 
 # Rules with no targets
 .PHONY: clean clean-buildfiles buildrelease release install
 
+# Default target
+.DEFAULT_GOAL := all
+
+# Before the below works, you need to build the aqualinkd-releasebin docker for compiling.
+# sudo docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
 release:
 	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make buildrelease 
 	$(info Binaries for release have been built)
 
-# This is run inside container Dockerfile.releaseBinariies
-buildrelease: clean armhf arm64
+# This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
+buildrelease: clean armhf arm64 
 	$(shell cd release && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
 
 
@@ -220,6 +234,12 @@ arm64: $(MAIN_ARM64) $(SLOG_ARM64)
 	$(info $(MAIN_ARM64) has been compiled)
 	$(info $(SLOG_ARM64) has been compiled)
 
+# amd64
+amd64: CC := $(CC_AMD64)
+amd64: $(MAIN_AMD64) $(SLOG_AMD64)
+	$(info $(MAIN_AMD64) has been compiled)
+	$(info $(SLOG_AMD64) has been compiled)
+
 #debug, Just change compile flags and call MAIN
 debug: CFLAGS = $(DFLAGS)
 debug: $(MAIN) $(SLOG)
@@ -253,6 +273,11 @@ $(OBJ_DIR_ARM64)/%.o: %.c | $(OBJ_DIR_ARM64)
 $(SL_OBJ_DIR_ARM64)/%.o: %.c | $(SL_OBJ_DIR_ARM64)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
+$(OBJ_DIR_AMD64)/%.o: %.c | $(OBJ_DIR_AMD64)
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(SL_OBJ_DIR_AMD64)/%.o: %.c | $(SL_OBJ_DIR_AMD64)
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 # Rules to link
 $(MAIN): $(OBJ_FILES)
@@ -262,6 +287,9 @@ $(MAIN_ARM64): $(OBJ_FILES_ARM64)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS) 
 
 $(MAIN_ARMHF): $(OBJ_FILES_ARMHF)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
+
+$(MAIN_AMD64): $(OBJ_FILES_AMD64)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS) 
 
 $(DEBG): $(DBG_OBJ_FILES)
@@ -279,6 +307,9 @@ $(SLOG_ARM64): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
 $(SLOG_ARM64): $(SL_OBJ_FILES_ARM64)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
+$(SLOG_AMD64): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
+$(SLOG_AMD64): $(SL_OBJ_FILES_AMD64)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
 # Rules to make object directories.
 $(OBJ_DIR):
@@ -302,14 +333,19 @@ $(OBJ_DIR_ARM64):
 $(SL_OBJ_DIR_ARM64):
 	$(MKDIR) $(call FixPath,$@)
 
+$(OBJ_DIR_AMD64):
+	$(MKDIR) $(call FixPath,$@)
+
+$(SL_OBJ_DIR_AMD64):
+	$(MKDIR) $(call FixPath,$@)
 
 # Clean rules
 
 clean: clean-buildfiles
 	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(DEBG)
-	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_ARM64) $(MAIN_ARMHF) $(SLOG) $(SLOG_ARM64) $(SLOG_ARMHF) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY) $(DEBG)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_ARM64) $(MAIN_ARMHF) $(MAIN_AMD64) $(SLOG) $(SLOG_ARM64) $(SLOG_ARMHF) $(SLOG_AMD64) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY) $(DEBG)
 
 clean-buildfiles:
-	$(RM) $(wildcard *.o) $(wildcard *~) $(OBJ_FILES) $(DBG_OBJ_FILES) $(SL_OBJ_FILES) $(OBJ_FILES_ARMHF) $(OBJ_FILES_ARM64) $(SL_OBJ_FILES_ARMHF) $(SL_OBJ_FILES_ARM64)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(OBJ_FILES) $(DBG_OBJ_FILES) $(SL_OBJ_FILES) $(OBJ_FILES_ARMHF) $(OBJ_FILES_ARM64) $(OBJ_FILES_AMD64) $(SL_OBJ_FILES_ARMHF) $(SL_OBJ_FILES_ARM64) $(SL_OBJ_FILES_AMD64)
 
 

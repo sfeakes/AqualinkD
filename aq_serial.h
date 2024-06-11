@@ -62,16 +62,30 @@
 #define PP3 0xFF
 #define PP4 0xA5
 
-#define PEN_CMD_STATUS 0x07
+#define PEN_DEV_MASTER 0x10
+
+#define PEN_CMD_SPEED     0x01
+#define PEN_CMD_REMOTECTL 0x04
+#define PEN_CMD_POWER     0x06
+#define PEN_CMD_STATUS    0x07
+
+
 
 #define PEN_PKT_FROM 6
 #define PEN_PKT_DEST 5
 #define PEN_PKT_CMD 7
 
-#define PEN_HI_B_RPM 14
-#define PEN_LO_B_RPM 15
-#define PEN_HI_B_WAT 12
-#define PEN_LO_B_WAT 13
+// Pentair VSP
+#define PEN_MODE        10
+#define PEN_DRIVE_STATE 11
+#define PEN_HI_B_WAT    12
+#define PEN_LO_B_WAT    13
+#define PEN_HI_B_RPM    14
+#define PEN_LO_B_RPM    15
+#define PEN_FLOW        16
+#define PEN_PPC         17  // Pump pressure curve
+#define PEN_HI_B_STATUS 20  // The current status value of the pump. following values: ok, filterWarning, overCurrent, priming, systemBlocked, generalAlarm, powerOutage, overCurrent2, overVoltage, commLost
+#define PEN_LO_B_STATUS 21
 // END Pentair
 
 #define AQ_MINPKTLEN    5

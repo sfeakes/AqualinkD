@@ -881,7 +881,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
       if (isSINGLE_DEV_PANEL != true)
       {
         changePanelToMode_Only();
-        LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+        LOG(IAQT_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
       }
     }
   }
@@ -898,7 +898,7 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
       if (isSINGLE_DEV_PANEL != true)
       {
         changePanelToMode_Only();
-        LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+        LOG(IAQT_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
       }
     }
   }
@@ -940,10 +940,22 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
     if (button != NULL) {
       LOG(IAQT_LOG,LOG_NOTICE, "Temperature units are '%s'\n",button->name);
       if (button->name[8] == 'C') {
+        LOG(IAQT_LOG,LOG_NOTICE, "Temperature unit message is '%s' set to degC\n",button->name);
+        aq_data->temp_units = CELSIUS;
+      } else {
+        LOG(IAQT_LOG,LOG_NOTICE, "Temperature unit message is '%s' set to degF\n",button->name);
+        aq_data->temp_units = FAHRENHEIT;
+      }
+      
+
+      /*
+      printf("************** DEG IS '%c'\n", (uintptr_t)button->name[8]);
+      if ( (uintptr_t)button->name[8] == 'C') { // NSF THIS DOES NOT WORK, LEAVE COMPILER WARNING TO COME BACK AND FIX
         aq_data->temp_units = CELSIUS;
       } else {
         aq_data->temp_units = FAHRENHEIT;
       }
+      */
     }
   }
 

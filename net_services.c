@@ -920,6 +920,18 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_WATTS_TOPIC, _aqualink_data->pumps[i].watts);
     }
+    if (_aqualink_data->pumps[i].mode != TEMP_UNKNOWN && _aqualink_data->pumps[i].mode != _last_mqtt_aqualinkdata.pumps[i].mode) {
+      _last_mqtt_aqualinkdata.pumps[i].mode = _aqualink_data->pumps[i].mode;
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_MODE_TOPIC, _aqualink_data->pumps[i].mode);
+    }
+    if (_aqualink_data->pumps[i].status != TEMP_UNKNOWN && _aqualink_data->pumps[i].status != _last_mqtt_aqualinkdata.pumps[i].status) {
+      _last_mqtt_aqualinkdata.pumps[i].status = _aqualink_data->pumps[i].status;
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_STATUS_TOPIC, _aqualink_data->pumps[i].status);
+    }
+    if (_aqualink_data->pumps[i].pressureCurve != TEMP_UNKNOWN && _aqualink_data->pumps[i].pressureCurve != _last_mqtt_aqualinkdata.pumps[i].pressureCurve) {
+      _last_mqtt_aqualinkdata.pumps[i].pressureCurve = _aqualink_data->pumps[i].pressureCurve;
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_PPC_TOPIC, _aqualink_data->pumps[i].pressureCurve);
+    }
   }
 }
 
@@ -1923,9 +1935,13 @@ void reset_last_mqtt_status()
   _last_mqtt_aqualinkdata.heater_err_status = NUL; // 0x00
 
   for (i=0; i < _aqualink_data->num_pumps; i++) {
-    _last_mqtt_aqualinkdata.pumps[i].gpm = -1;
-    _last_mqtt_aqualinkdata.pumps[i].rpm = -1;
-    _last_mqtt_aqualinkdata.pumps[i].watts = -1;
+    _last_mqtt_aqualinkdata.pumps[i].gpm = TEMP_UNKNOWN;
+    _last_mqtt_aqualinkdata.pumps[i].rpm = TEMP_UNKNOWN;
+    _last_mqtt_aqualinkdata.pumps[i].watts = TEMP_UNKNOWN;
+    _last_mqtt_aqualinkdata.pumps[i].mode = TEMP_UNKNOWN;
+    _last_mqtt_aqualinkdata.pumps[i].status = TEMP_UNKNOWN;
+    _last_mqtt_aqualinkdata.pumps[i].pressureCurve = TEMP_UNKNOWN;
+    //_last_mqtt_aqualinkdata.pumps[i].driveState = TEMP_UNKNOWN;
   }
 
 }

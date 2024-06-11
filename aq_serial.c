@@ -46,6 +46,9 @@ ioctl(fd, TIOCSSERIAL, &serial);
 
 */
 
+// Default to send command with leading NUL, this changes that
+//#define SEND_CMD_WITH_TRAILING_NUL
+
 //#define BLOCKING_MODE
 
 static bool _blocking_mode = false;
@@ -60,7 +63,45 @@ void send_packet(int fd, unsigned char *packet, int length);
 
 
 
-const char* get_packet_type(unsigned char* packet , int length)
+const char* get_pentair_packet_type(unsigned char* packet , int length)
+{
+  static char buf[15];
+
+  if (length <= 0 )
+    return "";
+
+  switch (packet[PEN_PKT_CMD]) {
+    case PEN_CMD_SPEED:
+      if (packet[PEN_PKT_DEST]== PEN_DEV_MASTER)
+        return "VSP SetSpeed rtn";
+      else
+        return "VSP SetSpeed";
+    break;
+     case PEN_CMD_REMOTECTL:
+      if (packet[PEN_PKT_DEST]== PEN_DEV_MASTER)
+        return "VSP RemoteCtl rtn";
+      else
+        return "VSP RemoteCtl";
+    break;
+     case PEN_CMD_POWER:
+      if (packet[PEN_PKT_DEST]== PEN_DEV_MASTER)
+        return "VSP SetPower rtn";
+      else
+        return "VSP SetPower";
+    break;
+     case PEN_CMD_STATUS:
+      if (packet[PEN_PKT_DEST]== PEN_DEV_MASTER)
+        return "VSP Status";
+      else
+        return "VSP GetStatus";
+    break;
+    default:
+      sprintf(buf, "Unknown '0x%02hhx'", packet[PEN_PKT_CMD]);
+      return buf;
+    break;
+  }
+}
+const char* get_jandy_packet_type(unsigned char* packet , int length)
 {
   static char buf[15];
 
@@ -190,6 +231,16 @@ const char* get_packet_type(unsigned char* packet , int length)
     break;
   }
 }
+
+const char* get_packet_type(unsigned char* packet , int length)
+{
+  if (getProtocolType(packet)==PENTAIR) {
+    return get_pentair_packet_type(packet, length);
+  }
+  
+  return get_jandy_packet_type(packet, length);
+}
+
 
 // Generate and return checksum of packet.
 int generate_checksum(unsigned char* packet, int length)
@@ -424,9 +475,6 @@ int unlock_port(int fd)
 
 // https://www.cmrr.umn.edu/~strupp/serial.html#2_5_2
 // http://unixwiz.net/techtips/termios-vmin-vtime.html
-//#define OLD_SERIAL_INIT
-#ifndef OLD_SERIAL_INIT
-
 
 // Unless AQ_RS_EXTRA_OPTS is defined, blocking will always be true
 int _init_serial_port(const char* tty, bool blocking, bool readahead)
@@ -513,60 +561,7 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
 
   return fd;
 }
-#else //OLD_SERIAL_INIT
-int _init_serial_port(const char* tty, bool blocking, bool readahead) // readahead ignored in this implimentation
-{
 
-  long BAUD = B9600;
-  long DATABITS = CS8;
-  long STOPBITS = 0;
-  long PARITYON = 0;
-  long PARITY = 0;
-
-  struct termios newtio;       //place for old and new port settings for serial port
-
-  _blocking_mode = blocking;
-
-  //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK);
-  int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
-  if (fd < 0)  {
-    LOG(RSSD_LOG,LOG_ERR, "Unable to open port: %s\n", tty);
-    return -1;
-  }
-
-  LOG(RSSD_LOG,LOG_DEBUG, "Openeded serial port %s\n",tty);
-  
-  if (_blocking_mode) {
-    // http://unixwiz.net/techtips/termios-vmin-vtime.html
-    // Not designed behaviour, but it's what we need.
-    fcntl(fd, F_SETFL, 0);
-    newtio.c_cc[VMIN]= 1;
-    //newtio.c_cc[VTIME]= 0; // This will wait indefinatly. (not the best if panel / rs485 adapter is down)
-    newtio.c_cc[VTIME]= 50; // (1 to 255)  1 = 0.1 sec, 255 = 25.5 sec
-    LOG(RSSD_LOG,LOG_INFO, "Set serial port %s to blocking mode\n",tty);
-  } else {
-    int flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK | O_NDELAY);
-    newtio.c_cc[VMIN]= 0;
-    newtio.c_cc[VTIME]= 1; // This should be 0 if we have readahead before write
-    LOG(RSSD_LOG,LOG_INFO, "Set serial port %s to non blocking mode\n",tty);
-  }
-
-  tcgetattr(fd, &_oldtio); // save current port settings
-    // set new port settings for canonical input processing
-  newtio.c_cflag = BAUD | DATABITS | STOPBITS | PARITYON | PARITY | CLOCAL | CREAD;
-  newtio.c_iflag = IGNPAR;
-  newtio.c_lflag = 0;       // ICANON;  
-  newtio.c_oflag = 0;
-    
-  tcflush(fd, TCIFLUSH);
-  tcsetattr(fd, TCSANOW, &newtio);
-  
-  LOG(RSSD_LOG,LOG_DEBUG, "Set serial port %s io attributes\n",tty);
-
-  return fd;
-}
-#endif
 
 
 void close_blocking_serial_port()
@@ -656,12 +651,14 @@ void send_pentair_command(int fd, unsigned char *packet_buffer, int size)
   packet[++i] = NUL;  // Checksum
   packet[++i] = NUL;  // Checksum
   generate_pentair_checksum(&packet[1], i);
-  packet[++i] = NUL;
+  //packet[++i] = NUL;
 
 
   //logPacket(packet, i);
-  send_packet(fd,packet,i);
+  send_packet(fd,packet,++i);
 }
+
+#ifndef SEND_CMD_WITH_TRAILING_NUL
 
 void send_jandy_command(int fd, unsigned char *packet_buffer, int size)
 {
@@ -679,13 +676,33 @@ void send_jandy_command(int fd, unsigned char *packet_buffer, int size)
 
   packet[++i] = DLE;
   packet[++i] = ETX;
+
+  packet[i-2] = generate_checksum(packet, i+1);
+
+  send_packet(fd,packet,++i);
+}
+#else
+void send_jandy_command(int fd, unsigned char *packet_buffer, int size)
+{
+  unsigned char packet[AQ_MAXPKTLEN];
+  int i=0;
+  
+  packet[0] = DLE;
+  packet[1] = STX;
+
+  for (i=2; i-2 < size; i++) {
+    packet[i] = packet_buffer[i-2];
+  }
+
+  packet[++i] = DLE;
+  packet[++i] = ETX;
   packet[++i] = NUL;
 
   packet[i-3] = generate_checksum(packet, i);
 
   send_packet(fd,packet,++i);
 }
-
+#endif
 /*
  unsigned char tp[] = {PCOL_PENTAIR, 0x07, 0x0F, 0x10, 0x08, 0x0D, 0x55, 0x55, 0x5B, 0x2A, 0x2B, 0x00, 0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00};
  send_command(0, tp, 19);
@@ -793,7 +810,8 @@ void send_packet(int fd, unsigned char *packet, int length)
   // MAYBE Change this back to debug serial
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes, type 0x%02hhx cmd 0x%02hhx\n",length-2,packet[5],packet[6]);
-  logPacketWrite(&packet[1], length-2);
+  if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
+    logPacketWrite(&packet[1], length-2);
 /*
   if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
     char buff[1024];
@@ -814,39 +832,74 @@ void send_packet(int fd, unsigned char *packet, int length)
 
   tcdrain(fd); // Make sure buffer has been sent.
   //if (_aqconfig_.frame_delay > 0) {
+#ifndef SERIAL_LOGGER
+  if (_aqconfig_.frame_delay > 0) {
     timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
-    LOG(RSSD_LOG, LOG_DEBUG, "Time from recv to %s send is %ld.%09ld sec\n",
-      (_blocking_mode?"blocking":"non-blocking"), elapsed_time.tv_sec,
-      elapsed_time.tv_nsec);
+    LOG(RSTM_LOG, LOG_DEBUG, "Time from recv to %s send is %.3f sec\n",
+                            (_blocking_mode?"blocking":"non-blocking"), 
+                            roundf3(timespec2float(&elapsed_time)));
+  }
+#endif
   //}
 
 }
 
+#ifndef SEND_CMD_WITH_TRAILING_NUL
 void _send_ack(int fd, unsigned char ack_type, unsigned char command)
 {
-  const int length = 11;
+  //const int length = 11;
+  int length = 10;
   // Default null ack with checksum generated, don't mess with it, just over right                    
   unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL }; 
+  //unsigned char ackPacket[] = { NUL, DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX }; 
+
+  // To overcome Pentair VSP bug in Jandy control panel, we need to NOT send trailing NUL on
+  // a normal ACK, but sent the trailing NUL on in ack with command.
+  // Always send trailing NUL causes VSP to loose connection
+  // Never sending trailing NUL causes come commands to be missed.
 
   // Update the packet and checksum if command argument is not NUL.
   if(command != NUL || ack_type != NUL) {
     //ackPacket[5] = 0x00 normal, 0x03 some pause, 0x01 some pause ending  (0x01 = Screen Busy (also return from logn message))
     ackPacket[5] = ack_type;
     ackPacket[6] = command;
-    ackPacket[7] = generate_checksum(ackPacket, length-1);
+    ackPacket[7] = generate_checksum(ackPacket, length);
     if (command == DLE) {  // We shuld probably also check the ack type as well, just for future proofing.
       // 0x10(DLE) that's not part of the headder or footer needs to be escaped AFTER with NUL, so shif everyting uo one
       ackPacket[8] = ackPacket[7]; // move the caculated checksum
       ackPacket[7] = NUL; // escape the DLE
       ackPacket[9] = DLE; // add new end sequence 
-      ackPacket[10] = ETX; // add new end sequence 
+      ackPacket[10] = ETX; // add new end sequence
+      length = 11;
     }
   }
-
-  //printf("***Send ACK (%s) ***\n",(ack_type==ACK_NORMAL?"Normal":(ack_type==ACK_SCREEN_BUSY?"ScreenBusy":"ScreenBusyDisplay")) );
-
   send_packet(fd, ackPacket, length);
 }
+#else
+void _send_ack(int fd, unsigned char ack_type, unsigned char command)
+{
+  //const int length = 11;
+  int length = 9;
+  // Default null ack with checksum generated, don't mess with it, just over right                    
+  unsigned char ackPacket[] = { DLE, STX, DEV_MASTER, CMD_ACK, NUL, NUL, 0x13, DLE, ETX, NUL }; 
+
+  if(command != NUL || ack_type != NUL) {
+    //ackPacket[5] = 0x00 normal, 0x03 some pause, 0x01 some pause ending  (0x01 = Screen Busy (also return from logn message))
+    ackPacket[4] = ack_type;
+    ackPacket[5] = command;
+    ackPacket[6] = generate_checksum(ackPacket, length);
+    if (command == DLE) {  // We shuld probably also check the ack type as well, just for future proofing.
+      // 0x10(DLE) that's not part of the headder or footer needs to be escaped AFTER with NUL, so shif everyting uo one
+      ackPacket[7] = ackPacket[7]; // move the caculated checksum
+      ackPacket[6] = NUL; // escape the DLE
+      ackPacket[8] = DLE; // add new end sequence 
+      ackPacket[9] = ETX; // add new end sequence
+      length = 10;
+    }
+  }
+  send_packet(fd, ackPacket, length);
+}
+#endif // SEND_CMD_WITH_TRAILING_NUL
 
 void send_ack(int fd, unsigned char command)
 {
@@ -885,6 +938,8 @@ int get_packet(int fd, unsigned char* packet)
   //bool lastByteDLE = false;
   int PentairPreCnt = 0;
   int PentairDataCnt = -1;
+  struct timespec packet_elapsed;
+  struct timespec packet_end_time;
 
   memset(packet, 0, AQ_MAXPKTLEN);
 
@@ -1053,7 +1108,19 @@ int get_packet(int fd, unsigned char* packet)
   }
 
   //if (_aqconfig_.frame_delay > 0) {
-    clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
+
+  if (_aqconfig_.frame_delay > 0 || getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
+    clock_gettime(CLOCK_REALTIME, &packet_end_time);
+    if (getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
+      timespec_subtract(&packet_elapsed, &packet_end_time, &last_serial_read_time);
+      LOG(RSTM_LOG, LOG_DEBUG, "Time between packets (%.3f sec)\n", roundf3(timespec2float(&packet_elapsed)) );
+    }
+    if (_aqconfig_.frame_delay > 0) {
+      memcpy(&last_serial_read_time, &packet_end_time, sizeof(struct timespec));
+    }
+  }
+
+  //clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
   //}
   LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)

@@ -102,9 +102,7 @@
             color: #777 !important;
         }
 
-        .statusmsg {
-
-        }
+        .statusmsg {}
 
         .error {
             background-color: rgb(255, 0, 0) !important;
@@ -113,6 +111,10 @@
 
         .logmsgerror {
             color: rgb(255, 0, 0) !important;
+        }
+
+        .newversion {
+            background-color: rgb(148, 195, 233) !important;
         }
 
         .hidden {
@@ -243,6 +245,7 @@
 
         var _panel_size = 6;
         var _panel_set = 0;
+        var _latestVersionAvailable = 0;
 
         function init_collapsible() {
             var coll = document.getElementsByClassName("collapsible");
@@ -270,7 +273,7 @@
         }
 
         function disablebutton(id) {
-            console.log("disable " + id);
+            //console.log("disable " + id);
             var button = document.getElementById(id);
             if (button) {
                 button.disabled = true;
@@ -278,7 +281,7 @@
             }
         }
         function enablebutton(id) {
-            console.log("enable " + id);
+            //console.log("enable " + id);
             var button = document.getElementById(id);
             if (button) {
                 button.disabled = false;
@@ -323,15 +326,15 @@
             var logcontainer = document.getElementById("logs");
 
             if (log_element_count >= LOGS2DISPLAY) {
-              try {
-                console.log("Removing "+logcontainer.lastElementChild.innerHTML);
-                logcontainer.lastElementChild.remove();
-              } catch(e) {
-                console.log("ERROR Removing log '"+logcontainer.lastElementChild.innerHTML+"'");
-                log_element_count++;
-              }
+                try {
+                    console.log("Removing " + logcontainer.lastElementChild.innerHTML);
+                    logcontainer.lastElementChild.remove();
+                } catch (e) {
+                    console.log("ERROR Removing log '" + logcontainer.lastElementChild.innerHTML + "'");
+                    log_element_count++;
+                }
             } else {
-              log_element_count++;
+                log_element_count++;
             }
 
             element.appendChild(document.createTextNode(message));
@@ -388,7 +391,7 @@
                 };
             } else*/
             if (caller.id == "downloadlog") {
-                
+
                 //window.location = '/api/debug/download';
                 downloadFile('/api/logfile/download', document.getElementById("logsize").value);
                 return;
@@ -398,28 +401,28 @@
         }
 
         function downloadFile(filePath, lines) {
-                console.log("Lines=" + lines);
-                
-                var link = document.createElement('a');
-                link.href = filePath+"/"+lines;
-                //link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
-                link.download = "aqualinkd.log"
-                link.click();
-                // Can't get a form post to cleanly download, and "a download" above can only do get. So add value
-               /*
-                var form = document.createElement('form');
-                form.setAttribute("style", "display: none;");
-                form.method='POST';
-                form.action=filePath;
-                form.target='aqd'; // Set trget to iframe "aqd"(aqualinkd), this stops WS for resetting
-                element=document.createElement('INPUT');
-                element.name='value';
-                element.value=lines;
-                form.appendChild(element);
-                document.body.appendChild(form);
-                form.submit();
-                */
-                
+            console.log("Lines=" + lines);
+
+            var link = document.createElement('a');
+            link.href = filePath + "/" + lines;
+            //link.download = filePath.substr(filePath.lastIndexOf('/') + 1);
+            link.download = "aqualinkd.log"
+            link.click();
+            // Can't get a form post to cleanly download, and "a download" above can only do get. So add value
+            /*
+             var form = document.createElement('form');
+             form.setAttribute("style", "display: none;");
+             form.method='POST';
+             form.action=filePath;
+             form.target='aqd'; // Set trget to iframe "aqd"(aqualinkd), this stops WS for resetting
+             element=document.createElement('INPUT');
+             element.name='value';
+             element.value=lines;
+             form.appendChild(element);
+             document.body.appendChild(form);
+             form.submit();
+             */
+
         }
 
         function settoggle(id, onoff) {
@@ -441,13 +444,18 @@
  
             */
             if (data['aqualinkd_version']) {
-                var eCommands = document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+                document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+                if (data['aqualinkd_version'] == _latestVersionAvailable ) {
+                    document.getElementById("latesversionavailable").classList.add("hidden");
+                } else {
+                    document.getElementById("latesversionavailable").classList.add("newversion");
+                }
             }
             if (data['version']) {
-                var eCommands = document.getElementById("panelversion").innerHTML = data['version'];
+                document.getElementById("panelversion").innerHTML = data['version'];
             }
             if (data['panel_type']) {
-                var eCommands = document.getElementById("paneltype").innerHTML = data['panel_type'];
+                document.getElementById("paneltype").innerHTML = data['panel_type'];
             }
             if (data['status']) {
                 update_status_message(data['status']);
@@ -461,19 +469,19 @@
             */
         }
 
-        function update_status_message(message, error=false) {
-          try{
-            if (error || message.substring(0, 5).toLowerCase() == "error" )
-              document.getElementById("statusmsg").classList.add("error");
-            else
-              document.getElementById("statusmsg").classList.remove("error");
+        function update_status_message(message, error = false) {
+            try {
+                if (error || message.substring(0, 5).toLowerCase() == "error")
+                    document.getElementById("statusmsg").classList.add("error");
+                else
+                    document.getElementById("statusmsg").classList.remove("error");
 
-            if (message == " ") {
-                document.getElementById("statusmsg").innerHTML = "Connected";
-            } else if (message != " ") {
-                document.getElementById("statusmsg").innerHTML = message;
-            }
-          } catch (Error) {}
+                if (message == " ") {
+                    document.getElementById("statusmsg").innerHTML = "Connected";
+                } else if (message != " ") {
+                    document.getElementById("statusmsg").innerHTML = message;
+                }
+            } catch (Error) { }
         }
 
         function setAqManagerOptions(data) {
@@ -483,26 +491,26 @@
               if logfilename=NULL we can turn on/off logging to file.
               logging2file will tell us if it's currently on or off
             */
-           if (data['deamonized'] == 'off') {
-            console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
-            //disablebutton("restart");
-           }
-
-/*
-            if (data['logfilename'] == "(null)")
-                enabletoggle("logfile");
-            else
-                disabletoggle("logfile");
-*/
-/*
-            if (data['logfileready'] == "on") {
-                enablebutton("downloadlog");
-                enablebutton("cleanlog");
-            } else {
-                disablebutton("downloadlog");
-                disablebutton("cleanlog");
+            if (data['deamonized'] == 'off') {
+                //console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
+                disablebutton("restart");
             }
-*/
+
+            /*
+                        if (data['logfilename'] == "(null)")
+                            enabletoggle("logfile");
+                        else
+                            disabletoggle("logfile");
+            */
+            /*
+                        if (data['logfileready'] == "on") {
+                            enablebutton("downloadlog");
+                            enablebutton("cleanlog");
+                        } else {
+                            disablebutton("downloadlog");
+                            disablebutton("cleanlog");
+                        }
+            */
             var eCommands = document.getElementById("loglevels");
             for (var obj in data['loglevels']) {
                 //console.log(data['loglevels'][obj].name);
@@ -641,18 +649,19 @@
         */
         function init() {
             startWebsockets();
+            getLatestVersion();
         }
 
         function set_unavailable(message) {
-            
+
             console.log("!!! NOT Available !!!");
 
-            update_log_message("!!! AqualinkD Manager "+message+" !!!");
+            update_log_message("!!! AqualinkD Manager " + message + " !!!");
 
             const demoClasses = document.querySelectorAll('.inner');
             demoClasses.forEach(element => {
                 element.style.opacity = 0.2;
-                console.log('Element '+element);
+                console.log('Element ' + element);
             });
 
             disablebutton("restart");
@@ -697,6 +706,20 @@
 
             send_command(cmd);
         }
+
+        function getLatestVersion() {
+            var xmlhttp = new XMLHttpRequest();
+            xmlhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var JS = JSON.parse(this.responseText);
+                    _latestVersionAvailable = JS.tag_name.replace(/[^\d.-]/g, '');
+                    document.getElementById("latestaqualinkdversion").innerHTML = _latestVersionAvailable;
+                    
+                }
+            };
+            xmlhttp.open("GET", "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest", true);
+            xmlhttp.send();
+        }
     </script>
 
 <body onload="init();init_collapsible();">
@@ -712,7 +735,7 @@
                                 Console&nbsp;&nbsp;</label></th>
                     </tr>
                     <tr>
-                        <td colspan="2" align="center"><label id="statusmsg" class="statusmsg" >status</label></td>
+                        <td colspan="2" align="center"><label id="statusmsg" class="statusmsg">status</label></td>
                     </tr>
                     <tr>
                         <td align="center">
@@ -729,6 +752,10 @@
                         <tr>
                             <td>AqualinkD version:</td>
                             <td id="aqualinkdversion"></td>
+                        </tr>
+                        <tr id="latesversionavailable">
+                            <td>Latest version:</td>
+                            <td id="latestaqualinkdversion"></td>
                         </tr>
                         <tr>
                             <td>Panel version:</td>
@@ -753,11 +780,17 @@
                         <div class="toggle-switch"></div><span class="toggle-label">Log to file</span>
                     </label>
                 -->
-                    <table border='0'><tr><td>
-                      <input id="downloadlog" type="button" onclick="setlogfile(this);" value="Download logfile"></input>
-                    </td><td>
-                      <input id="logsize" type="text" value="1000" size="5">#lines</input>
-                    </td></tr></table>
+                    <table border='0'>
+                        <tr>
+                            <td>
+                                <input id="downloadlog" type="button" onclick="setlogfile(this);"
+                                    value="Download logfile"></input>
+                            </td>
+                            <td>
+                                <input id="logsize" type="text" value="1000" size="5">#lines</input>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
                 <!--&nbsp;-->
                 <button class="collapsible">Debug Masks</button>
@@ -777,7 +810,7 @@
                 <!--<div class="inner">END</div>-->
             </div>
         </div>
-    <!--<iframe src='about:blank' id="logdownload"></iframe>-->
+        <!--<iframe src='about:blank' id="logdownload"></iframe>-->
     </div>
 </body>
 

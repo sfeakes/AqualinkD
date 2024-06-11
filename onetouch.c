@@ -257,7 +257,7 @@ bool log_heater_setpoints(struct aqualinkdata *aq_data)
       if (isSINGLE_DEV_PANEL != true)
       {
         changePanelToMode_Only();
-        LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+        LOG(ONET_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
       }
     }
     if (rsm_strcmp(_menu[3], "Temp2") == 0 )

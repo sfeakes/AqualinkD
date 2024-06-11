@@ -169,13 +169,13 @@ console.log("SIM LOAD");
           console.log("OneTouch checking if iframe");
           if (targetNode != null) {
             var observer = new MutationObserver(function(){
-            if(targetNode.style.display != 'none'){
-              console.log("OneTouch sim Displaying");
-              startWebsockets();
-            } else {
-              console.log("OneTouch sim Hiding");
-              stopWebsockets();
-            }
+              if(targetNode.style.display != 'none'){
+                console.log("OneTouch sim Displaying");
+                startWebsockets();
+              } else {
+                console.log("OneTouch sim Hiding");
+                stopWebsockets();
+              }
             });
             observer.observe(targetNode, { attributes: true, childList: true });
             console.log("OneTouch in iframe");

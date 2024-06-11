@@ -52,7 +52,7 @@ void changePanelToMode_Only() {
 
 void changePanelToExtendedIDProgramming() {
   _aqconfig_.paneltype_mask |= RSP_EXT_PROG;
-  LOG(AQUA_LOG,LOG_NOTICE, "AqualinkD is using use %s mode for programming (where supported)\n",isONET_ENABLED?"ONETOUCH":"IAQ TOUCH");
+  LOG(PANL_LOG,LOG_NOTICE, "AqualinkD is using use %s mode for programming (where supported)\n",isONET_ENABLED?"ONETOUCH":"IAQ TOUCH");
 }
 
 void addPanelRSserialAdapterInterface() {
@@ -83,7 +83,7 @@ int PANEL_SIZE() {
   else if ((_aqconfig_.paneltype_mask & RSP_16) == RSP_16)
     return 16;
   
-  LOG(AQUA_LOG,LOG_ERR, "Internal error, panel size not set, using 8\n");
+  LOG(PANL_LOG,LOG_ERR, "Internal error, panel size not set, using 8\n");
   return 8;
 }
 //bool setPanel(const char *str);
@@ -133,7 +133,7 @@ int setSizeMask(int size)
   int rtn_size = 0;
 
   if ( size > TOTAL_BUTTONS) {
-    LOG(AQUA_LOG,LOG_ERR, "Panel size is either invalid or too large for compiled parameters, ignoring %d using %d\n",size, TOTAL_BUTTONS);
+    LOG(PANL_LOG,LOG_ERR, "Panel size is either invalid or too large for compiled parameters, ignoring %d using %d\n",size, TOTAL_BUTTONS);
     rtn_size = TOTAL_BUTTONS;
   }
 
@@ -160,7 +160,7 @@ int setSizeMask(int size)
       _aqconfig_.paneltype_mask |= RSP_16;
     break;
     default:
-      LOG(AQUA_LOG,LOG_ERR, "Didn't understand panel size, '%d' setting to size to 8\n",size);
+      LOG(PANL_LOG,LOG_ERR, "Didn't understand panel size, '%d' setting to size to 8\n",size);
       _aqconfig_.paneltype_mask |= RSP_8;
       rtn_size = 8;
     break;
@@ -176,7 +176,7 @@ void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool d
 {
   #ifndef AQ_PDA
     if (!rs) {
-      LOG(AQUA_LOG,LOG_ERR, "Can't use PDA mode, AqualinkD has not been compiled with PDA Enabled\n");
+      LOG(PANL_LOG,LOG_ERR, "Can't use PDA mode, AqualinkD has not been compiled with PDA Enabled\n");
       rs = true;
     }
   #endif
@@ -228,7 +228,7 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
     else // Account for PDA-8
       size = atoi(&str[4]);
   } else {
-    LOG(AQUA_LOG,LOG_ERR, "Didn't understand panel type, '%.2s' from '%s' setting to size to RS-8\n",str,str);
+    LOG(PANL_LOG,LOG_ERR, "Didn't understand panel type, '%.2s' from '%s' setting to size to RS-8\n",str,str);
     rs = true;
     size = 8;
   }
@@ -245,7 +245,7 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
   } else if (str[i+1] == 'D' || str[i+1] == 'd') {
     dual = true;
   } else {
-    LOG(AQUA_LOG,LOG_ERR, "Didn't understand panel type, '%s' from '%s' setting to Combo\n",&str[i+1],str);
+    LOG(PANL_LOG,LOG_ERR, "Didn't understand panel type, '%s' from '%s' setting to Combo\n",&str[i+1],str);
     combo = true;
   }
 
@@ -503,8 +503,83 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   #endif
 }
 
+const char* getRequestName(request_source source)
+{
+  switch(source) {
+   case NET_MQTT:
+      return "MQTT";
+    break;
+    case NET_API:
+      return "API";
+    break;
+    case NET_WS:
+      return "WebSocket";
+    break;
+    case NET_DZMQTT:
+      return "Domoticz";
+    break;
+    case NET_TIMER:
+      return "Timer";
+    break;
+  }
+
+  static char buf[25];
+  sprintf(buf, "Unknown %d", source);
+  return buf;
+}
+const char* getActionName(action_type type)
+{
 
 
+  switch (type) {
+    case ON_OFF:
+      return "OnOff";
+    break;
+    case NO_ACTION:
+      return "No Action";
+    break;
+    case POOL_HTR_SETOINT:
+      return "Pool Heater Setpoint";
+    break;
+    case SPA_HTR_SETOINT:
+      return "Spa Heater Setpoint";
+    break;
+    case FREEZE_SETPOINT:
+      return "Freeze Protect Setpoint";
+    break;
+    case SWG_SETPOINT:
+      return "SWG Percent";
+    break;
+    case SWG_BOOST:
+      return "SWG Boost";
+    break;
+    case PUMP_RPM:
+      return "VSP RPM/GPM";
+    break;
+    case PUMP_VSPROGRAM:
+      return "VSP Program";
+    break;
+    case POOL_HTR_INCREMENT:
+      return "Pool Heater Increment";
+    break;
+    case SPA_HTR_INCREMENT:
+      return "Spa Heater Increment";
+    break;
+    case TIMER:
+      return "Timer";
+    break;
+    case LIGHT_MODE:
+      return "Light Mode";
+    break;
+    case DATE_TIME:
+      return "Date Time";
+    break;
+  }
+
+  static char buf[25];
+  sprintf(buf, "Unknown %d", type);
+  return buf;
+}
 
 //void create_PDA_on_off_request(aqkey *button, bool isON);
 //bool create_panel_request(struct aqualinkdata *aqdata,  netRequest requester, int buttonIndex, int value, bool timer);
@@ -519,10 +594,10 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON)
   if ((button->led->state == OFF && isON == false) ||
       (isON > 0 && (button->led->state == ON || button->led->state == FLASH ||
                      button->led->state == ENABLE))) {
-    LOG(AQUA_LOG, LOG_INFO, "received '%s' for '%s', already '%s', Ignoring\n", (isON == false ? "OFF" : "ON"), button->name, (isON == false ? "OFF" : "ON"));
+    LOG(PANL_LOG, LOG_INFO, "received '%s' for '%s', already '%s', Ignoring\n", (isON == false ? "OFF" : "ON"), button->name, (isON == false ? "OFF" : "ON"));
     //return false;
   } else {
-    LOG(AQUA_LOG, LOG_INFO, "received '%s' for '%s', turning '%s'\n", (isON == false ? "OFF" : "ON"), button->name, (isON == false ? "OFF" : "ON"));
+    LOG(PANL_LOG, LOG_INFO, "received '%s' for '%s', turning '%s'\n", (isON == false ? "OFF" : "ON"), button->name, (isON == false ? "OFF" : "ON"));
 #ifdef AQ_PDA
     if (isPDA_PANEL) {
       if (button->special_mask & PROGRAM_LIGHT && isPDA_IAQT) {
@@ -570,16 +645,16 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON)
 bool programDeviceValue(struct aqualinkdata *aqdata, action_type type, int value, int id, bool expectMultiple) // id is only valid for PUMP RPM
 {
   if (aqdata->unactioned.type != NO_ACTION && type != aqdata->unactioned.type)
-    LOG(AQUA_LOG,LOG_ERR, "about to overwrite unactioned panel program\n");
+    LOG(PANL_LOG,LOG_ERR, "about to overwrite unactioned panel program\n");
 
   if (type == POOL_HTR_SETOINT || type == SPA_HTR_SETOINT || type == FREEZE_SETPOINT || type == SWG_SETPOINT ) {
     aqdata->unactioned.value = setpoint_check(type, value, aqdata);
     if (value != aqdata->unactioned.value)
-      LOG(AQUA_LOG,LOG_NOTICE, "requested setpoint value %d is invalid, change to %d\n", value, aqdata->unactioned.value);
+      LOG(PANL_LOG,LOG_NOTICE, "requested setpoint value %d is invalid, change to %d\n", value, aqdata->unactioned.value);
   } else if (type == PUMP_RPM) {
     aqdata->unactioned.value = value;
   } else if (type == PUMP_VSPROGRAM) {
-    LOG(AQUA_LOG,LOG_ERR, "requested Pump vsp program is not implimented yet\n", value, aqdata->unactioned.value);
+    LOG(PANL_LOG,LOG_ERR, "requested Pump vsp program is not implimented yet\n", value, aqdata->unactioned.value);
   } else {
     // SWG_BOOST & PUMP_RPM & SETPOINT incrment
     aqdata->unactioned.value = value;
@@ -604,7 +679,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
   clight_detail *light = NULL;
 #ifdef AQ_PDA
   if (isPDA_PANEL && !isPDA_IAQT) {
-    LOG(AQUA_LOG,LOG_ERR, "Light mode control not supported in PDA mode\n");
+    LOG(PANL_LOG,LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
 #endif
@@ -617,7 +692,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
   }
 
   if (light == NULL) {
-    LOG(AQUA_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
+    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
     return;
   }
 
@@ -647,20 +722,26 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
 //bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, int subIndex, bool fromMQTT)
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source)
 {
-  LOG(AQUA_LOG,LOG_INFO, "Device request type %d for deviceindex %d of value %d from %d\n",type,deviceIndex, value, source);
+  LOG(PANL_LOG,LOG_INFO, "Device request type '%s' for deviceindex %d '%s' of value %d from '%s'\n",
+                          getActionName(type),
+                          deviceIndex,aqdata->aqbuttons[deviceIndex].label, 
+                          value, 
+                          getRequestName(source));
   switch (type) {
     case ON_OFF:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], value<=0?false:true, deviceIndex );
       setDeviceState(aqdata, deviceIndex, value<=0?false:true );
       // Clear timer if off request and timer is active
       if (value<=0 && (aqdata->aqbuttons[deviceIndex].special_mask & TIMER_ACTIVE) == TIMER_ACTIVE ) {
-        clear_timer(aqdata, &aqdata->aqbuttons[deviceIndex]);
+        //clear_timer(aqdata, &aqdata->aqbuttons[deviceIndex]);
+        clear_timer(aqdata, deviceIndex);
       }
     break;
     case TIMER:
       //setDeviceState(&aqdata->aqbuttons[deviceIndex], true);
       setDeviceState(aqdata, deviceIndex, true);
-      start_timer(aqdata, &aqdata->aqbuttons[deviceIndex], value);
+      //start_timer(aqdata, &aqdata->aqbuttons[deviceIndex], deviceIndex, value);
+      start_timer(aqdata, deviceIndex, value);
     break;
     case LIGHT_MODE:
       programDeviceLightMode(aqdata, value, deviceIndex);
@@ -680,7 +761,7 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
       aq_programmer(AQ_SET_TIME, NULL, aqdata);
     break;
     default:
-      LOG(AQUA_LOG,LOG_ERR, "Unknown device request type %d for deviceindex %d\n",type,deviceIndex);
+      LOG(PANL_LOG,LOG_ERR, "Unknown device request type %d for deviceindex %d\n",type,deviceIndex);
     break;
   }
 

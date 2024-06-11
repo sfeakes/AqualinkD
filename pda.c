@@ -252,7 +252,7 @@ void process_pda_packet_msg_long_time(const char *msg)
 
   if (checkAqualinkTime() != true)
   {
-    LOG(AQRS_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data->time, _aqualink_data->date);
+    LOG(PDA_LOG,LOG_NOTICE, "RS time is NOT accurate '%s %s', re-setting on controller!\n", _aqualink_data->time, _aqualink_data->date);
     aq_programmer(AQ_SET_TIME, NULL, _aqualink_data);
   } 
 }
@@ -336,7 +336,7 @@ void setSingleDeviceMode()
   if (isSINGLE_DEV_PANEL != true)
   {
     changePanelToMode_Only();
-    LOG(AQRS_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
+    LOG(PDA_LOG,LOG_ERR, "AqualinkD set to 'Combo Pool & Spa' but detected 'Only Pool OR Spa' panel, please change config\n");
   }
 }
 

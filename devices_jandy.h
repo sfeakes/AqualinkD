@@ -8,11 +8,11 @@
 bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
 
 bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore);
-bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata);
+bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);
-void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata);
-void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata);
+void processMissingAckPacketFromSWG(unsigned char destination, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);
+void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);
 
 bool processPacketFromJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to );
 bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);

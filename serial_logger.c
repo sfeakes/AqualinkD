@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V2.1"
+#define VERSION "serial_logger V2.2"
 
 /*
 typedef enum used {
@@ -80,13 +80,15 @@ unsigned char _goodIAQTID[] = {0x30, 0x31, 0x32, 0x33};
 unsigned char _goodRSSAID[] = {0x48, 0x49};  // Know there are only 2 good RS SA id's, guess 0x49 is the second.
 unsigned char _filter[10];
 int _filters=0;
+unsigned char _pfilter[10];
+int _pfilters=0;
 bool _rawlog=false;
 bool _playback_file = false;
 
 
 int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y);
 
-int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs);
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs, bool timePackets);
 
 
 #ifdef SERIAL_LOGGER
@@ -101,7 +103,7 @@ void intHandler(int dummy) {
 }
 #else
 int serial_logger (int rs_fd, char *port_name, int logLevel) {
-  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false, false);
+  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false, false, false);
 }
 #endif
 
@@ -306,7 +308,7 @@ void printHex(char *pk, int length)
 }
 
 
-void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length)
+void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_length, char *message)
 {
   int i;
 
@@ -316,29 +318,53 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     return;
   }
 
-  if (_filters != 0)
+  // if filter is set and not match, then return without printing.
+  if (_filters != 0 || _pfilters != 0)
   {
     bool dest_match = false;
     bool src_match = false;
+    bool pent_match = false;
 
-    for (i=0; i < _filters; i++) {
-      if ( packet_buffer[PKT_DEST] == _filter[i])
-        dest_match = true;
-      if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
-        src_match = true;
+    if (_filters != 0) {
+      for (i=0; i < _filters; i++) {
+        if ( packet_buffer[PKT_DEST] == _filter[i])
+          dest_match = true;
+        if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
+          src_match = true;
+      }
+    }
+    if (_pfilters != 0) {
+      for (i=0; i < _pfilters; i++) {
+        if ( packet_buffer[PEN_PKT_FROM] == _pfilter[i] ||
+             packet_buffer[PEN_PKT_DEST] == _pfilter[i] )
+          pent_match = true;
+      }
     }
 
-    if(dest_match == false && src_match == false)
+    if(dest_match == false && src_match == false && pent_match == false)
       return;
   }
-  
+
+  if (message != NULL)
+    printf("%s",message);
+
+  protocolType ptype = getProtocolType(packet_buffer);
+
+  printf("%s packet To 0x%02hhx of type %16.16s",
+                      (ptype==PENTAIR?"Pentair":"Jandy  "),
+                      packet_buffer[(ptype==JANDY?PKT_DEST:PEN_PKT_DEST)], 
+                      get_packet_type(packet_buffer, packet_length));
+/*
   if (getProtocolType(packet_buffer)==JANDY) {
     if (packet_buffer[PKT_DEST] != 0x00)
       printf("\n");
     printf("Jandy   %4.4s 0x%02hhx of type %16.16s", (packet_buffer[PKT_DEST]==0x00?"From":"To"), (packet_buffer[PKT_DEST]==0x00?ID:packet_buffer[PKT_DEST]), get_packet_type(packet_buffer, packet_length));
   } else {
-    printf("Pentair From 0x%02hhx To 0x%02hhx       ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
+    if (packet_buffer[PEN_PKT_FROM] == 0x10)
+      printf("\n");
+    printf("Pentair From 0x%02hhx To 0x%02hhx                 ",packet_buffer[PEN_PKT_FROM],packet_buffer[PEN_PKT_DEST]  );
   }
+*/
   printf(" | HEX: ");
   printHex((char *)packet_buffer, packet_length);
   
@@ -363,6 +389,7 @@ int main(int argc, char *argv[]) {
   bool serialBlocking = true;
   bool errorMonitor = false;
   bool printAllIDs = false;
+  bool timePackets = false;
 
   // aq_serial.c uses the following
   _aqconfig_.log_protocol_packets = false;
@@ -384,12 +411,14 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\t-d (debug / print messages)\n");
     fprintf(stderr, "\t-p <number> (# packets to log, default=%d)\n",PACKET_MAX);
     fprintf(stderr, "\t-i <ID> (just log specific ID, can use multiple -i. will also force -d switc)\n");
+    fprintf(stderr, "\t-pi <ID> (just log specific Pantair ID, can use multiple -pi. will also force -d switch)\n");
     fprintf(stderr, "\t-r (raw)\n");
     fprintf(stderr, "\t-s (Serial Speed Test / OS caching issues)\n");
     fprintf(stderr, "\t-lpack (log RS packets to %s)\n",RS485LOGFILE);
     fprintf(stderr, "\t-lrawb (log raw RS bytes to %s)\n",RS485BYTELOGFILE);
     fprintf(stderr, "\t-e (monitor errors)\n");
     fprintf(stderr, "\t-a (Print all ID's the panel queried)\n");
+    fprintf(stderr, "\t-t (time each packet, will also force -s switch)\n");
     fprintf(stderr, "\nie:\t%s /dev/ttyUSB0 -d -p 1000 -i 0x08 -i 0x0a\n\n", argv[0]);
     return 1;
   }
@@ -405,7 +434,14 @@ int main(int argc, char *argv[]) {
       sscanf(argv[i+1], "0x%2x", &n);
       _filter[_filters] = n;
       _filters++;
-      printf("Add filter %i 0x%02hhx\n",_filters, _filter[_filters-1]);
+      printf("Add Jandy filter %i 0x%02hhx\n",_filters, _filter[_filters-1]);
+      logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
+    } else if (strcmp(argv[i], "-pi") == 0 && i+1 < argc) {
+      unsigned int n;
+      sscanf(argv[i+1], "0x%2x", &n);
+      _pfilter[_pfilters] = n;
+      _pfilters++;
+      printf("Add Pentair filter %i 0x%02hhx\n",_pfilters, _pfilter[_pfilters-1]);
       logLevel = LOG_DEBUG; // no point in filtering on ID if we're not going to print it.
     } else if (strcmp(argv[i], "-r") == 0) {
       _rawlog = true;
@@ -425,6 +461,9 @@ int main(int argc, char *argv[]) {
       errorMonitor = true;
     } else if (strcmp(argv[i], "-a") == 0) {
       printAllIDs = true;
+    } else if (strcmp(argv[i], "-t") == 0) {
+      timePackets = true;
+      logLevel = LOG_DEBUG;
     }
   }
 
@@ -472,7 +511,7 @@ int main(int argc, char *argv[]) {
 
   startPacketLogger();
 
-  _serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor, printAllIDs);
+  _serial_logger(rs_fd, argv[1], logPackets, logLevel, panleProbe, rsSerialSpeedTest, errorMonitor, printAllIDs, timePackets);
 
   stopPacketLogger();
 
@@ -484,7 +523,7 @@ int main(int argc, char *argv[]) {
 
 
 
-int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs) {
+int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor, bool printAllIDs, bool timePackets) {
   int packet_length;
   int last_packet_length = 0;
   unsigned char packet_buffer[AQ_MAXPKTLEN];
@@ -500,10 +539,17 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   struct timespec start_time;
   struct timespec end_time;
   struct timespec elapsed;
+  struct timespec packet_start_time;
+  struct timespec packet_end_time;
+  struct timespec packet_elapsed;
+  char extra_message[64];
   int blankReads = 0;
   bool returnError = false;
 
   clock_gettime(CLOCK_REALTIME, &start_time);
+  if (timePackets) {
+    clock_gettime(CLOCK_REALTIME, &packet_start_time);
+  }
 
   while (_keepRunning == true) {
     if (rs_fd < 0) {
@@ -511,6 +557,13 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
+
+    if (timePackets) {
+      clock_gettime(CLOCK_REALTIME, &packet_end_time);
+      sl_timespec_subtract(&packet_elapsed, &packet_end_time, &packet_start_time);
+      clock_gettime(CLOCK_REALTIME, &packet_start_time);
+      sprintf(extra_message,"Time between packets (%.3f sec)\n", roundf3(timespec2float(&packet_elapsed)) );
+    }
 
     if (packet_length == AQSERR_READ) {
       // Unrecoverable read error. Force an attempt to reconnect.
@@ -545,7 +598,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
         //LOG(RSSD_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
 #ifdef SERIAL_LOGGER
         if (logLevel > LOG_NOTICE)
-          printPacket(lastID, packet_buffer, packet_length);
+          printPacket(lastID, packet_buffer, packet_length, timePackets?extra_message:NULL);
 #endif
         if (getProtocolType(packet_buffer) == PENTAIR) {
           found = false;
@@ -607,6 +660,12 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
     }
 
+#ifndef SERIAL_LOGGER
+    if(received_packets%100==0) {
+      LOG(RSSD_LOG, LOG_NOTICE, "Read %d of %d packets\n", received_packets, logPackets);
+    }
+#endif
+
     if (logPackets != 0 && received_packets >= logPackets) {
       _keepRunning = false;
     }
@@ -629,7 +688,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   clock_gettime(CLOCK_REALTIME, &end_time);
 
   // If we were monitoring errors, or filtering messages, or no panel probe, don;t print details
-  if (errorMonitor || panleProbe==false || _filters > 0) {
+  if (errorMonitor || panleProbe==false || _filters > 0 || _pfilters > 0) {
     return 0;
   } else if (returnError) {
     return 1;

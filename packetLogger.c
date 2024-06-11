@@ -110,8 +110,9 @@ void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, b
       if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
         return;
       }
-    } else if (!is_read && _lastReadFrom != _aqconfig_.RSSD_LOG_filter) // Must be write
+    } else if (!is_read && _lastReadFrom != _aqconfig_.RSSD_LOG_filter) { // Must be write
       return;
+    }
 /*
     if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
       return;
@@ -146,14 +147,22 @@ int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length,
 {
   int i = 0;
   int cnt = 0;
+  protocolType ptype = getProtocolType(packet_buffer);
 
+  cnt = sprintf(buff, "%s %s packet %sTo 0x%02hhx of type %16.16s | HEX: ",
+                      (is_read?"Read ":"Write"),
+                      (ptype==PENTAIR?"Pentair":"Jandy  "),
+                      (error?"BAD PACKET ":""), 
+                      packet_buffer[(ptype==JANDY?PKT_DEST:PEN_PKT_DEST)], 
+                      get_packet_type(packet_buffer, packet_length));
+/*
   if (getProtocolType(packet_buffer)==PENTAIR) {
     // Listing Jandy below if redundant.  need to clean this up.
     cnt = sprintf(buff, "%5.5s %s%8.8s Packet | HEX: ",(is_read?"Read":"Write"),(error?"BAD PACKET ":""),getProtocolType(packet_buffer)==PENTAIR?"Pentair":"Jandy");
   } else {
     cnt = sprintf(buff, "%5.5s %sTo 0x%02hhx of type %16.16s | HEX: ",(is_read?"Read":"Write"),(error?"BAD PACKET ":""), packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
   }
-
+*/
   for (i = 0; i < packet_length; i++)
     cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
 
