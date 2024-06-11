@@ -348,38 +348,6 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     send_mqtt(nc, topic, msg);
   }
 
-  // VSP
-  for (i=0; i < aqdata->num_pumps; i++)
-  {
-    int maxspeed=3450;   // Min is 600
-    int percent_min=18;  // 600 as % of max
-    char units[4];
-    sprintf(units, "RPM");
-
-    if ( aqdata->pumps[i].pumpType == VFPUMP ) {
-      maxspeed=130; // Min is 15
-      percent_min=12;   // 15 as % of max
-      sprintf(units, "GPM");
-    }
-
-    sprintf(msg, HASSIO_VSP_DISCOVER,
-            _aqconfig_.mqtt_aq_topic,
-            aqdata->pumps[i].button->name,units,
-            aqdata->pumps[i].button->label,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            maxspeed,
-            maxspeed,
-            percent_min);
-
-    sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
-    send_mqtt(nc, topic, msg);
-  }
-  
-
   // SWG
   if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
 
@@ -443,10 +411,39 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Air");
   send_mqtt(nc, topic, msg);
   
-  // Pumps
+  // VSP Pumps
   for (i=0; i < aqdata->num_pumps; i++) {
+    int maxspeed=3450;   // Min is 600
+    int percent_min=18;  // 600 as % of max
+    char units[4];
+    sprintf(units, "RPM");
+
+    if ( aqdata->pumps[i].pumpType == VFPUMP ) {
+      maxspeed=130; // Min is 15
+      percent_min=12;   // 15 as % of max
+      sprintf(units, "GPM");
+    }
+    // Create a FAN for pump against the button it' assigned to
+    // In the future maybe change this to the pump# or change the sensors to button???
+    sprintf(msg, HASSIO_VSP_DISCOVER,
+            _aqconfig_.mqtt_aq_topic,
+            aqdata->pumps[i].button->name,units,
+            aqdata->pumps[i].button->label,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
+            maxspeed,
+            maxspeed,
+            percent_min);
+
+    sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
+    send_mqtt(nc, topic, msg);
+
+    // Create sensors for each pump, against it's pump number
     int pn=i+1;
-    if (aqdata->pumps[i].pumpType==VFPUMP) {
+    if (aqdata->pumps[i].pumpType==VFPUMP || aqdata->pumps[i].pumpType==VSPUMP) {
       // We have GPM info
       sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
               _aqconfig_.mqtt_aq_topic,

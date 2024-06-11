@@ -110,7 +110,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Call for Help.
 * The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
 
-# (Comming) Updates in Release 2.3.7
+# Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.
 * Added more VSP data (Mode, Status, Pressure Curve, both RPM & GPM) for all Pentair Pumps (VS/VF/VSF).
 * Few updates to HomeAssistant integration.
