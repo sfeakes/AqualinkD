@@ -140,7 +140,7 @@ SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c times
 #MG_SRC = mongoose.c
 
 # Build durectories
-SRC_DIR := ./
+SRC_DIR := ./source
 OBJ_DIR := ./build
 DBG_OBJ_DIR := $(OBJ_DIR)/debug
 SL_OBJ_DIR := $(OBJ_DIR)/slog
