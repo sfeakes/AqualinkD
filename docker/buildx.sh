@@ -1,6 +1,9 @@
 #!/bin/bash
 #
 # Script to build arm64 & amd64 containers that are published to docker.io
+# 
+# This should never be used, unless you want to deploy AqualinkD docker containers to docer.io
+# It's here incase someone taked over this repo because I'm no longer around
 #
 
 IMAGE=aqualinkd
@@ -53,6 +56,9 @@ if echo $DOCKER_TAGS | grep -q $VERSION; then
     exit
   fi
 fi
+
+# Login first
+# cat ~sf/.docker.token | docker login --username sfeakes --password-stdin
 
 echo "Building Docker container for $IMAGE using branch $VERSION"
 docker buildx build --platform=linux/amd64,linux/arm64 \

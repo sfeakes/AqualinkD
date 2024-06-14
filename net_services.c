@@ -1041,10 +1041,6 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "simcmd", 10) == 0 && from == NET_WS) { // Only valid from websocket.
     simulator_send_cmd((unsigned char)value);
     return uActioned;
-    /*
-  } else if (strncmp(ri1, "rawcommand", 10) == 0 && from == NET_WS) { // Only valid from websocket.
-    aq_send_cmd((unsigned char)value);
-    return uActioned;*/
 #ifdef AQ_MANAGER
   } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uAQmanager;
@@ -1740,18 +1736,6 @@ void action_domoticz_mqtt_message(struct mg_connection *nc, struct mg_mqtt_messa
             LOG(NET_LOG,LOG_INFO, "MQTT: DZ: received '%s' for '%s', turning '%s'\n", (nvalue==DZ_OFF?"OFF":"ON"), _aqualink_data->aqbuttons[i].name,(nvalue==DZ_OFF?"OFF":"ON"));
             //create_panel_request(NET_DZMQTT, i, (nvalue == DZ_OFF?0:1), false);
             panel_device_request(_aqualink_data, ON_OFF, i, (nvalue == DZ_OFF?0:1), NET_DZMQTT);
-            /*
-#ifdef AQ_PDA
-            if (isPDA_PANEL) {
-              char msg[PTHREAD_ARG];
-              sprintf(msg, "%-5d%-5d",i, (nvalue == DZ_OFF?OFF:ON) );
-              aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-            } else
-#endif
-            {
-              aq_send_cmd(_aqualink_data->aqbuttons[i].code);
-            }
-            */
           }
         }
         break; // no need to continue in for loop, we found button.

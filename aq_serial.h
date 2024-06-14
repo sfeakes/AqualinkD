@@ -5,6 +5,10 @@
 #include <termios.h>
 #include <stdbool.h>
 
+#include "aq_programmer.h" // Need this for function getJandyDeviceType due to enum defined their.
+emulation_type getJandyDeviceType(unsigned char ID);
+const char *getJandyDeviceName(emulation_type etype);
+
 #define CONNECTION_ERROR "ERROR No connection to RS control panel"
 #ifdef AQ_MANAGER
 #define CONNECTION_RUNNING_SLOG "Running serial_logger, this will take some time"

@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 600
 
-#define VERSION "serial_logger V2.2"
+#define VERSION "serial_logger V2.3"
 
 /*
 typedef enum used {
@@ -64,6 +64,7 @@ struct aqconfig _aqconfig_;
 
 char _panelType[AQ_MSGLEN];
 char _panelRev[AQ_MSGLEN];
+bool _panelPDA = false;
 
 typedef struct serial_id_log {
   unsigned char ID;
@@ -259,15 +260,17 @@ char* canUseExtended(unsigned char ID) {
       return " <-- can use for Aqualinkd (PDA mode only)";
   }
   for (i = 0; i < 4; i++) {
-    if (ID == _goodONETID[i])
+    if (ID == _goodONETID[i] && _panelPDA == false)
       return " <-- can use for Aqualinkd (Extended Device ID)";
   }
   for (i = 0; i < 4; i++) {
-    if (ID == _goodIAQTID[i])
+    if (ID == _goodIAQTID[i] && _panelPDA == false)
       return " <-- can use for Aqualinkd (Prefered Extended Device ID)";
+    else if (ID == _goodIAQTID[i] && _panelPDA == true)
+      return " <-- can use for Aqualinkd (PDA mode Expermental only)";
   }
   for (i = 0; i < 2; i++) {
-    if (ID == _goodRSSAID[i])
+    if (ID == _goodRSSAID[i] && _panelPDA == false)
       return " <-- can use for Aqualinkd (RSSA ID)";
   }
   return "";
@@ -293,6 +296,10 @@ void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
       rsm_strncpy(_panelRev, packet_buffer+4, AQ_MSGLEN, packet_length-5);
     else if (msgcnt == 3)
       rsm_strncpy(_panelType, packet_buffer+4, AQ_MSGLEN, packet_length-5);
+  }
+
+  if (_panelType[1] == 'P' && _panelType[2] == 'D') { // PDA Panel
+    _panelPDA = true;
   }
 }
 
@@ -395,7 +402,8 @@ int main(int argc, char *argv[]) {
   _aqconfig_.log_protocol_packets = false;
   _aqconfig_.log_raw_bytes = false;
   _aqconfig_.ftdi_low_latency  = true;
-  
+  _aqconfig_.frame_delay = 10;
+
   printf("AqualinkD %s\n",VERSION);
 
   if (getuid() != 0) {
@@ -742,16 +750,21 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     if (slog[i].inuse == true)
       continue;
     
-    if (canUseAllB(slog[i].ID) && (mainID == 0x00 || canUsePDA(mainID))) 
-      mainID = slog[i].ID;
-    if (canUsePDA(slog[i].ID) && mainID == 0x00) 
-      mainID = slog[i].ID;
-    else if (canUseRSSA(slog[i].ID) && rssaID == 0x00) 
-      rssaID = slog[i].ID;
-    else if (canUseONET(slog[i].ID) && extID == 0x00) 
-      extID = slog[i].ID;
-    else if (canUseIQAT(slog[i].ID) && (extID == 0x00 || canUseONET(extID))) 
-      extID = slog[i].ID;
+    if (!_panelPDA) {
+      if (canUseAllB(slog[i].ID) && (mainID == 0x00 || canUsePDA(mainID))) 
+        mainID = slog[i].ID;
+      if (canUsePDA(slog[i].ID) && mainID == 0x00) 
+        mainID = slog[i].ID;
+      else if (canUseRSSA(slog[i].ID) && rssaID == 0x00) 
+        rssaID = slog[i].ID;
+      else if (canUseONET(slog[i].ID) && extID == 0x00) 
+        extID = slog[i].ID;
+      else if (canUseIQAT(slog[i].ID) && (extID == 0x00 || canUseONET(extID))) 
+        extID = slog[i].ID;
+    } else {
+      if (canUsePDA(slog[i].ID) && mainID == 0x00) 
+        mainID = slog[i].ID;
+    }
     
   }
   LOG(RSSD_LOG, LOG_NOTICE, "Suggested aqualinkd.conf values\n");

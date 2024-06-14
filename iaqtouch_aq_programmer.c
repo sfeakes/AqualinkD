@@ -836,6 +836,7 @@ void *get_aqualink_iaqtouch_freezeprotect( void *ptr )
   int frz = rsm_atoi(iaqtGetMessageLine(0));
   if (frz >= 0) {
     aq_data->frz_protect_set_point = frz;
+    aq_data->frz_protect_state = ON;
     LOG(IAQT_LOG,LOG_NOTICE, "IAQ Touch Freeze Protection setpoint %d\n",frz);
   }
 

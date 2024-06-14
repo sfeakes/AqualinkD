@@ -61,7 +61,68 @@ static struct timespec last_serial_read_time;
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
 
+emulation_type getJandyDeviceType(unsigned char ID) {
+  
+  // Using emulation_type from aqprogrammer. At some point may merge into one
+  // and call device type
 
+  if (ID >= 0x08 && ID <= 0x0B)
+    return ALLBUTTON;
+  if (ID >= 0x40 && ID <= 0x43)
+    return ONETOUCH;
+  if (ID >= 0x48 && ID <= 0x4B)
+    return RSSADAPTER;
+  if (ID >= 0x60 && ID <= 0x63)
+    return AQUAPDA;
+  if (ID >= 0x30 && ID <= 0x33)
+    return IAQTOUCH;
+
+/*
+  if (ID >= 0x00 && ID <= 0x03)
+    return MASTER;
+  if (ID >= 0x50 && ID <= 0x53)
+    return SWG;
+  if (ID >= 0x20 && ID <= 0x23)
+    return SPA_R;
+  if (ID >= 0x38 && ID <= 0x3B)
+    return LX_HEATER;
+  if (ID >= 0x58 && ID <= 0x5B)
+    return PC_DOCK; 
+  if (ID >= 0x68 && ID <= 0x6B)
+    return JXI_HEATER;
+  //if (ID >= 0x70 && ID <= 0x73)
+  if (ID >= 0x78 && ID <= 0x7B)
+    return EPUMP;
+  if (ID >= 0x80 && ID <= 0x83)
+    return CHEM;
+  //if (ID == 0x08)
+  //  return KEYPAD;
+*/
+  return SIM_NONE;
+}
+
+const char *getJandyDeviceName(emulation_type etype) {
+  switch(etype){
+    case ALLBUTTON:
+      return "AllButton";
+    break;
+    case ONETOUCH:
+      return "OneTouch";
+    break;
+    case RSSADAPTER:
+      return "RS SerialAdapter"; 
+    break;
+    case IAQTOUCH:
+      return "iAqualinkTouch";
+    break;
+    case AQUAPDA:
+      return "PDA";
+    break;
+    default:
+      return "Unknown";
+    break;
+  }
+}
 
 const char* get_pentair_packet_type(unsigned char* packet , int length)
 {

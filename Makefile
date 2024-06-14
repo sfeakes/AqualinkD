@@ -80,7 +80,7 @@ endif
 
 
 # Main source files
-SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
+SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c allbutton.c allbutton_aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
        serial_logger.c mongoose.c hassio.c simulator.c timespec_subtract.c
 
@@ -140,10 +140,14 @@ SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c times
 #MG_SRC = mongoose.c
 
 # Build durectories
+SRC_DIR := ./
 OBJ_DIR := ./build
 DBG_OBJ_DIR := $(OBJ_DIR)/debug
 SL_OBJ_DIR := $(OBJ_DIR)/slog
 
+INCLUDES := -I$(SRC_DIR)
+
+# define path for obj files per architecture
 OBJ_DIR_ARMHF := $(OBJ_DIR)/armhf
 OBJ_DIR_ARM64 := $(OBJ_DIR)/arm64
 OBJ_DIR_AMD64 := $(OBJ_DIR)/amd64
@@ -151,18 +155,37 @@ SL_OBJ_DIR_ARMHF := $(OBJ_DIR_ARMHF)/slog
 SL_OBJ_DIR_ARM64 := $(OBJ_DIR_ARM64)/slog
 SL_OBJ_DIR_AMD64 := $(OBJ_DIR_AMD64)/slog
 
-# Object files
-OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRCS))
-DBG_OBJ_FILES := $(patsubst %.c,$(DBG_OBJ_DIR)/%.o,$(DBG_SRC))
-SL_OBJ_FILES := $(patsubst %.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
+# append path to source
+SRCS := $(patsubst %.c,$(SRC_DIR)/%.c,$(SRCS))
+DBG_SRC := $(patsubst %.c,$(SRC_DIR)/%.c,$(DBG_SRC))
+SL_SRC := $(patsubst %.c,$(SRC_DIR)/%.c,$(SL_SRC))
 
-OBJ_FILES_ARMHF := $(patsubst %.c,$(OBJ_DIR_ARMHF)/%.o,$(SRCS))
-OBJ_FILES_ARM64 := $(patsubst %.c,$(OBJ_DIR_ARM64)/%.o,$(SRCS))
-OBJ_FILES_AMD64 := $(patsubst %.c,$(OBJ_DIR_AMD64)/%.o,$(SRCS))
+# append path to obj files per architecture
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
+DBG_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(DBG_OBJ_DIR)/%.o,$(DBG_SRC))
+SL_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
 
-SL_OBJ_FILES_ARMHF := $(patsubst %.c,$(SL_OBJ_DIR_ARMHF)/%.o,$(SL_SRC))
-SL_OBJ_FILES_ARM64 := $(patsubst %.c,$(SL_OBJ_DIR_ARM64)/%.o,$(SL_SRC))
-SL_OBJ_FILES_AMD64 := $(patsubst %.c,$(SL_OBJ_DIR_AMD64)/%.o,$(SL_SRC))
+OBJ_FILES_ARMHF := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ARMHF)/%.o,$(SRCS))
+OBJ_FILES_ARM64 := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ARM64)/%.o,$(SRCS))
+OBJ_FILES_AMD64 := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_AMD64)/%.o,$(SRCS))
+
+SL_OBJ_FILES_ARMHF := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR_ARMHF)/%.o,$(SL_SRC))
+SL_OBJ_FILES_ARM64 := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR_ARM64)/%.o,$(SL_SRC))
+SL_OBJ_FILES_AMD64 := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR_AMD64)/%.o,$(SL_SRC))
+
+#OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SRCS))
+#DBG_OBJ_FILES := $(patsubst %.c,$(DBG_OBJ_DIR)/%.o,$(DBG_SRC))
+#SL_OBJ_FILES := $(patsubst %.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
+
+#OBJ_FILES_ARMHF := $(patsubst %.c,$(OBJ_DIR_ARMHF)/%.o,$(SRCS))
+#OBJ_FILES_ARM64 := $(patsubst %.c,$(OBJ_DIR_ARM64)/%.o,$(SRCS))
+#OBJ_FILES_AMD64 := $(patsubst %.c,$(OBJ_DIR_AMD64)/%.o,$(SRCS))
+
+#SL_OBJ_FILES_ARMHF := $(patsubst %.c,$(SL_OBJ_DIR_ARMHF)/%.o,$(SL_SRC))
+#SL_OBJ_FILES_ARM64 := $(patsubst %.c,$(SL_OBJ_DIR_ARM64)/%.o,$(SL_SRC))
+#SL_OBJ_FILES_AMD64 := $(patsubst %.c,$(SL_OBJ_DIR_AMD64)/%.o,$(SL_SRC))
+
+
 #MG_OBJ_FILES := $(patsubst %.c,$(OBJ_DIR)/%.o,$(MG_SRC))
 
 # define the executable file
@@ -252,31 +275,31 @@ install:
 
 
 # Rules to compile
-$(OBJ_DIR)/%.o: %.c | $(OBJ_DIR)
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(DBG_OBJ_DIR)/%.o: %.c | $(DBG_OBJ_DIR)
+$(DBG_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(DBG_OBJ_DIR)
 	$(CC) $(DBG_CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(SL_OBJ_DIR)/%.o: %.c | $(SL_OBJ_DIR)
+$(SL_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(SL_OBJ_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(OBJ_DIR_ARMHF)/%.o: %.c | $(OBJ_DIR_ARMHF)
+$(OBJ_DIR_ARMHF)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR_ARMHF)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(SL_OBJ_DIR_ARMHF)/%.o: %.c | $(SL_OBJ_DIR_ARMHF)
+$(SL_OBJ_DIR_ARMHF)/%.o: $(SRC_DIR)/%.c | $(SL_OBJ_DIR_ARMHF)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(OBJ_DIR_ARM64)/%.o: %.c | $(OBJ_DIR_ARM64)
+$(OBJ_DIR_ARM64)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR_ARM64)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(SL_OBJ_DIR_ARM64)/%.o: %.c | $(SL_OBJ_DIR_ARM64)
+$(SL_OBJ_DIR_ARM64)/%.o: $(SRC_DIR)/%.c | $(SL_OBJ_DIR_ARM64)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(OBJ_DIR_AMD64)/%.o: %.c | $(OBJ_DIR_AMD64)
+$(OBJ_DIR_AMD64)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR_AMD64)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
-$(SL_OBJ_DIR_AMD64)/%.o: %.c | $(SL_OBJ_DIR_AMD64)
+$(SL_OBJ_DIR_AMD64)/%.o: $(SRC_DIR)/%.c | $(SL_OBJ_DIR_AMD64)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 # Rules to link

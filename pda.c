@@ -810,6 +810,7 @@ bool process_pda_packet(unsigned char *packet, int length)
   static bool equiptment_update_loop = false;
   static bool read_equiptment_menu = false;
 
+  _aqualink_data->last_packet_type = packet[PKT_CMD];
 
   process_pda_menu_packet(packet, length, in_programming_mode(_aqualink_data));
 

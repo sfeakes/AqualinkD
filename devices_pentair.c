@@ -114,6 +114,10 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
 /*
   VSP Pump Status.
 
+  Mode 0=local control, 1=remote control
+  DriveState = no idea
+  Pressure Curve = see manual
+  Status = below
   (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS];
 
   // Below was pulled from another project.  0 doesn;t seem to be accurate.

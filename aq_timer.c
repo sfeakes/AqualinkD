@@ -136,9 +136,7 @@ void *timer_worker( void *ptr )
     if ((tmthread->button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT && in_light_programming_mode(tmthread->aq_data)) {
       LOG(TIMR_LOG, LOG_NOTICE, "Not turning on '%s' as programmer is\n",tmthread->button->name);
     } else {
-    // crap way to do this, need to use net_service logic in teh future, but should never actually get here
       LOG(TIMR_LOG, LOG_NOTICE, "turning on '%s'\n",tmthread->button->name);
-      //aq_send_cmd(tmthread->button->code);
       panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
     }
   }
@@ -166,15 +164,7 @@ void *timer_worker( void *ptr )
 
   if (tmthread->button->led->state != OFF) {
     LOG(TIMR_LOG, LOG_INFO, "Timer waking turning '%s' off\n",tmthread->button->name);
-/*
-#ifdef AQ_PDA
-    if (isPDA_PANEL)
-      create_PDA_on_off_request(tmthread->button, false);
-    else
-#endif
-      aq_send_cmd(tmthread->button->code);
-*/
-      panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
+    panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
   } else {
     LOG(TIMR_LOG, LOG_INFO, "Timer waking '%s' is already off\n",tmthread->button->name);
   }

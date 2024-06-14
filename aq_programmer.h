@@ -41,6 +41,7 @@ typedef enum emulation_type{
 
 typedef enum {
   AQP_NULL = -1,
+  // ********* Generic Programming options, these are Allbutton by Default
   AQ_GET_POOL_SPA_HEATER_TEMPS,
   AQ_GET_FREEZE_PROTECT_TEMP,
   AQ_SET_TIME,
@@ -48,24 +49,30 @@ typedef enum {
   AQ_SET_SPA_HEATER_TEMP,
   AQ_SET_FRZ_PROTECTION_TEMP,
   AQ_GET_DIAGNOSTICS_MODEL,
-  //AQ_SEND_CMD,
   AQ_GET_PROGRAMS,
   AQ_SET_LIGHTPROGRAM_MODE,
   AQ_SET_LIGHTCOLOR_MODE, 
   AQ_SET_SWG_PERCENT,
-  AQ_PDA_DEVICE_STATUS,
-  AQ_PDA_DEVICE_ON_OFF,
   AQ_GET_AUX_LABELS,
   AQ_SET_BOOST,
   AQ_SET_PUMP_RPM,
   AQ_SET_PUMP_VS_PROGRAM,
-  // ******** Delimiter make sure to change MAX/MIN below
-  // NSF Need to add Specific ALL Button ones here
-  // ******** Delimiter make sure to change MAX/MIN below
-  // NSF Need to add ALL Specific PDA ones here
+  // ******** PDA Delimiter make sure to change MAX/MIN below
   AQ_PDA_INIT,
   AQ_PDA_WAKE_INIT,
-  // ******** Delimiter make sure to change MAX/MIN below
+  AQ_PDA_DEVICE_STATUS,
+  AQ_PDA_DEVICE_ON_OFF,
+  AQ_PDA_AUX_LABELS,
+  AQ_PDA_SET_BOOST,
+  AQ_PDA_SET_SWG_PERCENT,
+  AQ_PDA_GET_AUX_LABELS,
+  AQ_PDA_SET_POOL_HEATER_TEMPS,
+  AQ_PDA_SET_SPA_HEATER_TEMPS,
+  AQ_PDA_SET_FREEZE_PROTECT_TEMP,
+  AQ_PDA_SET_TIME,
+  AQ_PDA_GET_POOL_SPA_HEATER_TEMPS,
+  AQ_PDA_GET_FREEZE_PROTECT_TEMP,
+  // ******** OneTouch Delimiter make sure to change MAX/MIN below
   AQ_SET_ONETOUCH_PUMP_RPM,
   AQ_SET_ONETOUCH_MACRO,
   AQ_GET_ONETOUCH_SETPOINTS,
@@ -76,7 +83,7 @@ typedef enum {
   AQ_SET_ONETOUCH_TIME,
   AQ_SET_ONETOUCH_BOOST,
   AQ_SET_ONETOUCH_SWG_PERCENT,
-  // ******** Delimiter make sure to change MAX/MIN below
+  // ******** iAqalink Touch Delimiter make sure to change MAX/MIN below
   AQ_SET_IAQTOUCH_PUMP_RPM,
   AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM,
   AQ_GET_IAQTOUCH_VSP_ASSIGNMENT,
@@ -91,7 +98,7 @@ typedef enum {
   AQ_SET_IAQTOUCH_SET_TIME,
   AQ_SET_IAQTOUCH_DEVICE_ON_OFF,
   AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE,
-  // ******** Delimiter make sure to change MAX/MIN below
+  // ******** RS Serial Adapter Delimiter make sure to change MAX/MIN below
   AQ_GET_RSSADAPTER_SETPOINTS,
   AQ_SET_RSSADAPTER_POOL_HEATER_TEMP,
   AQ_SET_RSSADAPTER_SPA_HEATER_TEMP,
@@ -103,11 +110,11 @@ typedef enum {
 #define AQP_GENERIC_MIN      AQ_GET_POOL_SPA_HEATER_TEMPS
 #define AQP_GENERIC_MAX      AQ_SET_PUMP_VS_PROGRAM
 
-#define AQP_ALLBUTTON_MIN    AQP_NULL
-#define AQP_ALLBUTTONL_MAX   AQP_NULL
+#define AQP_ALLBUTTON_MIN    AQ_GET_POOL_SPA_HEATER_TEMPS
+#define AQP_ALLBUTTONL_MAX   AQ_SET_BOOST
 
 #define AQP_PDA_MIN          AQ_PDA_INIT
-#define AQP_PDA_MAX          AQ_PDA_WAKE_INIT
+#define AQP_PDA_MAX          AQ_SET_ONETOUCH_SWG_PERCENT
 
 #define AQP_ONETOUCH_MIN     AQ_SET_ONETOUCH_PUMP_RPM
 #define AQP_ONETOUCH_MAX     AQ_SET_ONETOUCH_SWG_PERCENT
@@ -145,10 +152,10 @@ bool in_iaqt_programming_mode(struct aqualinkdata *aq_data);
 bool in_swg_programming_mode(struct aqualinkdata *aq_data);
 bool in_light_programming_mode(struct aqualinkdata *aq_data);
 bool in_allb_programming_mode(struct aqualinkdata *aq_data);
-void aq_send_cmd(unsigned char cmd);
+//void aq_send_cmd(unsigned char cmd);
 void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_data);
 //void queueGetExtendedProgramData(emulation_type source_type, struct aqualinkdata *aq_data, bool labels);
-unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
+//unsigned char pop_aq_cmd(struct aqualinkdata *aq_data);
 
 void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
@@ -164,7 +171,7 @@ void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
 //void *set_aqualink_time( void *ptr );
 //void *get_aqualink_pool_spa_heater_temps( void *ptr );
 
-int get_aq_cmd_length();
+//int get_aq_cmd_length();
 int setpoint_check(int type, int value, struct aqualinkdata *aqdata);
 int RPM_check(pump_type type, int value, struct aqualinkdata *aqdata);
 //int RPM_check(int type, int value, struct aqualinkdata *aqdata);

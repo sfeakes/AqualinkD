@@ -105,6 +105,10 @@ const char *HASSIO_SWG_DISCOVER = "{"
 "}";
 
 // Use Fan for VSP
+// Need to change the max / min.  These do NOT lomit the slider in hassio, only the MQTT limits.
+// So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
+// (value-600) / (3450-600) * 100   
+// (value) / 100 * (3450-600) + 600  
 const char *HASSIO_VSP_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
@@ -119,10 +123,10 @@ const char *HASSIO_VSP_DISCOVER = "{"
     "\"payload_off\": \"0\","
     "\"percentage_command_topic\": \"%s/%s/%s/set\","       // aqualinkd,filter_pump , RPM|GPM
     "\"percentage_state_topic\":  \"%s/%s/%s\","   // aqualinkd,filter_pump , RPM|GPM
-    "\"percentage_value_template\": \"{{ ((value | float(0) / %d) * 100) | int }}\","     // 3450|130
-    "\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) | int }}\","   // 3450|130
+    "\"percentage_value_template\": \"{{ (((value | float(0) - %d) / %d) * 100) | int }}\","     // 600, (3450-600)
+    "\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) + %d | int }}\","   // (3450-130), 600
     "\"speed_range_max\": \"100\","
-    "\"speed_range_min\": \"%d\"," //  18|12  600rpm|15gpm
+    "\"speed_range_min\": \"0\"," //  18|12  600rpm|15gpm
     "\"qos\": 1,"
     "\"retain\": false"
 "}";
@@ -414,17 +418,19 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   // VSP Pumps
   for (i=0; i < aqdata->num_pumps; i++) {
     int maxspeed=3450;   // Min is 600
-    int percent_min=18;  // 600 as % of max
+    int minspeed=600;  // 600 as % of max
     char units[4];
     sprintf(units, "RPM");
 
     if ( aqdata->pumps[i].pumpType == VFPUMP ) {
       maxspeed=130; // Min is 15
-      percent_min=12;   // 15 as % of max
+      minspeed=15;   // 15 as % of max
       sprintf(units, "GPM");
     }
     // Create a FAN for pump against the button it' assigned to
     // In the future maybe change this to the pump# or change the sensors to button???
+    // Need to change the max / min.  These do NOT lomit the slider in hassio, only the MQTT limits.
+    // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
     sprintf(msg, HASSIO_VSP_DISCOVER,
             _aqconfig_.mqtt_aq_topic,
             aqdata->pumps[i].button->name,units,
@@ -434,9 +440,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            maxspeed,
-            maxspeed,
-            percent_min);
+            minspeed, (maxspeed - minspeed),
+            (maxspeed - minspeed), minspeed);
 
     sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
     send_mqtt(nc, topic, msg);

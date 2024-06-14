@@ -23,6 +23,7 @@
 #include "aq_panel.h"
 #include "serialadapter.h"
 #include "aq_timer.h"
+#include "allbutton_aq_programmer.h"
 
 void initPanelButtons(struct aqualinkdata *aqdata, bool rspda, int size, bool combo, bool dual);
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
@@ -627,20 +628,22 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // since allbutton (default) is stateless, and rssaadapter is statefull, use rssaadapter for any domoricz requests
         set_aqualink_rssadapter_aux_state(deviceIndex, isON);
       } else {
-        aq_send_cmd(button->code);
+        aq_send_allb_cmd(button->code);
       }
 // Pre set device to state, next status will correct if state didn't take, but this will stop multiple ON messages setting on/off
-#ifdef PRESTATE_ONOFF
-      if ((button->code == KEY_POOL_HTR || button->code == KEY_SPA_HTR ||
-           button->code == KEY_SOLAR_HTR) &&
-          isON > 0) {
-        button->led->state = ENABLE; // if heater and set to on, set pre-status to enable.
+//#ifdef PRESTATE_ONOFF
+      if (_aqconfig_.device_pre_state) {
+        if ((button->code == KEY_POOL_HTR || button->code == KEY_SPA_HTR ||
+             button->code == KEY_SOLAR_HTR) &&
+            isON > 0) {
+          button->led->state = ENABLE; // if heater and set to on, set pre-status to enable.
         //_aqualink_data->updated = true;
-      } else if (isRSSA_ENABLED || ((button->special_mask & PROGRAM_LIGHT) != PROGRAM_LIGHT)) {
-        button->led->state = (isON == false ? OFF : ON); // as long as it's not programmable light , pre-set to on/off
+        } else if (isRSSA_ENABLED || ((button->special_mask & PROGRAM_LIGHT) != PROGRAM_LIGHT)) {
+          button->led->state = (isON == false ? OFF : ON); // as long as it's not programmable light , pre-set to on/off
         //_aqualink_data->updated = true;
+        }
       }
-#endif
+//#endif
     }
   }
   return TRUE;
@@ -781,114 +784,7 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
   return TRUE;
 }
 
-/*
-bool create_panel_request(struct aqualinkdata *aqdata,  netRequest requester, int buttonIndex, int value, bool timer) {
 
-  // if value = 0 is OFF, 
-  // if value = 1 is ON if (timer = false).
-  // if value > 0 (timer should be true, and vaue is duration).
-
-  if ((_aqualink_data->aqbuttons[buttonIndex].led->state == OFF && value == 0) ||
-      (value > 0 && (_aqualink_data->aqbuttons[buttonIndex].led->state == ON || _aqualink_data->aqbuttons[buttonIndex].led->state == FLASH ||
-                      _aqualink_data->aqbuttons[buttonIndex].led->state == ENABLE))) {
-    LOG(NET_LOG, LOG_INFO, "%s: received '%s' for '%s', already '%s', Ignoring\n", actionName[requester], (value == 0 ? "OFF" : "ON"), _aqualink_data->aqbuttons[buttonIndex].name, (value == 0 ? "OFF" : "ON"));
-    //return false;
-  } else {
-    LOG(NET_LOG, LOG_INFO, "%s: received '%s' for '%s', turning '%s'\n", actionName[requester], (value == 0 ? "OFF" : "ON"), _aqualink_data->aqbuttons[buttonIndex].name, (value == 0 ? "OFF" : "ON"));
-#ifdef AQ_PDA
-    if (isPDA_PANEL) {
-      char msg[PTHREAD_ARG];
-      sprintf(msg, "%-5d%-5d", buttonIndex, (value == 0 ? OFF : ON));
-      aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-    } else
-#endif
-    {
-      // Check for panel programmable light. if so simple ON isn't going to work well
-      // Could also add "light mode" check, as this is only valid for panel configured light not aqualinkd configured light.
-      if ((_aqualink_data->aqbuttons[buttonIndex].special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT && _aqualink_data->aqbuttons[buttonIndex].led->state == OFF) {
-        // OK Programable light, and no light mode selected. Now let's work out best way to turn it on. serial_adapter protocol will to it without questions,
-        // all other will require programmig.
-        if (isRSSA_ENABLED) {
-          set_aqualink_rssadapter_aux_state(buttonIndex, true);
-        } else {
-          set_light_mode("0", buttonIndex); // 0 means use current light mode
-        }
-      } else {
-        aq_send_cmd(_aqualink_data->aqbuttons[buttonIndex].code);
-      }
-// Pre set device to state, next status will correct if state didn't take, but this will stop multiple ON messages setting on/off
-#ifdef PRESTATE_ONOFF
-      if ((_aqualink_data->aqbuttons[buttonIndex].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[buttonIndex].code == KEY_SPA_HTR ||
-           _aqualink_data->aqbuttons[buttonIndex].code == KEY_SOLAR_HTR) &&
-          value > 0) {
-        _aqualink_data->aqbuttons[buttonIndex].led->state = ENABLE; // if heater and set to on, set pre-status to enable.
-        //_aqualink_data->updated = true;
-      } else if (isRSSA_ENABLED || ((_aqualink_data->aqbuttons[buttonIndex].special_mask & PROGRAM_LIGHT) != PROGRAM_LIGHT)) {
-        _aqualink_data->aqbuttons[buttonIndex].led->state = (value == 0 ? OFF : ON); // as long as it's not programmable light , pre-set to on/off
-        //_aqualink_data->updated = true;
-      }
-#endif
-    }
-  }
-
-  // If it's a timer, start the timer
-  if (timer) {
-    start_timer(_aqualink_data, &_aqualink_data->aqbuttons[buttonIndex], value);
-  }
-
-  return true;
-}
-
-void create_program_request(netRequest requester, action_type type, int value, int id) // id is only valid for PUMP RPM
-{
-  if (_aqualink_data->unactioned.type != NO_ACTION && type != _aqualink_data->unactioned.type)
-    LOG(NET_LOG,LOG_ERR, "%s: About to overwrite unactioned panel program\n",actionName[requester]);
-
-  if (type == POOL_HTR_SETOINT || type == SPA_HTR_SETOINT || type == FREEZE_SETPOINT || type == SWG_SETPOINT ) {
-    _aqualink_data->unactioned.value = setpoint_check(type, value, _aqualink_data);
-    if (value != _aqualink_data->unactioned.value)
-      LOG(NET_LOG,LOG_NOTICE, "%s: requested setpoint value %d is invalid, change to %d\n",actionName[requester], value, _aqualink_data->unactioned.value);
-  } else if (type == PUMP_RPM) {
-    //_aqualink_data->unactioned.value = RPM_check(_aqualink_data->pumps[id].pumpType , value, _aqualink_data);
-    _aqualink_data->unactioned.value = value;
-    //if (value != _aqualink_data->unactioned.value)
-    //  LOG(NET_LOG,LOG_NOTICE, "%s: requested Pump value %d is invalid, change to %d\n",actionName[requester], value, _aqualink_data->unactioned.value);
-  } else if (type == PUMP_VSPROGRAM) {
-    //_aqualink_data->unactioned.value = value;
-    //if (value != _aqualink_data->unactioned.value)
-    LOG(NET_LOG,LOG_ERR, "%s: requested Pump vsp program is not implimented yet\n",actionName[requester], value, _aqualink_data->unactioned.value);
-  } else {
-    // SWG_BOOST & PUMP_RPM
-    _aqualink_data->unactioned.value = value;
-  }
-
-  _aqualink_data->unactioned.type = type;
-  _aqualink_data->unactioned.id = id; // This is only valid for pump.
-
-  if (requester == NET_MQTT) // We can get multiple MQTT requests from some, so this will wait for last one to come in.
-    time(&_aqualink_data->unactioned.requested);
-  else
-    _aqualink_data->unactioned.requested = 0;
-
-  
-}
-
-#ifdef AQ_PDA
-void create_PDA_on_off_request(aqkey *button, bool isON) 
-{
-  int i;
-   char msg[PTHREAD_ARG];
-
-  for (i=0; i < _aqualink_data->total_buttons; i++) {
-    if (_aqualink_data->aqbuttons[i].code == button->code) {
-      sprintf(msg, "%-5d%-5d", i, (isON? ON : OFF));
-      aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, _aqualink_data);
-      break;
-    }
-  }
-}
-#endif
-*/
 
 
 

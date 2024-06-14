@@ -100,6 +100,7 @@ struct aqconfig
   bool enable_scheduler;
   bool ftdi_low_latency;
   int frame_delay;
+  bool device_pre_state;
 #ifdef AQ_NO_THREAD_NETSERVICE
   int rs_poll_speed; // Need to remove
   bool thread_netservices; // Need to remove

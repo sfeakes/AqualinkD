@@ -148,6 +148,7 @@ void init_parameters (struct aqconfig * parms)
   parms->enable_scheduler = true;
   parms->ftdi_low_latency = true;
   parms->frame_delay = 0;
+  parms->device_pre_state = true;
   
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
@@ -635,7 +636,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "rs485_frame_delay", 17) == 0) {
     _aqconfig_.frame_delay = strtoul(value, NULL, 10);
     rtn=true;
-  } 
+  } else if (strncasecmp (param, "device_pre_state", 16) == 0) {
+    _aqconfig_.device_pre_state = text2bool(value);
+    rtn=true;
+  }
+
   else if (strncasecmp(param, "button_", 7) == 0) {
     // Check we have inichalized panel information, if not use any settings we may have
     if (_aqconfig_.paneltype_mask == 0)

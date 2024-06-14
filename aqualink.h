@@ -33,7 +33,7 @@
 
 // The below will change state of devices before that are actually set on the control panel, this helps
 // with duplicate messages that come in quick succession that can catch the state before it happens.
-#define PRESTATE_ONOFF
+//#define PRESTATE_ONOFF
 #define PRESTATE_SWG_SETPOINT
 //#define PRESTATE_HEATER_SETPOINT // This one is not implimented yet
 
