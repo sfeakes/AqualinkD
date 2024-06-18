@@ -405,6 +405,7 @@ void iaqt_pump_update(struct aqualinkdata *aq_data, int updated) {
         aq_data->pumps[i].rpm = PUMP_OFF_RPM;
         aq_data->pumps[i].gpm = PUMP_OFF_GPM;
         aq_data->pumps[i].watts = PUMP_OFF_WAT;
+        aq_data->pumps[i].pStatus = PS_OFF;
         LOG(IAQT_LOG,LOG_DEBUG, "Clearing pump %d\n",i);
         aq_data->updated  =true;
       }
@@ -460,6 +461,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
     } else if (rsm_strcmp(_deviceStatus[i],"RPM:") == 0) {
       if (pump != NULL) {
         pump->rpm = rsm_atoi(&_deviceStatus[i][9]);
+        pump->pStatus = PS_OK;
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
@@ -467,6 +469,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
     } else if (rsm_strcmp(_deviceStatus[i],"GPM:") == 0) {
       if (pump != NULL) {
         pump->gpm = rsm_atoi(&_deviceStatus[i][9]);
+        pump->pStatus = PS_OK;
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
@@ -474,27 +477,31 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
     } else if (rsm_strcmp(_deviceStatus[i],"Watts:") == 0) {
       if (pump != NULL) {
         pump->watts = rsm_atoi(&_deviceStatus[i][9]);
+        //pump->ppStatus = DON"T SET, WE GET WATTS IN PRIMING
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"*** Priming ***") == 0) {
       if (pump != NULL) {
-        pump->rpm = PUMP_PRIMING;
+        //pump->rpm = PUMP_PRIMING;   // NSF need to remove future
+        pump->pStatus = PS_PRIMING;
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Offline)") == 0) {
       if (pump != NULL) {
-        pump->rpm = PUMP_OFFLINE;
+        //pump->rpm = PUMP_OFFLINE;    // NSF need to remove future
+        pump->pStatus = PS_OFFLINE;
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Priming Error)") == 0) {
       if (pump != NULL) {
-        pump->rpm = PUMP_ERROR;
+        //pump->rpm = PUMP_ERROR;  // NSF need to remove future
+        pump->pStatus = PS_ERROR;
         aq_data->updated = true;
       } else
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);

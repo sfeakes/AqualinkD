@@ -108,7 +108,11 @@ const char *HASSIO_SWG_DISCOVER = "{"
 // Need to change the max / min.  These do NOT lomit the slider in hassio, only the MQTT limits.
 // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
 // (value-600) / (3450-600) * 100   
-// (value) / 100 * (3450-600) + 600  
+// (value) / 100 * (3450-600) + 600
+
+
+\
+
 const char *HASSIO_VSP_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
@@ -123,10 +127,11 @@ const char *HASSIO_VSP_DISCOVER = "{"
     "\"payload_off\": \"0\","
     "\"percentage_command_topic\": \"%s/%s/%s/set\","       // aqualinkd,filter_pump , RPM|GPM
     "\"percentage_state_topic\":  \"%s/%s/%s\","   // aqualinkd,filter_pump , RPM|GPM
-    "\"percentage_value_template\": \"{{ (((value | float(0) - %d) / %d) * 100) | int }}\","     // 600, (3450-600)
+ //   "\"percentage_value_template\": \"{{ (((value | float(0) - %d) / %d) * 100) | int }}\","     // 600, (3450-600)
+    "\"percentage_value_template\": \"{%% if value | float(0) > %d %%} {{ (((value | float(0) - %d) / %d) * 100) | int }}{%% else %%} 1{%% endif %%}\"," // min,min,(max-min)
     "\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) + %d | int }}\","   // (3450-130), 600
-    "\"speed_range_max\": \"100\","
-    "\"speed_range_min\": \"0\"," //  18|12  600rpm|15gpm
+    "\"speed_range_max\": 100,"
+    "\"speed_range_min\": 1," //  18|12  600rpm|15gpm
     "\"qos\": 1,"
     "\"retain\": false"
 "}";
@@ -202,6 +207,53 @@ const char *HASSIO_PUMP_SENSOR_DISCOVER = "{"
     "\"icon\": \"mdi:pump\""
 "}";
 
+// Same as above but no UOM
+const char *HASSIO_PUMP_SENSOR_DISCOVER2 = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"sensor\","
+    "\"unique_id\": \"aqualinkd_%s%d_%s\","
+    "\"name\": \"%s %s %s\","
+    "\"state_topic\": \"%s/%s%s\","
+    "\"value_template\": \"{{ value_json }}\","
+    "\"icon\": \"mdi:pump\""
+"}";
+
+const char *HASS_PUMP_MODE_TEMPLATE = "\"{% set values = { '0':'local control', '1':'remote controled'} %}{{ values[value] if value in values.keys() else 'unknown' }}\"";
+
+const char *HASS_PUMP_STATUS_TEMPLATE = "\"{% set values = { "
+                              "'-4':'Error',"
+                              "'-3':'Offline',"
+                              "'-2':'Priming',"
+                              "'-1':'Off',"
+                              "'0':'On',"
+                              "'1':'Ok', "
+                              "'2':'filter warning', "
+                              "'4':'Overcurrent condition', "
+                              "'8':'Priming', "
+                              "'16':'System blocked', "
+                              "'32':'General alarm', "
+                              "'64':'Overtemp condition', "
+                              "'128':'Power outage',"
+                              "'256':'Overcurrent condition 2',"
+                              "'512':'Overvoltage condition'} %}"
+                     "{{ values[value] if value in values.keys() else 'Unspecified Error' }}\"";
+
+const char *HASSIO_PUMP_TEXT_SENSOR_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"sensor\","
+    "\"unique_id\": \"aqualinkd_%s%d_%s\","
+    "\"name\": \"%s %s %s\","
+    "\"state_topic\": \"%s/%s%s\","
+    "\"value_template\": %s,"
+    "\"icon\": \"mdi:pump\""
+"}";
+/*
+Below doesn;t work (int and string values).  Maybe try text sensor and add RPM/GPM to number
+Or add seperate text sensor. (this would be better options, that way you can see priming AND rpm)
+"value_template": "{% set values = { '-1':'priming', '-2':'offline', '-3':'error'} %}{{ values[value] if value in values.keys() else value }}",
+*/
 const char *HASSIO_TEXT_SENSOR_DISCOVER = "{"
    "\"device\": {" HASS_DEVICE "},"
    "\"availability\": {" HASS_AVAILABILITY "},"
@@ -440,7 +492,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            minspeed, (maxspeed - minspeed),
+            minspeed, minspeed, (maxspeed - minspeed),
             (maxspeed - minspeed), minspeed);
 
     sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
@@ -448,6 +500,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
 
     // Create sensors for each pump, against it's pump number
     int pn=i+1;
+
     if (aqdata->pumps[i].pumpType==VFPUMP || aqdata->pumps[i].pumpType==VSPUMP) {
       // We have GPM info
       sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
@@ -458,7 +511,46 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
               "GPM");
       sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s%d_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pump",pn,"GPM");
       send_mqtt(nc, topic, msg);
+
+      if (READ_RSDEV_vsfPUMP ) {
+        // All Pentair hame some other info we gather.
+        sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER2,
+              _aqconfig_.mqtt_aq_topic,
+              "Pump",pn,"PPC",
+              aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Presure Curve",
+              _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name ,PUMP_PPC_TOPIC);
+        sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s%d_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pump",pn,"PPC");
+        send_mqtt(nc, topic, msg);
+/*
+        sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER2,
+              _aqconfig_.mqtt_aq_topic,
+              "Pump",pn,"Mode",
+              aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Mode",
+              _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name ,PUMP_MODE_TOPIC);
+        sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s%d_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pump",pn,"Mode");
+        send_mqtt(nc, topic, msg);
+*/
+        sprintf(msg, HASSIO_PUMP_TEXT_SENSOR_DISCOVER,
+              _aqconfig_.mqtt_aq_topic,
+              "Pump",pn,"Mode",
+              aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Mode",
+              _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name ,PUMP_MODE_TOPIC,
+              HASS_PUMP_MODE_TEMPLATE);
+        sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s%d_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pump",pn,"Mode");
+        send_mqtt(nc, topic, msg);
+      }
     }
+
+    sprintf(msg, HASSIO_PUMP_TEXT_SENSOR_DISCOVER,
+              _aqconfig_.mqtt_aq_topic,
+              "Pump",pn,"Status",
+              aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Status",
+              _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name ,PUMP_STATUS_TOPIC,
+              HASS_PUMP_STATUS_TEMPLATE);
+    sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s%d_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pump",pn,"Status");
+    send_mqtt(nc, topic, msg);
+
+    // All pumps have the below.
     sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"RPM",

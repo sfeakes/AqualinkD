@@ -157,6 +157,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   //static int swg_msg_count = 0;
   //static int boost_msg_count = 0;
   static int16_t msg_loop = 0;
+  static aqledstate default_frz_protect_state = OFF;
   // NSF replace message with msg
 #ifdef AQ_RS16
   int16_t rs16;
@@ -186,7 +187,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
 
     // Anything that wasn't on during the last set of messages, turn off
     if ((msg_loop & MSG_FREEZE) != MSG_FREEZE)
-       aq_data->frz_protect_state = OFF;
+       aq_data->frz_protect_state = default_frz_protect_state;
 
     if ((msg_loop & MSG_SERVICE) != MSG_SERVICE &&
         (msg_loop & MSG_TIMEOUT) != MSG_TIMEOUT ) {
@@ -287,6 +288,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     //LOG(ALLB_LOG,LOG_DEBUG, "frz protect long message: %s", &message[28]);
     aq_data->frz_protect_set_point = atoi(message + 28);
     aq_data->frz_protect_state = ENABLE;
+    default_frz_protect_state = ENABLE;
 
     if (aq_data->temp_units == UNKNOWN)
       setUnits(msg, aq_data);
@@ -371,7 +373,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL)
   {
     msg_loop |= MSG_FREEZE;
-    aq_data->frz_protect_state = ON;
+    aq_data->frz_protect_state = default_frz_protect_state;
     //freeze_msg_count = 0;
     strcpy(aq_data->last_display_message, msg); // Also display the message on web UI
   }

@@ -242,9 +242,12 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 //printf("Button %s is VSP\n", button->name);
     for (i=0; i < aqdata->num_pumps; i++) {
       if (button == aqdata->pumps[i].button) {       
-          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\"", 
-                  aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,
-                  (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
+          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Pump_Status\":\"%d\"", 
+                  aqdata->pumps[i].rpm,
+                  aqdata->pumps[i].gpm,
+                  aqdata->pumps[i].watts,
+                  (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")),
+                  getPumpStatus(i, aqdata));
 
           return buffer;
       }
@@ -656,10 +659,12 @@ printf("Pump GPM %d\n",aqdata->pumps[i].gpm);
 printf("Pump GPM %d\n",aqdata->pumps[i].watts);
 printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     */
-    if (aqdata->pumps[i].pumpType != PT_UNKNOWN && (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gpm != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN)) {
-      length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPM\":\"%d\",\"Watts\":\"%d\",\"Pump_Type\":\"%s\"},",
+    //if (aqdata->pumps[i].pumpType != PT_UNKNOWN && (aqdata->pumps[i].rpm != TEMP_UNKNOWN || aqdata->pumps[i].gpm != TEMP_UNKNOWN || aqdata->pumps[i].watts != TEMP_UNKNOWN)) {
+    if (aqdata->pumps[i].pumpType != PT_UNKNOWN ) {
+      length += sprintf(buffer+length, "\"Pump_%d\":{\"name\":\"%s\",\"id\":\"%s\",\"RPM\":\"%d\",\"GPM\":\"%d\",\"Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Status\":\"%d\"},",
                         i+1,aqdata->pumps[i].button->label,aqdata->pumps[i].button->name,aqdata->pumps[i].rpm,aqdata->pumps[i].gpm,aqdata->pumps[i].watts,
-                        (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")));
+                        (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")),
+                        getPumpStatus(i, aqdata));
     }
   }
   if (buffer[length-1] == ',')

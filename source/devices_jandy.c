@@ -635,6 +635,21 @@ void processMissingAckPacketFromJandyPump(unsigned char destination, struct aqua
   return;
 }
 
+int getPumpStatus(int pumpIndex, struct aqualinkdata *aqdata)
+{
+  int rtn = aqdata->pumps[pumpIndex].pStatus;
+
+  // look at notes in device_jandy for pump status.
+  // 1 & 0 are on off, anything else error. So if below 1 use the panel status (pStatus).
+  // Not set would be -999 TEMP_UNKNOWN
+  // At moment Jandy pumps wil only have panel status, RS485 not decoded.
+  if ( aqdata->pumps[pumpIndex].status > 1 ) {
+    rtn = aqdata->pumps[pumpIndex].status;
+  }
+
+  return rtn;
+}
+
 
 
 

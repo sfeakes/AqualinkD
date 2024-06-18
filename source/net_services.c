@@ -678,20 +678,24 @@ void send_mqtt_string_msg(struct mg_connection *nc, const char *dev_name, const 
   send_mqtt(nc, mqtt_pub_topic, msg);
 }
 
+#define MQTT_TIMED_UDATE 300 //(in seconds)
 
 void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 {
-  static int cnt=0;
   int i;
   const char *status;
+  int pumpStatus;
 
+  // We get called about every second, so check time every MQTT_TIMED_UDATE / 2
   if (_aqconfig_.mqtt_timed_update) {
-#ifdef AQ_NO_THREAD_NETSERVICE
-    if (cnt > 300) {  // 100 = about every 2 minutes.
-#else
-    if (cnt > 30) {  // 30 = about every 2 minutes.
-#endif
-      reset_last_mqtt_status();
+    static int cnt=0;
+    if (cnt >= (MQTT_TIMED_UDATE/2)) {
+      static time_t last_full_update = 0;
+      time_t now = time(0); // get time now
+      if ( (int)difftime(now, last_full_update) > MQTT_TIMED_UDATE ) {
+        reset_last_mqtt_status();
+        memcpy(&last_full_update, &now, sizeof(time_t));
+      }
       cnt = 0;
     } else {
       cnt++;
@@ -924,13 +928,15 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       _last_mqtt_aqualinkdata.pumps[i].mode = _aqualink_data->pumps[i].mode;
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_MODE_TOPIC, _aqualink_data->pumps[i].mode);
     }
-    if (_aqualink_data->pumps[i].status != TEMP_UNKNOWN && _aqualink_data->pumps[i].status != _last_mqtt_aqualinkdata.pumps[i].status) {
-      _last_mqtt_aqualinkdata.pumps[i].status = _aqualink_data->pumps[i].status;
-      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_STATUS_TOPIC, _aqualink_data->pumps[i].status);
-    }
     if (_aqualink_data->pumps[i].pressureCurve != TEMP_UNKNOWN && _aqualink_data->pumps[i].pressureCurve != _last_mqtt_aqualinkdata.pumps[i].pressureCurve) {
       _last_mqtt_aqualinkdata.pumps[i].pressureCurve = _aqualink_data->pumps[i].pressureCurve;
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_PPC_TOPIC, _aqualink_data->pumps[i].pressureCurve);
+    }
+    pumpStatus = getPumpStatus(i, _aqualink_data);
+    if (pumpStatus != TEMP_UNKNOWN && 
+        pumpStatus != _last_mqtt_aqualinkdata.pumps[i].status) {
+      _last_mqtt_aqualinkdata.pumps[i].status = pumpStatus;
+      send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_STATUS_TOPIC, pumpStatus);
     }
   }
 }
@@ -1430,7 +1436,16 @@ float pass_mg_body(struct mg_str *body) {
   return TEMP_UNKNOWN;
 }
 
+void log_http_request(int level, char *message, struct http_message *http_msg) {
+  char *uri = (char *)malloc(http_msg->uri.len + http_msg->query_string.len + 2);
+  
+  strncpy(uri, http_msg->uri.p, http_msg->uri.len + http_msg->query_string.len + 1);
+  uri[http_msg->uri.len + http_msg->query_string.len + 1] = '\0';
 
+  LOG(NET_LOG,level, "%s: '%s'\n", message, uri);
+  
+  free(uri);
+}
 
 void action_web_request(struct mg_connection *nc, struct http_message *http_msg) {
   char *msg = NULL;
@@ -1442,13 +1457,14 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
 
   //DEBUG_TIMER_START(&tid);
   if (getLogLevel(NET_LOG) >= LOG_INFO) { // Simply for log message, check we are at
-                                   // this log level before running all this
-                                   // junk
+                                          // this log level before running all this junk
+    /*
     char *uri = (char *)malloc(http_msg->uri.len + http_msg->query_string.len + 2);
     strncpy(uri, http_msg->uri.p, http_msg->uri.len + http_msg->query_string.len + 1);
     uri[http_msg->uri.len + http_msg->query_string.len + 1] = '\0';
     LOG(NET_LOG,LOG_INFO, "URI request: '%s'\n", uri);
-    free(uri);
+    free(uri);*/
+    log_http_request(LOG_INFO, "URI request: ", http_msg);
   }
   //DEBUG_TIMER_STOP(tid, NET_LOG, "action_web_request debug print crap took"); 
 
@@ -1457,7 +1473,8 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
   // If we have a get request, pass it
   if (strncmp(http_msg->uri.p, "/api", 4 ) != 0) {
     if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
-      LOG(NET_LOG,LOG_ERR, "WEB: Old API stanza requested, ignoring client request\n");
+      //LOG(NET_LOG,LOG_ERR, "WEB: Old API stanza requested, ignoring client request\n");
+      log_http_request(LOG_ERR, "Old API stanza requested, ignoring request :", http_msg);
     } else {
       DEBUG_TIMER_START(&tid);
       mg_serve_http(nc, http_msg, _http_server_opts);

@@ -337,12 +337,13 @@ bool log_freeze_setpoints(struct aqualinkdata *aq_data)
   return rtn;
 }
 
-
+/*
 bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
 {
   int rpm = 0;
   int watts = 0;
   int gpm = 0;
+  panel_vsp_status panelStatus = PS_OK;
   int pump_index = rsm_atoi(&_menu[menuLineIdx][14]);
   if (pump_index <= 0)
     pump_index = rsm_atoi(&_menu[menuLineIdx][12]); // Pump inxed is in different position on line `  ePump AC  4`
@@ -359,13 +360,16 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
     }
   }
   else if (rsm_strcmp(_menu[menuLineIdx+1], "*** Priming ***") == 0){
-    rpm = PUMP_PRIMING;
+    //rpm = PUMP_PRIMING; // NSF need to remove future
+    panelStatus = PS_PRIMING;
   }
   else if (rsm_strcmp(_menu[menuLineIdx+1], "(Offline)") == 0){
-    rpm = PUMP_OFFLINE;
+    //rpm = PUMP_OFFLINE; // NSF need to remove future
+    panelStatus = PS_OFFLINE;
   }
   else if (rsm_strcmp(_menu[menuLineIdx+1], "(Priming Error)") == 0){
-    rpm = PUMP_ERROR;
+    //rpm = PUMP_ERROR; // NSF need to remove future
+    panelStatus = PS_ERROR;
   }
 
   LOG(ONET_LOG, LOG_DEBUG, "Found Pump '%s', Index %d, RPM %d, Watts %d, GPM %d\n", _menu[menuLineIdx], pump_index, rpm, watts, gpm);
@@ -380,6 +384,7 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
       aq_data->pumps[i].rpm = rpm;
       aq_data->pumps[i].watts = watts;
       aq_data->pumps[i].gpm = gpm;
+      aq_data->pumps[i].pStatus = panelStatus;
       // LOG(ONET_LOG,LOG_INFO, "Matched OneTouch Pump to Index %d, RPM %d, Watts %d, GPM %d\n",i,rpm,watts,gpm);
       LOG(ONET_LOG, LOG_INFO, "Matched Pump to '%s', Index %d, RPM %d, Watts %d, GPM %d\n", aq_data->pumps[i].button->name, i, rpm, watts, gpm);
       if (aq_data->pumps[i].pumpType == PT_UNKNOWN)
@@ -400,13 +405,14 @@ bool get_pumpinfo_from_menu_OLD(struct aqualinkdata *aq_data, int menuLineIdx)
   LOG(ONET_LOG, LOG_WARNING, "Did not find AqualinkD config for Pump '%s'\n",_menu[menuLineIdx]);
   return false;
 }
-
+*/
 
 bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx, int pump_number)
 {
   int rpm = 0;
   int watts = 0;
   int gpm = 0;
+  panel_vsp_status pStatus = PS_OK;
   char *cidx = NULL;
 
   // valid controlpanel pump numbers are 1,2,3,4
@@ -426,13 +432,13 @@ bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx, int p
     }
   }
   else if (rsm_strcmp(_menu[menuLineIdx + 1], "*** Priming ***") == 0){
-    rpm = PUMP_PRIMING;
+    pStatus = PS_PRIMING;
   }
   else if (rsm_strcmp(_menu[menuLineIdx + 1], "(Offline)") == 0){
-    rpm = PUMP_OFFLINE;
+    pStatus = PS_OFFLINE;
   }
   else if (rsm_strcmp(_menu[menuLineIdx + 1], "(Priming Error)") == 0){
-    rpm = PUMP_ERROR;
+    pStatus = PS_ERROR;
   }
 
   if (rpm==0 && watts==0 && rpm==0) {
@@ -449,6 +455,7 @@ bool get_pumpinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx, int p
       aq_data->pumps[i].rpm = rpm;
       aq_data->pumps[i].watts = watts;
       aq_data->pumps[i].gpm = gpm;
+      aq_data->pumps[i].pStatus = pStatus;
       if (aq_data->pumps[i].pumpType == PT_UNKNOWN){
         if (rsm_strcmp(_menu[menuLineIdx],"Intelliflo VS") == 0)
           aq_data->pumps[i].pumpType = VSPUMP;
@@ -679,6 +686,7 @@ void pump_update(struct aqualinkdata *aq_data, int updated) {
         aq_data->pumps[i].rpm = PUMP_OFF_RPM;
         aq_data->pumps[i].gpm = PUMP_OFF_GPM;
         aq_data->pumps[i].watts = PUMP_OFF_WAT;
+        aq_data->pumps[i].pStatus = PS_OFF;
       }
     }
     updates = '\0';

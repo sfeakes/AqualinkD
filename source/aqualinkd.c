@@ -573,13 +573,15 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config use_aux_labels    = %s\n", bool2text(_aqconfig_.use_panel_aux_labels));
   LOG(AQUA_LOG,LOG_NOTICE, "Config override frz prot = %s\n", bool2text(_aqconfig_.override_freeze_protect));
 #ifndef MG_DISABLE_MQTT
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_server       = %s\n", _aqconfig_.mqtt_server);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_dz_sub_topic = %s\n", _aqconfig_.mqtt_dz_sub_topic);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_dz_pub_topic = %s\n", _aqconfig_.mqtt_dz_pub_topic);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_aq_topic     = %s\n", _aqconfig_.mqtt_aq_topic);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_user         = %s\n", _aqconfig_.mqtt_user);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_passwd       = %s\n", _aqconfig_.mqtt_passwd);
-  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt_ID           = %s\n", _aqconfig_.mqtt_ID);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt server       = %s\n", _aqconfig_.mqtt_server);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt DZ sub topic = %s\n", _aqconfig_.mqtt_dz_sub_topic);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt DZ pub topic = %s\n", _aqconfig_.mqtt_dz_pub_topic);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt AQ topic     = %s\n", _aqconfig_.mqtt_aq_topic);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt user         = %s\n", _aqconfig_.mqtt_user);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt passwd       = %s\n", _aqconfig_.mqtt_passwd);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt timed update = %s\n", bool2text(_aqconfig_.mqtt_timed_update));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt HA dis topic = %s\n", _aqconfig_.mqtt_hass_discover_topic);
+  LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt ID           = %s\n", _aqconfig_.mqtt_ID);
   if (_aqconfig_.dzidx_air_temp !=TEMP_UNKNOWN) {
     LOG(AQUA_LOG,LOG_NOTICE, "Config idx water temp    = %d\n", _aqconfig_.dzidx_air_temp);
   }
@@ -868,6 +870,7 @@ void main_loop()
     _aqualink_data.pumps[i].mode = TEMP_UNKNOWN;
     //_aqualink_data.pumps[i].driveState = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].status = TEMP_UNKNOWN;
+    _aqualink_data.pumps[i].pStatus = PS_OFF;
     _aqualink_data.pumps[i].pressureCurve = TEMP_UNKNOWN;
   }
 

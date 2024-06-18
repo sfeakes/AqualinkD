@@ -495,6 +495,7 @@ void pda_pump_update(struct aqualinkdata *aq_data, int updated) {
         aq_data->pumps[i].rpm = PUMP_OFF_RPM;
         aq_data->pumps[i].gpm = PUMP_OFF_GPM;
         aq_data->pumps[i].watts = PUMP_OFF_WAT;
+        aq_data->pumps[i].pStatus = PS_OFF;
       }
     }
     updates = '\0';
@@ -541,6 +542,7 @@ void get_pda_pumpinfo_from_menu(int menuLineIdx, int pump_number)
   int rpm = 0;
   int watts = 0;
   int gpm = 0;
+  panel_vsp_status pStatus = PS_OK;
   char *cidx = NULL;
 
   // valid controlpanel pump numbers are 1,2,3,4
@@ -559,13 +561,13 @@ void get_pda_pumpinfo_from_menu(int menuLineIdx, int pump_number)
     }
   }
   else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "*** Priming ***") == 0){
-    rpm = PUMP_PRIMING;
+    pStatus = PS_PRIMING;
   }
   else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "(Offline)") == 0){
-    rpm = PUMP_OFFLINE;
+    pStatus = PS_OFFLINE;
   }
   else if (rsm_strcmp(pda_m_line(menuLineIdx+1), "(Priming Error)") == 0){
-    rpm = PUMP_ERROR;
+    pStatus = PS_ERROR;
   }
 
   if (rpm==0 && watts==0 && rpm==0) {
@@ -581,6 +583,7 @@ void get_pda_pumpinfo_from_menu(int menuLineIdx, int pump_number)
       _aqualink_data->pumps[i].rpm = rpm;
       _aqualink_data->pumps[i].watts = watts;
       _aqualink_data->pumps[i].gpm = gpm;
+      _aqualink_data->pumps[i].pStatus = pStatus;
       if (_aqualink_data->pumps[i].pumpType == PT_UNKNOWN){
         if (rsm_strcmp(pda_m_line(menuLineIdx),"Intelliflo VS") == 0)
           _aqualink_data->pumps[i].pumpType = VSPUMP;

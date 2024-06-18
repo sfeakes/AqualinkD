@@ -35,4 +35,6 @@ void setSWGdeviceStatus(struct aqualinkdata *aqdata, emulation_type requester, u
 void getJandyHeaterError(struct aqualinkdata *aqdata, char *message);
 void getJandyHeaterErrorMQTT(struct aqualinkdata *aqdata, char *message);
 
+int getPumpStatus(int pumpIndex, struct aqualinkdata *aqdata);
+
 #endif // AQUAPURE_H_

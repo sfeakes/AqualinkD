@@ -766,6 +766,7 @@ pump_detail *getpump(struct aqualinkdata *aqdata, int button)
     aqdata->pumps[aqdata->num_pumps].rpm = TEMP_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].watts = TEMP_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].gpm = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].pStatus = PS_OFF;
     aqdata->num_pumps++;
     return &aqdata->pumps[aqdata->num_pumps-1];
   }

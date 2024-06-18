@@ -1039,10 +1039,12 @@
       try {
         if (document.getElementById(id).getAttribute('status') == 'on') {
           document.getElementById(id + '_status_line2').innerHTML = text;
+          return true;
         } else {
           //console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
         }
       } catch(exception) {}
+      return false;
     }
 
     function setThermostatTile(id, value, sp_value) {
@@ -1242,36 +1244,9 @@
             }
           }
         } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_vsp') {
-          if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM) {   
-            if (object.Pump_RPM == -3) {
-              setTileOnText(object.id, 'Pump ERROR'); // Small txt
-              document.getElementById(object.id).setAttribute('setpoint', 0);
-            } else if (object.Pump_RPM == -2) {
-              setTileOnText(object.id, 'Pump Offline'); // Small txt
-              document.getElementById(object.id).setAttribute('setpoint', 0);
-            } else if (object.Pump_RPM == -1) {
-              setTileOnText(object.id, 'Pump Priming'); // Small text
-              document.getElementById(object.id).setAttribute('setpoint', 0);
-            } else {
-              if (object.Pump_Type == "vfPump") {
-                if (_show_vsp_gpm == true) {
-                  setTileOnText(object.id, 'GPM:'+object.Pump_GPM);
-                  setTileOnTextLine2(object.id, 'RPM:'+object.Pump_RPM);
-                } else {
-                  setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
-                  setTileOnTextLine2(object.id, 'GPM:'+object.Pump_GPM);
-                }
-                document.getElementById(object.id).setAttribute('setpoint', object.Pump_GPM);
-              } else {
-                setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
-                document.getElementById(object.id).setAttribute('setpoint', object.Pump_RPM);
-                if (object.Pump_GPM > 0) {
-                  setTileOnTextLine2(object.id, 'GPM:'+object.Pump_GPM);
-                } else {
-                  setTileOnTextLine2(object.id, "");
-                }
-              }
-            }
+          if (typeof object.Pump_RPM !== 'undefined' && object.Pump_RPM &&
+              typeof object.Pump_Status !== 'undefined' && object.Pump_Status ) {
+            updatePumpTile(object.id, object.Pump_Status, object.Pump_Type, object.Pump_RPM, object.Pump_GPM, object.Pump_Watts);
           }
           if (typeof object.Pump_Type !== 'undefined') {
             document.getElementById(object.id).setAttribute('pumptype', object.Pump_Type);
@@ -2201,58 +2176,63 @@
             document.getElementById('SWG' + '_status').innerHTML = 'Boost '+data.swg_boost_msg;
         }
       }
-
-      //obj.leds.'SWG/Boost' 
-
-      // NSF Really quick hack to show RPM on filter pump. Need to come back and do this correctly.
-      /*
-      if ((typeof data.extra["Pump_1"] !== 'undefined') && (typeof data.extra["Pump_1"].RPM !== 'undefined')) {
-        console.log(data.extra["Pump_1"].RPM);
-        if (document.getElementById('Filter_Pump').getAttribute('status') == 'on') {
-          document.getElementById('Filter_Pump_status').innerHTML = 'RPM:'+data.extra["Pump_1"].RPM;
-        }
-      }*/
-      //console.log(data["Pump_1"].RPM);
-      
       var i = 1;
       while (i < 5) {
         //console.log(data["Pump_"+i].RPM);
-        if ((typeof data["Pump_"+i] !== 'undefined') && (typeof data["Pump_"+i].RPM !== 'undefined')) {
-          if (data["Pump_"+i].RPM == -3) {
-            setTileOnText(data["Pump_"+i].id, 'Pump ERROR');
-          } else if (data["Pump_"+i].RPM == -2) {
-            setTileOnText(data["Pump_"+i].id, 'Pump Offline');
-          } else if (data["Pump_"+i].RPM == -1) {
-            setTileOnText(data["Pump_"+i].id, 'Pump Priming');
-          } else {
-            //setTileOnText(object.id, 'RPM:'+object.Pump_RPM);
-            if (data["Pump_"+i].Pump_Type == "vfPump") {
-              if (_show_vsp_gpm == true) {
-                setTileOnText(data["Pump_"+i].id, 'GPM:'+data["Pump_"+i].GPM);
-                setTileOnTextLine2(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
-              } else {
-                setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
-                setTileOnTextLine2(data["Pump_"+i].id, 'GPM:'+data["Pump_"+i].GPM);
-              }
-              document.getElementById(data["Pump_"+i].id).setAttribute('setpoint', data["Pump_"+i].GPM);
-            } else {
-              document.getElementById(data["Pump_"+i].id).setAttribute('setpoint', data["Pump_"+i].RPM);
-              setTileOnText(data["Pump_"+i].id, 'RPM:'+data["Pump_"+i].RPM);
-              if (data["Pump_"+i].GPM > 0) {
-                setTileOnTextLine2(data["Pump_"+i].id, 'GPM:'+data["Pump_"+i].GPM);
-              } else {
-                setTileOnTextLine2(data["Pump_"+i].id, "");
-              }
-            }
-          }
-          /*
-          if (document.getElementById(data["Pump_"+i].id).getAttribute('status') == 'on')
-            document.getElementById(data["Pump_"+i].id + '_status').innerHTML = 'RPM:'+data["Pump_"+i].RPM;
-          else
-            console.log(data["Pump_"+i].id + ' is off, not displaying RPM ' + data["Pump_"+i].RPM);*/
+        if (typeof data["Pump_"+i] !== 'undefined') {
+          updatePumpTile(data["Pump_"+i].id, data["Pump_"+i].Status, data["Pump_"+i].Pump_Type, data["Pump_"+i].RPM, data["Pump_"+i].GPM, data["Pump_"+i].Watts);
         }
         i++;
       }
+    }
+
+    function updatePumpTile(tileid, status, type, rpm, gpm, watts) {
+      var tLine = '';
+      var bLine = '';
+       // If we have 1 line, simple (error & priming takes presidence over anything else)
+       // If we have 2 lines, then BOTTOM (line #1) is ERROR (not priming) or what the pump needs to control (RPM for all except VF which is GPM)
+       //                          TOP (line #2) is (priming/RPM/GPM).
+       
+      // 1,0,-1 are all good states, anything else error 
+      if (status >= 1 || status <= -3) {
+        if (status == -3) {
+          setTileOnText(tileid, 'Pump Offline');
+        } else {
+          setTileOnText(tileid, 'Pump ERROR');
+        }
+        document.getElementById(tileid).setAttribute('setpoint', 0);
+        setTileOnTextLine2(tileid, "");
+        return;
+      }
+
+      if (type == "vfPump") {
+        bLine = ((gpm > 0) ? 'GPM:'+gpm : 'GPM:0');
+        tLine = ((rpm > 0) ? 'RPM:'+rpm : '');
+        document.getElementById(tileid).setAttribute('setpoint', ((gpm > 0) ? gpm : 0));
+      } else if ( rpm > 0) {
+        bLine = ((rpm > 0) ? 'RPM:'+rpm : 'RPM:0');
+        if (gpm > 0) {
+          tLine = 'GPM:'+gpm;
+        } else if (watts > 0) {
+          tLine = 'Watts:'+watts;
+        }
+        document.getElementById(tileid).setAttribute('setpoint', ((rpm > 0) ? rpm : 0));
+      } else if ( watts > 0 ) {
+        bLine = ((watts > 0) ? 'Watts:'+watts : '');
+        document.getElementById(tileid).setAttribute('setpoint', ((rpm > 0) ? rpm : 0));
+      }
+      // If we are in priming. Move lines and display priming
+      if (status == -2) {
+        tLine = bLine;
+        bLine = 'Pump Priming';
+      } else if (status == -1) {
+        // Pump is off
+        var tLine = '';
+        var bLine = 'On';
+      }
+      
+      setTileOnText(tileid, bLine);
+      setTileOnTextLine2(tileid, tLine);
     }
 
     function deviceSort(a, b) {

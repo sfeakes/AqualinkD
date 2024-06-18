@@ -148,12 +148,25 @@ typedef enum simulator_type {
 } simulator_type;
 */
 
-#define PUMP_PRIMING -1
-#define PUMP_OFFLINE -2
-#define PUMP_ERROR   -3
+//#define PUMP_PRIMING -1
+//#define PUMP_OFFLINE -2
+//#define PUMP_ERROR   -3
 #define PUMP_OFF_RPM 0
 #define PUMP_OFF_GPM PUMP_OFF_RPM
 #define PUMP_OFF_WAT PUMP_OFF_RPM
+
+
+// FUTURE VSP STATUS, keep panel status and RS485 status seperate
+
+typedef enum panel_vsp_status
+{
+  PS_OK = 0,  // Start at 0 to match actual status from RS, but go down from their.
+  PS_OFF = -1,
+  PS_PRIMING = -2,
+  PS_OFFLINE = -3,
+  PS_ERROR = -4
+} panel_vsp_status;
+
 
 typedef struct pumpd
 {
@@ -171,6 +184,7 @@ typedef struct pumpd
   int mode;  // 0 local control, 1 remote control
   //int driveState; // Haven't figured out what this is yet
   int status;
+  panel_vsp_status pStatus;  // FUTURE VSP STATUS,
   int pressureCurve;
 } pump_detail;
 

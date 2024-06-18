@@ -114,13 +114,36 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
 /*
   VSP Pump Status.
 
+  Are you sure it is a VS pump because the flow rate byte(7)(PEN_FLOW) is only valid for VSF and VF pumps?
+
   Mode 0=local control, 1=remote control
   DriveState = no idea
   Pressure Curve = see manual
   Status = below
   (packet[PEN_HI_B_STATUS] * 256) + packet[PEN_LO_B_STATUS];
 
+  Guess at the status would be.
+  0 ok ( ok for VSF, looks like off for VF / VS? )
+  1 ok ( ok for VF / VS?, not sure on VSF )
+  2 filter warning
+  4 Overcurrent condition
+  8 Priming
+ 16 System blocked
+ 32 General alarm
+ 64 Overtemp condition
+128 Power outage
+256 Overcurrent condition 2
+512 Overvoltage condition
+1024 Unspecified Error
+2048 Unspecified Error 
+4096 Unspecified Error 
+8192 Unspecified Error 
+16384 Unspecified Error 
+32768 Communication failure
+
+
   // Below was pulled from another project.  0 doesn;t seem to be accurate.
+  // 0 is OK on VSF pump
   [0, { name: 'off', desc: 'Off' }], // When the pump is disconnected or has no power then we simply report off as the status.  This is not the recommended wiring
         // for a VS/VF pump as is should be powered at all times.  When it is, the status will always report a value > 0.
   [1, { name: 'ok', desc: 'Ok' }], // Status is always reported when the pump is not wired to a relay regardless of whether it is on or not
