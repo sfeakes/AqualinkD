@@ -60,7 +60,7 @@ bool remount_root_ro(bool readonly) {
   }
 }
 
-bool passJson_scObj(char* line, int length, aqs_cron *values)
+bool passJson_scObj(const char* line, int length, aqs_cron *values)
 {
   int keystart=0;
   //int keyend=0;
@@ -130,9 +130,8 @@ bool passJson_scObj(char* line, int length, aqs_cron *values)
   return (captured >= 7)?true:false;
 }
 
-int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
+int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize)
 {
-  int length=0;
   FILE *fp;
   int i;
   bool inarray = false;
@@ -141,8 +140,7 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
 
   if ( !_aqconfig_.enable_scheduler) {
     LOG(SCHD_LOG,LOG_WARNING, "Schedules are disabled\n");
-    length += sprintf(outBuf, "{\"message\":\"Error Schedules disabled\"}");
-    return length;
+    return sprintf(outBuf, "{\"message\":\"Error Schedules disabled\"}");
   }
 
   LOG(SCHD_LOG,LOG_NOTICE, "Saving Schedule:\n");
@@ -154,15 +152,13 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
   if (fp == NULL) {
     LOG(SCHD_LOG,LOG_ERR, "Open file failed '%s'\n", CRON_FILE);
     remount_root_ro(true);
-    length += sprintf(outBuf, "{\"message\":\"Error Saving Schedules\"}");
-    return length;
+    return sprintf(outBuf, "{\"message\":\"Error Saving Schedules\"}");
   }
+
   fprintf(fp, "#***** AUTO GENERATED DO NOT EDIT *****\n");
   fprintf(fp, "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin\n");
 
   LOG(SCHD_LOG,LOG_DEBUG, "Schedules Message body:\n'%.*s'\n", inSize, inBuf);
-
-  length += sprintf(outBuf, "{\"message\":\"Saved Schedules\"}");
 
   for (i=0; i < inSize; i++) {
       if ( inBuf[i] == '[' ) {
@@ -174,24 +170,20 @@ int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize)
         LOG(SCHD_LOG,LOG_DEBUG, "Write to cron Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
         LOG(SCHD_LOG,LOG_INFO, "%s%s %s %s %s %s curl -s -S --show-error -o /dev/null localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
         fprintf(fp, "%s%s %s %s %s %s root curl -s -S --show-error -o /dev/null localhost:%s%s -d value=%s -X PUT\n",(cline.enabled?"":"#"),cline.minute, cline.hour, cline.daym, cline.month, cline.dayw, _aqconfig_.socket_port, cline.url, cline.value);
-      } else if ( inarray && inBuf[i] == '}') {
-        //inobj=false;
-        //objed=i;
       }
   }
     
-
   fprintf(fp, "#***** AUTO GENERATED DO NOT EDIT *****\n");
   fclose(fp);
 
-  // if we created file, change the permisions
+  // if we created file, change the permissions
   if (!fileexists)
     if ( chmod(CRON_FILE, S_IRUSR | S_IWUSR ) < 0 )
-      LOG(SCHD_LOG,LOG_ERR, "Could not change permitions on cron file %s, scheduling may not work\n",CRON_FILE);
+      LOG(SCHD_LOG,LOG_ERR, "Could not change permissions on cron file %s, scheduling may not work\n",CRON_FILE);
 
   remount_root_ro(fs);
 
-  return length;
+  return sprintf(outBuf, "{\"message\":\"Saved Schedules\"}");
 }
 
 int build_schedules_js(char* buffer, int size)
