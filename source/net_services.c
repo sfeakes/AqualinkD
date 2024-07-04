@@ -1417,22 +1417,25 @@ float pass_mg_body(struct mg_str *body) {
   int i;
   char buf[10];
   
+  int len = sizeof(buf);
+  if (body->len < len) {
+    len = body->len;
+  }
+
   // NSF Really need to come back and clean this up
 
-  for (i=0; i < body->len; i++) {
+  for (i=0; i < len; i++) {
     if ( body->p[i] == '=' || body->p[i] == ':' ) {
-      while (!isdigit((unsigned char) body->p[i]) && body->p[i] != '-' && i < body->len) {i++;}
-      if(i < body->len) {
+      while (!isdigit((unsigned char) body->p[i]) && body->p[i] != '-' && i < len) {i++;}
+      if(i < len) {
         // Need to copy to buffer so we can terminate correctly.
-        strncpy(buf, &body->p[i], body->len - i);
-        buf[body->len - i] = '\0';
-        //printf ("RETURN\n");
-        //return atof(&body->p[i]);
+        strncpy(buf, &body->p[i], len - i);
+        buf[len - i] = '\0';
         return atof(buf);
       }
     }
   }
-  //printf ("RETURN UNKNOWN\n");
+  
   return TEMP_UNKNOWN;
 }
 
@@ -1554,8 +1557,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
         {
           char message[JSON_BUFFER_SIZE];
           DEBUG_TIMER_START(&tid2);
-          //int size = save_schedules_js(_aqualink_data, &http_msg->body, message, JSON_BUFFER_SIZE);
-          int size = save_schedules_js((char *)&http_msg->body, http_msg->body.len, message, JSON_BUFFER_SIZE);
+          int size = save_schedules_js(http_msg->body.p, http_msg->body.len, message, JSON_BUFFER_SIZE);
           DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() save_schedules_js took");
           mg_send_head(nc, 200, size, CONTENT_JS);
           mg_send(nc, message, size); 

@@ -24,7 +24,7 @@ typedef struct aqs_cron
 } aqs_cron;
 
 int build_schedules_js(char* buffer, int size);
-int save_schedules_js(char* inBuf, int inSize, char* outBuf, int outSize);
+int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize);
 //void read_schedules();
 //void write_schedules();
 
