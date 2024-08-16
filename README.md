@@ -115,6 +115,8 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Decoded more Pentair VSP pump status.
 * Changed VSP pump status handling (display more in web UI)
 * VSP Pump status & other attributes in HASSIO
+* Dual temperature sensors supported
+* Updated to serial_logger
 
 # Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.

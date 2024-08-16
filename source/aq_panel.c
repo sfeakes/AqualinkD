@@ -46,6 +46,40 @@ char *name2label(char *str)
   return newst;
 }
 
+// This has NOT been tested.
+uint8_t getPanelSupport( char *rev_string, int rev_len)
+{
+  uint8_t supported = 0;
+  
+  char REV[5];
+
+  // Get the actual rev letter
+  if ( rsm_get_revision(REV, rev_string, rev_len) ) {
+    // Rev >=I == one touch protocol
+    // Rev >=O == VSP
+    // Rev >=Q == iaqualink touch protocol.
+    // REv >= P == chemlink
+    // Rev >= HH serial adapter.
+    if (REV[0] >= 81) // Q in ascii
+      supported |= RSP_SUP_IAQT;
+    
+    if (REV[0] >= 80) // P in ascii
+      supported |= RSP_SUP_CHEM;
+
+    if (REV[0] >= 79) // O in ascii
+      supported |= RSP_SUP_VSP;
+    
+    if (REV[0] >= 73) // I in ascii
+      supported |= RSP_SUP_ONET;
+
+    if (REV[0] > 72 || (REV[0] == 72 && REV[1] == 72) ) // H in ascii
+      supported |= RSP_SUP_SERA;
+    
+  }
+
+  return supported;
+}
+
 void changePanelToMode_Only() {
   _aqconfig_.paneltype_mask |= RSP_SINGLE;
   _aqconfig_.paneltype_mask &= ~RSP_COMBO;

@@ -1,0 +1,269 @@
+
+#####################################
+#
+# Build container to compile AqualnkD Release binaries (armhf and arm64)
+#
+# armhf is 32 bit armv6l (armhf) stretch and newer - work on all Pi's running 32bit (Pi1 to Pi4)
+# arm64 is 64 bit aarch64 buster and newer - work on Pi3/Pi4/2w running 64bit os
+#
+# docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# docker run -it --mount type=bind,source=./build,target=/build aqualinkd-releasebin bash
+#
+#  clean method
+# docker system prune
+#
+#####################################
+
+FROM debian:buster
+
+# ############
+# Get arm64 build environment.
+#
+
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    binutils-arm-linux-gnueabi \
+    file
+
+RUN dpkg --add-architecture arm64
+RUN apt-get update && \
+    apt-get install -y libsystemd-dev:arm64
+
+# ############
+# Get armhf build environment
+# prebuilt armhf doesn't support hard float, (or something that causes it to fail on armhf machines)   
+#RUN apt-get install -y \
+#    gcc-arm-linux-gnueabihf \
+#    binutils-arm-linux-gnueabihf
+
+#RUN dpkg --add-architecture armhf
+#RUN apt-get update && \
+#    apt-get install -y libsystemd-dev:armhf
+
+# So we need to build arnhf our selves.  Since we are doing that, using debian/rasbian stretch versions of
+# everthing for best compatibality
+
+ENV GCC_VERSION gcc-6.3.0
+ENV GLIBC_VERSION glibc-2.24
+ENV BINUTILS_VERSION binutils-2.28
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install some tools and compilers + clean up
+RUN apt-get update && \
+    #apt-get install -y rsync git wget gcc-6 g++-6 cmake gdb gdbserver bzip2 && \
+    apt-get install -y rsync git wget cmake gdb gdbserver bzip2 && \
+    apt-get clean autoclean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+
+# Use GCC 6 as the default
+#RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 999 \
+# && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 999 \
+# && update-alternatives --install /usr/bin/cc  cc  /usr/bin/gcc-6 999 \
+# && update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-6 999
+
+# Add a user called `develop`
+RUN useradd -ms /bin/bash develop
+RUN echo "develop   ALL=(ALL:ALL) ALL" >> /etc/sudoers
+
+WORKDIR /home/develop
+
+# Download and extract GCC
+RUN wget https://ftp.gnu.org/gnu/gcc/${GCC_VERSION}/${GCC_VERSION}.tar.gz && \
+    tar xf ${GCC_VERSION}.tar.gz && \
+    rm ${GCC_VERSION}.tar.gz
+# Download and extract LibC
+RUN wget https://ftp.gnu.org/gnu/libc/${GLIBC_VERSION}.tar.bz2 && \
+    tar xjf ${GLIBC_VERSION}.tar.bz2 && \
+    rm ${GLIBC_VERSION}.tar.bz2
+# Download and extract BinUtils
+RUN wget https://ftp.gnu.org/gnu/binutils/${BINUTILS_VERSION}.tar.bz2 && \
+    tar xjf ${BINUTILS_VERSION}.tar.bz2 && \
+    rm ${BINUTILS_VERSION}.tar.bz2
+# Download the GCC prerequisites
+RUN cd ${GCC_VERSION} && contrib/download_prerequisites && rm *.tar.*
+#RUN cd gcc-9.2.0 && contrib/download_prerequisites && rm *.tar.*
+
+# Build BinUtils
+RUN mkdir -p /opt/cross-pi-gcc
+WORKDIR /home/develop/build-binutils
+RUN ../${BINUTILS_VERSION}/configure \
+        --prefix=/opt/cross-pi-gcc --target=arm-linux-gnueabihf \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --disable-multilib
+RUN make -j$(nproc)
+RUN make install
+
+
+# Apply batch to GCC
+# https://github.com/qca/open-ath9k-htc-firmware/issues/135
+WORKDIR /home/develop
+RUN sed -i '1474s/file ==/file[0] ==/' gcc-6.3.0/gcc/ubsan.c
+
+# Build the first part of GCC
+WORKDIR /home/develop/build-gcc
+RUN ../${GCC_VERSION}/configure \
+        --prefix=/opt/cross-pi-gcc \
+        --target=arm-linux-gnueabihf \
+        --enable-languages=c,c++,fortran \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --disable-multilib \
+        --enable-linker-build-id
+RUN make -j$(nproc) 'LIMITS_H_TEST=true' all-gcc
+RUN make install-gcc
+ENV PATH=/opt/cross-pi-gcc/bin:${PATH}
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y gawk bison python3 && \
+    apt-get clean autoclean && \
+    apt-get autoremove -y && \
+    rm -rf /var/lib/apt/lists/*
+
+# Download and install the Linux headers
+WORKDIR /home/develop
+RUN git clone --depth=1 https://github.com/raspberrypi/linux
+WORKDIR /home/develop/linux
+ENV KERNEL=kernel7
+RUN make ARCH=arm INSTALL_HDR_PATH=/opt/cross-pi-gcc/arm-linux-gnueabihf headers_install
+
+# Build GLIBC
+WORKDIR /home/develop/build-glibc
+RUN ../${GLIBC_VERSION}/configure \
+        --prefix=/opt/cross-pi-gcc/arm-linux-gnueabihf \
+        --build=$MACHTYPE --host=arm-linux-gnueabihf --target=arm-linux-gnueabihf \
+        --with-arch=armv6 --with-fpu=vfp --with-float=hard \
+        --with-headers=/opt/cross-pi-gcc/arm-linux-gnueabihf/include \
+        --disable-multilib libc_cv_forced_unwind=yes
+RUN make install-bootstrap-headers=yes install-headers
+RUN make -j8 csu/subdir_lib
+RUN install csu/crt1.o csu/crti.o csu/crtn.o /opt/cross-pi-gcc/arm-linux-gnueabihf/lib
+RUN arm-linux-gnueabihf-gcc -nostdlib -nostartfiles -shared -x c /dev/null \
+        -o /opt/cross-pi-gcc/arm-linux-gnueabihf/lib/libc.so
+RUN touch /opt/cross-pi-gcc/arm-linux-gnueabihf/include/gnu/stubs.h
+
+# Continue building GCC
+WORKDIR /home/develop/build-gcc
+RUN make -j$(nproc) all-target-libgcc
+RUN make install-target-libgcc
+
+# Finish building GLIBC
+WORKDIR /home/develop/build-glibc
+RUN make -j$(nproc)
+RUN make install
+
+# Finish building GCC
+WORKDIR /home/develop/build-gcc
+RUN make -j$(nproc)
+RUN make install
+
+
+# Download systemd and it's dependancys.
+RUN mkdir -p /home/develop/packages
+WORKDIR /home/develop/packages
+
+
+####################
+# Manually libsystemd-dev and all it's depandancys
+# Commented out ones are what I really want, but couldn;t find.
+#####RUN wget https://archive.debian.org/debian/pool/main/s/systemd/libsystemd-dev_232-25+deb9u14_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/s/systemd/libsystemd-dev_232-25+deb9u12_armhf.deb
+#####RUN wget https://archive.debian.org/debian/pool/main/s/systemd/libsystemd0_232-25+deb9u14_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/s/systemd/libsystemd0_232-25+deb9u12_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/g/glibc/libc6_2.24-11+deb9u4_armhf.deb        
+#RUN wget https://archive.debian.org/debian/pool/main/libg/libgpg-error/libgpg-error0_1.26-2_armhf.deb        
+#####RUN wget https://archive.debian.org/debian/pool/main/x/xz-utils/liblzma5_5.2.2-1.2+deb9u1_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/x/xz-utils/liblzma5_5.2.2-1.2+b1_armhf.deb  
+#RUN wget https://archive.debian.org/debian/pool/main/libs/libselinux/libselinux1_2.6-3+b3_armhf.deb           
+#####RUN wget https://archive.debian.org/debian/pool/main/libg/libgcrypt20//libgcrypt20_1.7.6-2+deb9u4_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/libg/libgcrypt20//libgcrypt20_1.7.6-2+deb9u3_armhf.deb 
+#####RUN wget https://archive.debian.org/debian/pool/main/l/lz4/liblz4-1_0.0~r131-2+deb9u1_armhf.deb
+#RUN wget https://archive.debian.org/debian/pool/main/l/lz4/liblz4-1_0.0~r131-2+b1_armhf.deb  
+#####RUN wget https://archive.debian.org/debian/pool/main/p/pcre3/libpcre3_2%3a8.39-3_armhf.deb        
+#RUN wget https://archive.debian.org/debian/pool/main/p/pcre3/libpcre3_8.39-3_armhf.deb
+#
+# Now we have all packaged, let's unpack them.
+#
+# Install all packages into /opt/cross-pi-gcc/arm-linux-gnueabihf
+#RUN for file in *; do dpkg-deb -x $file /opt/cross-pi-gcc/arm-linux-gnueabihf; done
+#
+
+####################
+# Rather than manually, Let's do some modifications to apt and get that working (kinda)
+
+# Get just enough for apt-get and dpk to run.  apt-get doesn't actually work, just enough to download
+ENV APT_ROOT=/opt/cross-pi-gcc/apt-armhf
+RUN mkdir -p $APT_ROOT
+#RUN APT_ROOT=/opt/cross-pi-gcc/apt-armhf; export APT_ROOT
+
+RUN mkdir -p $APT_ROOT/etc/apt/sources.list.d/
+RUN mkdir -p $APT_ROOT/var/lib/dpkg/updates/
+RUN mkdir -p $APT_ROOT/var/lib/dpkg/info
+RUN mkdir -p $APT_ROOT/var/cache/apt/archives/partial
+RUN mkdir -p $APT_ROOT/var/log/apt/
+#mkdir -p $APT_ROOT/usr/share/
+
+RUN echo "deb http://archive.debian.org/debian/ stretch main contrib non-free" > $APT_ROOT/etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian/ stretch-proposed-updates main contrib non-free" >> $APT_ROOT/etc/apt/sources.list
+RUN echo "deb http://archive.debian.org/debian-security stretch/updates main contrib non-free" >> $APT_ROOT/etc/apt/sources.list
+
+RUN touch $APT_ROOT/var/lib/dpkg/status
+
+RUN ln -s /etc/apt/trusted.gpg.d $APT_ROOT/etc/apt/
+RUN ln -s /etc/apt/preferences.d $APT_ROOT/etc/apt/
+RUN ln -s /etc/apt/auth.conf.d $APT_ROOT/etc/apt/
+
+# needed for download
+RUN dpkg --add-architecture armhf 
+# needed for install
+RUN dpkg --root=$APT_ROOT --add-architecture armhf
+
+RUN apt -o Dir=$APT_ROOT update
+
+RUN apt -o Dir=$APT_ROOT download libsystemd-dev:armhf \
+             libsystemd0:armhf \
+             libc6:armhf \
+             libgcrypt20:armhf \
+             liblz4-1:armhf \
+             liblzma5:armhf \
+             libselinux1:armhf \
+             libpcre3:armhf \
+             libgpg-error0:armhf
+
+############
+# Now we have all packaged, let's unpack them.
+
+# Install all packages into /opt/cross-pi-gcc/arm-linux-gnueabihf
+# Could use `dpkg --root=$APT_ROOT --force-all -i` in below, but extract works without any warnings. 
+RUN for file in *; do dpkg -x $file /opt/cross-pi-gcc/arm-linux-gnueabihf; done
+
+# the above will ge installed in /opt/cross-pi-gcc/arm-linux-gnueabihf/lib/arm-linux-gnueabihf, 
+# and we need them in /opt/cross-pi-gcc/arm-linux-gnueabihf/lib/, so make come links.
+WORKDIR /opt/cross-pi-gcc/arm-linux-gnueabihf/lib
+RUN for file in ./arm-linux-gnueabihf/*; do ln -s $file ./`basename $file` 2> /dev/null; done; exit 0
+
+# liblz4.so.1 is installed in a different directory, so link that as well.
+RUN ln -s /opt/cross-pi-gcc/arm-linux-gnueabihf/usr/lib/arm-linux-gnueabihf/liblz4.so.1 /opt/cross-pi-gcc/arm-linux-gnueabihf/lib/liblz4.so.1
+
+
+ENV C_INCLUDE_PATH=/opt/cross-pi-gcc/arm-linux-gnueabihf/usr/include
+
+ENV PATH=$PATH:/opt/cross-pi-gcc/bin:/opt/cross-pi-gcc/libexec/gcc/arm-linux-gnueabihf/6.3.0/
+
+RUN mkdir /build
+WORKDIR /build
+
+# Add a user called `build` uid 1001 & gid 10000
+# You chould change RB_UID & RB_GID to what works on your build setup
+ENV RB_USER=build
+ENV RB_UID=1001
+ENV RB_GID=1000
+RUN groupadd -g $RB_GID $RB_USER  2> /dev/null; exit 0
+RUN useradd $RB_USER -u $RB_UID -g $RB_GID -m -s /bin/bash
+RUN echo "$RB_USER   ALL=(ALL:ALL) ALL" >> /etc/sudoers
+
+USER $RB_USER
+ 

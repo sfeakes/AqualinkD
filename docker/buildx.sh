@@ -58,7 +58,7 @@ if echo $DOCKER_TAGS | grep -q $VERSION; then
 fi
 
 # Login first
-# cat ~sf/.docker.token | docker login --username sfeakes --password-stdin
+# cat ~/.docker.token | docker login --username sfeakes --password-stdin
 
 echo "Building Docker container for $IMAGE using branch $VERSION"
 docker buildx build --platform=linux/amd64,linux/arm64 \

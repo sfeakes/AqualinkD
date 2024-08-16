@@ -78,6 +78,8 @@ void setUnits(char *msg, struct aqualinkdata *aq_data)
 #define MSG_RS16BUTTON  (1 << 8)
 #define MSG_BATTERY_LOW (1 << 9)
 #define MSG_SWG_DEVICE  (1 << 10)
+#define MSG_LOOP_POOL_TEMP   (1 << 11)
+#define MSG_LOOP_SPA_TEMP    (1 << 12)
 
 #ifdef AQ_RS16
 int16_t  RS16_endswithLEDstate(char *msg, struct aqualinkdata *aq_data)
@@ -224,6 +226,14 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
         // NSF Need something to catch startup when SWG=0 so we set it to enabeled.
         // when other ways/protocols to detect SWG=0 are turned off.
     }
+
+    if ((msg_loop & MSG_LOOP_POOL_TEMP) != MSG_LOOP_POOL_TEMP && aq_data->pool_temp != TEMP_UNKNOWN ) {
+      aq_data->pool_temp = TEMP_UNKNOWN;
+    }
+    if ((msg_loop & MSG_LOOP_SPA_TEMP) != MSG_LOOP_SPA_TEMP && aq_data->spa_temp != TEMP_UNKNOWN ) {
+      aq_data->spa_temp = TEMP_UNKNOWN;
+    }
+
     /*
     //  AQUAPURE=0 we never get that message on ALLBUTTON so don't turn off unless filter pump if off
     if ((msg_loop & MSG_SWG) != MSG_SWG && aq_data->aqbuttons[PUMP_INDEX].led->state == OFF ) {
@@ -302,6 +312,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   }
   else if (strncasecmp(msg, MSG_POOL_TEMP, MSG_POOL_TEMP_LEN) == 0)
   {
+    msg_loop |= MSG_LOOP_POOL_TEMP;
     aq_data->pool_temp = atoi(msg + MSG_POOL_TEMP_LEN);
 
     if (aq_data->temp_units == UNKNOWN)
@@ -309,6 +320,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   }
   else if (strncasecmp(msg, MSG_SPA_TEMP, MSG_SPA_TEMP_LEN) == 0)
   {
+    msg_loop |= MSG_LOOP_SPA_TEMP;
     aq_data->spa_temp = atoi(msg + MSG_SPA_TEMP_LEN);
 
     if (aq_data->temp_units == UNKNOWN)
@@ -620,6 +632,10 @@ bool process_allbutton_packet(unsigned char *packet, int length, struct aqualink
     //LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
     memcpy(aq_data->raw_status, packet + 4, AQ_PSTLEN);
     processLEDstate(aq_data);
+
+    /* NSF Take this out, and use the ALLButton loop cycle to determin if we get spa/pool temp
+       messages.  Works better for dual equiptment when both pool & spa pumps and dual temp sensors */
+    /*
     if (aq_data->aqbuttons[PUMP_INDEX].led->state == OFF)
     {
      aq_data->pool_temp = TEMP_UNKNOWN;
@@ -635,6 +651,7 @@ bool process_allbutton_packet(unsigned char *packet, int length, struct aqualink
     {
      aq_data->pool_temp = TEMP_UNKNOWN;
     }
+    */
 
     // COLOR MODE programming relies on state changes, so let any threads know
     //if (aq_data->active_thread.ptype == AQ_SET_LIGHTPROGRAM_MODE) {

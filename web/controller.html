@@ -1018,7 +1018,7 @@
         }
       } catch (e) {
           // NSF Do we need to create the device?
-          console.log('ERROR id=' + id + ' Line 837 | element = '+document.getElementById(id));
+          console.log('ERROR id=' + id + ' Line '+new Error().lineNumber+' | element = '+document.getElementById(id));
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
       var tile;
@@ -2193,7 +2193,8 @@
        // If we have 2 lines, then BOTTOM (line #1) is ERROR (not priming) or what the pump needs to control (RPM for all except VF which is GPM)
        //                          TOP (line #2) is (priming/RPM/GPM).
        
-      // 1,0,-1 are all good states, anything else error 
+      // 1,0,-1 are all good states, anything else error
+      try {
       if (status >= 1 || status <= -3) {
         if (status == -3) {
           setTileOnText(tileid, 'Pump Offline');
@@ -2233,6 +2234,10 @@
       
       setTileOnText(tileid, bLine);
       setTileOnTextLine2(tileid, tLine);
+      } catch (e) {
+        // NSF Do we need to create the device?
+        console.log('ERROR id=' + tileid + ' Line '+new Error().lineNumber+' | element = '+document.getElementById(tileid));
+      }
     }
 
     function deviceSort(a, b) {

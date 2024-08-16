@@ -213,6 +213,11 @@ SLOG_AMD64 = ./release/serial_logger-amd64
 
 # Before the below works, you need to build the aqualinkd-releasebin docker for compiling.
 # sudo docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# Something like below
+#releasebuilddocker:
+#	sudo docker build -f ./docker/Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+#	$(info Docker for building release binaries has been created)
+
 release:
 	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make buildrelease 
 	$(info Binaries for release have been built)

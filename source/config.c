@@ -120,8 +120,8 @@ void init_parameters (struct aqconfig * parms)
   //parms->onetouch_mode = false;
   parms->convert_mqtt_temp = true;
   parms->convert_dz_temp = true;
-  parms->report_zero_pool_temp = false;
-  parms->report_zero_spa_temp = false;
+  parms->report_zero_pool_temp = true;
+  parms->report_zero_spa_temp = true;
   //parms->read_all_devices = true;
   //parms->read_pentair_packets = false;
   parms->read_RS485_devmask = 0;

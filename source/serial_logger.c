@@ -39,9 +39,9 @@
 #include "config.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 600
+#define PACKET_MAX 800
 
-#define VERSION "serial_logger V2.3"
+#define VERSION "serial_logger V2.4"
 
 /*
 typedef enum used {
@@ -65,6 +65,7 @@ struct aqconfig _aqconfig_;
 char _panelType[AQ_MSGLEN];
 char _panelRev[AQ_MSGLEN];
 bool _panelPDA = false;
+int _panelRevInt = 0;
 
 typedef struct serial_id_log {
   unsigned char ID;
@@ -301,6 +302,12 @@ void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
   if (_panelType[1] == 'P' && _panelType[2] == 'D') { // PDA Panel
     _panelPDA = true;
   }
+
+  char REV[5];
+  if ( rsm_get_revision(REV, _panelRev, AQ_MSGLEN) ) {
+    _panelRevInt = REV[0];
+  }
+
 }
 
 #ifdef SERIAL_LOGGER
@@ -759,8 +766,12 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
         rssaID = slog[i].ID;
       else if (canUseONET(slog[i].ID) && extID == 0x00) 
         extID = slog[i].ID;
-      else if (canUseIQAT(slog[i].ID) && (extID == 0x00 || canUseONET(extID))) 
-        extID = slog[i].ID;
+      else if (canUseIQAT(slog[i].ID) && (extID == 0x00 || canUseONET(extID)))
+      {
+        // Check panel rev is higher than REV Q (if it's been found). Panel rev I pings on IAQtouch id but it's not supported.
+        if ( _panelRevInt == 0 || _panelRevInt >= 81 ) 
+          extID = slog[i].ID;
+      }
     } else {
       if (canUsePDA(slog[i].ID) && mainID == 0x00) 
         mainID = slog[i].ID;

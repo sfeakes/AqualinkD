@@ -347,7 +347,7 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
       int rtn=-1;
       //LOG(IAQT_LOG,LOG_DEBUG, "Button compare '%s' to '%s'\n",button->name, aq_data->aqbuttons[i].label);
       // If we are loading HOME page then simply button name is the label ie "Aux3"
-      // If loading DEVICES? page then button name + statusis "Aux3 OFF "
+      // If loading DEVICES? page then button name + status is "Aux3 OFF "
 
       if (_currentPageLoading == IAQ_PAGE_HOME)
         rtn = rsm_strmatch((const char *)button->name, aq_data->aqbuttons[i].label);
@@ -630,6 +630,15 @@ void processPage(struct aqualinkdata *aq_data)
 //Info:    iAQ Touch: Home Status page 01| 72  
 //Info:    iAQ Touch: Home Status page 04| Spa Temp
 //Info:    iAQ Touch: Home Status page 05| Air Temp
+// IF WE HAVE A PANEL WITH EXTRA PUMP & TEMP SENSOR, THEN WE GET DIFFERENT INFO.
+// We Need to code for both cases.
+//Info:   iAQ Touch: Home Status page 00| 96          <- pool
+//Info:   iAQ Touch: Home Status page 01| 96          <- air
+//Info:   iAQ Touch: Home Status page 02| Spa Temp
+//Info:   iAQ Touch: Home Status page 03| 95          <- spa temp
+//Info:   iAQ Touch: Home Status page 04| Pool Temp
+//Info:   iAQ Touch: Home Status page 05| Air Temp
+
       if (isPDA_PANEL) { // Set temp if PDA panel
        if (rsm_strcmp(_homeStatus[5],"Air Temp") == 0) {
         aq_data->air_temp = atoi(_homeStatus[1]);

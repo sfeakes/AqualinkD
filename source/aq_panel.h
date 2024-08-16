@@ -30,6 +30,15 @@
 #define RSP_RSSA   (1 << 14) // 128
 #define RSP_EXT_PROG (1 << 15) // 128
 
+
+// Bitmask for pannel support against board rev
+// used in getPanelSupport()
+#define RSP_SUP_ONET (1 << 0)
+#define RSP_SUP_IAQT (1 << 1)
+#define RSP_SUP_VSP  (1 << 2)
+#define RSP_SUP_CHEM (1 << 3)
+#define RSP_SUP_SERA (1 << 4) // Serial adapter
+
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
@@ -42,6 +51,8 @@ void addPanelOneTouchInterface();
 void addPanelIAQTouchInterface();
 void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
+
+uint8_t getPanelSupport( char *rev_string, int rev_len);
 //void panneltest();
 
 #define isPDA_PANEL ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

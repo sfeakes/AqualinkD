@@ -934,6 +934,13 @@ bool processPacketFromJandyChemFeeder(unsigned char *packet_buffer, int packet_l
 
   LOG(DJAN_LOG, LOG_INFO, "%s\n", msg);
 
+  /*
+  ph_setpoint  = float(raw_data[8]) / 10
+  acl_setpoint = raw_data[9] * 10
+  ph_current   = float(raw_data[10]) / 10
+  acl_current  = raw_data[11] * 10
+  */
+
   return false;
 }
 
