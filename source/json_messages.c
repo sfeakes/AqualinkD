@@ -488,7 +488,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   //return length;
 }
 
-int logmaskjsonobject(int16_t flag, char* buffer)
+int logmaskjsonobject(logmask_t flag, char* buffer)
 {
   int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
   return length;

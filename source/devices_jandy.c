@@ -83,7 +83,7 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   else if (READ_RSDEV_SWG && packet_buffer[PKT_DEST] >= JANDY_DEC_SWG_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_SWG_MAX)
   {
     interestedInNextAck = DRS_SWG;
-    rtn = processPacketToSWG(packet_buffer, packet_length, aqdata, _aqconfig_.swg_zero_ignore);
+    rtn = processPacketToSWG(packet_buffer, packet_length, aqdata/*, _aqconfig_.swg_zero_ignore*/);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
   else if (READ_RSDEV_ePUMP && packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
@@ -125,14 +125,14 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
   return rtn;
 }
 
-bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore) {
-  static int swg_zero_cnt = 0;
+bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata /*, int swg_zero_ignore*/) {
+  //static int swg_zero_cnt = 0;
   bool changedAnything = false;
 
     // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
-    beautifyPacket(buff, packet, packet_length, true);
+    beautifyPacket(buff, 1024, packet, packet_length, true);
     LOG(DJAN_LOG,LOG_DEBUG, "To     SWG: %s", buff);
   }
 
@@ -142,32 +142,33 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
     // Not really sure what to do with this, just ignore 0xff / 255 for the moment. (if statment above)
 
     // SWG can get ~10 messages to set to 0 then go back again for some reason, so don't go to 0 until 10 messages are received
-    if (swg_zero_cnt <= swg_zero_ignore && packet[4] == 0x00) {
+    /*
+    if (swg_zero_cnt < swg_zero_ignore && packet[4] == 0x00) {
       LOG(DJAN_LOG, LOG_DEBUG, "Ignoring SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n", (int)packet[4],
                  swg_zero_cnt, swg_zero_ignore, packet[4], packet[5]);
       swg_zero_cnt++;
-    } else if (swg_zero_cnt > swg_zero_ignore && packet[4] == 0x00) {
+    } else if (swg_zero_cnt >= swg_zero_ignore && packet[4] == 0x00) {
       if (aqdata->swg_percent != (int)packet[4]) {
         //aqdata->swg_percent = (int)packet[4];
         setSWGpercent(aqdata, (int)packet[4]);
         changedAnything = true;
         aqdata->updated = true;
-        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from reading control panel packet sent to SWG (received %d messages)\n", aqdata->swg_percent, swg_zero_cnt);
+        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from reading control panel RS485 packet sent to SWG\n", aqdata->swg_percent);
       }
       // LOG(DJAN_LOG, LOG_DEBUG, "SWG set to %d due to packet packet count %d <= %d from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // (int)packet[4],swg_zero_cnt,SWG_ZERO_IGNORE_COUNT,packet[4],packet[5]);  swg_zero_cnt++;
-    } else {
-      swg_zero_cnt = 0;
+    } else {*/
+      //swg_zero_cnt = 0;
       if (aqdata->swg_percent != (int)packet[4]) {
         //aqdata->swg_percent = (int)packet[4];
         setSWGpercent(aqdata, (int)packet[4]);
         changedAnything = true;
         aqdata->updated = true;
-        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from control panel packet to SWG\n", aqdata->swg_percent);
+        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from control panel RS485 packet to SWG\n", aqdata->swg_percent);
       }
       // LOG(DJAN_LOG, LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // aqdata.swg_percent,packet[4],packet[5]);
-    }
+    /*}*/
 
     if (aqdata->swg_percent > 100)
       aqdata->boost = true;
@@ -194,7 +195,7 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
   // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
-    beautifyPacket(buff, packet, packet_length, true);
+    beautifyPacket(buff, 1024, packet, packet_length, true);
     LOG(DJAN_LOG,LOG_DEBUG, "From   SWG: %s", buff);
   }
 
@@ -562,8 +563,8 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
  */
    // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
-    char msg[1000];
-    beautifyPacket(msg, packet_buffer, packet_length, true);
+    char msg[1024];
+    beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
     LOG(DJAN_LOG, LOG_DEBUG, "To   ePump: %s\n", msg);
   }
 
@@ -594,9 +595,9 @@ bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length,
 
   // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
-    char msg[1000];
+    char msg[1024];
     //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-    beautifyPacket(msg, packet_buffer, packet_length, true);
+    beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
     LOG(DJAN_LOG, LOG_DEBUG, "From ePump: %s\n", msg);
   }
 
@@ -659,9 +660,9 @@ bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_leng
 {
 
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
-    char msg[1000];
+    char msg[1024];
     //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-    beautifyPacket(msg, packet_buffer, packet_length, true);
+    beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
     LOG(DJAN_LOG, LOG_DEBUG, "To     JXi: %s\n", msg);
   }
 
@@ -792,9 +793,9 @@ void getJandyHeaterErrorMQTT(struct aqualinkdata *aqdata, char *message)
 bool processPacketFromJandyJXiHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
-    char msg[1000];
+    char msg[1024];
     //logMessage(LOG_DEBUG, "Need to log ePump message here for future\n");
-    beautifyPacket(msg, packet_buffer, packet_length, true);
+    beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
     LOG(DJAN_LOG, LOG_DEBUG, "From   JXi: %s\n", msg);
   }
 
@@ -848,10 +849,10 @@ bool processPacketFromJandyJXiHeater(unsigned char *packet_buffer, int packet_le
 bool processPacketToJandyLXHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
   
-  char msg[1000];
+  char msg[1024];
   int length = 0;
 
-  beautifyPacket(msg, packet_buffer, packet_length, true);
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "To      LX: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
@@ -877,10 +878,10 @@ bool processPacketToJandyLXHeater(unsigned char *packet_buffer, int packet_lengt
 
 bool processPacketFromJandyLXHeater(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
-  char msg[1000];
+  char msg[1024];
   int length = 0;   
 
-  beautifyPacket(msg, packet_buffer, packet_length, true);
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "From    LX: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
@@ -906,10 +907,10 @@ bool processPacketFromJandyLXHeater(unsigned char *packet_buffer, int packet_len
 
 bool processPacketToJandyChemFeeder(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
-  char msg[1000];
+  char msg[1024];
   int length = 0;
 
-  beautifyPacket(msg, packet_buffer, packet_length, true);
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "To    Chem: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");
@@ -922,10 +923,10 @@ bool processPacketToJandyChemFeeder(unsigned char *packet_buffer, int packet_len
 }
 
 bool processPacketFromJandyChemFeeder(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to){
-  char msg[1000];
+  char msg[1024];
   int length = 0;
 
-  beautifyPacket(msg, packet_buffer, packet_length, true);
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "From  Chem: %s\n", msg);
 
   length += sprintf(msg+length, "Last panel info ");

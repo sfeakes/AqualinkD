@@ -46,6 +46,7 @@
 #include "simulator.h"
 #include "hassio.h"
 #include "version.h"
+#include "color_lights.h"
 
 #ifdef AQ_PDA
 #include "pda.h"
@@ -939,6 +940,18 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_STATUS_TOPIC, pumpStatus);
     }
   }
+
+  // Loop over programmable lights
+  for (i=0; i < _aqualink_data->num_lights; i++) {
+    char topic[50];
+    if ( _aqualink_data->lights[i].currentValue != TEMP_UNKNOWN && _aqualink_data->lights[i].currentValue != _last_mqtt_aqualinkdata.lights[i].currentValue ) {
+      _last_mqtt_aqualinkdata.lights[i].currentValue = _aqualink_data->lights[i].currentValue;
+      send_mqtt_aux_msg(nc, _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC, _aqualink_data->lights[i].currentValue);
+
+      sprintf(topic, "%s%s/name", _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC);
+      send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue - 1, ALLBUTTON));
+    }
+  }
 }
 
 
@@ -1077,8 +1090,25 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     return uActioned; 
   } else if (strncmp(ri1, "seriallogger", 12) == 0 && from == NET_WS) { // Only valid from websocket.
     LOG(NET_LOG,LOG_NOTICE, "Received request to run serial_logger!\n");
+    //LOG(NET_LOG,LOG_NOTICE, "Received request ri1=%s, ri2=%s, ri3=%s value=%f\n",ri1,ri2,ri3,value);
+    _aqualink_data->slogger_packets = round(value);
+    if (ri2 != NULL) {
+      //MIN( 19, (ri3 - ri2));
+      snprintf(_aqualink_data->slogger_ids, MIN( 19, (ri3 - ri2)+1 ), ri2); // 0x01 0x02 0x03 0x04
+    } else {
+      _aqualink_data->slogger_ids[0] = '\0';
+    }
+    if (ri3 != NULL && strncmp(ri3, "true", 4) == 0) {
+      _aqualink_data->slogger_debug = true;
+    } else {
+      _aqualink_data->slogger_debug = false;
+    }
+    //LOG(NET_LOG,LOG_NOTICE, "Received request to run serial_logger (%d,%s,%s)!\n",
+    //                        _aqualink_data->slogger_packets,
+    //                        _aqualink_data->slogger_ids[0]!='\0'?_aqualink_data->slogger_ids:" ", 
+    //                        _aqualink_data->slogger_debug?"debug":"" ); 
     _aqualink_data->run_slogger = true;
-    return uActioned; 
+    return uActioned;
 #else // AQ_MANAGER
   } else if (strncmp(ri1, "aqmanager", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     return uNotAvailable;
@@ -1945,6 +1975,10 @@ void reset_last_mqtt_status()
     _last_mqtt_aqualinkdata.pumps[i].status = TEMP_UNKNOWN;
     _last_mqtt_aqualinkdata.pumps[i].pressureCurve = TEMP_UNKNOWN;
     //_last_mqtt_aqualinkdata.pumps[i].driveState = TEMP_UNKNOWN;
+  }
+
+  for (i=0; i < _aqualink_data->num_lights; i++) {
+     _last_mqtt_aqualinkdata.lights[i].currentValue = TEMP_UNKNOWN;
   }
 
 }

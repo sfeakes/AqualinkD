@@ -113,10 +113,22 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Updates in 2.3.8 (Dev)
 * Code & Repo refactor
 * Decoded more Pentair VSP pump status.
-* Changed VSP pump status handling (display more in web UI)
-* VSP Pump status & other attributes in HASSIO
-* Dual temperature sensors supported
-* Updated to serial_logger
+* Changed VSP pump status handling (display more in web UI).
+* VSP Pump status & other attributes in HASSIO.
+* Dual temperature sensors supported.
+* Updates to serial_logger.
+* Changes to aqmanager for adding more options for decoding protocols.
+* Support for packets changes from panels REV Yg
+<!-- 
+NEED TO FIX FOR THIS RELEASE.
+* Pump by name and not ID.
+* look at using 0x00 for no exit on serial errors / startup
+<done> * MQTT ID is now using a lot longer name due to arm64/armhf
+<done> * Ignore SWG 0 messages can now be removed since VSP is fixed.
+<done> * Increase packet length due to below (also the print message)
+  Warning: RS Serial: Serial packet too large\
+  Warning: RS Serial: Read  Jandy   packet BAD PACKET To 0x33 of type   Unknown '0x72' | HEX: 0x10|0x02|0x33|0x72|0x20|0x01|0x02|0x03|0x04|0x05|0x06|0x07|0x08|0x09|0x0a|0x0b|0x0c|0x0d|0x0e|0x0f|0x10|0x11|0x12|0x13|0x14|0x15|0x16|0x17|0x18|0x19|0x1.........\
+-->
 
 # Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.

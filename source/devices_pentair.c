@@ -34,7 +34,7 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
   // Only log if we are pentair debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DPEN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
-    beautifyPacket(buff, packet, packet_length, true);
+    beautifyPacket(buff, 1024, packet, packet_length, true);
     LOG(DPEN_LOG,LOG_DEBUG, "%s", buff);
   }
 

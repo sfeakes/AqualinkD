@@ -46,6 +46,8 @@ const char* getPanelString();
 
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
+void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button); 
+
 void changePanelToMode_Only();
 void addPanelOneTouchInterface();
 void addPanelIAQTouchInterface();

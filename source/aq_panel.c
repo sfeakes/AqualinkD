@@ -24,6 +24,7 @@
 #include "serialadapter.h"
 #include "aq_timer.h"
 #include "allbutton_aq_programmer.h"
+#include "rs_msg_utils.h"
 
 void initPanelButtons(struct aqualinkdata *aqdata, bool rspda, int size, bool combo, bool dual);
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
@@ -60,6 +61,8 @@ uint8_t getPanelSupport( char *rev_string, int rev_len)
     // Rev >=Q == iaqualink touch protocol.
     // REv >= P == chemlink
     // Rev >= HH serial adapter.
+
+    // Rev Yg (and maybe before) has Pump label (not number), and also Virtual Device called Label Auxiliraries
     if (REV[0] >= 81) // Q in ascii
       supported |= RSP_SUP_IAQT;
     
@@ -752,6 +755,9 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
     sprintf(buf, "%-5d%-5d%-5d",value, button, light->lightType);
     aq_programmer(AQ_SET_LIGHTCOLOR_MODE, buf, aqdata);
   }
+
+  // Use function so can be called from programming thread if we decide to in future.
+  updateButtonLightProgram(aqdata, value, button);
 }
 
 /*
@@ -794,7 +800,12 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
       start_timer(aqdata, deviceIndex, value);
     break;
     case LIGHT_MODE:
-      programDeviceLightMode(aqdata, value, deviceIndex);
+      if (value <= 0) {
+        // Consider this a bad/malformed request to turn the light off.
+        panel_device_request(aqdata, ON_OFF, deviceIndex, 0, source);
+      } else {
+        programDeviceLightMode(aqdata, value, deviceIndex);
+      }
     break;
     case POOL_HTR_SETOINT:
     case SPA_HTR_SETOINT:
@@ -819,8 +830,27 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
 }
 
 
+// Programmable light has been updated, so update the status in AqualinkD
+void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button)
+{
+  int i;
+  clight_detail *light = NULL;
 
+  for (i=0; i < aqdata->num_lights; i++) {
+    if (&aqdata->aqbuttons[button] == aqdata->lights[i].button) {
+      // Found the programmable light
+      light = &aqdata->lights[i];
+      break;
+    }
+  }
 
+  if (light == NULL) {
+    LOG(PANL_LOG,LOG_ERR, "Button not found for light  button index=%d\n",button);
+    return;
+  }
+
+   light->currentValue = value;
+}
 
 
 #ifdef DO_NOT_COMPILE

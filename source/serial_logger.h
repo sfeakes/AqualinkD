@@ -13,7 +13,8 @@ int logPackets = PACKET_MAX;
 //int serial_logger(int rs_fd, char *port_name);
 //int serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, bool panleProbe, bool rsSerialSpeedTest, bool errorMonitor);
 
-int serial_logger (int rs_fd, char *port_name, int logLevel);
+//int serial_logger (int rs_fd, char *port_name, int logLevel);
+int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets, char *slogger_ids);
 void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length);
 
 #endif // SERIAL_LOGGER_H_

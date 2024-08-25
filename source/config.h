@@ -20,7 +20,7 @@
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
-#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
+//#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
 
@@ -83,7 +83,7 @@ struct aqconfig
   bool force_ps_setpoints;
   bool force_frzprotect_setpoints;
   bool force_chem_feeder;
-  int swg_zero_ignore;
+  //int swg_zero_ignore; // This can be removed since this was due to VSP that's been fixed.
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
   bool log_raw_bytes; // Read as bytes

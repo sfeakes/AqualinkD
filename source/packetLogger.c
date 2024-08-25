@@ -15,8 +15,8 @@ static bool _logfile_packets = false;
 //static bool _includePentair = false;
 static unsigned char _lastReadFrom = NUL;
 
-void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read);
-int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error, bool is_read);
+void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read);
+int _beautifyPacket(char *buff, int buff_size, unsigned char *packet_buffer, int packet_length, bool error, bool is_read);
 
 //void startPacketLogger(bool debug_RSProtocol_packets) {
 void startPacketLogger() {
@@ -88,12 +88,12 @@ void logPacketError(unsigned char *packet_buffer, int packet_length) {
   _logPacket(RSSD_LOG, packet_buffer, packet_length, true, false, true);
 }
 
-void debuglogPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool is_read) {
-  if ( getLogLevel(from) >= LOG_DEBUG )
-    _logPacket(from, packet_buffer, packet_length, false, true, is_read);
+void debuglogPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool is_read, bool forcelog) {
+  if ( forcelog == true || getLogLevel(from) >= LOG_DEBUG )
+    _logPacket(from, packet_buffer, packet_length, false, forcelog, is_read);
 }
 
-void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read)
+void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read)
 {
   // No point in continuing if loglevel is < debug_serial and not writing to file
   if ( force == false && 
@@ -119,31 +119,34 @@ void _logPacket(int16_t from, unsigned char *packet_buffer, int packet_length, b
     }
 */
   }
+  //char buff[1000];
+  char buff[LARGELOGBUFFER];
 
-  char buff[1000];
-
-  _beautifyPacket(buff, packet_buffer, packet_length, error, is_read);
+  int len = _beautifyPacket(buff, LARGELOGBUFFER, packet_buffer, packet_length, error, is_read);
 
   if (_logfile_packets)
     writePacketLog(buff);
 
   if (error == true)
-    LOG(from,LOG_WARNING, "%s", buff);
+    LOG_LARGEMSG(from,LOG_WARNING, buff, len);
   else {
-    if (force)
-      LOG(from,LOG_DEBUG, "%s", buff);
+    if (force) {
+      LOG_LARGEMSG(from, getSystemLogLevel()<LOG_DEBUG?getSystemLogLevel():LOG_DEBUG, buff, len);
+      //LOG_LARGEMSG(from, LOG_DEBUG, buff, len);
+    }
     //else if (is_read &&  _aqconfig_.serial_debug_filter != NUL && _aqconfig_.serial_debug_filter == packet_buffer[PKT_DEST])
     //  LOG(from,LOG_NOTICE, "%s", buff);
-    else
-      LOG(from,LOG_DEBUG_SERIAL, "%s", buff);
+    else {
+      LOG_LARGEMSG(from,LOG_DEBUG_SERIAL, buff, len);
+    }
   }
 }
 
-int beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool is_read)
+int beautifyPacket(char *buff, int buff_size, unsigned char *packet_buffer, int packet_length, bool is_read)
 {
-  return _beautifyPacket(buff, packet_buffer, packet_length, false, is_read);
+  return _beautifyPacket(buff, buff_size, packet_buffer, packet_length, false, is_read);
 }
-int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool error, bool is_read)
+int _beautifyPacket(char *buff, int buff_size, unsigned char *packet_buffer, int packet_length, bool error, bool is_read)
 {
   int i = 0;
   int cnt = 0;
@@ -163,8 +166,13 @@ int _beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length,
     cnt = sprintf(buff, "%5.5s %sTo 0x%02hhx of type %16.16s | HEX: ",(is_read?"Read":"Write"),(error?"BAD PACKET ":""), packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
   }
 */
-  for (i = 0; i < packet_length; i++)
+  for (i = 0; i < packet_length; i++) {
+    // Check we have enough space for next set of chars
+    if ( (cnt + 6) > buff_size)
+      break;
+
     cnt += sprintf(buff + cnt, "0x%02hhx|", packet_buffer[i]);
+  }
 
   cnt += sprintf(buff + cnt, "\n");
 

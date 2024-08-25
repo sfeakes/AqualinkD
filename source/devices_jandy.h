@@ -7,7 +7,7 @@
 
 bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
 
-bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, int swg_zero_ignore);
+bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata/*, int swg_zero_ignore*/);
 bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);
 bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata);
 bool processPacketFromJandyPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to);

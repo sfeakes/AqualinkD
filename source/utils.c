@@ -63,7 +63,7 @@ static int _cfg_log_level;
 static int _log_level = LOG_WARNING;
 
 static char *_loq_display_message = NULL;
-int16_t _logforcemask = 0;
+logmask_t _logforcemask = 0;
 
 //static char _log_filename[256];
 
@@ -104,13 +104,14 @@ int getSystemLogLevel()
 {
   return _log_level;
 }
-int getLogLevel(int16_t from)
+int getLogLevel(logmask_t from)
 {
 
   // RSSD_LOG should default to INFO unless the mask is explicitly set.
   // IE Even if DEBUG is set, (Note ignored for the moment)
 
-  if ( from == RSSD_LOG && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+  //if ( from == RSSD_LOG && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+  if ( (from == RSSD_LOG || from == SLOG_LOG) && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
     return LOG_DEBUG_SERIAL;
   else if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
     return LOG_DEBUG;
@@ -186,7 +187,7 @@ bool islogFileReady()
 /*
 * This function reports the last error 
 */
-void LOGSystemError (int errnum, int16_t from, const char *on_what)
+void LOGSystemError (int errnum, logmask_t from, const char *on_what)
 {
   fputs (strerror (errno), stderr);
   fputs (": ", stderr);
@@ -283,7 +284,7 @@ const char* loglevel2name(int level)
   return elevel2text(level);
 }
 
-const char* logmask2name(int16_t from)
+const char* logmask2name(logmask_t from)
 {
   switch (from) {
     case NET_LOG:
@@ -327,6 +328,9 @@ const char* logmask2name(int16_t from)
     break;
     case SIM_LOG:
       return "Simulator: ";
+    break;
+    case SLOG_LOG:
+      return "Serial Log:";
     break;
     case AQUA_LOG:
     default:
@@ -478,12 +482,12 @@ void test(int msg_level, char *msg)
 }
 */
 
-void addDebugLogMask(int16_t flag)
+void addDebugLogMask(logmask_t flag)
 {
   _logforcemask |= flag;
 }
 
-void removeDebugLogMask(int16_t flag)
+void removeDebugLogMask(logmask_t flag)
 {
   _logforcemask &= ~flag;
 }
@@ -493,12 +497,12 @@ void clearDebugLogMask()
   _logforcemask = 0;
 }
 
-bool isDebugLogMaskSet(int16_t flag)
+bool isDebugLogMaskSet(logmask_t flag)
 {
   return _logforcemask & flag;
 }
 
-void _LOG(int16_t from, int msg_level, char * message);
+void _LOG(logmask_t from, int msg_level, char * message);
 
 /*
 void logMessage(int msg_level, const char *format, ...)
@@ -518,7 +522,27 @@ void logMessage(int msg_level, const char *format, ...)
 }
 */
 
-void LOG(int16_t from, int msg_level, const char * format, ...)
+#define LOG_OFFSET 20 // Number of chars for logging the type example "Info:    iAQ Touch: "
+
+void LOG_LARGEMSG(const logmask_t from, const int msg_level, const char *message, const int message_length)
+{
+  // message_length is not used at present.  But maybe in th future we can add a bufer using malloc and realloc that's 
+  // reused between calls and simply use realloc if it's not large enough.
+  // Need to be careful, as it would also need to be thread safe.
+
+  if ( msg_level > getLogLevel(from))
+    return;
+
+  char buffer[LARGELOGBUFFER + LOG_OFFSET + 1];
+  
+  memset(buffer, ' ', LOG_OFFSET * sizeof(char)); 
+
+  strncpy(&buffer[LOG_OFFSET], message, LARGELOGBUFFER);
+
+  _LOG(from, msg_level, buffer);
+}
+
+void LOG(const logmask_t from, const int msg_level, const char * format, ...)
 {
   //printf("msg_level=%d _log_level=%d mask=%d\n",msg_level,_log_level,(_logforcemask & from));
   /*
@@ -532,11 +556,13 @@ void LOG(int16_t from, int msg_level, const char * format, ...)
   char buffer[LOGBUFFER];
   va_list args;
   va_start(args, format);
-  strncpy(buffer, "         ", 20);
+  //strncpy(buffer, "         ", 20);
+  memset(buffer, ' ', LOG_OFFSET * sizeof(char)); 
+  
   //vsprintf (&buffer[20], format, args);
-  int size = vsnprintf (&buffer[20], LOGBUFFER-30, format, args);
+  int size = vsnprintf (&buffer[LOG_OFFSET], LOGBUFFER-LOG_OFFSET-10, format, args);
   va_end(args);
-  if (size >= LOGBUFFER-30 ) {
+  if (size >= LOGBUFFER-LOG_OFFSET-10 ) {
     sprintf(&buffer[LOGBUFFER-11], ".........\n");
   }
 
@@ -544,20 +570,44 @@ void LOG(int16_t from, int msg_level, const char * format, ...)
 }
 
 
-void _LOG(int16_t from, int msg_level,  char *message)
+void _LOG(logmask_t from, int msg_level,  char *message)
 {
+  /*
+   message should have the first LOG_OFFSET (20) characters as spaces, this allows us to add Type & From to message.
+   example "                    The Message ..... "
+   we add  "Warning: NetService:The Message ..... "
+   Type is characters  0 to  8
+   From is characters  9 to 20
+
+  */
+
   int i;
 
   // Make all printable chars
+  /*
   for(i = 8; i+8 < strlen(&message[8]) && i < LOGBUFFER; i++) {
     if ( (message[i] < 32 || message[i] > 125) && message[i] != 10 ) {
       //printf ("Change %c to %c in %s\n",message[i], ' ', message);
       message[i] = ' ';
     }
+  }*/
+
+  int msglen = strlen(&message[LOG_OFFSET]);
+
+  // Fill first 20 chars and any non printable chars with a space.
+  for(i = 0; i < LOGBUFFER && i < (msglen+LOG_OFFSET+1) ; i++) {
+    if (i > LOG_OFFSET && message[i] == '\0')
+      break;
+
+    if ( message[i] != 10 && message[i] != 13 && ( i < LOG_OFFSET || message[i] < 32 || message[i] > 125) ) {
+      //printf ("Change %c to %c in %s\n",message[i], ' ', message);
+      message[i] = ' ';
+    }
   }
-  // Add return to end of string if not already their.
-  // NSF need to come back to this, doesn;t always work
-  if (message[i] != '\n') {
+
+  // Add line feed to end of string if not already there.
+  // i-1 == 10 and i == 0
+  if (message[i] != '\0' || message[i-1] != '\n') {
     message[i] = '\n';
     message[i+1] = '\0';
   }

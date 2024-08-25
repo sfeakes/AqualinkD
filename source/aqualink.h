@@ -89,7 +89,7 @@ typedef struct aqualinkkey
 #define VS_PUMP        (1 << 0)
 #define PROGRAM_LIGHT  (1 << 1)
 #define TIMER_ACTIVE   (1 << 2) 
-//#define DIMMER_LIGHT   (1 << 3) // NOT USED YET 
+//#define DIMMER_LIGHT   (1 << 3) // NOT USED (Use PROGRAM_LIGHT or type LC_DIMMER) 
 
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
@@ -212,6 +212,7 @@ typedef struct clightd
 {
   clight_type lightType;
   aqkey *button;
+  int currentValue;
 } clight_detail;
 
 
@@ -282,6 +283,9 @@ struct aqualinkdata
 
   #ifdef AQ_MANAGER
   volatile bool run_slogger;
+   int slogger_packets;
+   bool slogger_debug;
+   char slogger_ids[20];
   #endif
 
   #ifdef AQ_RS16

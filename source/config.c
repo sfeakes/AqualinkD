@@ -132,7 +132,7 @@ void init_parameters (struct aqconfig * parms)
   parms->force_frzprotect_setpoints = false;
   parms->force_chem_feeder = false;
   //parms->swg_pool_and_spa = false;
-  parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
+  //parms->swg_zero_ignore = DEFAULT_SWG_ZERO_IGNORE_COUNT;
   parms->display_warnings_web = false;
 
   parms->log_protocol_packets = false; // Read & Write as packets write to file
@@ -243,6 +243,8 @@ char *generate_mqtt_id(char *buf, int len) {
   int i;
   strncpy(buf, basename(__progname), len);
   i = strlen(buf);
+
+  if ( i > 9) { i=9; } // cut down to 9 characters (aqualinkd)
 
   if (i < len) {
     buf[i++] = '_';
@@ -603,9 +605,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
     _aqconfig_.log_protocol_packets = text2bool(value);
     rtn=true;
+    /*
   } else if (strncasecmp (param, "swg_zero_ignore_count", 21) == 0) {
     _aqconfig_.swg_zero_ignore = strtoul(value, NULL, 10);
     rtn=true;
+    */
   } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
     _aqconfig_.display_warnings_web = text2bool(value);
     rtn=true;

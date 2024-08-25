@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 800
 
-#define VERSION "serial_logger V2.4"
+#define VERSION "serial_logger V2.5"
 
 /*
 typedef enum used {
@@ -99,14 +99,46 @@ void broadcast_log(char *msg){
 }
 void intHandler(int dummy) {
   _keepRunning = false;
-  LOG(RSSD_LOG, LOG_NOTICE, "Stopping!\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "Stopping!\n");
   if (_playback_file)  // If we are reading file, loop is irevelent
     exit(0);
 }
 #else
-int serial_logger (int rs_fd, char *port_name, int logLevel) {
-  return _serial_logger(rs_fd,  port_name, PACKET_MAX, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false, false, false);
+int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets, char *slogger_ids) 
+{
+  int packets=PACKET_MAX;
+  unsigned int n;
+  int i=0;
+
+  // Reset some globals so we run.
+  _filters=0;
+  _pfilters=0;
+  _keepRunning = true;
+
+  if (slogger_packets > 0)
+     packets = slogger_packets;
+
+  int id_len = strlen(slogger_ids)-4;
+
+  //LOG(SLOG_LOG, LOG_NOTICE, "Jandy filter len=%d\n",id_len);
+  for (i=0; i <= id_len; i=i+5) {
+    //LOG(SLOG_LOG, LOG_NOTICE, "Jandy filter loop i=%d\n",i);
+    if (slogger_ids[i] == '0' && slogger_ids[i+1] == 'x') {
+      //LOG(SLOG_LOG, LOG_NOTICE, "Jandy filter loop %d %d\n",slogger_ids[i],slogger_ids[i+1]);
+      sscanf(&slogger_ids[i], "0x%2x", &n);
+      if (n != 0) {
+        _filter[_filters] = n;
+        _filters++;
+        LOG(SLOG_LOG, LOG_NOTICE, "Add Jandy filter %i 0x%02hhx\n",_filters, _filter[_filters-1]);
+      }
+    }
+  }
+
+  LOG(SLOG_LOG, LOG_NOTICE, "Running serial logger with %d pakets, loglevel %s\n",packets,elevel2text(logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE) );
+  
+  return _serial_logger(rs_fd,  port_name, packets, (logLevel>=LOG_NOTICE?logLevel:LOG_NOTICE), true, false, false, false, false);
 }
+
 #endif
 
 #define MASTER " <-- Master control panel"
@@ -123,6 +155,10 @@ int serial_logger (int rs_fd, char *port_name, int logLevel) {
 #define CHEM " <-- Chemlink"
 #define JXI_HEATER " <-- LXi / LRZ Heater"
 
+#define IAQLNK2 " <-- iAqualink 2.0"
+#define HEAT_PUMP " <-- Heat Pump"
+#define REM_PWR_CENT " <-- Remote Power Center"
+
 #define UNKNOWN " <-- Unknown Device"
 
 #define P_VSP " <-- Pentair VSP"
@@ -136,31 +172,52 @@ int serial_logger (int rs_fd, char *port_name, int logLevel) {
 const char *getDevice(unsigned char ID) {
   if (ID >= 0x00 && ID <= 0x03)
     return MASTER;
+
   if (ID >= 0x08 && ID <= 0x0B)
     return KEYPAD;
+
   if (ID >= 0x50 && ID <= 0x53)
     return SWG;
+
   if (ID >= 0x20 && ID <= 0x23)
     return SPA_R;
+
   if (ID >= 0x30 && ID <= 0x33)
     return AQUA;
+
   if (ID >= 0x38 && ID <= 0x3B)
     return LX_HEATER;
+
   if (ID >= 0x40 && ID <= 0x43)
     return ONE_T;
+
   if (ID >= 0x48 && ID <= 0x4B)
     return RS_SERL;
+
   if (ID >= 0x58 && ID <= 0x5B)
     return PC_DOCK;
+
   if (ID >= 0x60 && ID <= 0x63)
     return PDA;
+
   if (ID >= 0x68 && ID <= 0x6B)
     return JXI_HEATER;
-  //if (ID >= 0x70 && ID <= 0x73)
+
+  if (ID >= 0x70 && ID <= 0x73)
+    return HEAT_PUMP;
+
   if (ID >= 0x78 && ID <= 0x7B)
     return EPUMP;
+
   if (ID >= 0x80 && ID <= 0x83)
     return CHEM;
+
+  if (ID >= 0xA0 && ID <= 0xA3)
+    return IAQLNK2;
+
+  if (ID >= 0x28 && ID <= 0x2B)
+    return REM_PWR_CENT;
+
   //if (ID == 0x08)
   //  return KEYPAD;
 
@@ -310,6 +367,45 @@ void getPanelInfo(int rs_fd, unsigned char *packet_buffer, int packet_length)
 
 }
 
+bool filterMatch(unsigned char ID, unsigned char *packet_buffer, bool failNoFilters) {
+  int i;
+
+  //printf("Check 0x%02hhx & 0x%02hhx - ",ID,packet_buffer[PKT_DEST]);
+
+  if (_filters != 0 || _pfilters != 0)
+  {
+    bool dest_match = false;
+    bool src_match = false;
+    bool pent_match = false;
+
+    if (_filters != 0) {
+      for (i=0; i < _filters; i++) {
+        if ( packet_buffer[PKT_DEST] == _filter[i])
+          dest_match = true;
+        if ( ID == _filter[i] && packet_buffer[PKT_DEST] == 0x00 )
+          src_match = true;
+      }
+    }
+    if (_pfilters != 0) {
+      for (i=0; i < _pfilters; i++) {
+        if ( packet_buffer[PEN_PKT_FROM] == _pfilter[i] ||
+             packet_buffer[PEN_PKT_DEST] == _pfilter[i] )
+          pent_match = true;
+      }
+    }
+
+    if(dest_match == false && src_match == false && pent_match == false) {
+      //printf("don't print\n");
+      return false;
+    }
+  } else if (failNoFilters) {
+    return false;
+  }
+
+  //printf("print\n");
+  return true;
+}
+
 #ifdef SERIAL_LOGGER
 
 void printHex(char *pk, int length)
@@ -332,6 +428,10 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     return;
   }
 
+  if ( filterMatch(ID, packet_buffer, false) == false ) {
+    return;
+  }
+/*
   // if filter is set and not match, then return without printing.
   if (_filters != 0 || _pfilters != 0)
   {
@@ -358,7 +458,7 @@ void printPacket(unsigned char ID, unsigned char *packet_buffer, int packet_leng
     if(dest_match == false && src_match == false && pent_match == false)
       return;
   }
-
+*/
   if (message != NULL)
     printf("%s",message);
 
@@ -491,7 +591,7 @@ int main(int argc, char *argv[]) {
   if (_playback_file) {
     rs_fd = open(argv[1], O_RDONLY | O_NOCTTY | O_NONBLOCK | O_NDELAY);
     if (rs_fd < 0)  {
-      LOG(RSSD_LOG, LOG_ERR, "Unable to open file: %s\n", argv[1]);
+      LOG(SLOG_LOG, LOG_ERR, "Unable to open file: %s\n", argv[1]);
       displayLastSystemError(argv[1]);
       return -1;
     }
@@ -502,7 +602,7 @@ int main(int argc, char *argv[]) {
       rs_fd = init_blocking_serial_port(argv[1]);
 
     if (rs_fd < 0)  {
-      LOG(RSSD_LOG, LOG_ERR, "Unable to open port: %s\n", argv[1]);
+      LOG(SLOG_LOG, LOG_ERR, "Unable to open port: %s\n", argv[1]);
       displayLastSystemError(argv[1]);
       return -1;
     }
@@ -512,14 +612,14 @@ int main(int argc, char *argv[]) {
   signal(SIGTERM, intHandler);
 
   if (!errorMonitor) {
-    LOG(RSSD_LOG, LOG_NOTICE, "Logging serial information!\n");
+    LOG(SLOG_LOG, LOG_NOTICE, "Logging serial information!\n");
   } else {
-    LOG(RSSD_LOG, LOG_NOTICE, "Logging serial errors!\n");
+    LOG(SLOG_LOG, LOG_NOTICE, "Logging serial errors!\n");
   }
   if (_aqconfig_.log_protocol_packets)
-     LOG(RSSD_LOG, LOG_NOTICE, "Logging packets to %s!\n",RS485LOGFILE);
+     LOG(SLOG_LOG, LOG_NOTICE, "Logging packets to %s!\n",RS485LOGFILE);
   if (_aqconfig_.log_raw_bytes)
-     LOG(RSSD_LOG, LOG_NOTICE, "Logging raw bytes to %s!\n",RS485BYTELOGFILE);
+     LOG(SLOG_LOG, LOG_NOTICE, "Logging raw bytes to %s!\n",RS485BYTELOGFILE);
 
   if (logLevel < LOG_DEBUG && errorMonitor==false )
     printf("Please wait.");
@@ -568,7 +668,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
   while (_keepRunning == true) {
     if (rs_fd < 0) {
-      LOG(RSSD_LOG, LOG_ERR, "ERROR, serial port disconnect\n");
+      LOG(SLOG_LOG, LOG_ERR, "ERROR, serial port disconnect\n");
     }
 
     packet_length = get_packet(rs_fd, packet_buffer);
@@ -582,27 +682,27 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
     if (packet_length == AQSERR_READ) {
       // Unrecoverable read error. Force an attempt to reconnect.
-      LOG(RSSD_LOG, LOG_ERR, "ERROR, on serial port! Please check %s\n",port_name);
+      LOG(SLOG_LOG, LOG_ERR, "ERROR, on serial port! Please check %s\n",port_name);
       _keepRunning = false;
       returnError = true;
     } else if (packet_length == AQSERR_TIMEOUT) {
       // Unrecoverable read error. Force an attempt to reconnect.
-      LOG(RSSD_LOG, LOG_ERR, "ERROR, Timeout on serial port, nothing read! Please check %s\n",port_name);
+      LOG(SLOG_LOG, LOG_ERR, "ERROR, Timeout on serial port, nothing read! Please check %s\n",port_name);
       _keepRunning = false;
       returnError = true;
     } else if (packet_length < 0) {
       // Error condition
       if (errorMonitor && last_packet_length > 0) { // Error packet wwould have already been printed.
-        char buff[900];
-        beautifyPacket(buff, last_packet_buffer, last_packet_length, true);
-        LOG(RSSD_LOG, LOG_NOTICE, "Previous packet (before error)\n");
-        LOG(RSSD_LOG, LOG_NOTICE, "%s------------------------------\n",buff);
-        //LOG(RSSD_LOG, LOG_NOTICE, "\n");
+        char buff[1024];
+        beautifyPacket(buff, 1024, last_packet_buffer, last_packet_length, true);
+        LOG(SLOG_LOG, LOG_NOTICE, "Previous packet (before error)\n");
+        LOG(SLOG_LOG, LOG_NOTICE, "%s------------------------------\n",buff);
+        //LOG(SLOG_LOG, LOG_NOTICE, "\n");
       }
     } else if (packet_length == 0) {
       // Nothing read
       if (++blankReads > (rsSerialSpeedTest?100000000:1000) ) {
-        LOG(RSSD_LOG, LOG_ERR, "ERROR, too many blank reads! Please check %s\n",port_name);
+        LOG(SLOG_LOG, LOG_ERR, "ERROR, too many blank reads! Please check %s\n",port_name);
         _keepRunning = false;
         returnError = true;
       }
@@ -610,10 +710,14 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
         delay(1);
     } else if (packet_length > 0) {
         blankReads = 0;
-        //LOG(RSSD_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
+        //LOG(SLOG_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
 #ifdef SERIAL_LOGGER
         if (logLevel > LOG_NOTICE)
           printPacket(lastID, packet_buffer, packet_length, timePackets?extra_message:NULL);
+#else
+        if (logLevel >= LOG_DEBUG || filterMatch(lastID, packet_buffer, true)) {
+           debuglogPacket(SLOG_LOG, packet_buffer, packet_length, true, true);
+        }
 #endif
         if (getProtocolType(packet_buffer) == PENTAIR) {
           found = false;
@@ -646,7 +750,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
          }
          
          if (packet_buffer[PKT_DEST] == DEV_MASTER /*&& packet_buffer[PKT_CMD] == CMD_ACK*/) {
-          //LOG(RSSD_LOG, LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
+          //LOG(SLOG_LOG, LOG_NOTICE, "ID is in use 0x%02hhx %x\n", lastID, lastID);
           for (i = 0; i <= sindex; i++) {
             if (slog[i].ID == lastID) {
               slog[i].inuse = true;
@@ -669,7 +773,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
         if (packet_length > 0 && packet_buffer[PKT_DEST] != 0x00)  {
           // Only test for packets from panel, when you test to panel you are timing reply.
-          LOG(RSSD_LOG, LOG_ERR, "SERIOUS RS485 ERROR, Slow serial port read detected, (check RS485 adapteer / os performance / USB serial speed\n");
+          LOG(SLOG_LOG, LOG_ERR, "SERIOUS RS485 ERROR, Slow serial port read detected, (check RS485 adapteer / os performance / USB serial speed\n");
         }
       }
 
@@ -677,7 +781,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
 #ifndef SERIAL_LOGGER
     if(received_packets%100==0) {
-      LOG(RSSD_LOG, LOG_NOTICE, "Read %d of %d packets\n", received_packets, logPackets);
+      LOG(SLOG_LOG, LOG_NOTICE, "Read %d of %d packets\n", received_packets, logPackets);
     }
 #endif
 
@@ -711,42 +815,42 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
   sl_timespec_subtract(&elapsed, &end_time, &start_time);
 
-  LOG(RSSD_LOG, LOG_DEBUG, "\n\n");
+  LOG(SLOG_LOG, LOG_DEBUG, "\n\n");
   if (logLevel < LOG_DEBUG)
     printf("\n\n");
 
   if (sindex >= SLOG_MAX)
-    LOG(RSSD_LOG, LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
+    LOG(SLOG_LOG, LOG_ERR, "Ran out of storage, some ID's were not captured, please increase SLOG_MAX and recompile\n");
 
   if (elapsed.tv_sec > 0) {
-    LOG(RSSD_LOG, LOG_NOTICE, "RS485 interface received %d packets in %d seconds (~%.2f Msg/Sec)\n", received_packets, elapsed.tv_sec, (received_packets / (float)elapsed.tv_sec) );
+    LOG(SLOG_LOG, LOG_NOTICE, "RS485 interface received %d packets in %d seconds (~%.2f Msg/Sec)\n", received_packets, elapsed.tv_sec, (received_packets / (float)elapsed.tv_sec) );
   }
 
-  LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Model   : %s\n", _panelType);
-  LOG(RSSD_LOG, LOG_NOTICE, "Jandy Control Panel Version : %s\n", _panelRev);
+  LOG(SLOG_LOG, LOG_NOTICE, "Jandy Control Panel Model   : %s\n", _panelType);
+  LOG(SLOG_LOG, LOG_NOTICE, "Jandy Control Panel Version : %s\n", _panelRev);
   
 
-  LOG(RSSD_LOG, LOG_NOTICE, "Jandy ID's found\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "Jandy ID's found\n");
   for (i = 0; i < sindex; i++) {
-    //LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
+    //LOG(SLOG_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use" : "not used",
     //           (slog[i].inuse == false && canUse(slog[i].ID) == true)? " <-- can use for Aqualinkd" : "");
     //if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true) {
     if (logLevel >= LOG_DEBUG || slog[i].inuse == true || canUse(slog[i].ID) == true || printAllIDs == true) {
-      LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use  " : "not used",
+      LOG(SLOG_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use  " : "not used",
                (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
     }
   }
 
   if (pent_sindex > 0) {
-    LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
-    LOG(RSSD_LOG, LOG_NOTICE, "Pentair ID's found\n");
+    LOG(SLOG_LOG, LOG_NOTICE, "\n\n");
+    LOG(SLOG_LOG, LOG_NOTICE, "Pentair ID's found\n");
   }
   for (i=0; i < pent_sindex; i++) {
-    LOG(RSSD_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use  " : "not used",
+    LOG(SLOG_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use  " : "not used",
                (pent_slog[i].inuse == false)?canUseExtended(pent_slog[i].ID):getPentairDevice(pent_slog[i].ID));
   }
 
-  LOG(RSSD_LOG, LOG_NOTICE, "\n\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "\n\n");
 
 
   char mainID = 0x00;
@@ -778,21 +882,21 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     }
     
   }
-  LOG(RSSD_LOG, LOG_NOTICE, "Suggested aqualinkd.conf values\n");
-  LOG(RSSD_LOG, LOG_NOTICE, "-------------------------\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "Suggested aqualinkd.conf values\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "-------------------------\n");
   if (strlen (_panelType) > 0)
-    LOG(RSSD_LOG, LOG_NOTICE, "panel_type = %s\n",_panelType);
+    LOG(SLOG_LOG, LOG_NOTICE, "panel_type = %s\n",_panelType);
 
   if (mainID != 0x00)
-    LOG(RSSD_LOG, LOG_NOTICE, "device_id = 0x%02hhx\n",mainID);
+    LOG(SLOG_LOG, LOG_NOTICE, "device_id = 0x%02hhx\n",mainID);
 
   if (rssaID != 0x00)
-    LOG(RSSD_LOG, LOG_NOTICE, "rssa_device_id = 0x%02hhx\n",rssaID);
+    LOG(SLOG_LOG, LOG_NOTICE, "rssa_device_id = 0x%02hhx\n",rssaID);
 
   if (extID != 0x00)
-    LOG(RSSD_LOG, LOG_NOTICE, "extended_device_id = 0x%02hhx\n",extID);
+    LOG(SLOG_LOG, LOG_NOTICE, "extended_device_id = 0x%02hhx\n",extID);
 
-  LOG(RSSD_LOG, LOG_NOTICE, "-------------------------\n");
+  LOG(SLOG_LOG, LOG_NOTICE, "-------------------------\n");
 
   return 0;
 }

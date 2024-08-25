@@ -536,6 +536,9 @@ void *set_allbutton_light_colormode( void *ptr )
 
   if (i == LIGHT_COLOR_OPTIONS) {
     LOG(ALLB_LOG, LOG_ERR, "Light Programming didn't receive color light mode message for '%s'\n",use_current_mode?"light program":mode_name);
+  } else {
+    // Set before we are called.
+    //updateButtonLightProgram(aq_data, val, btn);
   }
 
   cleanAndTerminateThread(threadCtrl);
@@ -623,6 +626,9 @@ void *set_allbutton_light_programmode( void *ptr )
     waitfor_queue2empty();
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);
+
+  // set before we are called
+  //updateButtonLightProgram(aq_data, val, btn);
 
   cleanAndTerminateThread(threadCtrl);
   

@@ -53,6 +53,32 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEC_CHEM_MIN    128   // 0x80
 #define JANDY_DEC_CHEM_MAX    131   // 0x83
 
+/*
+//===== Device ID's =====//
+//=========================================================================//
+DEV_MASTER_MASK     =     0x00; // MASTER(S???0               00-03  0b0 0000 0XX //
+DEV_CTL_MASK        =     0x08; // HOME CONTROLLER (RS-8?)    08-0b  0b0 0001 0XX //
+//                        0x10; // XXXXX DEVICE               10-13  0b0 0010 0XX //
+//                        0x18; // XXXXX DEVICE               18-1b  0b0 0011 0XX //
+DEV_SPA_MASK        =     0x20; // SPA DEVICE                 20-23  0b0 0100 0XX //
+DEV_RPC_MASK        =     0x28; // REMOTE POWER CENTER DEVICE 28-2b  0b0 0101 0XX //
+DEV_AQUALINK_MASK   =     0x30; // AQUALINK DEVICE            30-33  0b0 0110 0XX //
+DEV_LX_HTR_MASK     =     0x38; // LX HEATER                  38-3b  0b0 0111 0XX //
+DEV_ONETOUCH_MASK   =     0x40; // XXXXX ONE TOUCH DEVICE     40-43  0b0 1000 0XX //
+//                        0x48; // XXXXX DEVICE               48-4b  0b0 1001 0XX //
+DEV_AQUARITE_MASK   =     0x50; // AQUARITE DEVICE            50-53  0b0 1010 0XX //
+DEV_PCDOCK_MASK     =     0x58; // PCDOCK DEVICE              58-5b  0b0 1011 0XX //
+DEV_PDA_JDA_MASK    =     0x60; // AQUAPALM DEVICE            60-63  0b0 1100 0XX //
+DEV_LXI_LRZE_MASK   =     0x68; // LXi/LZRE DEVICE            68-6b  0b0 1101 0XX //
+DEV_HEATPUMP_MASK   =     0x70; // HEAT PUMP DEVICE           70-73  0b0 1110 0XX //
+JANDY_EPUMP_MASK    =     0x78; // EPUMP DEVICE               78-7b  0b0 1111 0XX //
+DEV_CHEMLINK_MASK   =     0x80; // CHEMLINK DEVICE            80-83  0b1 0000 0XX //
+Heater                    0x88; // XXXXX DEVICE               88-8b  0b1 0001 0XX //
+//                        0x90; // XXXXX DEVICE               90-93  0b1 0010 0XX //
+//                        0x98; // XXXXX DEVICE               98-9b  0b1 0011 0XX //
+DEV_AQUALINK_2_MASK =     0xA0; // AQUALINK 2                 A0-A3  0b1 0100 0XX //
+DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
+*/
 
 // PACKET DEFINES Jandy
 #define NUL  0x00
@@ -94,11 +120,17 @@ const char *getJandyDeviceName(emulation_type etype);
 
 #define AQ_MINPKTLEN    5
 //#define AQ_MAXPKTLEN   64
-#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
+//#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
+#define AQ_MAXPKTLEN   256  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
 #define AQ_PSTLEN       5
 #define AQ_MSGLEN      16
 #define AQ_MSGLONGLEN 128
 #define AQ_TADLEN      13
+
+// For printing warning & debug messages for packets. 
+// The below are related to AQ_MAXPKTLEN
+#define AQ_MAXPKTLEN_WARNING   128 // Print warning message if over this
+//#define AQ_PACKET_PRINT_BUFFER 1400 // Must be at least AQ_MAXPKTLEN * 5 + 100
 
 /* COMMANDS */
 #define CMD_PROBE       0x00

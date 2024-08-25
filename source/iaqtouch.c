@@ -417,6 +417,21 @@ void iaqt_pump_update(struct aqualinkdata *aq_data, int updated) {
   }
 }
 
+
+/* Some newer revisions support pump by name and not number.
+   Seen this is rev Yg   
+
+Info:    iAQ Touch: Page: Status (diff ID) | 0x2a\
+Info:    iAQ Touch: Status page 00| Filter Pump\
+Info:    iAQ Touch: Status page 01| Spa Light\
+Info:    iAQ Touch: Status page 02| Pool Light\
+Info:    iAQ Touch: Status page 03| Pump 2248\     <--- This is the pump name.
+Info:    iAQ Touch: Status page 04|     RPM: 1350\
+Info:    iAQ Touch: Status page 05|   Watts: 176\
+Info:    iAQ Touch: Status page 06| #1 AquaPure\
+
+*/
+
 void passDeviceStatusPage(struct aqualinkdata *aq_data)
 {
   int i;
@@ -724,8 +739,8 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   
   if ( packet[3] != CMD_IAQ_POLL && getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
   //if ( getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
-    char buff[1000];
-    beautifyPacket(buff, packet, length, false);
+    char buff[1024];
+    beautifyPacket(buff, 1024, packet, length, false);
     LOG(IAQT_LOG,LOG_DEBUG, "Received message : %s", buff);
   }
   

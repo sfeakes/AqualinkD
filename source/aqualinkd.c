@@ -527,7 +527,6 @@ int startup(char *self, char *cfgFile)
     _aqualink_data.total_buttons = 12;
   */
 
-
   if (_cmdln_loglevel != -1)
     _aqconfig_.log_level = _cmdln_loglevel;
 
@@ -635,10 +634,10 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
   LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
   LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
-
+/*
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
-
+*/
   if (_aqconfig_.ftdi_low_latency == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial FTDI low latency  = %s\n", bool2text(_aqconfig_.ftdi_low_latency));
 
@@ -872,6 +871,10 @@ void main_loop()
     _aqualink_data.pumps[i].status = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].pStatus = PS_OFF;
     _aqualink_data.pumps[i].pressureCurve = TEMP_UNKNOWN;
+  }
+
+  for (i=0; i < MAX_LIGHTS; i++) {
+     _aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
   }
 
   if (_aqconfig_.force_swg == true) {
@@ -1137,8 +1140,15 @@ void main_loop()
     if (_aqualink_data.run_slogger) {
        LOG(AQUA_LOG,LOG_WARNING, "Starting serial_logger, this will take some time!\n");
        broadcast_aqualinkstate_error(CONNECTION_RUNNING_SLOG);
-       serial_logger(rs_fd, _aqconfig_.serial_port, getSystemLogLevel());
+
+       if (_aqualink_data.slogger_debug)
+         addDebugLogMask(SLOG_LOG);
+
+       serial_logger(rs_fd, _aqconfig_.serial_port, _aqualink_data.slogger_debug?LOG_DEBUG:getSystemLogLevel(), _aqualink_data.slogger_packets, _aqualink_data.slogger_ids);
        _aqualink_data.run_slogger = false;
+
+       if (_aqualink_data.slogger_debug)
+         removeDebugLogMask(SLOG_LOG);
     }
 #endif
 

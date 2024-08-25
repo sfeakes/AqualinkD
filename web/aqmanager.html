@@ -50,7 +50,7 @@
             justify-content: center;
             /*border: 1px solid red;*/
             row-gap: 20px;
-
+            /*overflow-y: scroll; this only works if we know the height, we can caculate but not important at moment */
         }
 
         /*
@@ -698,6 +698,20 @@
                 case "seriallog":
                     cmd.uri = "seriallogger"
                     break;
+                case "seriallogWoptions":
+                    var ids = document.getElementById("slog_ids").value;
+                    if ( ids.length == 0 )
+                      ids='--';
+
+                    cmd.uri = "seriallogger/"+ids+"/"+document.getElementById("slog_debug").checked;
+                    cmd.value = document.getElementById("slog_packets").value
+                    console.log("Command = "+cmd);
+                    //console.log("Packets=" + document.getElementById("slog_packets").value );
+                    //console.log("IDs=" + document.getElementById("slog_ids").value );
+                    //console.log("ListQueriedID=" + document.getElementById("slog_ids_queried").checked );
+                    //console.log("debug=" + document.getElementById("slog_debug").checked );
+                    //return; // REMOVE
+                    break;
                 default:
                     alert("Unknown button");
                     return;
@@ -738,6 +752,10 @@
                         <td colspan="2" align="center"><label id="statusmsg" class="statusmsg">status</label></td>
                     </tr>
                     <tr>
+                        <td colspan="2" align="center"><input id="restart" type="button" onclick="send(this);" value="Restart AqualinkD"></td>
+                    </tr>
+                    <!--
+                    <tr>
                         <td align="center">
                             <input id="restart" type="button" onclick="send(this);" value="Restart AqualinkD">
                         </td>
@@ -745,6 +763,7 @@
                             <input id="seriallog" type="button" onclick="send(this);" value="Run Serial Logger">
                         </td>
                     </tr>
+                    -->
                 </table>
                 <button class="collapsible" id="systembutton">System Information</button>
                 <div class="content" id="system">
@@ -773,7 +792,7 @@
                     <!-- Will be populated on load -->
                 </div>
                 <button class="collapsible">Log File</button>
-                <div class="content" id="loglevels">
+                <div class="content" id="logfile">
                     <!--
                     <label class="toggle logtoggle"><input class="toggle-checkbox" type="checkbox" id="logfile"
                             onclick="setlogfile(this);">
@@ -796,6 +815,29 @@
                 <button class="collapsible">Debug Masks</button>
                 <div class="debugmasks content" id="debugmasks">
                     <!-- Will be populated on load -->
+                </div>
+                <button class="collapsible">Serial Logger</button>
+                <div class="content" id="seriallogger">
+                    <table border='0'>
+                        <tr>
+                          <td colspan="2" align="center"><input id="seriallogWoptions" type="button" onclick="send(this);" value="Run Serial Logger"></td>
+                        </tr>
+                        <tr>
+                          <td>#Packets</td>
+                          <td><input id="slog_packets" type="text" value="800" size="5"></input></td>
+                        </tr>
+                        <tr>
+                          <td>ID's <font size="-2">(Eg 0x08 0x10)</font></td>
+                          <td><input id="slog_ids" type="text" value="" size="15"></input></td>
+                        </tr>
+                        <tr>
+                          <td>Debug</td>
+                          <td><input id="slog_debug" type="checkbox"></input></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" align="center">AqualinkD will be disabled while running</td>
+                        </tr>
+                    </table>
                 </div>
                 <button class="collapsible">Config</button>
                 <div class="content" id="config">

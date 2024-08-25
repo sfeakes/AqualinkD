@@ -329,7 +329,7 @@ bool check_jandy_checksum(unsigned char* packet, int length)
     LOG(RSSD_LOG,LOG_INFO, "Ignoring bad checksum, seems to be bug in Jandy protocol\n");
     if (getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
       static char buf[1000];
-      beautifyPacket(buf,packet,length,true);
+      beautifyPacket(buf,1000, packet,length,true);
       LOG(RSSD_LOG,LOG_DEBUG, "Packetin question %s\n",buf);
     }
     return true;
@@ -1128,7 +1128,7 @@ int get_packet(int fd, unsigned char* packet)
     // Break out of the loop if we exceed maximum packet
     // length.
     if (index >= AQ_MAXPKTLEN) {
-      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large for buffer, stopped reading\n");
       logPacketError(packet, index);
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return AQSERR_2LARGE;
@@ -1136,9 +1136,12 @@ int get_packet(int fd, unsigned char* packet)
     }
   }
   
-  // Clean out rest of buffer, make sure their is nothing else
-/*  Doesn't work for shit due to probe message speed, need to come back and re-think
-*/
+
+  // Report any unusual size packets.
+  if (index >= AQ_MAXPKTLEN_WARNING) {
+    LOG(RSSD_LOG,LOG_WARNING, "Serial packet seems too large at length %d\n", index);
+    logPacketError(packet, index);
+  }
 
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
@@ -1156,6 +1159,8 @@ int get_packet(int fd, unsigned char* packet)
       return AQSERR_CHKSUM;
     }
   }
+
+ 
 /* 
   if (generate_checksum(packet, index) != packet[index-3]){
     LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
