@@ -90,6 +90,7 @@
       // Reload background image every X seconds.(useful if camera snapshot)
       // 0 means only load once when page loads.
       //var background_reload = 10;
+      //var background_reload = 0;
 
       // By default all Variable Speed Pumps will show RPM.
       // this will show GPM on VSP's that you can only set GPM (ie Jandy VF pumps)

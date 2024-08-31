@@ -718,6 +718,15 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
       }
       rtn=true;
+    } else if (strncasecmp(param + 9, "_pumpName", 9) == 0) { //button_01_pumpIndex=1
+      pump_detail *pump = getpump(aqdata, num);
+      if (pump != NULL) {
+        //pump->pumpName = cleanalloc(value);
+        strncpy(pump->pumpName ,cleanwhitespace(value), PUMP_NAME_LENGTH-1);
+      } else {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+      }
+      rtn=true;
     }
       /*
     } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
@@ -771,6 +780,9 @@ pump_detail *getpump(struct aqualinkdata *aqdata, int button)
     aqdata->pumps[aqdata->num_pumps].watts = TEMP_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].gpm = TEMP_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].pStatus = PS_OFF;
+    aqdata->pumps[aqdata->num_pumps].pumpIndex = 0;
+    //pumpType
+    aqdata->pumps[aqdata->num_pumps].pumpName[0] = '\0';
     aqdata->num_pumps++;
     return &aqdata->pumps[aqdata->num_pumps-1];
   }

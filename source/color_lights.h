@@ -29,7 +29,16 @@ int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
 //char *_color_light_options_[LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS][LIGHT_COLOR_NAME];
 
 #endif //COLOR_LIGHTS_H_
+/*
 
+Rev T.2 has the below
+Jandy colors    <- Same
+Jandy LED       <- Same
+SAm/Sal         <- Same
+IntelliBrite    <- Same
+Hayw Univ Col   <- Color Logic
+
+*/
 /*
 Color Name      Jandy Colors    Jandy LED       SAm/SAL         Color Logic     IntelliBrite      dimmer
 ---------------------------------------------------------------------------------------------------------

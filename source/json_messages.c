@@ -523,11 +523,12 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += logmaskjsonobject(RSSA_LOG, buffer+length);
   length += logmaskjsonobject(DJAN_LOG, buffer+length);
   length += logmaskjsonobject(DPEN_LOG, buffer+length);
-  length += logmaskjsonobject(RSSD_LOG, buffer+length);
   length += logmaskjsonobject(PROG_LOG, buffer+length);
   length += logmaskjsonobject(SCHD_LOG, buffer+length);
   length += logmaskjsonobject(RSTM_LOG, buffer+length);
   length += logmaskjsonobject(SIM_LOG, buffer+length);
+
+  length += logmaskjsonobject(RSSD_LOG, buffer+length); // Make sure the last one.
   // DBGT_LOG is a compile time only, so don;t include
   if (buffer[length-1] == ',')
     length--;

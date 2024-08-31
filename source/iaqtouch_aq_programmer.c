@@ -686,6 +686,7 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   char VSPstr[20];
   int structIndex;
   struct iaqt_page_button *button;
+  char *pumpName = NULL;
 
   //printf("**** program string '%s'\n",buf);
   
@@ -694,6 +695,7 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   //int pumpRPM = atoi(&buf[2]);
   for (structIndex=0; structIndex < aq_data->num_pumps; structIndex++) {
     if (aq_data->pumps[structIndex].pumpIndex == pumpIndex) {
+      pumpName = aq_data->pumps[structIndex].pumpName;
       if (aq_data->pumps[structIndex].pumpType == PT_UNKNOWN) {
         LOG(IAQT_LOG,LOG_ERR, "Can't set Pump RPM/GPM until type is known\n");
         cleanAndTerminateThread(threadCtrl);
@@ -707,8 +709,8 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   //int pumpRPM = atoi(&buf[2]);
   //int pumpIndex = 1;
 
-  // Just force to pump 1 for testing
-  sprintf(VSPstr, "VSP%1d Spd ADJ",pumpIndex);
+
+  
   // NSF Should probably check pumpRPM is not -1 here
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_PUMP_RPM);
@@ -718,10 +720,17 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   if ( goto_iaqt_page(IAQ_PAGE_DEVICES, aq_data) == false )
     goto f_end;
 
+  sprintf(VSPstr, "VSP%1d Spd ADJ",pumpIndex);
   button = iaqtFindButtonByLabel(VSPstr);
+  if (button == NULL && pumpName[0] != '\0') {
+    // Try by name
+    sprintf(VSPstr, "%s ADJ",pumpName);
+    button = iaqtFindButtonByLabel(VSPstr);
+  }
+
   if (button == NULL) {
-    LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find '%s' button on page setup\n", VSPstr);
-    goto f_end;
+      LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not Pump by index 'VSP%1d Spd ADJ' or by name '%s' button on page setup\n", pumpIndex, VSPstr);
+      goto f_end;
   }
 
   send_aqt_cmd(button->keycode);

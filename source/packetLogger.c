@@ -13,7 +13,7 @@ static FILE *_byteLogFile    = NULL;
 static bool _logfile_raw     = false;
 static bool _logfile_packets = false;
 //static bool _includePentair = false;
-static unsigned char _lastReadFrom = NUL;
+//static unsigned char _lastReadFrom = NUL;
 
 void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read);
 int _beautifyPacket(char *buff, int buff_size, unsigned char *packet_buffer, int packet_length, bool error, bool is_read);
@@ -95,6 +95,8 @@ void debuglogPacket(logmask_t from, unsigned char *packet_buffer, int packet_len
 
 void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read)
 {
+  static unsigned char lastPacketTo = NUL;
+
   // No point in continuing if loglevel is < debug_serial and not writing to file
   if ( force == false && 
        error == false && 
@@ -104,21 +106,19 @@ void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length,
     return;
   }
   
+
   if ( _aqconfig_.RSSD_LOG_filter != NUL ) {
-    if (is_read) {
-      _lastReadFrom = packet_buffer[PKT_DEST];
-      if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
-        return;
-      }
-    } else if (!is_read && _lastReadFrom != _aqconfig_.RSSD_LOG_filter) { // Must be write
+    // NOTE Whole IF statment is reversed
+    if ( ! ( (_aqconfig_.RSSD_LOG_filter == packet_buffer[PKT_DEST]) ||
+             ( packet_buffer[PKT_DEST] == 0x00 && lastPacketTo == _aqconfig_.RSSD_LOG_filter)) ) 
+    {
+      lastPacketTo = packet_buffer[PKT_DEST];
       return;
     }
-/*
-    if ( is_read && _aqconfig_.RSSD_LOG_filter != packet_buffer[PKT_DEST]) {
-      return;
-    }
-*/
+    lastPacketTo = packet_buffer[PKT_DEST];
   }
+
+
   //char buff[1000];
   char buff[LARGELOGBUFFER];
 

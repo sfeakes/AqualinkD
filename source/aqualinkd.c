@@ -667,7 +667,10 @@ int startup(char *self, char *cfgFile)
     ext[0] = '\0';
     for (j = 0; j < _aqualink_data.num_pumps; j++) {
       if (_aqualink_data.pumps[j].button == &_aqualink_data.aqbuttons[i]) {
-        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d |",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].pumpIndex);
+        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d | %s",
+                  _aqualink_data.pumps[j].pumpID, 
+                  _aqualink_data.pumps[j].pumpIndex, 
+                  _aqualink_data.pumps[j].pumpName[0]=='\0'?"":_aqualink_data.pumps[j].pumpName);
       }
     }
     for (j = 0; j < _aqualink_data.num_lights; j++) {

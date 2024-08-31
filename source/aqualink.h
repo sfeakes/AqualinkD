@@ -167,6 +167,7 @@ typedef enum panel_vsp_status
   PS_ERROR = -4
 } panel_vsp_status;
 
+#define PUMP_NAME_LENGTH 30
 
 typedef struct pumpd
 {
@@ -175,6 +176,8 @@ typedef struct pumpd
   int watts;
   unsigned char pumpID;
   int pumpIndex;
+  char pumpName[PUMP_NAME_LENGTH];
+  //char *pumpName;
   pump_type pumpType;
   //int buttonID;
   protocolType prclType;

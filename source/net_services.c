@@ -1067,10 +1067,21 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     setSystemLogLevel(round(value));
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "addlogmask", 10) == 0 && from == NET_WS) { // Only valid from websocket.
+    if ( round(value) == RSSD_LOG ) {
+      // Check for filter on RSSD LOG
+      if (ri2 != NULL) {
+        _aqconfig_.RSSD_LOG_filter = strtoul(cleanalloc(ri2), NULL, 16);
+        LOG(NET_LOG,LOG_NOTICE, "Adding RSSD LOG filter 0x%02hhx", _aqconfig_.RSSD_LOG_filter);
+      }
+    }
     addDebugLogMask(round(value));
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "removelogmask", 13) == 0 && from == NET_WS) { // Only valid from websocket.
     removeDebugLogMask(round(value));
+    if ( round(value) == RSSD_LOG ) {
+      _aqconfig_.RSSD_LOG_filter = NUL;
+      LOG(NET_LOG,LOG_NOTICE, "Removed RSSD LOG filter");
+    }
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "logfile", 7) == 0) {
     /*

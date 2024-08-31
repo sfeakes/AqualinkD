@@ -123,6 +123,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 NEED TO FIX FOR THIS RELEASE.
 * Pump by name and not ID.
 * look at using 0x00 for no exit on serial errors / startup
+* Add 0x?? filter for debug_serial from aqmanager 
 <done> * MQTT ID is now using a lot longer name due to arm64/armhf
 <done> * Ignore SWG 0 messages can now be removed since VSP is fixed.
 <done> * Increase packet length due to below (also the print message)

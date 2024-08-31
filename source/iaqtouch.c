@@ -432,15 +432,72 @@ Info:    iAQ Touch: Status page 06| #1 AquaPure\
 
 */
 
+pump_detail *matchPump(const logmask_t from, struct aqualinkdata *aq_data, char *name, int *pump_index)
+{
+  int i;
+  pump_detail *pump = NULL;
+  int pi = 0;
+
+  LOG(IAQT_LOG,LOG_DEBUG, "Finding pump for message '%s'\n",name);
+
+  if (rsm_strcmp(name, "Intelliflo VS") == 0 ||
+      rsm_strcmp(name, "Intelliflo VF") == 0 ||
+      rsm_strcmp(name, "Jandy ePUMP") == 0 ||
+      rsm_strcmp(name, "ePump AC") == 0)
+  {
+    pi = rsm_atoi(&name[14]);
+    if (pi <= 0)
+      pi = rsm_atoi(&name[10]); // ePump AC seems to display index in different position
+  }
+
+  // Now loop over all the VSP pumps and check the name.
+  for (i = 0; i < aq_data->num_pumps; i++)
+  {
+    if ((pi > 0 && aq_data->pumps[i].pumpIndex == pi) ||
+        (rsm_strcmp(name, aq_data->pumps[i].pumpName) == 0))
+    {
+      *pump_index = i;
+      pump = &aq_data->pumps[i];
+    }
+  }
+
+  // Log a warning
+  if (pi > 0)
+  {
+    if (pump == NULL)
+    {
+      LOG(from, LOG_WARNING, "Got pump message '%s' but can't find pump # %d, please update aqualinkd.conf\n", name, pi);
+    }
+    else if (pump->pumpType == PT_UNKNOWN)
+    {
+      if (rsm_strcmp(name, "Intelliflo VS") == 0)
+        pump->pumpType = VSPUMP;
+      else if (rsm_strcmp(name, "Intelliflo VF") == 0)
+        pump->pumpType = VFPUMP;
+      else if (rsm_strcmp(name, "Jandy ePUMP") == 0 ||
+               rsm_strcmp(name, "ePump AC") == 0)
+        pump->pumpType = EPUMP;
+    }
+  }
+
+  if (pump == NULL)
+    LOG(from, LOG_DEBUG, "Did not find pump config for '%s'\n", name);
+  else
+    LOG(from, LOG_DEBUG, "Found pump '%s', Name='%s', 'Index='%d'\n", name, pump->pumpName, pump->pumpIndex);
+
+  return pump;
+}
+
 void passDeviceStatusPage(struct aqualinkdata *aq_data)
 {
   int i;
-  int pi;
+  int pi = -2;
   pump_detail *pump = NULL;
   //bool found_swg = false;
   //int pump_index = 0;
 
   for (i=0; i <IAQ_STATUS_PAGE_LINES; i++ ) {
+    /*
     //LOG(IAQT_LOG,LOG_NOTICE, "Passing message %.2d| %s\n",i,_deviceStatus[i]);
     if (rsm_strcmp(_deviceStatus[i],"Intelliflo VS") == 0 ||
         rsm_strcmp(_deviceStatus[i],"Intelliflo VF") == 0 ||
@@ -473,8 +530,10 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         
       continue;
 
-    } else if (rsm_strcmp(_deviceStatus[i],"RPM:") == 0) {
+    } else*/ if (rsm_strcmp(_deviceStatus[i],"RPM:") == 0) {
+      pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
       if (pump != NULL) {
+        iaqt_pump_update(aq_data, pi); // Log that we saw a pump
         pump->rpm = rsm_atoi(&_deviceStatus[i][9]);
         pump->pStatus = PS_OK;
         aq_data->updated = true;
@@ -498,7 +557,9 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"*** Priming ***") == 0) {
+      pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
       if (pump != NULL) {
+        iaqt_pump_update(aq_data, pi); // Log that we saw a pump
         //pump->rpm = PUMP_PRIMING;   // NSF need to remove future
         pump->pStatus = PS_PRIMING;
         aq_data->updated = true;
@@ -506,7 +567,9 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Offline)") == 0) {
+      pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
       if (pump != NULL) {
+        iaqt_pump_update(aq_data, pi); // Log that we saw a pump
         //pump->rpm = PUMP_OFFLINE;    // NSF need to remove future
         pump->pStatus = PS_OFFLINE;
         aq_data->updated = true;
@@ -514,7 +577,9 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Priming Error)") == 0) {
+      pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
       if (pump != NULL) {
+        iaqt_pump_update(aq_data, pi); // Log that we saw a pump
         //pump->rpm = PUMP_ERROR;  // NSF need to remove future
         pump->pStatus = PS_ERROR;
         aq_data->updated = true;

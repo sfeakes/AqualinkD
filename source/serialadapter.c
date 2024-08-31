@@ -255,8 +255,13 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
     LOG(RSSA_LOG,LOG_DEBUG, "Probe received, will queue device update shortly\n");
     //queueGetProgramData(RSSADAPTER, aq_data);
     cnt=-5; // Connection reset, so queue the status update
-  }
-  if (packet[PKT_CMD] == 0x13) {
+  /*
+  } else if (packet[PKT_CMD] == CMD_STATUS) {
+    // This is identical to allbutton status packet.
+    LOG(RSSA_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    debuglogPacket(RSSA_LOG, packet, length, true, true);
+  */
+  } else if (packet[PKT_CMD] == 0x13) {
     //beautifyPacket(buff, packet, length);
     //LOG(RSSA_LOG,LOG_DEBUG, "%s", buff);
     //LOG(RSSA_LOG,LOG_DEBUG,"  Command 0x%02hhx = |0x%02hhx|0x%02hhx|0x%02hhx  %d|%d|%d\n", packet[4], packet[5], packet[6], packet[7], packet[5], packet[6], packet[7]);

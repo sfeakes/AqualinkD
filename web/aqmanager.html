@@ -246,6 +246,7 @@
         var _panel_size = 6;
         var _panel_set = 0;
         var _latestVersionAvailable = 0;
+        var _rssd_logmask = 0;
 
         function init_collapsible() {
             var coll = document.getElementsByClassName("collapsible");
@@ -355,7 +356,7 @@
             send_command(msg);
         }
         function setlogmask(caller) {
-            console.log(caller.id);
+            //console.log(caller.id);
             var id = parseInt(caller.id.split('_')[1]);
             var addremove = "";
             if (caller.checked) {
@@ -368,6 +369,16 @@
                 uri: addremove,
                 value: id
             };
+
+            // If it's RSSD logmask, and we have filter, append that to the uri.
+            if (caller.id == _rssd_logmask ) {
+              var filter = document.getElementById("rssd_filter").value;
+              if (filter) {
+                if (addremove ==  "addlogmask") {
+                    msg.uri = msg.uri + "/" + filter;
+                }
+              }
+            }
             send_command(msg);
         }
         function setlogfile(caller) {
@@ -434,6 +445,18 @@
                 element.checked = false;
                 //console.log("set " + element.id + " off");
             }
+        }
+
+        function checkboxClick(caller) {
+            try {
+                if (caller.id == "slog_debug") {
+                    if (caller.checked) {
+                        document.getElementById("slog_ids").disabled = true;
+                    } else {
+                        document.getElementById("slog_ids").disabled = false;
+                    }
+                }
+            } catch (Error) { }
         }
 
 
@@ -540,9 +563,19 @@
                         '<div class="toggle-switch"></div>' +
                         '<span class="toggle-label">' + data['debugmasks'][obj].name + '</span>';
                     eCommands.appendChild(element);
+
+                    if ( data['debugmasks'][obj].name.substr(0,9) == "RS Serial" ) {
+                        _rssd_logmask = element_id;
+                        element = document.createElement('div');
+                        element.style.marginTop = '1px';
+                        element.style.marginBottom = '2px'; // = 'style="margin-left: 5px';
+                        element.innerHTML =  '<input id="rssd_filter" type="text" value="" size="4" maxlength="4">&nbsp;RS Serial Filter ID <font size="-2">(Eg 0x10)</font></input>';
+                        eCommands.appendChild(element);
+                    } 
                 }
                 settoggle(element_id, data['debugmasks'][obj].set);
             }
+
         }
 
         function get_appropriate_ws_url() {
@@ -705,7 +738,7 @@
 
                     cmd.uri = "seriallogger/"+ids+"/"+document.getElementById("slog_debug").checked;
                     cmd.value = document.getElementById("slog_packets").value
-                    console.log("Command = "+cmd);
+                    //console.log("Command = "+cmd);
                     //console.log("Packets=" + document.getElementById("slog_packets").value );
                     //console.log("IDs=" + document.getElementById("slog_ids").value );
                     //console.log("ListQueriedID=" + document.getElementById("slog_ids_queried").checked );
@@ -832,7 +865,7 @@
                         </tr>
                         <tr>
                           <td>Debug</td>
-                          <td><input id="slog_debug" type="checkbox"></input></td>
+                          <td><input id="slog_debug" type="checkbox" onclick="checkboxClick(this)"></input></td>
                         </tr>
                         <tr>
                             <td colspan="2" align="center">AqualinkD will be disabled while running</td>

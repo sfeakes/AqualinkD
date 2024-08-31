@@ -16,6 +16,8 @@ void processLEDstate(struct aqualinkdata *aq_data)
   int byte;
   int bit;
 
+  //debuglogPacket(ALLB_LOG, );
+
   for (byte = 0; byte < 5; byte++)
   {
     for (bit = 0; bit < 8; bit += 2)
@@ -629,7 +631,8 @@ bool process_allbutton_packet(unsigned char *packet, int length, struct aqualink
     //LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received ACK length %d.\n", length);
     break;
   case CMD_STATUS:
-    //LOG(ALLB_LOG,LOG_DEBUG_SERIAL, "RS Received STATUS length %d.\n", length);
+    //LOG(ALLB_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    //debuglogPacket(ALLB_LOG, packet, length, true, true);
     memcpy(aq_data->raw_status, packet + 4, AQ_PSTLEN);
     processLEDstate(aq_data);
 
