@@ -118,6 +118,10 @@ void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length,
     lastPacketTo = packet_buffer[PKT_DEST];
   }
 
+  if (is_read)
+    LOG(from,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",packet_length);
+  else
+    LOG(from,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",packet_length);
 
   //char buff[1000];
   char buff[LARGELOGBUFFER];

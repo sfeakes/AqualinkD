@@ -491,6 +491,10 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
 int logmaskjsonobject(logmask_t flag, char* buffer)
 {
   int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
+
+  if (flag == RSSD_LOG) {
+    length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filter\":\"0x%02hhx\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF), _aqconfig_.RSSD_LOG_filter);
+  }
   return length;
 }
 int logleveljsonobject(int level, char* buffer)

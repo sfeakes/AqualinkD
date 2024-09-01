@@ -802,12 +802,13 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   //char buff[1024];
   // NSF Take this out
   
+  /*
   if ( packet[3] != CMD_IAQ_POLL && getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
   //if ( getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
     char buff[1024];
-    beautifyPacket(buff, 1024, packet, length, false);
+    beautifyPacket(buff, 1024, packet, length, true);
     LOG(IAQT_LOG,LOG_DEBUG, "Received message : %s", buff);
-  }
+  }*/
   
   
   if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {

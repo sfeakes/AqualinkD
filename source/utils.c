@@ -43,6 +43,8 @@
 #endif
 
 #include "utils.h"
+#include "rs_msg_utils.h"
+#include "aq_serial.h"
 
 #define DEFAULT_LOG_FILE "/tmp/aqualinkd-inline.log"
 //#define MAXCFGLINE 265
@@ -197,7 +199,7 @@ void LOGSystemError (int errnum, logmask_t from, const char *on_what)
   if (_daemonise == TRUE)
   {
     //logMessage (LOG_ERR, "%d : %s", errno, on_what);
-    LOG(AQUA_LOG, LOG_ERR, "%s (%d) : %s\n", strerror (errno), errno, on_what);
+    LOG(from, LOG_ERR, "%s (%d) : %s\n", strerror (errno), errno, on_what);
     closelog ();
   }
 }
@@ -502,7 +504,7 @@ bool isDebugLogMaskSet(logmask_t flag)
   return _logforcemask & flag;
 }
 
-void _LOG(logmask_t from, int msg_level, char * message);
+void _LOG(logmask_t from, int msg_level, char * message, int message_buffer_size);
 
 /*
 void logMessage(int msg_level, const char *format, ...)
@@ -539,7 +541,13 @@ void LOG_LARGEMSG(const logmask_t from, const int msg_level, const char *message
 
   strncpy(&buffer[LOG_OFFSET], message, LARGELOGBUFFER);
 
-  _LOG(from, msg_level, buffer);
+  int len = rsm_strncpy(&buffer[LOG_OFFSET], (unsigned char*)message, LARGELOGBUFFER, message_length);
+
+  if (len >= LARGELOGBUFFER) {
+    sprintf(&buffer[LARGELOGBUFFER + LOG_OFFSET - 4], "...\n");
+  }
+
+  _LOG(from, msg_level, buffer, LARGELOGBUFFER + LOG_OFFSET);
 }
 
 void LOG(const logmask_t from, const int msg_level, const char * format, ...)
@@ -560,17 +568,17 @@ void LOG(const logmask_t from, const int msg_level, const char * format, ...)
   memset(buffer, ' ', LOG_OFFSET * sizeof(char)); 
   
   //vsprintf (&buffer[20], format, args);
-  int size = vsnprintf (&buffer[LOG_OFFSET], LOGBUFFER-LOG_OFFSET-10, format, args);
+  int size = vsnprintf (&buffer[LOG_OFFSET], LOGBUFFER-LOG_OFFSET-4, format, args);
   va_end(args);
-  if (size >= LOGBUFFER-LOG_OFFSET-10 ) {
-    sprintf(&buffer[LOGBUFFER-11], ".........\n");
+  if (size >= LOGBUFFER-LOG_OFFSET-4 ) {
+    sprintf(&buffer[LOGBUFFER-5], "...\n");
   }
 
-  _LOG(from, msg_level, buffer);
+  _LOG(from, msg_level, buffer, LOGBUFFER);
 }
 
 
-void _LOG(logmask_t from, int msg_level,  char *message)
+void _LOG(logmask_t from, int msg_level, char *message, int message_buffer_size)
 {
   /*
    message should have the first LOG_OFFSET (20) characters as spaces, this allows us to add Type & From to message.
@@ -583,19 +591,10 @@ void _LOG(logmask_t from, int msg_level,  char *message)
 
   int i;
 
-  // Make all printable chars
-  /*
-  for(i = 8; i+8 < strlen(&message[8]) && i < LOGBUFFER; i++) {
-    if ( (message[i] < 32 || message[i] > 125) && message[i] != 10 ) {
-      //printf ("Change %c to %c in %s\n",message[i], ' ', message);
-      message[i] = ' ';
-    }
-  }*/
-
   int msglen = strlen(&message[LOG_OFFSET]);
 
   // Fill first 20 chars and any non printable chars with a space.
-  for(i = 0; i < LOGBUFFER && i < (msglen+LOG_OFFSET+1) ; i++) {
+  for(i = 0; i < message_buffer_size && i < (msglen+LOG_OFFSET+1) ; i++) {
     if (i > LOG_OFFSET && message[i] == '\0')
       break;
 
@@ -662,7 +661,9 @@ void _LOG(logmask_t from, int msg_level,  char *message)
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
-    snprintf(_loq_display_message, 127, "%s\n",message);
+    //snprintf(_loq_display_message, AQ_MSGLONGLEN-2, "%s\n",message);
+    int len = rsm_strncpy(_loq_display_message, (unsigned char*)message, AQ_MSGLONGLEN-1, message_buffer_size);
+    _loq_display_message[len] = '\0';
   }
 
 #ifndef AQ_MANAGER

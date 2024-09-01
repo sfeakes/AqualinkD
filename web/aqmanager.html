@@ -247,6 +247,7 @@
         var _panel_set = 0;
         var _latestVersionAvailable = 0;
         var _rssd_logmask = 0;
+        const RSSD_MASK_ID = 512;  // Must match RSSD_LOG in utils.c
 
         function init_collapsible() {
             var coll = document.getElementsByClassName("collapsible");
@@ -564,13 +565,19 @@
                         '<span class="toggle-label">' + data['debugmasks'][obj].name + '</span>';
                     eCommands.appendChild(element);
 
-                    if ( data['debugmasks'][obj].name.substr(0,9) == "RS Serial" ) {
+                    //if ( data['debugmasks'][obj].name.substr(0,9) == "RS Serial" ) {
+                    //    _rssd_logmask = element_id;
+                    if ( data['debugmasks'][obj].id == RSSD_MASK_ID) {
                         _rssd_logmask = element_id;
                         element = document.createElement('div');
                         element.style.marginTop = '1px';
                         element.style.marginBottom = '2px'; // = 'style="margin-left: 5px';
                         element.innerHTML =  '<input id="rssd_filter" type="text" value="" size="4" maxlength="4">&nbsp;RS Serial Filter ID <font size="-2">(Eg 0x10)</font></input>';
                         eCommands.appendChild(element);
+                        if (data['debugmasks'][obj].filter != "0x00"){
+                            //var filter = document.getElementById("rssd_filter").value;
+                            document.getElementById("rssd_filter").value = data['debugmasks'][obj].filter;
+                        }
                     } 
                 }
                 settoggle(element_id, data['debugmasks'][obj].set);

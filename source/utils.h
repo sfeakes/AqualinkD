@@ -43,7 +43,7 @@ typedef  int32_t logmask_t;
 #define DJAN_LOG (1 << 7) // Jange Device
 #define DPEN_LOG (1 << 8) // Pentair Device
 // misc
-#define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB?
+#define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB DO NOT CHANGE THIS, UI HARDCODED to 512. 
 #define PROG_LOG (1 << 10) // Programmer
 #define SCHD_LOG (1 << 11) // Scheduler Timer
 #define RSTM_LOG (1 << 12) // RS packet Time

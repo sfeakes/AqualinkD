@@ -57,8 +57,13 @@ if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "igno
       BINEXT="-armhf"
     ;;
     *)
-      echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
-      BINEXT=""
+      if [ -f $BUILD/$SOURCEBIN-$ARCH ]; then
+        echo "Arch $ARCH is not officially supported, but we found a suitable binary"
+        BINEXT="-$ARCH"
+      else
+        echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
+        BINEXT=""
+      fi
     ;;
   esac
 

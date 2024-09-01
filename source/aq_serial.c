@@ -869,7 +869,7 @@ void send_packet(int fd, unsigned char *packet, int length)
   */
 
   // MAYBE Change this back to debug serial
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes, type 0x%02hhx cmd 0x%02hhx\n",length-2,packet[5],packet[6]);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketWrite(&packet[1], length-2);
@@ -1189,7 +1189,7 @@ int get_packet(int fd, unsigned char* packet)
 
   //clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
   //}
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketRead(packet, index);
   // Return the packet length.
