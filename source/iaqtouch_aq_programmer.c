@@ -373,7 +373,7 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     if (pageID == IAQ_PAGE_DEVICES) {
       send_aqt_cmd(KEY_IAQTCH_HOMEP_KEY08);
       unsigned char page = waitfor_iaqt_nextPage(aq_data);
-      if (page != IAQ_PAGE_DEVICES && page == IAQ_PAGE_DEVICES_REV_Yg) {
+      if (page != IAQ_PAGE_DEVICES && page != IAQ_PAGE_DEVICES_REV_Yg) {
         LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find Device page\n");
         return false;
       }

@@ -232,8 +232,15 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
   //LOG(RSSA_LOG,LOG_DEBUG, " Received message\n");
   //debuglogPacket(RSSA_LOG, packet, length, true);
 
+  if ( (cnt % 20 == 0) || cnt == 10 ) {
+    //if (!(cnt % 20) || cnt == 10 ) {
+      DEBUG_GET_STATE(aq_data, 5); // 4 = AUX 3
+  }
+
+
   if (cnt == 0 || cnt >= 250) {
     LOG(RSSA_LOG,LOG_INFO, "Queue device update requests\n");
+
     if (cnt == 0) {
       // The below inturn calls get_aqualink_rssadapter_setpoints()
       // But do it here as it's the first init, cnt=0 will only happen once  
@@ -306,13 +313,11 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
       rtn = true;
     } else if (packet[4] == 0x03) {
       // These are device status messages
-      /*
-      for(int i=0; i < aq_data->total_buttons; i++) {
-        if ( devID(i) == ) {
-
-        }
-        //aq_data->aqbuttons[i].led->state;
-      }*/
+      LOG(RSSA_LOG,LOG_DEBUG,"AUX?? 0x%02hhx state is 0x%02hhx '%s' %s\n", 
+                              packet[7], 
+                              packet[6],
+                              aq_data->aqbuttons[(packet[7] - (unsigned char)0x13)].label,
+                              packet[6]==0x00?"off":"on");
 #ifdef AQ_RS16
       if (packet[7] == RS_SA_AUX12) {
         LOG(RSSA_LOG,LOG_INFO,"AUX12 %d\n", packet[6]);
