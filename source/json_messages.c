@@ -98,6 +98,14 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return programtypeDisplayName(aqdata->active_thread.ptype);
   }
   */
+
+/*
+ printf("**** Programming=%s, length=%ld, empty=%s, Message=%s \n",
+         aqdata->active_thread.thread_id==0?"no":"yes",
+         strlen(aqdata->last_display_message),
+         rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))==true?"yes":"no",
+         aqdata->last_display_message);
+ */
  if (aqdata->active_thread.thread_id != 0) {
    if (!aqdata->is_display_message_programming || rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))){
      return programtypeDisplayName(aqdata->active_thread.ptype);

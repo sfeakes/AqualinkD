@@ -136,7 +136,7 @@ struct iaqt_page_button *iaqtFindButtonByIndex(int index) {
   struct iaqt_page_button *buttons;
 
   // NSF Need to merge this from iaqtFindButtonByLabel function
-  if (_currentPage == IAQ_PAGE_DEVICES)
+  if (_currentPage == IAQ_PAGE_DEVICES || _currentPage == IAQ_PAGE_DEVICES_REV_Yg)
     buttons = _devicePageButtons[0];
   else if (_currentPage == IAQ_PAGE_DEVICES2)
     buttons = _devicePageButtons[1];
@@ -164,7 +164,7 @@ struct iaqt_page_button *iaqtFindButtonByLabel(const char *label) {
   int i;
   struct iaqt_page_button *buttons;
 
-  if (_currentPage == IAQ_PAGE_DEVICES)
+  if (_currentPage == IAQ_PAGE_DEVICES || _currentPage == IAQ_PAGE_DEVICES_REV_Yg)
     buttons = _devicePageButtons[0];
   else if (_currentPage == IAQ_PAGE_DEVICES2)
     buttons = _devicePageButtons[1];
@@ -289,7 +289,7 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
   struct iaqt_page_button *button;
   int index = (int)message[PKT_IAQT_BUTINDX];
 
-  if (_currentPageLoading == IAQ_PAGE_DEVICES)
+  if (_currentPageLoading == IAQ_PAGE_DEVICES || _currentPageLoading == IAQ_PAGE_DEVICES_REV_Yg)
     button = &_devicePageButtons[0][index];
   else if (_currentPageLoading == IAQ_PAGE_DEVICES2)
     button = &_devicePageButtons[1][index];
@@ -673,7 +673,10 @@ void processPage(struct aqualinkdata *aq_data)
     case IAQ_PAGE_DEVICES:
     case IAQ_PAGE_DEVICES2:
     case IAQ_PAGE_DEVICES3:
+    case IAQ_PAGE_DEVICES_REV_Yg:
       if (_currentPage == IAQ_PAGE_DEVICES)
+        dp = 0;
+      else if (_currentPage == IAQ_PAGE_DEVICES_REV_Yg)
         dp = 0;
       else if (_currentPage == IAQ_PAGE_DEVICES2)
         dp = 1;
@@ -1058,6 +1061,15 @@ const char *iaqt_page_name(const unsigned char page)
     case IAQ_PAGE_HELP:
       return "Help Page";
     break;
+    case IAQ_PAGE_SERVICEMODE:
+      return "Service Mode";
+    break;
+
+    // New stuff
+    case IAQ_PAGE_DEVICES_REV_Yg:
+      return "Devices (rev Yg)";
+    break;
+
     default:
       sprintf (_namebuf,"** Unknown 0x%02hhx **",page);
       return _namebuf;
@@ -1136,6 +1148,8 @@ void temp_debugprintExtraInfo(unsigned char *pk, int length)
       printf("                        New Page | Other Devices\n");
     else if (pk[4] == IAQ_PAGE_DEVICES2)
       printf("                        New Page | Other Devices page 2\n");
+    else if (pk[4] == IAQ_PAGE_DEVICES_REV_Yg)
+      printf("                        New Page | Devices Panel REV Yg\n");
     else if (pk[4] == IAQ_PAGE_SET_TEMP)
       printf("                        New Page | Set Temp\n");
     else if (pk[4] == IAQ_PAGE_MENU)

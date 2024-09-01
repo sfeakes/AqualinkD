@@ -185,6 +185,12 @@ void set_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *aqdat
 */
 }
 
+void DEBUG_GET_STATE(struct aqualinkdata *aq_data, int buttonIndex) {
+  LOG(RSSA_LOG,LOG_DEBUG, "Getting state for index=%d %s\n",buttonIndex,aq_data->aqbuttons[buttonIndex].label);
+
+  rssadapter_device_state( devID(buttonIndex), 0x00 );
+}
+
 void get_aqualink_rssadapter_setpoints() {
   //push_rssa_cmd(getModel);
   push_rssa_cmd(getUnits);
@@ -299,7 +305,14 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
       aq_data->spa_htr_set_point = (int) packet[6];
       rtn = true;
     } else if (packet[4] == 0x03) {
-      // These are device status messages 
+      // These are device status messages
+      /*
+      for(int i=0; i < aq_data->total_buttons; i++) {
+        if ( devID(i) == ) {
+
+        }
+        //aq_data->aqbuttons[i].led->state;
+      }*/
 #ifdef AQ_RS16
       if (packet[7] == RS_SA_AUX12) {
         LOG(RSSA_LOG,LOG_INFO,"AUX12 %d\n", packet[6]);
@@ -316,6 +329,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         rtn = setLEDstate(aq_data->aqbuttons[16].led,  packet[6], aq_data);
       }
 #endif
+      
     }
   }
 

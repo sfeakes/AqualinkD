@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 800
 
-#define VERSION "serial_logger V2.5"
+#define VERSION "serial_logger V2.6"
 
 /*
 typedef enum used {
@@ -661,6 +661,13 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   int blankReads = 0;
   bool returnError = false;
 
+  bool found_swg =false;
+  bool found_vsp =false;
+  bool found_jxi =false;
+  bool found_lx =false;
+  bool found_chem =false;
+  bool found_pent_vsp =false;
+
   clock_gettime(CLOCK_REALTIME, &start_time);
   if (timePackets) {
     clock_gettime(CLOCK_REALTIME, &packet_start_time);
@@ -839,6 +846,20 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
       LOG(SLOG_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", slog[i].ID, (slog[i].inuse == true) ? "in use  " : "not used",
                (slog[i].inuse == false)?canUseExtended(slog[i].ID):getDevice(slog[i].ID));
     }
+
+    if (slog[i].inuse == true) {
+      if (slog[i].ID >= JANDY_DEC_SWG_MIN && slog[i].ID <= JANDY_DEC_SWG_MAX) {
+        found_swg =true;
+      } else if (slog[i].ID >= JANDY_DEC_PUMP_MIN && slog[i].ID <= JANDY_DEC_PUMP_MAX) {
+        found_vsp =true;
+      } else if (slog[i].ID >= JANDY_DEC_JXI_MIN && slog[i].ID <= JANDY_DEC_JXI_MAX) {
+        found_jxi =true;
+      } else if (slog[i].ID >= JANDY_DEC_LX_MIN && slog[i].ID <= JANDY_DEC_LX_MAX) {
+        found_lx =true;
+      } else if (slog[i].ID >= JANDY_DEC_CHEM_MIN && slog[i].ID <= JANDY_DEC_CHEM_MAX) {
+        found_chem =true;
+      }
+    }
   }
 
   if (pent_sindex > 0) {
@@ -848,6 +869,12 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   for (i=0; i < pent_sindex; i++) {
     LOG(SLOG_LOG, LOG_NOTICE, "ID 0x%02hhx is %s %s\n", pent_slog[i].ID, (pent_slog[i].inuse == true) ? "in use  " : "not used",
                (pent_slog[i].inuse == false)?canUseExtended(pent_slog[i].ID):getPentairDevice(pent_slog[i].ID));
+
+    if (pent_slog[i].inuse == true) {
+      if (pent_slog[i].ID >= PENTAIR_DEC_PUMP_MIN && pent_slog[i].ID <= PENTAIR_DEC_PUMP_MAX) {
+        found_pent_vsp=true;
+      }
+    }
   }
 
   LOG(SLOG_LOG, LOG_NOTICE, "\n\n");
@@ -895,6 +922,19 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
 
   if (extID != 0x00)
     LOG(SLOG_LOG, LOG_NOTICE, "extended_device_id = 0x%02hhx\n",extID);
+
+  if (found_pent_vsp)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_vsfPump = yes\n");
+  if (found_vsp)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_ePump = yes\n");
+  if (found_swg)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_swg = yes\n");
+  if (found_jxi)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_JXi = yes\n");
+  if (found_lx)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_LX = yes\n");
+  if (found_chem)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_Chem = yes\n");
 
   LOG(SLOG_LOG, LOG_NOTICE, "-------------------------\n");
 

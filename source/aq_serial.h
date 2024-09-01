@@ -471,6 +471,10 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_FREEZE_PROTECT  0x11
 #define IAQ_PAGE_LABEL_AUX       0x32
 #define IAQ_PAGE_HELP            0x0c
+#define IAQ_PAGE_SERVICEMODE     0x5e // Also Timeout
+
+#define IAQ_PAGE_DEVICES_REV_Yg  0x0a  // Panel rev Yg (and maybe others use this)
+
 //#define IAQ_PAGE_START_BOOST     0x3f
 //#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
 

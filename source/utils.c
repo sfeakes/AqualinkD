@@ -661,9 +661,11 @@ void _LOG(logmask_t from, int msg_level, char *message, int message_buffer_size)
 
   // Sent the log to the UI if configured.
   if (msg_level <= LOG_ERR && _loq_display_message != NULL) {
+    //printf ("*** Showing error in web **** \n");
     //snprintf(_loq_display_message, AQ_MSGLONGLEN-2, "%s\n",message);
     int len = rsm_strncpy(_loq_display_message, (unsigned char*)message, AQ_MSGLONGLEN-1, message_buffer_size);
     _loq_display_message[len] = '\0';
+    printf ("*** Adding ERROR to buffer '%s' **** \n",_loq_display_message);
   }
 
 #ifndef AQ_MANAGER

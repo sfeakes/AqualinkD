@@ -156,9 +156,9 @@ bool rsm_isempy(const char *src, int length)
   int i;
   for(i=0; i < length; i++) {
     if  (src[i] > 32 && src[i] < 127) // 32 is space
-      return true;
+      return false;
   }
-  return false;
+  return true;
 }
 /*
   Can probably replace this with rsm_strncasestr in all code.
