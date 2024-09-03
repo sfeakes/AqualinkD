@@ -694,6 +694,16 @@ int startup(char *self, char *cfgFile)
                            _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
     }
   }
+/*
+  for (i=0; i < _aqualink_data.total_buttons; i++) 
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Button index=%d, label=%s, code=0x%02hhx, rssd code=0x%02hhx\n", 
+                             i, 
+                             _aqualink_data.aqbuttons[i].label,
+                             _aqualink_data.aqbuttons[i].code,
+                             _aqualink_data.aqbuttons[i].rssd_code);
+  }
+*/
 
   if (_aqconfig_.deamonize == true)
   {
@@ -878,6 +888,7 @@ void main_loop()
 
   for (i=0; i < MAX_LIGHTS; i++) {
      _aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
+     _aqualink_data.lights[i].RSSDstate = OFF;
   }
 
   if (_aqconfig_.force_swg == true) {

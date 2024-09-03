@@ -61,6 +61,12 @@ uint8_t getPanelSupport( char *rev_string, int rev_len)
     // Rev >=Q == iaqualink touch protocol.
     // REv >= P == chemlink
     // Rev >= HH serial adapter.
+    // Rev >= L == JandyColors Smart Light Control
+    // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
+    // Rev >= N Hayward ColorLogic LED Light
+    // Rev >= O.1== Jandy WaterColors LED ( 9 colors )
+    // Rev >= T.0.1 == limited color light
+    // Rec >= T.2 == full color lights
 
     // Rev Yg (and maybe before) has Pump label (not number), and also Virtual Device called Label Auxiliraries
     if (REV[0] >= 81) // Q in ascii
@@ -71,12 +77,24 @@ uint8_t getPanelSupport( char *rev_string, int rev_len)
 
     if (REV[0] >= 79) // O in ascii
       supported |= RSP_SUP_VSP;
-    
+
     if (REV[0] >= 73) // I in ascii
       supported |= RSP_SUP_ONET;
 
     if (REV[0] > 72 || (REV[0] == 72 && REV[1] == 72) ) // H in ascii
       supported |= RSP_SUP_SERA;
+    
+    if (REV[0] >= 77) // M in ascii
+      supported |= REP_SUP_CLIT1;
+
+    if (REV[0] >= 78) // N in ascii
+      supported |= REP_SUP_CLIT2;
+
+    if (REV[0] >= 79) // O in ascii
+      supported |= REP_SUP_CLIT3;
+
+    if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
+      supported |= REP_SUP_CLIT4;
     
   }
 
@@ -302,6 +320,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_PUMP;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_PUMP;
   index++;
   
   if (combo) {
@@ -312,6 +331,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_SPA;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_SPA;
     index++;
   }
   
@@ -322,6 +342,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX1;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX1;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[4-1];
@@ -331,6 +352,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX2;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX2;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[3-1];
@@ -340,6 +362,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX3;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX3;
   index++;
   
   
@@ -351,6 +374,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX4;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX4;
     index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[8-1];
@@ -360,6 +384,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX5;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX5;
     index++; 
   }
 
@@ -371,6 +396,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX6;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX6;
     index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[1-1];
@@ -380,6 +406,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX7;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX7;
     index++;
   }
 #ifdef AQ_RS16
@@ -401,6 +428,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB1;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX8;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[12-1];
@@ -410,6 +438,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB2;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX9;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[1-1];
@@ -419,6 +448,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB3;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX10;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[13-1];  
@@ -428,6 +458,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB4;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX11;
     index++;
   }
 
@@ -439,6 +470,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB5;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX12;
     index++;
  
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[22-1];  // doesn't actually exist
@@ -448,6 +480,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB6;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX13;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[23-1];  // doesn't actually exist
@@ -456,6 +489,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].name = BTN_AUXB7;
     aqdata->aqbuttons[index].code = KEY_AUXB7;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX14;
    index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[24-1]; // doesn't actually exist
@@ -465,6 +499,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB8;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX15;
     index++;
   }
 #endif // AQ_RS16
@@ -479,6 +514,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
       aqdata->aqbuttons[index].code = KEY_AUX6;
       aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
       aqdata->aqbuttons[index].special_mask = 0;
+      aqdata->aqbuttons[index].rssd_code = RS_SA_AUX6;
       index++;
     }
     //Dual panels (2/10 & 2/14) have no AUX7, they go from AUX6 to AUXB1, but the keycodes are the same as other panels
@@ -664,9 +700,17 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // Domoticz has a bad habbit of resending the same state back to us, when we use the PRESTATE_ONOFF option
         // since allbutton (default) is stateless, and rssaadapter is statefull, use rssaadapter for any domoricz requests
         set_aqualink_rssadapter_aux_state(deviceIndex, isON);
+      } else if (button->special_mask & PROGRAM_LIGHT && isRSSA_ENABLED) {
+        // If off and program light, use the RS serial adapter since that is overiding the state now.
+        set_aqualink_rssadapter_aux_state(deviceIndex, isON);
       } else {
         aq_send_allb_cmd(button->code);
       }
+
+#ifdef CLIGHT_PANEL_FIX 
+      if (isRSSA_ENABLED) {get_aqualink_rssadapter_colorlight_statuses(aqdata);}
+#endif
+
 // Pre set device to state, next status will correct if state didn't take, but this will stop multiple ON messages setting on/off
 //#ifdef PRESTATE_ONOFF
       if (_aqconfig_.device_pre_state) {
@@ -750,6 +794,20 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
                                       _aqconfig_.light_programming_initial_off,
                                       _aqconfig_.light_programming_mode );
     aq_programmer(AQ_SET_LIGHTPROGRAM_MODE, buf, aqdata);
+  } else if (isRSSA_ENABLED && light->lightType != LC_DIMMER) {
+    unsigned char rssd_value = value;
+    set_aqualink_rssadapter_aux_extended_state(light->button, rssd_value);
+  } else if (isRSSA_ENABLED && light->lightType == LC_DIMMER) {
+    // Dimmer needs to be turned on first
+    set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+    // Value 1 = 25, 1 = 50, 3 = 75, 4 = 100 (need to convert value into binary)
+    if (value >= 1 && value <= 4) {
+      // If value is not on of those vales, then ignore
+      unsigned char rssd_value = value * 25;
+      set_aqualink_rssadapter_aux_extended_state(light->button, rssd_value);
+    } else {
+      LOG(PANL_LOG,LOG_ERR, "Light mode %d is not valid for '%s'\n",value, light->button->label);
+    }
   } else {
     //sprintf(buf, "%-5s%-5d%-5d",value, button, light->lightType);
     sprintf(buf, "%-5d%-5d%-5d",value, button, light->lightType);

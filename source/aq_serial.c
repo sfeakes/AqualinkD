@@ -872,7 +872,7 @@ void send_packet(int fd, unsigned char *packet, int length)
   //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes, type 0x%02hhx cmd 0x%02hhx\n",length-2,packet[5],packet[6]);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
-    logPacketWrite(&packet[1], length-2);
+    logPacketWrite(&packet[1], length-1);
 /*
   if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
     char buff[1024];

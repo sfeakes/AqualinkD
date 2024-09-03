@@ -18,6 +18,8 @@
 #endif
 
 
+#define CLIGHT_PANEL_FIX // Overcome bug in some jandy panels where color light status of on is not in LED status
+
 #define TIME_CHECK_INTERVAL  3600
 //#define TIME_CHECK_INTERVAL  100 // DEBUG ONLY
 #define ACCEPTABLE_TIME_DIFF 120
@@ -81,6 +83,7 @@ typedef struct aqualinkkey
 //  char *pda_label;
 //#endif
   unsigned char code;
+  unsigned char rssd_code;
   int dz_idx;
   uint8_t special_mask;
 } aqkey;
@@ -199,6 +202,10 @@ typedef enum clight_type {
   LC_SAL, 
   LC_CLOGIG, 
   LC_INTELLIB,
+  LC_HAYWCL,
+  LC_SPARE_1,
+  LC_SPARE_2,
+  LC_SPARE_3,
   LC_DIMMER,
   NUMBER_LIGHT_COLOR_TYPES // This is used to size and count so add more prior to this
 } clight_type;
@@ -216,6 +223,7 @@ typedef struct clightd
   clight_type lightType;
   aqkey *button;
   int currentValue;
+  aqledstate RSSDstate;  // state from rs serial adapter
 } clight_detail;
 
 
@@ -305,6 +313,9 @@ struct aqualinkdata
   struct timespec last_active_time;
   struct timespec start_active_time;
   #endif
+
+  // Overcome color light bug, by reconnecting allbutton panel.
+  //bool reconnectAllButton;
 };
 
 

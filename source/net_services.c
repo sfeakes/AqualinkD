@@ -949,7 +949,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_mqtt_aux_msg(nc, _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC, _aqualink_data->lights[i].currentValue);
 
       sprintf(topic, "%s%s/name", _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC);
-      send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue - 1, ALLBUTTON));
+      send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue, ALLBUTTON));
     }
   }
 }

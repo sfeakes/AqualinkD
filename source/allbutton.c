@@ -47,6 +47,14 @@ void processLEDstate(struct aqualinkdata *aq_data)
     LOG(ALLB_LOG,LOG_NOTICE, "%s = %d", aq_data->aqbuttons[i].name,  aq_data->aqualinkleds[i].state);
   }
 */
+#ifdef CLIGHT_PANEL_FIX // Use state from RSSD protocol for color light if it's on.
+  for (int i=0; i < aq_data->num_lights; i++) {
+    if ( aq_data->lights[i].RSSDstate == ON && aq_data->lights[i].button->led->state != ON ) {
+      aq_data->lights[i].button->led->state = aq_data->lights[i].RSSDstate;
+      //LOG(ALLB_LOG,LOG_WARNING,"Fix Jandy bug, color light '%s' is on, setting status to match!\n", aq_data->lights[i].button->label);
+    }
+  }
+#endif
 }
 
 void setUnits(char *msg, struct aqualinkdata *aq_data)

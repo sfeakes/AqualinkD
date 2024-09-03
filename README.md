@@ -87,6 +87,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Create iAqualink Touch Simulator
 * Probably decoded enough protocols for AuqlinkD to self configure.
 
+
 <!--
 * NEED TO FIX for PDA and iAQT protocol.
   * Not always doing on/off
@@ -110,7 +111,10 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Call for Help.
 * The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
 
-# Updates in 2.3.8 (Dev)
+# Updates in 2.3.8
+* <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
+* Fixed bugs with particular Jandy panel versions and color lights.
+* Added support for more color lights, and sped up programming
 * Code & Repo refactor
 * Decoded more Pentair VSP pump status.
 * Changed VSP pump status handling (display more in web UI).

@@ -38,6 +38,11 @@
 #define RSP_SUP_VSP  (1 << 2)
 #define RSP_SUP_CHEM (1 << 3)
 #define RSP_SUP_SERA (1 << 4) // Serial adapter
+#define REP_SUP_CLIT1 (1 << 5) // color lights (first suppoer)
+#define REP_SUP_CLIT2 (1 << 6) // color lights 
+#define REP_SUP_CLIT3 (1 << 7) // color lights 
+#define REP_SUP_CLIT4 (1 << 8) // Full color lights (T.2)
+
 
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);

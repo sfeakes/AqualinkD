@@ -11,13 +11,19 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
 //void rssadapter_device_off(unsigned char devID);
 
 void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn);
-
+//void set_aqualink_rssadapter_aux_extended_state(int buttonIndex, const unsigned char state);
+void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsigned char state);
 void get_aqualink_rssadapter_setpoints();
 void set_aqualink_rssadapter_pool_setpoint(char *args, struct aqualinkdata *aqdata);
 void set_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *aqdata);
 
 void increase_aqualink_rssadapter_pool_setpoint(char *args, struct aqualinkdata *aqdata);
 void increase_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *aqdata);
+
+#ifdef CLIGHT_PANEL_FIX 
+  void get_aqualink_rssadapter_colorlight_statuses(struct aqualinkdata *aqdata);
+#endif
+
 /*
 
 CAN ONLY REPLY WITH BELOW TO STATUS MESSAGE, UNLESS FOLLOWON 0x07
@@ -42,6 +48,9 @@ Value to be set
 Same as previous reply.
 
 */
+
+#define RS_SA_ON  0x81
+#define RS_SA_OFF 0x80
 
 #define RS_SA_DEVSTATUS 0x13
 

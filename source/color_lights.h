@@ -6,8 +6,12 @@
 #include "aq_programmer.h"
 
 #define LIGHT_COLOR_NAME    16
-#define LIGHT_COLOR_OPTIONS 17
+#define LIGHT_COLOR_OPTIONS 19
 //#define LIGHT_COLOR_TYPES   LC_DIMMER+1
+
+// The status returned from RS Serial Adapter has this added as a base.  
+#define RSSD_COLOR_LIGHT_OFFSET  64
+#define RSSD_DIMMER_LIGHT_OFFSET 128
 
 /*
 // color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
