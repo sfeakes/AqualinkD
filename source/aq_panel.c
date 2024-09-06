@@ -48,29 +48,48 @@ char *name2label(char *str)
 }
 
 // This has NOT been tested.
-uint8_t getPanelSupport( char *rev_string, int rev_len)
+uint16_t getPanelSupport( char *rev_string, int rev_len)
 {
-  uint8_t supported = 0;
+  uint16_t supported = 0;
   
   char REV[5];
 
+  if (! rsm_get_revision(REV, rev_string, rev_len) ) {
+    LOG(PANL_LOG,LOG_ERR, "Couldn't get panel revision from '%s'\n",rev_string);
+    return 0; // No point in continue
+  } else if (REV[0] > 90 || REV[0] < 65) { // > Z or < A
+    LOG(PANL_LOG,LOG_WARNING, "Panel revision is not understood '%s', please report this issue");
+  }
+
+
   // Get the actual rev letter
-  if ( rsm_get_revision(REV, rev_string, rev_len) ) {
+  //if ( rsm_get_revision(REV, rev_string, rev_len) ) {
     // Rev >=I == one touch protocol
     // Rev >=O == VSP
     // Rev >=Q == iaqualink touch protocol.
     // REv >= P == chemlink
-    // Rev >= HH serial adapter.
+    // Rev >= I serial adapter.
+    // Rev >= F == Dommer.  But need serial protocol so set to I
     // Rev >= L == JandyColors Smart Light Control
     // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
     // Rev >= N Hayward ColorLogic LED Light
     // Rev >= O.1== Jandy WaterColors LED ( 9 colors )
     // Rev >= T.0.1 == limited color light
-    // Rec >= T.2 == full color lights
+    // Rec >= T.2 == more color lights
+    // Rev >= Q Aqualink Touch protocol
+    // Rev >= R iAqualink (wifi adapter) protocol
+    // Rev >= L PC Dock
+    // Rev >= W pump label (not number)
+    // Rev >= Yg Virtual Device called Label Auxiliraries
 
-    // Rev Yg (and maybe before) has Pump label (not number), and also Virtual Device called Label Auxiliraries
+    if (REV[0] > 89 || ( REV[0] == 89 && REV[1] >= 103))
+      supported |= RSP_SUP_VBTN;
+
     if (REV[0] >= 81) // Q in ascii
-      supported |= RSP_SUP_IAQT;
+      supported |= RSP_SUP_AQLT;
+
+    if (REV[0] >= 82) // R
+      supported |= RSP_SUP_IAQL;
     
     if (REV[0] >= 80) // P in ascii
       supported |= RSP_SUP_CHEM;
@@ -78,25 +97,22 @@ uint8_t getPanelSupport( char *rev_string, int rev_len)
     if (REV[0] >= 79) // O in ascii
       supported |= RSP_SUP_VSP;
 
-    if (REV[0] >= 73) // I in ascii
+    if (REV[0] >= 73){ // I in ascii
       supported |= RSP_SUP_ONET;
-
-    if (REV[0] > 72 || (REV[0] == 72 && REV[1] == 72) ) // H in ascii
-      supported |= RSP_SUP_SERA;
+      supported |= RSP_SUP_RSSA;
+      supported |= RSP_SUP_SWG;
+    }
     
-    if (REV[0] >= 77) // M in ascii
-      supported |= REP_SUP_CLIT1;
+    if (REV[0] >= 76) // L in ascii
+      supported |= RSP_SUP_CLIT;
 
-    if (REV[0] >= 78) // N in ascii
-      supported |= REP_SUP_CLIT2;
+    if (REV[0] >= 73) // I in ascii, dimmer came out in F, but we use the serial adapter to set, so use that as support
+      supported |= RSP_SUP_DLIT;
 
-    if (REV[0] >= 79) // O in ascii
-      supported |= REP_SUP_CLIT3;
-
-    if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
-      supported |= REP_SUP_CLIT4;
+    //if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
+    //  supported |= RSP_SUP_CLIT4;
     
-  }
+  //}
 
   return supported;
 }
@@ -163,7 +179,6 @@ setPanel("RS-6 Combo");
 setPanel("RS-8 Combo");
 }
 */
-
 
 char _panelString[60];
 void setPanelString()
@@ -308,6 +323,43 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
   //setPanelSize(size, combo, dual, pda)
   setPanel(aqdata, rs, size, combo, dual);
 }
+
+aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
+  if (aqdata->total_buttons + 1 >= TOTAL_BUTTONS) {
+    return NULL;
+  }
+  if (aqdata->virtual_button_start <= 0) {
+    aqdata->virtual_button_start = aqdata->total_buttons;
+  }
+  aqkey *button = &aqdata->aqbuttons[aqdata->total_buttons++];
+
+  //aqdata->aqbuttons[index].led = ;
+  //aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
+  //aqdata->aqbuttons[index].label = // copy label;
+  //aqdata->aqbuttons[index].name = // aux_v?;  ? is vindex 
+  //aqdata->aqbuttons[index].code = NUL;
+  //aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
+  //aqdata->aqbuttons[index].special_mask = 0;
+
+  aqled *led = malloc(sizeof(aqled));
+  button->led = led;
+ 
+  char *name = malloc(sizeof(char*) * 10);
+  snprintf(name, 9, "%s%d", BTN_VAUX, vindex);
+  button->name = name; 
+
+  if (strlen(label) <= 0) {
+    button->label = name; 
+  } else {
+    button->label = label; 
+  }
+  button->code = NUL;
+  button->dz_idx = DZ_NULL_IDX;
+  button->special_mask |= VIRTUAL_BUTTON; // Could change to special mask vbutton
+
+  return button;  
+}
+
 
 // 4,6,8,10,12,14
 void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual) {
@@ -556,9 +608,9 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].special_mask = 0;
   index++;
 
+  // Set the sizes for button index
   aqdata->total_buttons = index;
-
-  //aqdata->single_device = !combo;
+  aqdata->virtual_button_start = 0;
 
   #ifdef AQ_RS16
     aqdata->rs16_vbutton_start = 13 - (combo?0:1);
@@ -695,6 +747,15 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         } else {
           //set_light_mode("0", deviceIndex); // 0 means use current light mode
           programDeviceLightMode(aqdata, 0, deviceIndex); // 0 means use current light mode
+        }
+      } else if (button->special_mask & VIRTUAL_BUTTON) {
+        // Virtual buttons only supported with Aqualink Touch
+        if (isIAQT_ENABLED) {
+          char msg[PTHREAD_ARG];
+          sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+          aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
+        } else {
+          LOG(PANL_LOG, LOG_ERR, "Can only use Aqualink Touch protocol for Virtual Buttons");
         }
       } else if ( source == NET_DZMQTT && isRSSA_ENABLED ) {
         // Domoticz has a bad habbit of resending the same state back to us, when we use the PRESTATE_ONOFF option

@@ -111,7 +111,30 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Call for Help.
 * The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
 
-# Updates in 2.3.8
+
+<!-- 
+NEED TO FIX FOR THIS RELEASE.
+* Pump by name and not ID. clean up code
+* look at using 0x00 for no exit on serial errors / startup
+* DONE look at virtual button support
+*   vbuton will need the PDA on iAQT protocol working.
+* change dimmer to % from steps. (will make HASIO & Homekit easier)
+* show Colorlight name in UI
+* add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
+* deprecate extended_device_id_programming
+* show error is vbutton and no extended_device_id
+# Updates in 2.3.9
+-->
+# Updates in 2.3.9 (dev 0.1) -> Under development
+* Added support for One Touch Buttons & Custom Virtual Buttons (new in Jandy Rev Yg).
+  * look at `virtual_button??_label` in aqualinkd.conf
+  * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
+* PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
+  * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
+  * Please consider this very much BETA at the moment.
+  * use `rssa_device_id=0x33` in aqualinkd.conf
+
+# Updates in Release 2.3.8
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
 * Fixed bugs with particular Jandy panel versions and color lights.
 * Added support for more color lights, and sped up programming
@@ -123,17 +146,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Updates to serial_logger.
 * Changes to aqmanager for adding more options for decoding protocols.
 * Support for packets changes from panels REV Yg
-<!-- 
-NEED TO FIX FOR THIS RELEASE.
-* Pump by name and not ID.
-* look at using 0x00 for no exit on serial errors / startup
-* Add 0x?? filter for debug_serial from aqmanager 
-<done> * MQTT ID is now using a lot longer name due to arm64/armhf
-<done> * Ignore SWG 0 messages can now be removed since VSP is fixed.
-<done> * Increase packet length due to below (also the print message)
-  Warning: RS Serial: Serial packet too large\
-  Warning: RS Serial: Read  Jandy   packet BAD PACKET To 0x33 of type   Unknown '0x72' | HEX: 0x10|0x02|0x33|0x72|0x20|0x01|0x02|0x03|0x04|0x05|0x06|0x07|0x08|0x09|0x0a|0x0b|0x0c|0x0d|0x0e|0x0f|0x10|0x11|0x12|0x13|0x14|0x15|0x16|0x17|0x18|0x19|0x1.........\
--->
+* Support VSP by label (not pump number), REV Yg
 
 # Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.

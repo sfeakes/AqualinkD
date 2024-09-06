@@ -127,6 +127,10 @@ void intHandler(int sig_num)
 #endif
 }
 
+bool isVirtualButtonEnabled() {
+  return _aqualink_data.virtual_button_start>0?true:false;
+}
+
 // Should move to panel.
 bool checkAqualinkTime()
 {

@@ -3,7 +3,7 @@
     // If the device isn't listed below is will NOT be shown.
     // For a complete list returned from your particular aqualinkd instance
     // use the below URL and look at the ID value for each device.
-    // http://aqualink.ip.address/?command=devices
+    // http://aqualink.ip.address/api/devices
     var devices = [
         "Filter_Pump",
         "Spa_Mode",
@@ -38,6 +38,21 @@
         "CHEM/ORP",
         "Solar_Heater",
         "Extra_Aux",
+        "Aux_V1",
+        "Aux_V2",
+        "Aux_V3",
+        "Aux_V4",
+        "Aux_V5",
+        "Aux_V6",
+        "Aux_V7",
+        "Aux_V8",
+        "Aux_V9",
+        "Aux_V10",
+        "Aux_V11",
+        "Aux_V12",
+        "Aux_V13",
+        "Aux_V14",
+        "Aux_V15",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0

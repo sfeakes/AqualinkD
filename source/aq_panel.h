@@ -33,15 +33,18 @@
 
 // Bitmask for pannel support against board rev
 // used in getPanelSupport()
-#define RSP_SUP_ONET (1 << 0)
-#define RSP_SUP_IAQT (1 << 1)
-#define RSP_SUP_VSP  (1 << 2)
-#define RSP_SUP_CHEM (1 << 3)
-#define RSP_SUP_SERA (1 << 4) // Serial adapter
-#define REP_SUP_CLIT1 (1 << 5) // color lights (first suppoer)
-#define REP_SUP_CLIT2 (1 << 6) // color lights 
-#define REP_SUP_CLIT3 (1 << 7) // color lights 
-#define REP_SUP_CLIT4 (1 << 8) // Full color lights (T.2)
+#define RSP_SUP_ONET  (1 << 0)
+#define RSP_SUP_AQLT  (1 << 1)  // Aqualink Touch
+#define RSP_SUP_IAQL (1 << 2 ) // iAqualink Wifi
+#define RSP_SUP_RSSA  (1 << 3 ) // RS Serial Adapter
+#define RSP_SUP_VSP   (1 << 4)
+#define RSP_SUP_CHEM  (1 << 5)  // chem feeder
+#define RSP_SUP_TSCHEM (1 << 6 ) // true sense chem reader
+#define RSP_SUP_SWG   (1 << 7) // Salt water generator
+#define RSP_SUP_CLIT  (1 << 8) // color lights 
+#define RSP_SUP_DLIT  (1 << 9) // dimmer lights 
+#define RSP_SUP_VBTN  (1 << 10) // Virtual button
+#define RSP_SUP_PLAB (1 << 11) // Pump VSP by Label and not number
 
 
 //void initButtons(struct aqualinkdata *aqdata);
@@ -59,7 +62,9 @@ void addPanelIAQTouchInterface();
 void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
 
-uint8_t getPanelSupport( char *rev_string, int rev_len);
+uint16_t getPanelSupport( char *rev_string, int rev_len);
+
+aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
 //void panneltest();
 
 #define isPDA_PANEL ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

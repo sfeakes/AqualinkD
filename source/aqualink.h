@@ -66,6 +66,8 @@ bool checkAqualinkTime(); // Only need to externalise this for PDA
 #define MAX_PUMPS 4
 #define MAX_LIGHTS 4
 
+bool isVirtualButtonEnabled();
+
 enum {
  FAHRENHEIT,
  CELSIUS,
@@ -93,7 +95,7 @@ typedef struct aqualinkkey
 #define PROGRAM_LIGHT  (1 << 1)
 #define TIMER_ACTIVE   (1 << 2) 
 //#define DIMMER_LIGHT   (1 << 3) // NOT USED (Use PROGRAM_LIGHT or type LC_DIMMER) 
-
+#define VIRTUAL_BUTTON (1 << 4)
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
 struct programmingthread {
@@ -242,6 +244,7 @@ struct aqualinkdata
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
   unsigned short total_buttons;
+  unsigned short virtual_button_start;
   int air_temp;
   int pool_temp;
   int spa_temp;

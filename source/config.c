@@ -693,7 +693,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
           //pump->pumpType = EPUMP; // For testing let the interface set this
         }
       } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1
@@ -701,7 +701,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       if (pump != NULL) {
         pump->pumpIndex = strtoul(value, NULL, 10);
       } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpType", 9) == 0) {
@@ -715,7 +715,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         else if ( stristr(value, "Jandy ePump") != 0)
           pump->pumpType = EPUMP;
       } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
       }
       rtn=true;
     } else if (strncasecmp(param + 9, "_pumpName", 9) == 0) { //button_01_pumpIndex=1
@@ -724,32 +724,30 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         //pump->pumpName = cleanalloc(value);
         strncpy(pump->pumpName ,cleanwhitespace(value), PUMP_NAME_LENGTH-1);
       } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
       }
       rtn=true;
     }
-      /*
-    } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
-      //aqdata->aqbuttons[num].pda_label = cleanalloc(value);
-      //96 to 111 = Pentair, 120 to 123 = Jandy
-      if (pi < MAX_PUMPS) {
-        aqdata->pumps[pi].button = &aqdata->aqbuttons[num];
-        aqdata->pumps[pi].pumpID = strtoul(cleanalloc(value), NULL, 16);
-        aqdata->pumps[pi].pumpIndex = pi+1;
-        //aqdata->pumps[pi].buttonID = num;
-        if (aqdata->pumps[pi].pumpID < 119)
-          aqdata->pumps[pi].ptype = PENTAIR;
-        else
-          aqdata->pumps[pi].ptype = JANDY;
-        pi++;
-        
+#if defined AQ_IAQTOUCH
+  } else if (strncasecmp(param, "virtual_button_", 15) == 0) {
+     rtn=true;
+    if (_aqconfig_.paneltype_mask == 0) {
+      // ERROR the vbutton will be irnored.
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, Panel type mush be definied before adding a virtual_button, ignored setting : %s",param);
+    } else if (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) {
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must on of the folowing (0x30,0x31,0x32,0x33), ignored setting : %s",param);
+    } else if (strncasecmp(param + 17, "_label", 6) == 0) {
+      int num = strtoul(param + 15, NULL, 10);
+      char *label = cleanalloc(value);
+      aqkey *button = addVirtualButton(aqdata, label, num);
+      if (button != NULL) {
+        button->special_mask |= VIRTUAL_BUTTON;
       } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring %s'\n",MAX_PUMPS,param);
+        LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
       }
-      rtn=true;
-    } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1 
-    }*/
+    }
   }
+#endif
 
   return rtn;
 }

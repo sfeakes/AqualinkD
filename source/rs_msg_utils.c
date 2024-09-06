@@ -54,6 +54,9 @@ Pull revision from string  examples
 '    REV. O.2    '
 'B0029221 REV T.0.1'
 '   REV T.0.1'
+
+AllButton: Control Panel version B0316823 REV Yg
+
 */
 bool rsm_get_revision(char *dest, const char *src, int src_len)
 {

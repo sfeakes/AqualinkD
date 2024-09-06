@@ -246,6 +246,8 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define BTN_TEMP1_HTR  "Temp1_Heater"
 #define BTN_TEMP2_HTR  "Temp2_Heater"
 
+#define BTN_VAUX      "Aux_V"  // A number will be appended
+
 #ifdef AQ_RS16
 #define BTN_AUXB1      "Aux_B1"
 #define BTN_AUXB2      "Aux_B2"

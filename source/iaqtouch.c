@@ -28,6 +28,9 @@
 #include "rs_msg_utils.h"
 #include "devices_jandy.h"
 
+
+#define NEW_POLL_CYCLE
+
 void temp_debugprintExtraInfo(unsigned char *pk, int length);
 
 
@@ -284,6 +287,61 @@ void processTableMessage(unsigned char *message, int length)
     LOG(IAQT_LOG,LOG_ERR, "Run out of IAQT table buffer, need %d have %d\n",(int)message[5],IAQ_MSG_TABLE_LINES);
 }
 
+//  aqualinkd button found and updated, AQstart & AQend are index of aqualinkd button array
+void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page_button *pageButton, int AQstartIndex, int AQendIndex)
+{
+
+  for (int i = AQstartIndex; i < AQendIndex; i++)
+  {
+    //LOG(IAQT_LOG,LOG_DEBUG, "Button compare '%s' to '%s'\n",pageButton->name, aq_data->aqbuttons[i].label);
+
+    int rtn = -1;
+    // If we are loading HOME page then simply button name is the label ie "Aux3"
+    // If loading DEVICES? page then button name + status is "Aux3 OFF "
+    if (_currentPageLoading == IAQ_PAGE_HOME)
+      rtn = rsm_strmatch((const char *)pageButton->name, aq_data->aqbuttons[i].label);
+    else
+      rtn = rsm_strmatch_ignore((const char *)pageButton->name, aq_data->aqbuttons[i].label, 5); // 5 = 3 chars and 2 spaces ' OFF '
+
+    if (rtn == 0)
+    {
+      if (rtn == 0)
+      {
+        LOG(IAQT_LOG,LOG_DEBUG, "*** Found Status for %s state 0x%02hhx\n", aq_data->aqbuttons[i].label, pageButton->state);
+        switch(pageButton->state) {
+          case 0x00:
+            if (aq_data->aqbuttons[i].led->state != OFF) {
+              aq_data->aqbuttons[i].led->state = OFF;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x01:
+            if (aq_data->aqbuttons[i].led->state != ON) {
+              aq_data->aqbuttons[i].led->state = ON;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x02:
+            if (aq_data->aqbuttons[i].led->state != FLASH) {
+              aq_data->aqbuttons[i].led->state = FLASH;
+              aq_data->updated = true;
+            }
+          break;
+          case 0x03:
+            if (aq_data->aqbuttons[i].led->state != ENABLE) {
+              aq_data->aqbuttons[i].led->state = ENABLE;
+              aq_data->updated = true;
+            }
+          break;
+          default:
+            LOG(IAQT_LOG,LOG_NOTICE, "Unknown state 0x%02hhx for button %s\n",pageButton->state,pageButton->name); 
+          break;
+        }
+      }
+    }
+  }
+}
+
 void processPageButton(unsigned char *message, int length, struct aqualinkdata *aq_data)
 {
   struct iaqt_page_button *button;
@@ -328,8 +386,22 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
 
   // This get's called or every device state change in PDA mode, since we page over all the devices.
   // So capture and update the device state
+  if (isPDA_PANEL) {
+    updateAQButtonFromPageButton(aq_data,button,0,aq_data->total_buttons);
+  } else {
+#ifdef AQ_RS16
+    if ( PANEL_SIZE() >= 16) {
+      updateAQButtonFromPageButton(aq_data,button,aq_data->rs16_vbutton_start,aq_data->rs16_vbutton_end + 1);
+    }
+#endif
+    if ( isVirtualButtonEnabled() ) {
+      updateAQButtonFromPageButton(aq_data,button,aq_data->virtual_button_start,aq_data->total_buttons);
+    }
+  }
 
-  if (isPDA_PANEL || PANEL_SIZE() >= 16 ) {
+/*
+  // NSF Add virtual button support below. ( || aq_data->virtual_button_start > 0 )
+  if (isPDA_PANEL || PANEL_SIZE() >= 16) {
     int start = 0;
     int end = aq_data->total_buttons;
 
@@ -388,7 +460,7 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
         }
       }
     }
-  } 
+  } */
 }
 
 
@@ -684,16 +756,17 @@ void processPage(struct aqualinkdata *aq_data)
         dp = 2;
       //LOG(IAQT_LOG,LOG_INFO, "Devices Page #1:-\n");
       debugPrintButtons(_devicePageButtons[dp]);
-
+#ifndef NEW_POLL_CYCLE
       // If Button 15 has type 0x02 then we have previous, if 0x00 nothing (previous send code KEY_IAQTCH_PREV_PAGE)
       // If Button 16 has type 0x03 then we have next, if 0x00 nothing (next send code KEY_IAQTCH_NEXT_PAGE)
-      if ( (isPDA_PANEL || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
+      if ( (isPDA_PANEL || isVirtualButtonEnabled() || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
         if (_devicePageButtons[dp][16].type == 0x03) {
           iaqt_queue_cmd(KEY_IAQTCH_NEXT_PAGE);
         } else {
           iaqt_queue_cmd(KEY_IAQTCH_STATUS);
         }
       }
+#endif
     break;
     case IAQ_PAGE_COLOR_LIGHT:
       //LOG(IAQT_LOG,LOG_INFO, "Color Light Page :-\n");
@@ -793,7 +866,7 @@ void processPage(struct aqualinkdata *aq_data)
   }
 }
 
-#define REQUEST_STATUS_POLL_COUNT 50
+#define REQUEST_STATUS_POLL_COUNT 10
 
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
@@ -931,8 +1004,67 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   /*
   NEED TO ALTERNATE SEND KEY_IAQTCH_HOMEP_KEY08 KEY and KEY_IAQTCH_STATUS BELOW FOR PDA
   */
+
   // Standard ack/poll
   if (packet[3] == CMD_IAQ_POLL) {
+
+#ifdef NEW_POLL_CYCLE
+/*
+// loop device/<pause>device1/device2/device3/status/home/<repeat>
+----------
+if not programming && poll packet {
+  if home page end loaded {
+    reset counter
+    goto device page.
+  }
+
+  if (counter 5 ) {
+    if device goto device 1
+    else if device1 goto device2
+    else if device2 goto device3
+    else if device3 goto status
+    else if status goto Home
+  }
+  increase counter
+}*/
+    if (in_programming_mode(aq_data) == false) {
+      if (_currentPage == IAQ_PAGE_HOME) {
+        iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
+        cnt = 0;
+      }
+      //if ( (isPDA_PANEL || isVirtualButtonEnabled() || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
+      // Just sent Status Page request if none of the above are active
+      //}
+      // After we send devices page in above if statment, kick us through a loop of
+      // devices devices1 devices2 devices2 status.
+      uint8_t nextPageRequestKey = KEY_IAQTCH_HOME;
+
+      if (cnt++ > REQUEST_STATUS_POLL_COUNT) {
+        switch(_currentPage) {
+          case IAQ_PAGE_DEVICES:
+          case IAQ_PAGE_DEVICES_REV_Yg:
+            if (_devicePageButtons[0][16].type == 0x03) 
+              nextPageRequestKey = KEY_IAQTCH_NEXT_PAGE;
+            else
+              nextPageRequestKey = KEY_IAQTCH_STATUS;
+          break;
+          case IAQ_PAGE_DEVICES2:
+            if (_devicePageButtons[1][16].type == 0x03) 
+              nextPageRequestKey = KEY_IAQTCH_NEXT_PAGE;
+            else
+              nextPageRequestKey = KEY_IAQTCH_STATUS;
+          break;
+          case IAQ_PAGE_DEVICES3:
+            if (_devicePageButtons[1][16].type == 0x03) 
+              nextPageRequestKey = KEY_IAQTCH_NEXT_PAGE;
+            else
+              nextPageRequestKey = KEY_IAQTCH_STATUS;
+          break;
+        }
+        iaqt_queue_cmd(nextPageRequestKey);
+      }
+    }
+#else
     //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
     // Load status page every 50 messages
     if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
@@ -962,6 +1094,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
       // -5 seems to be too quick for VSP/GPM so using 10
       cnt = REQUEST_STATUS_POLL_COUNT - 10; 
     }
+#endif
     // On poll no need to kick programming threads
     return false;
   }
