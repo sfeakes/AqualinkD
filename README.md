@@ -119,22 +119,18 @@ NEED TO FIX FOR THIS RELEASE.
 * DONE look at virtual button support
 *   vbuton will need the PDA on iAQT protocol working.
 * change dimmer to % from steps. (will make HASIO & Homekit easier)
-* show Colorlight name in UI
 * add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
 * deprecate extended_device_id_programming
 * show error is vbutton and no extended_device_id
 # Updates in 2.3.9
 -->
-<!--
-# Updates in 2.4.1 (dev 0.1) -> Under development
-* Added support for One Touch Buttons & Virtual Buttons.
-  * look at `virtual_button??_label` in aqualinkd.conf
-  * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
+
+# Updates in 2.4.1 (under development)
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
-  * use `rssa_device_id=0x33` in aqualinkd.conf
--->
+  * use `device_id=0x33` in aqualinkd.conf
+
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
 * Fixed bugs with particular Jandy panel versions and color lights.

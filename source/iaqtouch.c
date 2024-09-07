@@ -334,7 +334,13 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
             }
           break;
           default:
-            LOG(IAQT_LOG,LOG_NOTICE, "Unknown state 0x%02hhx for button %s\n",pageButton->state,pageButton->name); 
+            // Dimmer light will have the % as the state. so 0x32=50% 0x4B=75%
+            // So anything greater than 0 use as on
+            if (pageButton->state > 0x00) {
+              aq_data->aqbuttons[i].led->state = ON;
+              aq_data->updated = true;
+            }
+            //LOG(IAQT_LOG,LOG_NOTICE, "Unknown state 0x%02hhx for button %s\n",pageButton->state,pageButton->name);
           break;
         }
       }

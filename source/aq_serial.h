@@ -121,7 +121,8 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define AQ_MINPKTLEN    5
 //#define AQ_MAXPKTLEN   64
 //#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
-#define AQ_MAXPKTLEN   256  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
+//#define AQ_MAXPKTLEN   256  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
+#define AQ_MAXPKTLEN   512  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
 #define AQ_PSTLEN       5
 #define AQ_MSGLEN      16
 #define AQ_MSGLONGLEN 128

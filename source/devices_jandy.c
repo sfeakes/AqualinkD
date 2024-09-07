@@ -947,7 +947,6 @@ bool processPacketFromJandyChemFeeder(unsigned char *packet_buffer, int packet_l
 
 
 
-
 /*
 
 // JXi Heater

@@ -482,7 +482,7 @@ int startup(char *self, char *cfgFile)
 
   // Sanity check on Device ID's against panel type
   if (isRS_PANEL) {
-    if (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) {
+    if ( (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) || _aqconfig_.device_id == 0x00) {
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match RS panel, please check config!\n", _aqconfig_.device_id);
@@ -992,7 +992,7 @@ void main_loop()
     got_probe_rssa = true;
   
   if (_aqconfig_.device_id == 0x00) {
-    LOG(AQUA_LOG,LOG_NOTICE, "Searching for valid ID, please configure one for faster startup\n");
+    LOG(AQUA_LOG,LOG_WARNING, "Searching for valid ID, please configure `device_id` for faster startup\n");
   }
 
   LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
@@ -1001,13 +1001,17 @@ void main_loop()
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
   while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
   {
-    if (blank_read == blank_read_reconnect) {
+    if (blank_read == blank_read_reconnect / 2) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
 #ifdef AQ_CONTAINER
         // Reset blank reads here, we want to ignore TTY errors in container to keep it running
         blank_read = 1;
 #endif
-    } else if (blank_read == blank_read_reconnect*2) {
+      if (_aqconfig_.device_id == 0x00) {
+        blank_read = 1; // if device id=0x00 it's code for don't exit
+      }
+      _aqualink_data.updated = true; // Make sure to show erros if ui is up
+    } else if (blank_read == blank_read_reconnect*2 ) {
       LOG(AQUA_LOG,LOG_ERR, "I'm done, exiting, please check '%s'\n",_aqconfig_.serial_port);
       stopPacketLogger();
       close_serial_port(rs_fd);

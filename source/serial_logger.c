@@ -206,6 +206,7 @@ const char *getDevice(unsigned char ID) {
   if (ID >= 0x70 && ID <= 0x73)
     return HEAT_PUMP;
 
+  // Looks like 0xe0 is also a Jandy ePump
   if (ID >= 0x78 && ID <= 0x7B)
     return EPUMP;
 

@@ -686,7 +686,8 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       pump_detail *pump = getpump(aqdata, num);
       if (pump != NULL) {
         pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
-        if ( (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
+        //if ( (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
+        if ( (int)pump->pumpID >= PENTAIR_DEC_PUMP_MIN && (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
           pump->prclType = PENTAIR;
         } else {
           pump->prclType = JANDY;

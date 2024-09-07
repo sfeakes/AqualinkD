@@ -45,19 +45,33 @@
 //SPA WILL TURN OFF AFTER COOL DOWN CYCLE
 
 
+bool printableChar(char ch)
+{
+  if ( (ch < 32 || ch > 126) || 
+        ch == 123 || // {
+        ch == 125 || // }
+        ch == 34 || // "
+        ch == 92    // backslash
+  ) {
+    return false;
+  }
+  return true;
 
+}
 
 int json_chars(char *dest, const char *src, int dest_len, int src_len)
 {
   int i;
   int end = dest_len < src_len ? dest_len:src_len;
   for(i=0; i < end; i++) {
+    /*
     if ( (src[i] < 32 || src[i] > 126) || 
           src[i] == 123 || // {
           src[i] == 125 || // }
           src[i] == 34 || // "
-          src[i] == 92 // backslash
-       ) // only printable chars
+          src[i] == 92    // backslash
+       ) // only printable chars*/
+    if (! printableChar(src[i]))
       dest[i] = ' ';
     else
       dest[i] = src[i];
@@ -120,24 +134,11 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return JSON_TIMEOUT;
   }
 
-  // NSF should probably use json_chars here.
   if (aqdata->last_display_message[0] != '\0') {
     int i;
     for(i=0; i < strlen(aqdata->last_display_message); i++ ) {
-      if (aqdata->last_display_message[i] <= 31 || aqdata->last_display_message[i] >= 127) {
+      if (! printableChar(aqdata->last_display_message[i])) {
         aqdata->last_display_message[i] = ' ';
-      } else {
-        switch (aqdata->last_display_message[i]) {
-          case '"':
-          case '/':
-          case '\n':
-          case '\t':
-          case '\f':
-          case '\r':
-          case '\b':
-            aqdata->last_display_message[i] = ' ';
-          break;
-        }
       }
     }
     //printf("JSON Sending '%s'\n",aqdata->last_display_message);
