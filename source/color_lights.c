@@ -22,7 +22,7 @@ const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] 
 //char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
 {
    // AqualnkD Colors ignored as no names in control panel.
-   { "bogus" },
+   { "", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18" },
    { // Jandy Color
         "",
         "Alpine White",  // 0x41
@@ -159,7 +159,7 @@ const char *light_mode_name(clight_type type, int index, emulation_type protocol
 {
   if (index <= 0 || index > LIGHT_COLOR_OPTIONS ){
     return "";
-  }
+  } 
 
   // Rename any modes depending on emulation type
   if (protocol == ALLBUTTON) {
