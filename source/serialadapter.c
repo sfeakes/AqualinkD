@@ -364,17 +364,9 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
 #endif
           // Set the color index.  (packet[6] - RSSD_COLOR_LIGHT_OFFSET)-1
           if (aq_data->lights[i].lightType != LC_DIMMER) {
-            int color_index = (packet[6] - RSSD_COLOR_LIGHT_OFFSET);
-            if (color_index <= 0 || color_index > LIGHT_COLOR_OPTIONS)
-              color_index = 0;
-            //LOG(RSSA_LOG,LOG_DEBUG,"Color index %d\n",color_index);
-            aq_data->lights[i].currentValue = color_index;
+            set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_COLOR_LIGHT_OFFSET));
           } else if (aq_data->lights[i].lightType == LC_DIMMER) {
-            int dimmer_index = (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25;
-            if (dimmer_index < 0 || dimmer_index > 4)
-              dimmer_index = 0;
-            //LOG(RSSA_LOG,LOG_DEBUG,"Dimmer index %d\n",dimmer_index);
-            aq_data->lights[i].currentValue = dimmer_index;
+            set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25);
           }
         }
       }

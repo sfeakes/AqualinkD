@@ -33,6 +33,7 @@
 #include "aq_timer.h"
 #include "aq_programmer.h"
 #include "rs_msg_utils.h"
+#include "color_lights.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -706,7 +707,31 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     length--;
   length += sprintf(buffer+length, "}");
 
+  length += sprintf(buffer+length, ",\"light_program\":{" );
+  for (i=0; i < aqdata->num_lights; i++) 
+  {
+      length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, RSSADAPTER) );
+  }
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "}");
 
+/*
+  for (i=0; i < aqdata->num_lights; i++) 
+  {
+    length += sprintf(buffer+length, ",\"Plight_%d\":{\"name\":\"%s\",\"id\":\"%s\", \"type\":\"%d\", \"value\":\"%d\", \"state\":\"%s\"}",
+                                     i+1,
+                                     aqdata->lights[i].button->label,
+                                     aqdata->lights[i].button->name,
+                                     aqdata->lights[i].lightType,
+                                     aqdata->lights[i].currentValue,
+                                     LED2text(aqdata->lights[i].RSSDstate)
+    );
+  }
+  */
+  //if (buffer[length-1] == ',')
+  //  length--;
+  //length += sprintf(buffer+length, "}");
 
 
   length += sprintf(buffer+length, "}" );

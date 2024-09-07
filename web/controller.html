@@ -2166,6 +2166,12 @@
       for (var obj in data.timer_durations) {
         setTileOnText(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
       }
+
+      for (var obj in data.light_program) {
+        if (data.light_program[obj] != "") {
+          setTileOnText(obj.toString(),data.light_program[obj]);
+        }
+      }
         
 
       if (data.swg_boost_msg != null ) {

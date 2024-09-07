@@ -157,6 +157,10 @@ void setColorLightsPanelVersion(uint8_t supported)
 
 const char *light_mode_name(clight_type type, int index, emulation_type protocol)
 {
+  if (index <= 0 || index > LIGHT_COLOR_OPTIONS ){
+    return "";
+  }
+
   // Rename any modes depending on emulation type
   if (protocol == ALLBUTTON) {
     if (strcmp(_color_light_options[type][index],"Afternoon Skies") == 0) {
@@ -190,6 +194,15 @@ bool isShowMode(const char *mode)
     return true;
   else
     return false;
+}
+
+void set_currentlight_value(clight_detail *light, int index)
+{
+  // We want to leave the last color, so if 0 don't do anything, but set to 0 if bad value
+  if (index < 0 || index > LIGHT_COLOR_OPTIONS)
+    light->currentValue = 0;
+  else if (index > 0 && index < LIGHT_COLOR_OPTIONS)
+    light->currentValue = index;
 }
 
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size)
