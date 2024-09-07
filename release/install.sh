@@ -133,8 +133,8 @@ fi
 #        we added Aux_V? to the button list
 if [ -f "$WEBLocation/config.js" ]; then
   # Test is if has AUX_V1 in file
-  if ! grep -q Aux_V1 ./config.js; then
-    $dateext=`date +%Y%m%d_%H_%M_%S`
+  if ! grep -q Aux_V1 $WEBLocation/config.js; then
+    dateext=`date +%Y%m%d_%H_%M_%S`
     echo "AqualinkD web config is old, making copy to $WEBLocation/config.js.$dateext"
     echo "Please make changes to new version $WEBLocation/config.js"
     mv $WEBLocation/config.js $WEBLocation/config.js.$dateext

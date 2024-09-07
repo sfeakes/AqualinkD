@@ -2169,7 +2169,19 @@
 
       for (var obj in data.light_program) {
         if (data.light_program[obj] != "") {
-          setTileOnText(obj.toString(),data.light_program[obj]);
+          var light_mode = data.light_program[obj];
+          
+          // If aqualinkd probrammed light, need to get convert int to text index, if not value is text
+          try {
+            var light_type = document.getElementById(obj.toString()).getAttribute('lighttype')
+            if (light_type == 0) {
+              var light_mode = _light_program[light_type][parseInt(data.light_program[obj])-1];
+              if (light_mode.endsWith(" - Show"))
+              light_mode = light_mode.slice(0, -7);
+            }
+          } catch (e) {}
+
+          setTileOnText(obj.toString(),light_mode);
         }
       }
         

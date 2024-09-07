@@ -125,16 +125,17 @@ NEED TO FIX FOR THIS RELEASE.
 * show error is vbutton and no extended_device_id
 # Updates in 2.3.9
 -->
-# Updates in 2.3.9 (dev 0.1) -> Under development
-* Added support for One Touch Buttons & Custom Virtual Buttons (new in Jandy Rev Yg).
+<!--
+# Updates in 2.4.1 (dev 0.1) -> Under development
+* Added support for One Touch Buttons & Virtual Buttons.
   * look at `virtual_button??_label` in aqualinkd.conf
   * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
   * use `rssa_device_id=0x33` in aqualinkd.conf
-
-# Updates in Release 2.3.8
+-->
+# Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
 * Fixed bugs with particular Jandy panel versions and color lights.
 * Added support for more color lights, and sped up programming
@@ -147,6 +148,12 @@ NEED TO FIX FOR THIS RELEASE.
 * Changes to aqmanager for adding more options for decoding protocols.
 * Support for packets changes from panels REV Yg
 * Support VSP by label (not pump number), REV Yg
+* Added support for One Touch Buttons & Virtual Buttons.
+  * look at `virtual_button??_label` in aqualinkd.conf
+  * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
+
+# Updates in Release 2.3.8
+* Release removed.  Bug with light program 0.
 
 # Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.
