@@ -68,6 +68,12 @@ bool checkAqualinkTime(); // Only need to externalise this for PDA
 
 bool isVirtualButtonEnabled();
 
+#define PUMP_RPM_MAX 3450
+#define PUMP_RPM_MIN 600
+#define PUMP_GPM_MAX 130
+#define PUMP_GPM_MIN 15
+
+
 enum {
  FAHRENHEIT,
  CELSIUS,
@@ -179,6 +185,8 @@ typedef struct pumpd
   int rpm;
   int gpm;
   int watts;
+  int maxSpeed; // Max rpm or gpm depending on pump
+  int minSpeed;
   unsigned char pumpID;
   int pumpIndex;
   char pumpName[PUMP_NAME_LENGTH];

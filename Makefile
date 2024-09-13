@@ -98,7 +98,7 @@ ifeq ($(AQ_ONETOUCH), true)
 endif
 
 ifeq ($(AQ_IAQTOUCH), true)
-  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c
+  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_IAQTOUCH
 endif
 

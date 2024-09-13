@@ -75,6 +75,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc);
 #endif
 
 void reset_last_mqtt_status();
+bool uri_strcmp(const char *uri, const char *string);
 
 //static const char *s_http_port = "8080";
 static struct mg_serve_http_opts _http_server_opts;
@@ -914,11 +915,17 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       _last_mqtt_aqualinkdata.pumps[i].rpm = _aqualink_data->pumps[i].rpm;
       //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_RPM_TOPIC, _aqualink_data->pumps[i].rpm);
+      if (_aqualink_data->pumps[i].pumpType == EPUMP || _aqualink_data->pumps[i].pumpType == VSPUMP) {
+        send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_SPEED_TOPIC, getPumpSpeedAsPercent(&_aqualink_data->pumps[i]));
+      }
     }
     if (_aqualink_data->pumps[i].gpm != TEMP_UNKNOWN && _aqualink_data->pumps[i].gpm != _last_mqtt_aqualinkdata.pumps[i].gpm) {
       _last_mqtt_aqualinkdata.pumps[i].gpm = _aqualink_data->pumps[i].gpm;
       //send_mqtt_aux_msg(nc, PUMP_TOPIC, i+1, PUMP_GPH_TOPIC, _aqualink_data->pumps[i].gph);
       send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_GPM_TOPIC, _aqualink_data->pumps[i].gpm);
+      if (_aqualink_data->pumps[i].pumpType == VFPUMP) {
+        send_mqtt_aux_msg(nc, _aqualink_data->pumps[i].button->name, PUMP_SPEED_TOPIC, getPumpSpeedAsPercent(&_aqualink_data->pumps[i]));
+      }
     }
     if (_aqualink_data->pumps[i].watts != TEMP_UNKNOWN && _aqualink_data->pumps[i].watts != _last_mqtt_aqualinkdata.pumps[i].watts) {
       _last_mqtt_aqualinkdata.pumps[i].watts = _aqualink_data->pumps[i].watts;
@@ -1254,7 +1261,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       rtn = uBad;
     }
   // Action a pump RPM/GPM message
-  } else if ((ri3 != NULL && ((strncasecmp(ri2, "RPM", 3) == 0) || (strncasecmp(ri2, "GPM", 3) == 0) || (strncasecmp(ri2, "VSP", 3) == 0)) && (strncasecmp(ri3, "set", 3) == 0))) {
+  } else if ((ri3 != NULL && ((strncasecmp(ri2, "RPM", 3) == 0) || (strncasecmp(ri2, "GPM", 3) == 0) || (strncasecmp(ri2, "Speed", 5) == 0) || (strncasecmp(ri2, "VSP", 3) == 0)) && (strncasecmp(ri3, "set", 3) == 0))) {
     found = false;
     // Is it a pump index or pump name
     if (strncmp(ri1, "Pump_", 5) == 0) { // Pump by number
@@ -1274,9 +1281,15 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
               return uBad;
             }
           } else {
-            LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d %s to %d\n",actionName[from],pumpIndex+1, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
+            if (strncasecmp(ri2, "Speed", 5) == 0) {
+              int val = convertPumpPercentToSpeed(&_aqualink_data->pumps[i], round(value));
+              LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d Speed to %d%%, using %s of %d\n",actionName[from],pumpIndex+1, round(value), (_aqualink_data->pumps[i].pumpType==VFPUMP?"GPM":"RPM" ) ,val);
+              panel_device_request(_aqualink_data, PUMP_RPM, pumpIndex, val, from); 
+            } else {
+              LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d %s to %d\n",actionName[from],pumpIndex+1, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
             //create_program_request(from, PUMP_RPM, round(value), pumpIndex);
-            panel_device_request(_aqualink_data, PUMP_RPM, pumpIndex, round(value), from);
+              panel_device_request(_aqualink_data, PUMP_RPM, pumpIndex, round(value), from);
+            }
           }
           //_aqualink_data->unactioned.type = PUMP_RPM;
           //_aqualink_data->unactioned.value = round(value);
@@ -1287,7 +1300,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       }
     } else { // Pump by button name
       for (i=0; i < _aqualink_data->total_buttons ; i++) {
-        if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
+        //if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
+        if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name)) {
           int pi;
           for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
             if (_aqualink_data->pumps[pi].button == &_aqualink_data->aqbuttons[i]) {
@@ -1304,9 +1318,15 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
                   return uBad;
                 }
               } else {
-                LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d %s to %d\n",actionName[from], pi+1, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
+                if (strncasecmp(ri2, "Speed", 5) == 0) {
+                  int val = convertPumpPercentToSpeed(&_aqualink_data->pumps[pi], round(value));
+                  LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d Speed to %d%%, using %s of %d\n",actionName[from],_aqualink_data->pumps[pi].pumpIndex, round(value), (_aqualink_data->pumps[i].pumpType==VFPUMP?"GPM":"RPM" ) ,val);
+                  panel_device_request(_aqualink_data, PUMP_RPM, _aqualink_data->pumps[pi].pumpIndex, val, from); 
+                } else {
+                  LOG(NET_LOG,LOG_NOTICE, "%s: request to change pump %d %s to %d\n",actionName[from], pi+1, (strncasecmp(ri2, "GPM", 3) == 0)?"GPM":"RPM", round(value));
                 //create_program_request(from, PUMP_RPM, round(value), _aqualink_data->pumps[pi].pumpIndex);
-                panel_device_request(_aqualink_data, PUMP_RPM, _aqualink_data->pumps[pi].pumpIndex, round(value), from);
+                  panel_device_request(_aqualink_data, PUMP_RPM, _aqualink_data->pumps[pi].pumpIndex, round(value), from);
+                }
               }
               //_aqualink_data->unactioned.type = PUMP_RPM;
               //_aqualink_data->unactioned.value = round(value);
@@ -1363,13 +1383,15 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
 
     for (i=0; i < _aqualink_data->total_buttons && found==false; i++) {
       // If Label = "Spa", "Spa_Heater" will turn on "Spa", so need to check '/' on label as next character
-      if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
-          (strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0 && ri1[strlen(_aqualink_data->aqbuttons[i].label)] == '/'))
+      //if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
+      //   (strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0 && ri1[strlen(_aqualink_data->aqbuttons[i].label)] == '/'))
+      if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name) || uri_strcmp(ri1, _aqualink_data->aqbuttons[i].label) )
       {
         found = true;
         //create_panel_request(from, i, value, istimer);
+        LOG(NET_LOG,LOG_INFO, "%d: MATCH %s to topic %.*s\n",from,_aqualink_data->aqbuttons[i].name,uri_length, URI);
+        LOG(NET_LOG,LOG_INFO, "ri1=%s, length=%d char@=%c\n",ri1,strlen(_aqualink_data->aqbuttons[i].label),ri1[strlen(_aqualink_data->aqbuttons[i].label)] );
         panel_device_request(_aqualink_data, atype, i, value, from);
-        //LOG(NET_LOG,LOG_INFO, "%s: MATCH %s to topic %.*s\n",from,_aqualink_data->aqbuttons[i].name,uri_length, URI);
       }
     }
     if(!found) {
@@ -1387,6 +1409,28 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   return rtn;
 }
 
+/*
+  Quicker and more accurate for us than normal strncmp, since we check for the trailing / at right position
+  check Spa against uri /Spa/set /Spa_mode/set / Spa_heater/set
+*/
+bool uri_strcmp(const char *uri, const char *string) {
+  int i;
+  int len = strlen(string);
+
+  // Check the trailing / on length first.
+  if (uri[len] != '/') {
+    return false;
+  }
+
+  // Now check all characters
+  for (i=0; i < len; i++) {
+    if ( uri[i] != string[i] ){
+      return false;
+    } 
+  }
+
+  return true;
+}
 
 void action_mqtt_message(struct mg_connection *nc, struct mg_mqtt_message *msg) {
   char *rtnmsg;

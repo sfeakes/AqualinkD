@@ -360,6 +360,32 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   return button;  
 }
 
+// So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
+// (value-600) / (3450-600) * 100   
+// (value) / 100 * (3450-600) + 600
+
+//{{ (((value | float(0) - %d) / %d) * 100) | int }} - minspeed, (maxspeed - minspeed),
+//{{ ((value | float(0) / 100) * %d) + %d | int }} - (maxspeed - minspeed), minspeed)
+
+int getPumpSpeedAsPercent(pump_detail *pump) {
+  int pValue = pump->pumpType==VFPUMP?pump->gpm:pump->rpm;
+
+  if (pValue < pump->minSpeed) {
+      return 0;
+  }
+
+  // Below will return 0% if pump is at min, so return max (caculation, 1)
+  return AQ_MAX( (int)((float)(pValue - pump->minSpeed) / (float)(pump->maxSpeed - pump->minSpeed) * 100) + 0.5, 1);
+}
+
+int convertPumpPercentToSpeed(pump_detail *pump, int pValue) {
+  if (pValue >= 100)
+    return pump->maxSpeed;
+  else if (pValue <= 0)
+    return pump->minSpeed;
+  
+  return ( ((float)(pValue / (float)100) * (pump->maxSpeed - pump->minSpeed) + pump->minSpeed)) + 0.5;
+}
 
 // 4,6,8,10,12,14
 void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual) {
@@ -716,6 +742,13 @@ const char* getActionName(action_type type)
 bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, request_source source)
 {
   aqkey *button = &aqdata->aqbuttons[deviceIndex];
+
+  if (button->special_mask & VIRTUAL_BUTTON && button->special_mask & VS_PUMP) {
+    // Virtual Button with VSP is always on.
+    LOG(PANL_LOG, LOG_INFO, "received '%s' for '%s', virtual pump is always on, ignoring", (isON == false ? "OFF" : "ON"), button->name);
+    button->led->state = ON;
+    return false;
+  }
 
   if ((button->led->state == OFF && isON == false) ||
       (isON > 0 && (button->led->state == ON || button->led->state == FLASH ||

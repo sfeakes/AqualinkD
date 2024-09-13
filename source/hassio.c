@@ -127,9 +127,8 @@ const char *HASSIO_VSP_DISCOVER = "{"
     "\"payload_off\": \"0\","
     "\"percentage_command_topic\": \"%s/%s/%s/set\","       // aqualinkd,filter_pump , RPM|GPM
     "\"percentage_state_topic\":  \"%s/%s/%s\","   // aqualinkd,filter_pump , RPM|GPM
- //   "\"percentage_value_template\": \"{{ (((value | float(0) - %d) / %d) * 100) | int }}\","     // 600, (3450-600)
-    "\"percentage_value_template\": \"{%% if value | float(0) > %d %%} {{ (((value | float(0) - %d) / %d) * 100) | int }}{%% else %%} 1{%% endif %%}\"," // min,min,(max-min)
-    "\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) + %d | int }}\","   // (3450-130), 600
+    //"\"percentage_value_template\": \"{%% if value | float(0) > %d %%} {{ (((value | float(0) - %d) / %d) * 100) | int }}{%% else %%} 1{%% endif %%}\"," // min,min,(max-min)
+    //"\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) + %d | int }}\","   // (3450-130), 600
     "\"speed_range_max\": 100,"
     "\"speed_range_min\": 1," //  18|12  600rpm|15gpm
     "\"qos\": 1,"
@@ -469,20 +468,9 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   
   // VSP Pumps
   for (i=0; i < aqdata->num_pumps; i++) {
-    int maxspeed=3450;   // Min is 600
-    int minspeed=600;  // 600 as % of max
-    char units[4];
-    sprintf(units, "RPM");
-
-    if ( aqdata->pumps[i].pumpType == VFPUMP ) {
-      maxspeed=130; // Min is 15
-      minspeed=15;   // 15 as % of max
-      sprintf(units, "GPM");
-    }
+   char units[] = "Speed";
     // Create a FAN for pump against the button it' assigned to
     // In the future maybe change this to the pump# or change the sensors to button???
-    // Need to change the max / min.  These do NOT lomit the slider in hassio, only the MQTT limits.
-    // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
     sprintf(msg, HASSIO_VSP_DISCOVER,
             _aqconfig_.mqtt_aq_topic,
             aqdata->pumps[i].button->name,units,
@@ -491,9 +479,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,
             _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units,
-            minspeed, minspeed, (maxspeed - minspeed),
-            (maxspeed - minspeed), minspeed);
+            _aqconfig_.mqtt_aq_topic,aqdata->pumps[i].button->name,units);
 
     sprintf(topic, "%s/fan/aqualinkd/aqualinkd_%s_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->pumps[i].button->name, units);
     send_mqtt(nc, topic, msg);

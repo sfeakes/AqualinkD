@@ -114,15 +114,22 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 <!-- 
 NEED TO FIX FOR THIS RELEASE.
+***** FIX NET_SERVICES.C   action_uri()   spa and spa_mode get confused. check EVERY strncmp
+* MQTT filter_pump/percent/set, maybe add max/min to pump config. / print protocol on startup
 * Pump by name and not ID. clean up code
-* look at using 0x00 for no exit on serial errors / startup
+* DONE look at using 0x00 for no exit on serial errors / startup
 * DONE look at virtual button support
 *   vbuton will need the PDA on iAQT protocol working.
 * change dimmer to % from steps. (will make HASIO & Homekit easier)
 * add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
-* deprecate extended_device_id_programming
-* show error is vbutton and no extended_device_id
-# Updates in 2.3.9
+* deprecate (hide and default to yes) extended_device_id_programming
+* Move following to main and not config.c - show error is vbutton and no extended_device_id, vbutton w/ pump can be onetouch.
+* check panel version reported against config.
+# Updates in 2.4.1
+
+# install.sh change spa_mode to spa in config.js
+# DONE change hassio.c to use rpm speed/percent
+# pickup speed faster on iaqualinktouch after change
 -->
 
 # Updates in 2.4.1 (under development)
@@ -130,6 +137,10 @@ NEED TO FIX FOR THIS RELEASE.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
   * use `device_id=0x33` in aqualinkd.conf
+* Added MQTT vsp_pump/speed/set for setting speed (RPM/GPM) by %, for automation hubs.
+* cleaned up code for spa_mode and spa for newer pannels.
+* Allow VSP to be asigned to virtual button.
+* Fixed bug with timer not starting.
 
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)

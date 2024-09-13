@@ -76,6 +76,8 @@ emulation_type getJandyDeviceType(unsigned char ID) {
     return AQUAPDA;
   if (ID >= 0x30 && ID <= 0x33)
     return IAQTOUCH;
+   if (ID >= 0xa0 && ID <= 0xa3)
+    return IAQUALNK;
 
 /*
   if (ID >= 0x00 && ID <= 0x03)
@@ -284,6 +286,10 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
         return "LXi error";
       else
         return "LXi status";
+    break;
+
+    case 0x53:
+      return "iAqalnk Poll";
     break;
 
     default:

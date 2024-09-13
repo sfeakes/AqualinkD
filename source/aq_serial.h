@@ -232,7 +232,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #endif
 
 #define BTN_PUMP      "Filter_Pump"
-#define BTN_SPA       "Spa_Mode"
+#define BTN_SPA       "Spa"
 #define BTN_AUX1      "Aux_1"
 #define BTN_AUX2      "Aux_2"
 #define BTN_AUX3      "Aux_3"

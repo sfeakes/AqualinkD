@@ -1000,6 +1000,13 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     //printf("*****  iAqualink Touch STARTUP Message ******* \n");
     if (gotInit == false) {
       LOG(IAQT_LOG,LOG_DEBUG, "STARTUP Message\n");
+      
+      if (_aqconfig_.enable_iaqualink) {
+        LOG(IAQT_LOG,LOG_DEBUG, "Enabling iAqualink Protocol\n");
+        // Below will not send 0x29 since queueGetProgramData takes presidance, 
+        //iaqt_queue_cmd(0x29);
+        _aqconfig_.extended_device_id2 = _aqconfig_.extended_device_id + 112; // 0x70 in dec
+      }
       //LOG(IAQT_LOG,LOG_ERR, "STARTUP REMOVED GET PANEL DATA FOR TESTING\n");
       queueGetProgramData(IAQTOUCH, aq_data);
       gotInit = true;

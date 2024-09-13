@@ -6,7 +6,7 @@
     // http://aqualink.ip.address/api/devices
     var devices = [
         "Filter_Pump",
-        "Spa_Mode",
+        "Spa",
         "Aux_1",
         "Aux_2",
         "Aux_3",

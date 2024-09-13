@@ -53,6 +53,7 @@
 #define PUMP_MODE_TOPIC "/Mode"
 #define PUMP_STATUS_TOPIC "/Status"
 #define PUMP_PPC_TOPIC "/PPC"
+#define PUMP_SPEED_TOPIC "/Speed"
 
 #define LIGHT_PROGRAM_TOPIC "/program"
 /*

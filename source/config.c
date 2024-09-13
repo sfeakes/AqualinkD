@@ -47,6 +47,8 @@
 
 char *generate_mqtt_id(char *buf, int len);
 pump_detail *getpump(struct aqualinkdata *aqdata, int button);
+bool populatePumpData(struct aqualinkdata *aqdata, char *pumpcfg ,aqkey *button, char *value);
+pump_detail *getPumpFromButtonID(struct aqualinkdata *aqdata, aqkey *button);
 
 struct tmpPanelInfo {
   int size;
@@ -403,9 +405,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     // Has to be before the below.
     _aqconfig_.extended_device_id_programming = text2bool(value);
     rtn=true;
-  } else if (strncasecmp(param, "extended_device_id", 9) == 0) {
+  } else if (strncasecmp(param, "extended_device_id", 18) == 0) {
     _aqconfig_.extended_device_id = strtoul(cleanalloc(value), NULL, 16);
-    //_config_parameters.onetouch_device_id != 0x00
+    rtn=true;
+   } else if (strncasecmp(param, "enable_iaqualink", 16) == 0) {
+    _aqconfig_.enable_iaqualink = text2bool(value);
     rtn=true;
 #endif
   } else if (strncasecmp(param, "panel_type_size", 15) == 0) {
@@ -682,63 +686,25 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
       }
       rtn=true;
-    } else if (strncasecmp(param + 9, "_pumpID", 7) == 0) {
-      pump_detail *pump = getpump(aqdata, num);
-      if (pump != NULL) {
-        pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
-        //if ( (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
-        if ( (int)pump->pumpID >= PENTAIR_DEC_PUMP_MIN && (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
-          pump->prclType = PENTAIR;
-        } else {
-          pump->prclType = JANDY;
-          //pump->pumpType = EPUMP; // For testing let the interface set this
-        }
-      } else {
+    } else if (strncasecmp(param + 9, "_pump", 5) == 0) {
+
+      if ( ! populatePumpData(aqdata, param + 10, &aqdata->aqbuttons[num], value) ) 
+      {
         LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
       }
+
       rtn=true;
-    } else if (strncasecmp(param + 9, "_pumpIndex", 10) == 0) { //button_01_pumpIndex=1
-      pump_detail *pump = getpump(aqdata, num);
-      if (pump != NULL) {
-        pump->pumpIndex = strtoul(value, NULL, 10);
-      } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
-      }
-      rtn=true;
-    } else if (strncasecmp(param + 9, "_pumpType", 9) == 0) {
-      // This is not documented, as it's prefered for AqualinkD to find the pump type.
-      pump_detail *pump = getpump(aqdata, num);
-      if (pump != NULL) {
-        if ( stristr(value, "Pentair VS") != 0)
-          pump->pumpType = VSPUMP;
-        else if ( stristr(value, "Pentair VF") != 0)
-          pump->pumpType = VFPUMP;
-        else if ( stristr(value, "Jandy ePump") != 0)
-          pump->pumpType = EPUMP;
-      } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
-      }
-      rtn=true;
-    } else if (strncasecmp(param + 9, "_pumpName", 9) == 0) { //button_01_pumpIndex=1
-      pump_detail *pump = getpump(aqdata, num);
-      if (pump != NULL) {
-        //pump->pumpName = cleanalloc(value);
-        strncpy(pump->pumpName ,cleanwhitespace(value), PUMP_NAME_LENGTH-1);
-      } else {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
-      }
-      rtn=true;
-    }
-#if defined AQ_IAQTOUCH
+    } 
+//#if defined AQ_IAQTOUCH
   } else if (strncasecmp(param, "virtual_button_", 15) == 0) {
-     rtn=true;
+    rtn=true;
+    int num = strtoul(param + 15, NULL, 10);
     if (_aqconfig_.paneltype_mask == 0) {
       // ERROR the vbutton will be irnored.
       LOG(AQUA_LOG,LOG_WARNING, "Config error, Panel type mush be definied before adding a virtual_button, ignored setting : %s",param);
-    } else if (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) {
-      LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must on of the folowing (0x30,0x31,0x32,0x33), ignored setting : %s",param);
+    //} else if (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) {
+    //  LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must on of the folowing (0x30,0x31,0x32,0x33), ignored setting : %s",param);
     } else if (strncasecmp(param + 17, "_label", 6) == 0) {
-      int num = strtoul(param + 15, NULL, 10);
       char *label = cleanalloc(value);
       aqkey *button = addVirtualButton(aqdata, label, num);
       if (button != NULL) {
@@ -746,15 +712,102 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       } else {
         LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
       }
+    } else if (strncasecmp(param + 17, "_pump", 5) == 0) {
+      char *vbname = malloc(sizeof(char*) * 10);
+      snprintf(vbname, 9, "%s%d", BTN_VAUX, num);
+      aqkey *vbutton = NULL;
+      for (int i = aqdata->virtual_button_start; i < aqdata->total_buttons; i++) {
+        //printf("Checking %s agasinsdt %s\n",aqdata->aqbuttons[i].name, vbname);
+        if ( strcmp( aqdata->aqbuttons[i].name, vbname) == 0 ) {
+          vbutton = &aqdata->aqbuttons[i];
+          vbutton->led->state = ON; //Virtual pump is always on 
+          if ( ! populatePumpData(aqdata, param + 18, vbutton, value) ) 
+          {
+            LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
+          }
+          break;
+        }
+      }
+      if (vbutton == NULL) {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, could not find vitrual button for `%s`",param);
+      }
     }
   }
-#endif
+//#endif
 
   return rtn;
 }
 
+// pumpcfg is pointer to pumpIndex, pumpName, pumpType pumpID, (ie pull off button_??_ or vurtual_button_??_)
+bool populatePumpData(struct aqualinkdata *aqdata, char *pumpcfg ,aqkey *button, char *value)
+{
 
+  pump_detail *pump = getPumpFromButtonID(aqdata, button);
+  if (pump == NULL) {
+    return false;
+  }
 
+  if (strncasecmp(pumpcfg, "pumpIndex", 9) == 0) {
+    pump->pumpIndex = strtoul(value, NULL, 10);
+  } else if (strncasecmp(pumpcfg, "pumpType", 8) == 0) {
+    if ( stristr(value, "Pentair VS") != 0)
+      pump->pumpType = VSPUMP;
+    else if ( stristr(value, "Pentair VF") != 0)
+      pump->pumpType = VFPUMP;
+    else if ( stristr(value, "Jandy ePump") != 0)
+      pump->pumpType = EPUMP;
+  } else if (strncasecmp(pumpcfg, "pumpName", 8) == 0) { 
+    strncpy(pump->pumpName ,cleanwhitespace(value), PUMP_NAME_LENGTH-1);
+  } else if (strncasecmp(pumpcfg, "pumpID", 6) == 0) {
+    pump->pumpID = strtoul(cleanalloc(value), NULL, 16);
+    if ( (int)pump->pumpID >= PENTAIR_DEC_PUMP_MIN && (int)pump->pumpID <= PENTAIR_DEC_PUMP_MAX) {
+      pump->prclType = PENTAIR;
+    } else {
+      pump->prclType = JANDY;
+    }
+  } else if (strncasecmp(pumpcfg, "pumpMaxSpeed", 12) == 0) {
+    pump->maxSpeed = strtoul(value, NULL, 10);
+  } else if (strncasecmp(pumpcfg, "pumpMinSpeed", 12) == 0) {
+    pump->minSpeed = strtoul(value, NULL, 10);
+  }
+
+  return true;
+}
+
+pump_detail *getPumpFromButtonID(struct aqualinkdata *aqdata, aqkey *button)
+{
+  int pi;
+
+  // Does it exist
+  for (pi=0; pi < aqdata->num_pumps; pi++) {
+    if (aqdata->pumps[pi].button == button) {
+      return &aqdata->pumps[pi];
+    }
+  }
+
+  // Create new entry
+  if (aqdata->num_pumps < MAX_PUMPS) {
+    //printf ("Creating pump %d\n",button);
+    button->special_mask |= VS_PUMP;
+    aqdata->pumps[aqdata->num_pumps].button = button;
+    aqdata->pumps[aqdata->num_pumps].pumpType = PT_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].rpm = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].watts = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].gpm = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].pStatus = PS_OFF;
+    aqdata->pumps[aqdata->num_pumps].pumpIndex = 0;
+    aqdata->pumps[aqdata->num_pumps].maxSpeed = TEMP_UNKNOWN;
+    aqdata->pumps[aqdata->num_pumps].minSpeed = TEMP_UNKNOWN;
+    //pumpType
+    aqdata->pumps[aqdata->num_pumps].pumpName[0] = '\0';
+    aqdata->num_pumps++;
+    return &aqdata->pumps[aqdata->num_pumps-1];
+  }
+
+  return NULL;
+}
+
+/*
 pump_detail *getpump(struct aqualinkdata *aqdata, int button)
 {
   //static int _pumpindex = 0;
@@ -788,7 +841,7 @@ pump_detail *getpump(struct aqualinkdata *aqdata, int button)
 
   return NULL;
 }
-
+*/
 
 void init_config()
 {

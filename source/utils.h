@@ -52,6 +52,7 @@ typedef  int32_t logmask_t;
 #define DBGT_LOG (1 << 14) // Debug Timer
 
 #define SLOG_LOG (1 << 15) // Serial_Logger
+#define IAQL_LOG (1 << 16) // iAqualink
 
 #define TIMR_LOG SCHD_LOG
 #define PANL_LOG PROG_LOG

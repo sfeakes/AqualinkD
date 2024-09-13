@@ -49,6 +49,7 @@
 #include "onetouch_aq_programmer.h"
 #include "iaqtouch.h"
 #include "iaqtouch_aq_programmer.h"
+#include "iaqualink.h"
 #include "version.h"
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
@@ -697,6 +698,12 @@ int startup(char *self, char *cfgFile)
       LOG(AQUA_LOG,LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
                            _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
     }
+
+    if ( ((_aqualink_data.aqbuttons[i].special_mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)  && 
+         ((_aqualink_data.aqbuttons[i].special_mask & VS_PUMP ) != VS_PUMP) &&
+          (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) ){
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must be on of the folowing (0x30,0x31,0x32,0x33) to use virtual button : '%s'",_aqualink_data.aqbuttons[i].label);
+    }
   }
 /*
   for (i=0; i < _aqualink_data.total_buttons; i++) 
@@ -765,6 +772,41 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
         rem_iaqt_control_cmd(cmd);
       }
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation type Processed packet in");
+    break;
+    case IAQUALNK:
+      /*
+      Probe | HEX: 0x10|0x02|0xa3|0x00|0xb5|0x10|0x03|
+        Ack | HEX: 0x10|0x02|0x00|0x01|0x00|0x00|0x13|0x10|0x03|
+     Unknown '0x61' | HEX: 0x10|0x02|0xa3|0x61|0x00|0x00|0x00|0x04|0x00|0x27|0x41|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x61|0x00|0x74|0x10|0x03|
+     Unknown '0x50' | HEX: 0x10|0x02|0xa3|0x50|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x20|0x00|0x25|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x50|0x00|0x63|0x10|0x03|
+     Unknown '0x51' | HEX: 0x10|0x02|0xa3|0x51|0x00|0x06|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x51|0x00|0x64|0x10|0x03|
+     Unknown '0x59' | HEX: 0x10|0x02|0xa3|0x59|0x00|0x0e|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x59|0x00|0x6c|0x10|0x03|
+     Unknown '0x52' | HEX: 0x10|0x02|0xa3|0x52|0x00|0x07|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x52|0x00|0x65|0x10|0x03|
+     Unknown '0x53' | HEX: 0x10|0x02|0xa3|0x53|0x08|0x10|0x03|
+                Ack | HEX: 0x10|0x02|0x00|0x01|0x3f|0x00|0x52|0x10|0x03|  
+      Use byte 3 as return ack, except for 0x53=0x3f
+      */
+      if (packet_buffer[PKT_CMD] == 0x53) {
+        /*
+        static int cnt=0;
+        if (cnt++ > 10) {
+          cnt=0;
+          LOG(IAQL_LOG,LOG_NOTICE, "Sending get bigass packet\n");
+          send_extended_ack(rs_fd, 0x3f, 0x18);
+        } else*/ {
+        // Use 0x3f
+          send_extended_ack(rs_fd, 0x3f, 0x00);
+        }
+        send_jandy_command(rs_fd, get_rssa_cmd(packet_buffer[PKT_CMD]), 4);
+      } else {
+        // Use packet_buffer[PKT_CMD] 
+        send_extended_ack(rs_fd, packet_buffer[PKT_CMD], 0x00);
+      }
     break;
 #endif
 #ifdef AQ_PDA
@@ -879,7 +921,8 @@ void main_loop()
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
 
-  for (i=0; i < MAX_PUMPS; i++) {
+  //for (i=0; i < MAX_PUMPS; i++) {
+  for (i=0; i < _aqualink_data.num_pumps; i++) {
     _aqualink_data.pumps[i].rpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].gpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].watts = TEMP_UNKNOWN;
@@ -888,6 +931,15 @@ void main_loop()
     _aqualink_data.pumps[i].status = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].pStatus = PS_OFF;
     _aqualink_data.pumps[i].pressureCurve = TEMP_UNKNOWN;
+
+    if (_aqualink_data.pumps[i].maxSpeed <= 0) {
+      _aqualink_data.pumps[i].maxSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MAX:PUMP_RPM_MAX);
+    }
+    if (_aqualink_data.pumps[i].minSpeed <= 0) {
+      _aqualink_data.pumps[i].minSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MIN:PUMP_RPM_MIN);
+    }
+
+    //printf("arrayindex=%d, pump=%d, min=%d, max=%d\n",i,_aqualink_data.pumps[i].pumpIndex, _aqualink_data.pumps[i].minSpeed ,_aqualink_data.pumps[i].maxSpeed);
   }
 
   for (i=0; i < MAX_LIGHTS; i++) {
@@ -1241,10 +1293,14 @@ void main_loop()
       }
 
       // Process and packets of devices we are acting as
-      if (packet_length > 0 && getProtocolType(packet_buffer) == JANDY &&
+      if (packet_length > 0 && getProtocolType(packet_buffer) == JANDY && packet_buffer[PKT_DEST] != 0x00 &&
           (packet_buffer[PKT_DEST] == _aqconfig_.device_id ||
            packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id ||
-           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id ))
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id ||
+           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id2
+#endif
+           ))
       {
         switch(getJandyDeviceType(packet_buffer[PKT_DEST])){
           case ALLBUTTON:
@@ -1266,6 +1322,10 @@ void main_loop()
           case AQUAPDA:
             _aqualink_data.updated = process_pda_packet(packet_buffer, packet_length);
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
+          break;
+          case IAQUALNK:
+            _aqualink_data.updated = process_iaqualink_packet(packet_buffer, packet_length, &_aqualink_data);
+            caculate_ack_packet(rs_fd, packet_buffer, IAQUALNK);
           break;
           default:
           break;

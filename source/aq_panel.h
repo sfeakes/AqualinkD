@@ -62,6 +62,9 @@ void addPanelIAQTouchInterface();
 void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
 
+int getPumpSpeedAsPercent(pump_detail *pump);
+int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable only needed internally
+
 uint16_t getPanelSupport( char *rev_string, int rev_len);
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);

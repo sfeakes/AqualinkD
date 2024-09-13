@@ -35,6 +35,7 @@ typedef enum emulation_type{
   ONETOUCH,
   IAQTOUCH,
   AQUAPDA,  // AQUAPALM and PDA are taken as specific type.
+  IAQUALNK, // iAqualink (wifi extra ID)
   JANDY_DEVICE, // Very rarley used.
   SIMULATOR
 } emulation_type;
