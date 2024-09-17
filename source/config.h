@@ -32,6 +32,8 @@
 #define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
 #define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
 
+#define MAX_RSSD_LOG_FILTERS 4
+
 struct aqconfig
 {
   char *config_file;
@@ -47,6 +49,7 @@ struct aqconfig
   unsigned char extended_device_id2;
   bool extended_device_id_programming;
   bool enable_iaqualink;
+  //bool enable_RS_device_value_print;
 #endif
   bool deamonize;
 #ifndef AQ_MANAGER // Need to uncomment and clean up referances in future.
@@ -89,7 +92,7 @@ struct aqconfig
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
   bool log_raw_bytes; // Read as bytes
-  unsigned char RSSD_LOG_filter;
+  unsigned char RSSD_LOG_filter[MAX_RSSD_LOG_FILTERS];
   //bool log_raw_RS_bytes;
   /*
 #ifdef AQ_RS_EXTRA_OPTS

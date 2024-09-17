@@ -93,6 +93,15 @@ void debuglogPacket(logmask_t from, unsigned char *packet_buffer, int packet_len
     _logPacket(from, packet_buffer, packet_length, false, forcelog, is_read);
 }
 
+bool RSSD_LOG_filter_match(unsigned char ID) {
+  for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+    if (_aqconfig_.RSSD_LOG_filter[i] != NUL && _aqconfig_.RSSD_LOG_filter[i] == ID) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool error, bool force, bool is_read)
 {
   static unsigned char lastPacketTo = NUL;
@@ -107,10 +116,12 @@ void _logPacket(logmask_t from, unsigned char *packet_buffer, int packet_length,
   }
   
 
-  if ( _aqconfig_.RSSD_LOG_filter != NUL ) {
+  if ( _aqconfig_.RSSD_LOG_filter[0] != NUL ) {
     // NOTE Whole IF statment is reversed
-    if ( ! ( (_aqconfig_.RSSD_LOG_filter == packet_buffer[PKT_DEST]) ||
-             ( packet_buffer[PKT_DEST] == 0x00 && lastPacketTo == _aqconfig_.RSSD_LOG_filter)) ) 
+    //if ( ! ( (_aqconfig_.RSSD_LOG_filter_OLD == packet_buffer[PKT_DEST]) ||
+    //         ( packet_buffer[PKT_DEST] == 0x00 && lastPacketTo == _aqconfig_.RSSD_LOG_filter_OLD)) ) 
+    if ( ! ( (RSSD_LOG_filter_match(packet_buffer[PKT_DEST])) ||
+             ( packet_buffer[PKT_DEST] == 0x00 && RSSD_LOG_filter_match(lastPacketTo) )) ) 
     {
       lastPacketTo = packet_buffer[PKT_DEST];
       return;

@@ -335,7 +335,7 @@ const char* logmask2name(logmask_t from)
       return "Serial Log:";
     break;
     case IAQL_LOG:
-      return "iAqualink :";
+      return "iAqualink: ";
     break;
     case AQUA_LOG:
     default:

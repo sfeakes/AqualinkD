@@ -141,6 +141,7 @@ NEED TO FIX FOR THIS RELEASE.
 * cleaned up code for spa_mode and spa for newer pannels.
 * Allow VSP to be asigned to virtual button.
 * Fixed bug with timer not starting.
+* Increase Speed of detecting device state changes. 
 
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)

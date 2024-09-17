@@ -46,6 +46,10 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEC_SWG_MAX      83   // 0x53
 #define JANDY_DEC_PUMP_MIN    120   // 0x78
 #define JANDY_DEC_PUMP_MAX    123   // 0x7b
+// Have also seen epump at 0xe0 with panel rev W that supports more pumps
+#define JANDY_DEC_PUMP2_MIN    224   // 0xe0
+#define JANDY_DEC_PUMP2_MAX    228   // 0xe3 // Their are probably more, but this is a guess
+
 #define JANDY_DEC_JXI_MIN     104   // 0x68
 #define JANDY_DEC_JXI_MAX     107   // 0x6B
 #define JANDY_DEC_LX_MIN       56   // 0x38
@@ -204,7 +208,8 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define KEY_AUX7      0x15
 #define KEY_POOL_HTR  0x12
 #define KEY_SPA_HTR   0x17
-#define KEY_SOLAR_HTR 0x1c
+//#define KEY_SOLAR_HTR 0x1c
+#define KEY_EXT_AUX   0x1c
 #define KEY_MENU      0x09
 #define KEY_CANCEL    0x0e
 #define KEY_LEFT      0x13
@@ -242,7 +247,8 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define BTN_AUX7      "Aux_7"
 #define BTN_POOL_HTR  "Pool_Heater"
 #define BTN_SPA_HTR   "Spa_Heater"
-#define BTN_SOLAR_HTR "Solar_Heater"
+//#define BTN_SOLAR_HTR "Solar_Heater"
+#define BTN_EXT_AUX   "Extra_Aux"
 
 #define BTN_TEMP1_HTR  "Temp1_Heater"
 #define BTN_TEMP2_HTR  "Temp2_Heater"
@@ -271,7 +277,8 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define BTN_PDA_AUX7      "AUX7"
 #define BTN_PDA_POOL_HTR  "POOL HEAT"
 #define BTN_PDA_SPA_HTR   "SPA HEAT"
-#define BTN_PDA_SOLAR_HTR "EXTRA AUX"
+//#define BTN_PDA_SOLAR_HTR "EXTRA AUX"
+#define BTN_PDA_EXT_AUX "EXTRA AUX"
 
 #define BUTTON_LABEL_LENGTH 20
 
@@ -402,6 +409,9 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_TITLE_MESSAGE 0x2d  // This is what the product name is set to (Jandy RS) usually
 //#define CMD_IAQ_VSP_ERROR     0x2c  // Error when setting speed too high
 #define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
+
+// If
+#define CMD_IAQ_AUX_STATUS    0x72 // Get this on AqualinkTouch protocol when iAqualink protocol sends 0x18 (get aux status I assume)
 /*
 #define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??
 #define CMD_IAQ_0x31          0x31 // Some pump speed info

@@ -9,14 +9,27 @@
 #include "devices_jandy.h"
 #include "allbutton_aq_programmer.h"
 
-void processLEDstate(struct aqualinkdata *aq_data)
+/* Below can also be called from serialadapter.c */
+void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from)
 {
 
   int i = 0;
   int byte;
   int bit;
 
+  if (memcmp(aq_data->raw_status, packet + 4, AQ_PSTLEN) != 0) {
+    aq_data->updated = true;
+    LOG(from,LOG_DEBUG, "Processing LEDs status CHANGED\n");
+  } else {
+    LOG(from,LOG_DEBUG, "Processing LEDs status\n");
+    // Their is no point in continuing here, so we could return if wanted.
+    // But for the moment, we don't need to speed up anything.
+  }
+
+  memcpy(aq_data->raw_status, packet + 4, AQ_PSTLEN);
+
   //debuglogPacket(ALLB_LOG, );
+  
 
   for (byte = 0; byte < 5; byte++)
   {
@@ -29,7 +42,7 @@ void processLEDstate(struct aqualinkdata *aq_data)
       else
         aq_data->aqualinkleds[i].state = OFF;
 
-      //LOG(ALLB_LOG,LOG_DEBUG,"Led %d state %d",i+1,aq_data->aqualinkleds[i].state);
+      //LOG(from,LOG_DEBUG,"Led %d state %d",i+1,aq_data->aqualinkleds[i].state);
       i++;
     }
   }
@@ -44,14 +57,14 @@ void processLEDstate(struct aqualinkdata *aq_data)
     aq_data->aqualinkleds[SOLAR_HTR_LED_INDEX - 1].state = ENABLE;
   /*
   for (i=0; i < TOTAL_BUTTONS; i++) {
-    LOG(ALLB_LOG,LOG_NOTICE, "%s = %d", aq_data->aqbuttons[i].name,  aq_data->aqualinkleds[i].state);
+    LOG(from,LOG_NOTICE, "%s = %d", aq_data->aqbuttons[i].name,  aq_data->aqualinkleds[i].state);
   }
 */
 #ifdef CLIGHT_PANEL_FIX // Use state from RSSD protocol for color light if it's on.
   for (int i=0; i < aq_data->num_lights; i++) {
     if ( aq_data->lights[i].RSSDstate == ON && aq_data->lights[i].button->led->state != ON ) {
       aq_data->lights[i].button->led->state = aq_data->lights[i].RSSDstate;
-      //LOG(ALLB_LOG,LOG_WARNING,"Fix Jandy bug, color light '%s' is on, setting status to match!\n", aq_data->lights[i].button->label);
+      //LOG(from,LOG_WARNING,"Fix Jandy bug, color light '%s' is on, setting status to match!\n", aq_data->lights[i].button->label);
     }
   }
 #endif
@@ -641,8 +654,10 @@ bool process_allbutton_packet(unsigned char *packet, int length, struct aqualink
   case CMD_STATUS:
     //LOG(ALLB_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
     //debuglogPacket(ALLB_LOG, packet, length, true, true);
-    memcpy(aq_data->raw_status, packet + 4, AQ_PSTLEN);
-    processLEDstate(aq_data);
+    
+    //memcpy(aq_data->raw_status, packet + 4, AQ_PSTLEN);
+    //processLEDstate(aq_data);
+    processLEDstate(aq_data, packet, ALLB_LOG);
 
     /* NSF Take this out, and use the ALLButton loop cycle to determin if we get spa/pool temp
        messages.  Works better for dual equiptment when both pool & spa pumps and dual temp sensors */

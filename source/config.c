@@ -83,7 +83,10 @@ void init_parameters (struct aqconfig * parms)
   //parms->device_id = strtoul(DEFAULT_DEVICE_ID, &p, 16);
   parms->device_id = strtoul(DEFAULT_DEVICE_ID, NULL, 16);
   parms->rssa_device_id = NUL;
-  parms->RSSD_LOG_filter = NUL;
+
+  for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+    parms->RSSD_LOG_filter[i] = NUL;
+  }
   parms->paneltype_mask = 0;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   parms->extended_device_id = NUL;
@@ -398,7 +401,12 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.rssa_device_id = strtoul(cleanalloc(value), NULL, 16);
     rtn=true;
   } else if (strncasecmp(param, "RSSD_LOG_filter", 15) == 0) {
-    _aqconfig_.RSSD_LOG_filter = strtoul(cleanalloc(value), NULL, 16);
+    for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+      if (_aqconfig_.RSSD_LOG_filter[i] == NUL) {
+        _aqconfig_.RSSD_LOG_filter[i] = strtoul(cleanalloc(value), NULL, 16);
+        break;
+      }
+    }
     rtn=true;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   } else if (strncasecmp (param, "extended_device_id_programming", 30) == 0) {

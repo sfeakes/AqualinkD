@@ -86,7 +86,8 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     rtn = processPacketToSWG(packet_buffer, packet_length, aqdata/*, _aqconfig_.swg_zero_ignore*/);
     previous_packet_to = packet_buffer[PKT_DEST];
   }
-  else if (READ_RSDEV_ePUMP && packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX)
+  else if (READ_RSDEV_ePUMP && (   (packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP_MAX) 
+                               ||  (packet_buffer[PKT_DEST] >= JANDY_DEC_PUMP2_MIN && packet_buffer[PKT_DEST] <= JANDY_DEC_PUMP2_MAX) ) )
   {
     interestedInNextAck = DRS_EPUMP;
     rtn = processPacketToJandyPump(packet_buffer, packet_length, aqdata);
@@ -129,7 +130,7 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
   //static int swg_zero_cnt = 0;
   bool changedAnything = false;
 
-    // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
+  // Only log if we are jandy debug move and not serial (otherwise it'll print twice)
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG && getLogLevel(RSSD_LOG) < LOG_DEBUG ) {
     char buff[1024];
     beautifyPacket(buff, 1024, packet, packet_length, true);
@@ -164,8 +165,9 @@ bool processPacketToSWG(unsigned char *packet, int packet_length, struct aqualin
         setSWGpercent(aqdata, (int)packet[4]);
         changedAnything = true;
         aqdata->updated = true;
-        LOG(DJAN_LOG, LOG_DEBUG, "Set SWG %% to %d from control panel RS485 packet to SWG\n", aqdata->swg_percent);
+        LOG(DJAN_LOG, LOG_INFO, "Set SWG %% to %d from control panel to SWG\n", aqdata->swg_percent);
       }
+
       // LOG(DJAN_LOG, LOG_DEBUG, "SWG set to %d due to packet from control panel to SWG 0x%02hhx 0x%02hhx\n",
       // aqdata.swg_percent,packet[4],packet[5]);
     /*}*/
@@ -212,7 +214,7 @@ bool processPacketFromSWG(unsigned char *packet, int packet_length, struct aqual
 
     if ( (packet[4] * 100) != aqdata->swg_ppm ) {
       aqdata->swg_ppm = packet[4] * 100;
-      LOG(DJAN_LOG, LOG_DEBUG, "Set SWG PPM to %d from SWG packet\n", aqdata->swg_ppm);
+      LOG(DJAN_LOG, LOG_INFO, "Received SWG PPM %d from SWG packet\n", aqdata->swg_ppm);
       changedAnything = true;
       aqdata->updated = true;
     }
@@ -571,9 +573,9 @@ bool processPacketToJandyPump(unsigned char *packet_buffer, int packet_length, s
   // If type 0x45 and 0x44 set to interested in next command.
   if (packet_buffer[3] == CMD_EPUMP_RPM) {
     // All we need to do is set we are interested in next packet, but ca   lling function already did this.
-    LOG(DJAN_LOG, LOG_DEBUG, "ControlPanel request Pump ID 0x%02hhx set RPM to %d\n",packet_buffer[PKT_DEST], ( (packet_buffer[EP_HI_B_RPM-1] * 256) + packet_buffer[EP_LO_B_RPM-1]) / 4 );
+    LOG(DJAN_LOG, LOG_INFO, "ControlPanel request Pump ID 0x%02hhx set RPM to %d\n",packet_buffer[PKT_DEST], ( (packet_buffer[EP_HI_B_RPM-1] * 256) + packet_buffer[EP_LO_B_RPM-1]) / 4 );
   } else if (packet_buffer[3] == CMD_EPUMP_WATTS) {
-    LOG(DJAN_LOG, LOG_DEBUG, "ControlPanel request Pump ID 0x%02hhx get watts\n",packet_buffer[PKT_DEST]);
+    LOG(DJAN_LOG, LOG_INFO, "ControlPanel request Pump ID 0x%02hhx get watts\n",packet_buffer[PKT_DEST]);
   }
     
   if (getLogLevel(DJAN_LOG) == LOG_DEBUG) {
@@ -685,24 +687,24 @@ bool processPacketToJandyJXiHeater(unsigned char *packet_buffer, int packet_leng
   */
  
   if (packet_buffer[5] != aqdata->pool_htr_set_point) {
-    LOG(DJAN_LOG, LOG_DEBUG, "JXi pool setpoint %d, Pool heater sp %d (changing to LXi)\n", packet_buffer[5], aqdata->pool_htr_set_point);
+    LOG(DJAN_LOG, LOG_INFO, "JXi pool setpoint %d, Pool heater sp %d (changing to LXi)\n", packet_buffer[5], aqdata->pool_htr_set_point);
     aqdata->pool_htr_set_point = packet_buffer[5];
   }
 
   if (packet_buffer[6] != aqdata->spa_htr_set_point) {
-    LOG(DJAN_LOG, LOG_DEBUG, "JXi spa setpoint %d, Spa heater sp %d (changing to LXi)\n", packet_buffer[6], aqdata->spa_htr_set_point);
+    LOG(DJAN_LOG, LOG_INFO, "JXi spa setpoint %d, Spa heater sp %d (changing to LXi)\n", packet_buffer[6], aqdata->spa_htr_set_point);
     aqdata->spa_htr_set_point = packet_buffer[6];
   }
 
   if (packet_buffer[7] != 0xff && packet_buffer[4] != 0x00) {
     if (packet_buffer[4] == 0x11 || packet_buffer[4] == 0x19) {
       if (aqdata->pool_temp != packet_buffer[7]) {
-        LOG(DJAN_LOG, LOG_DEBUG, "JXi pool water temp %d, pool water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->pool_temp);
+        LOG(DJAN_LOG, LOG_INFO, "JXi pool water temp %d, pool water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->pool_temp);
         aqdata->pool_temp = packet_buffer[7];
       }
     } else if (packet_buffer[4] == 0x12 || packet_buffer[4] == 0x1a) {
       if (aqdata->spa_temp != packet_buffer[7]) {
-        LOG(DJAN_LOG, LOG_DEBUG, "JXi spa water temp %d, spa water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->spa_temp);
+        LOG(DJAN_LOG, LOG_INFO, "JXi spa water temp %d, spa water temp %d (changing to LXi)\n", packet_buffer[7], aqdata->spa_temp);
         aqdata->spa_temp = packet_buffer[7];
       }
     }

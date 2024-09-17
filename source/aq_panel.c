@@ -627,9 +627,9 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[19-1];
   aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
-  aqdata->aqbuttons[index].label = rs?name2label(BTN_SOLAR_HTR):BTN_PDA_SOLAR_HTR;
-  aqdata->aqbuttons[index].name = BTN_SOLAR_HTR;
-  aqdata->aqbuttons[index].code = KEY_SOLAR_HTR;
+  aqdata->aqbuttons[index].label = rs?name2label(BTN_EXT_AUX):BTN_PDA_EXT_AUX;
+  aqdata->aqbuttons[index].name = BTN_EXT_AUX;
+  aqdata->aqbuttons[index].code = KEY_EXT_AUX;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
   index++;
@@ -809,7 +809,7 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
 //#ifdef PRESTATE_ONOFF
       if (_aqconfig_.device_pre_state) {
         if ((button->code == KEY_POOL_HTR || button->code == KEY_SPA_HTR ||
-             button->code == KEY_SOLAR_HTR) &&
+             button->code == KEY_EXT_AUX) &&
             isON > 0) {
           button->led->state = ENABLE; // if heater and set to on, set pre-status to enable.
         //_aqualink_data->updated = true;

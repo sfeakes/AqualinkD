@@ -1077,8 +1077,17 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     if ( round(value) == RSSD_LOG ) {
       // Check for filter on RSSD LOG
       if (ri2 != NULL) {
-        _aqconfig_.RSSD_LOG_filter = strtoul(cleanalloc(ri2), NULL, 16);
-        LOG(NET_LOG,LOG_NOTICE, "Adding RSSD LOG filter 0x%02hhx", _aqconfig_.RSSD_LOG_filter);
+        unsigned int n;
+        // ri will be /addlogmask/0x01 0x02 0x03 0x04/
+        for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+          int index=i*5;
+          if (ri2[index]=='0' && ri2[index+1]=='x') {
+            sscanf(&ri2[index], "0x%2x", &n);
+            _aqconfig_.RSSD_LOG_filter[i] = n;
+          //_aqconfig_.RSSD_LOG_filter_OLD = strtoul(cleanalloc(ri2), NULL, 16);
+            LOG(NET_LOG,LOG_NOTICE, "Adding RSSD LOG filter 0x%02hhx", _aqconfig_.RSSD_LOG_filter[i]);
+          }
+        }
       }
     }
     addDebugLogMask(round(value));
@@ -1086,8 +1095,11 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "removelogmask", 13) == 0 && from == NET_WS) { // Only valid from websocket.
     removeDebugLogMask(round(value));
     if ( round(value) == RSSD_LOG ) {
-      _aqconfig_.RSSD_LOG_filter = NUL;
-      LOG(NET_LOG,LOG_NOTICE, "Removed RSSD LOG filter");
+      for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+        _aqconfig_.RSSD_LOG_filter[i] = NUL;
+      }
+      //_aqconfig_.RSSD_LOG_filter_OLD = NUL;
+      //LOG(NET_LOG,LOG_NOTICE, "Removed RSSD LOG filter");
     }
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "logfile", 7) == 0) {

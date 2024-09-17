@@ -503,7 +503,14 @@ int logmaskjsonobject(logmask_t flag, char* buffer)
   int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
 
   if (flag == RSSD_LOG) {
-    length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filter\":\"0x%02hhx\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF), _aqconfig_.RSSD_LOG_filter);
+    //length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filter\":\"0x%02hhx\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF), _aqconfig_.RSSD_LOG_filter[0]);
+    length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filters\":[", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
+    for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+      length += sprintf(buffer+length, "\"0x%02hhx\",", _aqconfig_.RSSD_LOG_filter[i]);
+    }
+    //"]},"
+    length += sprintf(buffer+length-1, "]},");
+    length--;
   }
   return length;
 }

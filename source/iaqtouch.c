@@ -714,7 +714,7 @@ void debugPrintButtons(struct iaqt_page_button buttons[])
   int i;
   for (i=0; i < IAQ_PAGE_BUTTONS; i++) {
     if (buttons[i].state != 0 || buttons[i].type != 0 || buttons[i].unknownByte != 0 || buttons[i].keycode != 0)
-      LOG(IAQT_LOG,LOG_INFO, "Button %.2d| %21.21s | type=0x%02hhx | state=0x%02hhx | unknown=0x%02hhx | keycode=0x%02hhx\n",i,buttons[i].name,buttons[i].type,buttons[i].state,buttons[i].unknownByte,buttons[i].keycode);
+      LOG(IAQT_LOG,LOG_DEBUG, "Button %.2d| %21.21s | type=0x%02hhx | state=0x%02hhx | unknown=0x%02hhx | keycode=0x%02hhx\n",i,buttons[i].name,buttons[i].type,buttons[i].state,buttons[i].unknownByte,buttons[i].keycode);
   }
 }
 
@@ -891,7 +891,34 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     beautifyPacket(buff, 1024, packet, length, true);
     LOG(IAQT_LOG,LOG_DEBUG, "Received message : %s", buff);
   }*/
-  
+
+  // DEBUG for iAqualink
+  if (_aqconfig_.enable_iaqualink) {
+    if (packet[PKT_CMD] == CMD_IAQ_AUX_STATUS) {
+      // Look at notes in iaqualink.c for how this packet is made up
+      int start=packet[4];
+      start = start + 5;
+      for (int i = start; i < length-3; i=i) {
+        int status=i;
+        int labelstart=status+5;
+        int labellen=packet[status+4];
+        if (labelstart+labellen < length) {
+          LOG(IAQT_LOG,LOG_NOTICE, "Label %.*s = %s, bit1=0x%02hhx bit2=0x%02hhx bit3=0x%02hhx bit4=0x%02hhx\n", labellen, &packet[labelstart], (packet[status]==0x00?"Off":"On "), packet[status],packet[status+1],packet[status+2],packet[status+3]);
+        }
+        i = labelstart + labellen;
+      }
+    
+      LOG(IAQT_LOG,LOG_NOTICE, "Pump %s, Spa %s, SWG %d, PumpRPM %d, PoolSP=%d, SpaSP=%d\n",
+                              aq_data->aqbuttons[0].led->state==OFF?"Off":"On ",
+                              aq_data->aqbuttons[1].led->state==OFF?"Off":"On ",
+                              aq_data->swg_percent,
+                              aq_data->pumps[0].rpm,
+                              aq_data->pool_htr_set_point,
+                              aq_data->spa_htr_set_point);
+    }
+
+
+  }
   
   if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {
     // Reset and messages on new page

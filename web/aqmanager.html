@@ -572,11 +572,19 @@
                         element = document.createElement('div');
                         element.style.marginTop = '1px';
                         element.style.marginBottom = '2px'; // = 'style="margin-left: 5px';
-                        element.innerHTML =  '<input id="rssd_filter" type="text" value="" size="4" maxlength="4">&nbsp;RS Serial Filter ID <font size="-2">(Eg 0x10)</font></input>';
+                        element.innerHTML =  '<input id="rssd_filter" type="text" value="" size="10" maxlength="19">&nbsp;RS Serial Filter <font size="-2">(Eg 0x10 0x0a)</font></input>';
                         eCommands.appendChild(element);
-                        if (data['debugmasks'][obj].filter != "0x00"){
-                            //var filter = document.getElementById("rssd_filter").value;
-                            document.getElementById("rssd_filter").value = data['debugmasks'][obj].filter;
+                        var filterentry = document.getElementById("rssd_filter");
+                        filterentry.value = "";
+                        for (var id in data['debugmasks'][obj].filters) {
+                          console.log("Filter "+data['debugmasks'][obj].filters[id]);
+                          if (data['debugmasks'][obj].filters[id] != "0x00") {
+                            if (filterentry.value.length == 0) {
+                              filterentry.value = data['debugmasks'][obj].filters[id];
+                            } else {
+                              filterentry.value = filterentry.value+" "+data['debugmasks'][obj].filters[id];
+                            }
+                          }
                         }
                     } 
                 }

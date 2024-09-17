@@ -250,6 +250,9 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
     case CMD_IAQ_MSG_LONG:
       return "iAq Popup message";
     break;
+    case CMD_IAQ_AUX_STATUS:
+      return "iAq AUX status";
+    break;
     case RSSA_DEV_STATUS:
       // This is a fail reply 0x10|0x02|0x48|0x13|0x02|0x00|0x10|0x00|0x7f|0x10|0x03|
        // Rather than check all, just check 0x02 and checksum sin't I'm not sure 0x10 means faiure without 0x00 around it.

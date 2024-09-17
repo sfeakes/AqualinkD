@@ -9,6 +9,7 @@
 #include "serialadapter.h"
 #include "packetLogger.h"
 #include "color_lights.h"
+#include "allbutton.h"
 
 #define RSSA_QLEN 20
 
@@ -32,6 +33,14 @@ unsigned char getAux13[] = {0x00,0x01,0x00,RS_SA_AUX13};
 unsigned char getAux14[] = {0x00,0x01,0x00,RS_SA_AUX14};
 unsigned char getAux15[] = {0x00,0x01,0x00,RS_SA_AUX15};
 #endif
+
+// processLEDstate exists in allbutton.c
+//void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from);
+void processRSSALEDstate(struct aqualinkdata *aq_data, unsigned char *packet)
+{
+  processLEDstate(aq_data, packet, RSSA_LOG);
+}
+
 
 bool push_rssa_cmd(unsigned char *cmd) {
 
@@ -285,12 +294,12 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
     LOG(RSSA_LOG,LOG_DEBUG, "Probe received, will queue device update shortly\n");
     //queueGetProgramData(RSSADAPTER, aq_data);
     cnt=-5; // Connection reset, so queue the status update
-  /*
+  
   } else if (packet[PKT_CMD] == CMD_STATUS) {
     // This is identical to allbutton status packet.
-    LOG(RSSA_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
-    debuglogPacket(RSSA_LOG, packet, length, true, true);
-  */
+    //LOG(RSSA_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    //debuglogPacket(RSSA_LOG, packet, length, true, true);
+    processRSSALEDstate(aq_data, packet);
   } else if (packet[PKT_CMD] == 0x13) {
     //beautifyPacket(buff, packet, length);
     //LOG(RSSA_LOG,LOG_DEBUG, "%s", buff);

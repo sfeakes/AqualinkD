@@ -103,9 +103,9 @@ bool processPentairPacket(unsigned char *packet, int packet_length, struct aqual
   // Set power to pump 
   else if (packet[PEN_PKT_CMD] == PEN_CMD_POWER && packet[PEN_PKT_DEST] >= PENTAIR_DEC_PUMP_MIN &&  packet[PEN_PKT_DEST] <= PENTAIR_DEC_PUMP_MAX) {
     if (packet[9] == 0x0A) {
-      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power ON\n");
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power ON\n",packet[PEN_PKT_DEST]);
     } else {
-      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power OFF\n");
+      LOG(DPEN_LOG, LOG_INFO,"Pentair Pump 0x%02hhx request set power OFF\n",packet[PEN_PKT_DEST]);
     }
   }
   
