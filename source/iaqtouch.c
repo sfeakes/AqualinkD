@@ -24,6 +24,7 @@
 #include "packetLogger.h"
 #include "iaqtouch.h"
 #include "iaqtouch_aq_programmer.h"
+#include "iaqualink.h"
 #include "aq_programmer.h"
 #include "rs_msg_utils.h"
 #include "devices_jandy.h"
@@ -878,6 +879,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 {
   static bool gotInit = false; 
   static int cnt = 0;
+  static int probesSinceLastPageCMD=0;
   static bool gotStatus = true;
   static char message[AQ_MSGLONGLEN + 1];
   bool fake_pageend = false;
@@ -893,6 +895,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
   }*/
 
   // DEBUG for iAqualink
+  /*
   if (_aqconfig_.enable_iaqualink) {
     if (packet[PKT_CMD] == CMD_IAQ_AUX_STATUS) {
       // Look at notes in iaqualink.c for how this packet is made up
@@ -915,12 +918,19 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
                               aq_data->pumps[0].rpm,
                               aq_data->pool_htr_set_point,
                               aq_data->spa_htr_set_point);
+    } else if (packet[PKT_CMD] == 0x70){
+      debuglogPacket(IAQT_LOG, packet, length, true, true);
+    } else if (packet[PKT_CMD] == 0x71){ 
+      debuglogPacket(IAQT_LOG, packet, length, true, true);
     }
-
-
-  }
-  
-  if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) {
+  }*/
+  if (packet[PKT_CMD] == CMD_IAQ_MAIN_STATUS ||
+      packet[PKT_CMD] == CMD_IAQ_1TOUCH_STATUS ||
+      packet[PKT_CMD] == CMD_IAQ_AUX_STATUS) {
+    process_iaqualink_packet(packet, length, aq_data);
+  } 
+  else if (packet[PKT_CMD] == CMD_IAQ_PAGE_START) 
+  {
     // Reset and messages on new page
     aq_data->last_display_message[0] = ' ';
     aq_data->last_display_message[1] = '\0';
@@ -937,7 +947,9 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
     if (gotStatus == false)
       gotStatus = true;
     //[IAQ_STATUS_PAGE_LINES][AQ_MSGLEN+1];
-  } else if (packet[PKT_CMD] == CMD_IAQ_PAGE_END) {
+  } 
+  else if (packet[PKT_CMD] == CMD_IAQ_PAGE_END) 
+  {
     set_iaq_cansend(true);
     LOG(IAQT_LOG,LOG_DEBUG, "Turning IAQ SEND on\n");
     if (_currentPageLoading != NUL) {
@@ -1047,6 +1059,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
   // Standard ack/poll
   if (packet[3] == CMD_IAQ_POLL) {
+    probesSinceLastPageCMD++;
 
 #ifdef NEW_POLL_CYCLE
 /*
@@ -1069,7 +1082,7 @@ if not programming && poll packet {
 }*/
     if (in_programming_mode(aq_data) == false) {
       if (_currentPage == IAQ_PAGE_HOME) {
-        iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
+        iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08); // This is "other devices on/off" page
         cnt = 0;
       }
       //if ( (isPDA_PANEL || isVirtualButtonEnabled() || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
@@ -1101,8 +1114,20 @@ if not programming && poll packet {
               nextPageRequestKey = KEY_IAQTCH_STATUS;
           break;
         }
-        iaqt_queue_cmd(nextPageRequestKey);
+
+        if (probesSinceLastPageCMD > 3) {
+          // Seems to be a bug with wifi device ghosting command on/off, kind-a looks like our page commands don;t take sometimes so wait.
+          iaqt_queue_cmd(nextPageRequestKey);
+          probesSinceLastPageCMD=0;
+        } else {
+          LOG(IAQT_LOG, LOG_NOTICE, "Waiting to send next page cnt %d\n",probesSinceLastPageCMD);
+        }
       }
+    } else if (in_programming_mode(aq_data) == true) {
+      // Set count to something close to max, so we will pull latest info once programming has finished.
+      // This is good for VSP GPM programming as it takes number of seconds to register once finished programming.
+      // -5 seems to be too quick for VSP/GPM so using 10
+      cnt = REQUEST_STATUS_POLL_COUNT - 10; 
     }
 #else
     //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
@@ -1128,15 +1153,18 @@ if not programming && poll packet {
         iaqt_queue_cmd(KEY_IAQTCH_STATUS);
       }
      */
+
+
     } else if (in_programming_mode(aq_data) == true) {
-      // Set count to something close to above, so we will pull latest info once programming has finished.
-      // This is goot for VSP GPM programming as it takes number of seconds to register once finished programming.
+      // Set count to something close to max, so we will pull latest info once programming has finished.
+      // This is good for VSP GPM programming as it takes number of seconds to register once finished programming.
       // -5 seems to be too quick for VSP/GPM so using 10
       cnt = REQUEST_STATUS_POLL_COUNT - 10; 
     }
-#endif
+
     // On poll no need to kick programming threads
     return false;
+#endif
   }
 
   //debuglogPacket(IAQT_LOG ,packet, length);

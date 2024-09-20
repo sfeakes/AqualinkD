@@ -79,6 +79,7 @@ char *_cfgFile;
 int _cmdln_loglevel = -1;
 bool _cmdln_debugRS485 = false;
 bool _cmdln_lograwRS485 = false;
+bool _cmdln_nostartupcheck = false;
 
 #ifdef AQ_TM_DEBUG
   //struct timespec _rs_packet_readitme;
@@ -460,6 +461,10 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
       _cmdln_lograwRS485 = true;
+    }
+    else if (strcmp(argv[i], "-nc") == 0)
+    {
+      _cmdln_nostartupcheck = true;
     }    
   }
 
@@ -1018,7 +1023,7 @@ void main_loop()
   i=0;
 
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
-  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
+  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true && _cmdln_nostartupcheck == false)
   {
     if (blank_read == blank_read_reconnect / 2) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);

@@ -15,6 +15,8 @@ bool process_iaqualink_packet(unsigned char *packet, int length, struct aqualink
 #define IAQ_SPA      0x02
 #define IAQ_SPA_HTR  0x03
 //....... some missing ....
+#define IAD_SWG      0x19
+//....... some missing ....
 #define IAQ_AUX1     0x21
 #define IAQ_AUX2     0x22
 #define IAQ_AUX3     0x23
@@ -50,8 +52,17 @@ Notice:  iAQ Touch: Label Aux D6 = On
 Notice:  iAQ Touch: Label Aux D7 = On
 Notice:  iAQ Touch: Label Aux D8 = On
 */
+#define IAQ_AUXD2    0x39
+#define IAQ_AUXD3    0x3a // 58 in dec
+#define IAQ_AUXD4    // 59 in dec
+#define IAQ_AUXD5    // 60 in dec
+#define IAQ_AUXD6    // 61 in dec
+#define IAQ_AUXD7    // 62 in dec
+#define IAQ_AUXD8    // 63 in dec (but this is VAUX1)
 //... Need to add Vitrual buttons...
+#define IAQ_VAUX1    0x3f
 
+#define IAQ_PUMP_RPM 0x5e
 
 
 

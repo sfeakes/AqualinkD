@@ -411,6 +411,8 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
 
 // If
+#define CMD_IAQ_MAIN_STATUS   0x70
+#define CMD_IAQ_1TOUCH_STATUS 0x71
 #define CMD_IAQ_AUX_STATUS    0x72 // Get this on AqualinkTouch protocol when iAqualink protocol sends 0x18 (get aux status I assume)
 /*
 #define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??

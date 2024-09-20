@@ -250,6 +250,12 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
     case CMD_IAQ_MSG_LONG:
       return "iAq Popup message";
     break;
+    case CMD_IAQ_MAIN_STATUS:
+      return "iAq Main status";
+    break;
+    case CMD_IAQ_1TOUCH_STATUS:
+      return "iAq 1Touch status";
+    break;
     case CMD_IAQ_AUX_STATUS:
       return "iAq AUX status";
     break;
@@ -1148,8 +1154,11 @@ int get_packet(int fd, unsigned char* packet)
 
   // Report any unusual size packets.
   if (index >= AQ_MAXPKTLEN_WARNING) {
-    LOG(RSSD_LOG,LOG_WARNING, "Serial packet seems too large at length %d\n", index);
-    logPacketError(packet, index);
+    // Aqualink2 packets 0x72 and 0x71 can be very large, so supress if it one of those.
+    if (packet[PKT_CMD] != CMD_IAQ_AUX_STATUS && packet[PKT_CMD] != CMD_IAQ_1TOUCH_STATUS) {
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet seems too large at length %d\n", index);
+      logPacketError(packet, index);
+    }
   }
 
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
