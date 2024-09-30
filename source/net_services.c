@@ -1402,7 +1402,7 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
         found = true;
         //create_panel_request(from, i, value, istimer);
         LOG(NET_LOG,LOG_INFO, "%d: MATCH %s to topic %.*s\n",from,_aqualink_data->aqbuttons[i].name,uri_length, URI);
-        LOG(NET_LOG,LOG_INFO, "ri1=%s, length=%d char@=%c\n",ri1,strlen(_aqualink_data->aqbuttons[i].label),ri1[strlen(_aqualink_data->aqbuttons[i].label)] );
+        LOG(NET_LOG,LOG_INFO, "ri1=%s, length=%d char at len=%c\n",ri1,strlen(_aqualink_data->aqbuttons[i].label),ri1[strlen(_aqualink_data->aqbuttons[i].label)] );
         panel_device_request(_aqualink_data, atype, i, value, from);
       }
     }

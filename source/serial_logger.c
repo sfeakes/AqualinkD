@@ -942,10 +942,13 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   return 0;
 }
 
+#include "timespec_subtract.h"
 
-
-
-
+int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y)
+{
+  return timespec_subtract(result,x,y);
+}
+/*
 int sl_timespec_subtract (struct timespec *result, const struct timespec *x, const struct timespec *y)
 {
   struct timespec tmp;
@@ -972,7 +975,7 @@ int sl_timespec_subtract (struct timespec *result, const struct timespec *x, con
 
   return x->tv_sec < tmp.tv_sec;
 }
-
+*/
 
 
 

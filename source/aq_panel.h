@@ -79,6 +79,13 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
 #define isIAQT_ENABLED ((_aqconfig_.paneltype_mask & RSP_IAQT) == RSP_IAQT)
 #define isRSSA_ENABLED ((_aqconfig_.paneltype_mask & RSP_RSSA) == RSP_RSSA)
 #define isEXTP_ENABLED ((_aqconfig_.paneltype_mask & RSP_EXT_PROG) == RSP_EXT_PROG)
+
+#define isIAQL_ACTIVE ((_aqconfig_.extended_device_id2 != NUL))
+
+#define isVS_PUMP(mask) ((mask & VS_PUMP) == VS_PUMP)
+#define isVBUTTON(mask) ((mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)
+#define isPLIGHT(mask) ((mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+
 int PANEL_SIZE(); 
 //
 //#define PANEL_SIZE PANEL_SIZE()

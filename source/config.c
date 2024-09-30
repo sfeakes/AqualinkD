@@ -418,6 +418,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
    } else if (strncasecmp(param, "enable_iaqualink", 16) == 0) {
     _aqconfig_.enable_iaqualink = text2bool(value);
+    _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK; // This should not be set if we are reading dieectly so turn off mask
     rtn=true;
 #endif
   } else if (strncasecmp(param, "panel_type_size", 15) == 0) {
@@ -596,6 +597,17 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_CHEM;
     rtn=true;
+  } else if (strncasecmp (param, "read_RS485_iAqualink", 20) == 0) {
+    /* This should not be used with enable_iaqualink */
+    if (text2bool(value)) {
+      if (_aqconfig_.enable_iaqualink)
+        LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_RS485_iAqualink' is not valid when 'enable_iaqualink=yes', ignoring read_RS485_iAqualink!\n");
+      else
+        _aqconfig_.read_RS485_devmask |= READ_RS485_IAQUALNK;
+    } else {
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
+    }
+    rtn=true;
   } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;
@@ -709,7 +721,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     int num = strtoul(param + 15, NULL, 10);
     if (_aqconfig_.paneltype_mask == 0) {
       // ERROR the vbutton will be irnored.
-      LOG(AQUA_LOG,LOG_WARNING, "Config error, Panel type mush be definied before adding a virtual_button, ignored setting : %s",param);
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, Panel type must be definied before adding a virtual_button, ignored setting : %s",param);
     //} else if (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) {
     //  LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must on of the folowing (0x30,0x31,0x32,0x33), ignored setting : %s",param);
     } else if (strncasecmp(param + 17, "_label", 6) == 0) {

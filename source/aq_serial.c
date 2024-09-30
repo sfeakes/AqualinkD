@@ -56,7 +56,7 @@ int _blocking_fds = -1;
 
 static struct termios _oldtio;
 
-static struct timespec last_serial_read_time;
+static struct timespec _last_serial_read_time;
 
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
@@ -224,7 +224,10 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
         return "iAq pMessage";
     break;
     case CMD_IAQ_PAGE_BUTTON:
-        return "iAq pButton";
+       if (packet[PKT_DEST] == 0x00) // To master is iAqualink2 send command
+         return "iAqualnk sendCmd";
+       else
+         return "iAq pButton";
     break;
     case CMD_IAQ_POLL:
       return "iAq Poll";
@@ -254,7 +257,7 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
       return "iAq Main status";
     break;
     case CMD_IAQ_1TOUCH_STATUS:
-      return "iAq 1Touch status";
+      return "iAq 1Tch status";
     break;
     case CMD_IAQ_AUX_STATUS:
       return "iAq AUX status";
@@ -841,13 +844,14 @@ void send_packet(int fd, unsigned char *packet, int length)
     struct timespec min_frame_wait_time;
     struct timespec frame_wait_time;
     struct timespec remainder_time;
+    //struct timespec diff;
 
     min_frame_wait_time.tv_sec = 0;
     min_frame_wait_time.tv_nsec = _aqconfig_.frame_delay * 1000000;
 
     do {
       clock_gettime(CLOCK_REALTIME, &now);
-      timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+      timespec_subtract(&elapsed_time, &now, &_last_serial_read_time);
       if (timespec_subtract(&frame_wait_time, &min_frame_wait_time, &elapsed_time)) {
         break;
       }
@@ -910,7 +914,7 @@ void send_packet(int fd, unsigned char *packet, int length)
   //if (_aqconfig_.frame_delay > 0) {
 #ifndef SERIAL_LOGGER
   if (_aqconfig_.frame_delay > 0) {
-    timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+    timespec_subtract(&elapsed_time, &now, &_last_serial_read_time);
     LOG(RSTM_LOG, LOG_DEBUG, "Time from recv to %s send is %.3f sec\n",
                             (_blocking_mode?"blocking":"non-blocking"), 
                             roundf3(timespec2float(&elapsed_time)));
@@ -1000,6 +1004,8 @@ int get_packet_lograw(int fd, unsigned char* packet)
 }
 int _get_packet(int fd, unsigned char* packet, bool rawlog)
 */
+
+
 int get_packet(int fd, unsigned char* packet)
 {
   unsigned char byte = 0x00;
@@ -1192,20 +1198,25 @@ int get_packet(int fd, unsigned char* packet)
     return AQSERR_2SMALL;
   }
 
-  //if (_aqconfig_.frame_delay > 0) {
 
   if (_aqconfig_.frame_delay > 0 || getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
     clock_gettime(CLOCK_REALTIME, &packet_end_time);
     if (getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
-      timespec_subtract(&packet_elapsed, &packet_end_time, &last_serial_read_time);
+      timespec_subtract(&packet_elapsed, &packet_end_time, &_last_serial_read_time);
+      /*
+      LOG(RSTM_LOG, LOG_NOTICE, "Start sec=%ld nsec=%ld\n",_last_serial_read_time.tv_sec,_last_serial_read_time.tv_nsec);
+      LOG(RSTM_LOG, LOG_NOTICE, "End sec=%ld nsec=%ld\n",packet_end_time.tv_sec,packet_end_time.tv_nsec);
+      LOG(RSTM_LOG, LOG_NOTICE, "Elapsed sec=%ld nsec=%ld Time between packets (%.3f sec)\n",packet_elapsed.tv_sec,packet_elapsed.tv_nsec, roundf3(timespec2float(&packet_elapsed)) );
+      */
       LOG(RSTM_LOG, LOG_DEBUG, "Time between packets (%.3f sec)\n", roundf3(timespec2float(&packet_elapsed)) );
+
     }
-    if (_aqconfig_.frame_delay > 0) {
-      memcpy(&last_serial_read_time, &packet_end_time, sizeof(struct timespec));
-    }
+    //if (_aqconfig_.frame_delay > 0) {
+    memcpy(&_last_serial_read_time, &packet_end_time, sizeof(struct timespec));
+    //}
   }
 
-  //clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
+  //clock_gettime(CLOCK_REALTIME, &_last_serial_read_time);
   //}
   //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
@@ -1213,6 +1224,8 @@ int get_packet(int fd, unsigned char* packet)
   // Return the packet length.
   return index;
 }
+
+
 
 #else // PLAYBACKMODE
 

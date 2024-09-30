@@ -335,7 +335,7 @@ const char* logmask2name(logmask_t from)
       return "Serial Log:";
     break;
     case IAQL_LOG:
-      return "iAqualink: ";
+      return "iAqualink2: ";
     break;
     case AQUA_LOG:
     default:
@@ -490,11 +490,17 @@ void test(int msg_level, char *msg)
 void addDebugLogMask(logmask_t flag)
 {
   _logforcemask |= flag;
+
+  if (flag == IAQT_LOG) // If AQTouch add iAqualink
+    _logforcemask |= IAQL_LOG;
 }
 
 void removeDebugLogMask(logmask_t flag)
 {
   _logforcemask &= ~flag;
+
+  if (flag == IAQT_LOG) // If AQTouch remove iAqualink
+    _logforcemask &= ~IAQL_LOG;
 }
 
 void clearDebugLogMask()

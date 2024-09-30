@@ -10,8 +10,25 @@
 # docker run -it --mount type=bind,source=./build,target=/build aqualinkd-releasebin bash
 #
 #  clean method
-# docker system prune
+#  docker system prune
 #
+# armhf = 
+#    COLLECT_GCC=arm-linux-gnueabihf-gcc
+#    COLLECT_LTO_WRAPPER=/opt/cross-pi-gcc/libexec/gcc/arm-linux-gnueabihf/6.3.0/lto-wrapper
+#    Target: arm-linux-gnueabihf
+#    Configured with: ../gcc-6.3.0/configure --prefix=/opt/cross-pi-gcc --target=arm-linux-gnueabihf --enable-languages=c,c++,fortran --with-arch=armv6 --with-fpu=vfp --with-float=hard --disable-multilib --enable-linker-build-id
+#    Thread model: posix
+#    gcc version 6.3.0 (GCC)
+#    GLIBC version 2.24
+#
+# arm64 =
+#    COLLECT_GCC=aarch64-linux-gnu-gcc
+#    COLLECT_LTO_WRAPPER=/usr/lib/gcc-cross/aarch64-linux-gnu/8/lto-wrapper
+#    Target: aarch64-linux-gnu
+#    Configured with: ../src/configure -v --with-pkgversion='Debian 8.3.0-2' --with-bugurl=file:///usr/share/doc/gcc-8/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++ --prefix=/usr --with-gcc-major-version-only --program-suffix=-8 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --disable-libphobos --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=aarch64-linux-gnu --program-prefix=aarch64-linux-gnu- --includedir=/usr/aarch64-linux-gnu/include
+#    Thread model: posix
+#    gcc version 8.3.0 (Debian 8.3.0-2)   
+#    GLIBC 2.28-10+deb10u3
 #####################################
 
 FROM debian:buster

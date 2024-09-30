@@ -23,6 +23,7 @@
 #include "utils.h"
 #include "aq_mqtt.h"
 #include "packetLogger.h"
+#include "iaqualink.h"
 
 /*
   All button errors
@@ -110,6 +111,11 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     interestedInNextAck = DRS_CHEM;
     rtn = processPacketToJandyChemFeeder(packet_buffer, packet_length, aqdata);
     previous_packet_to = packet_buffer[PKT_DEST];
+  }
+  else if (READ_RSDEV_iAQLNK && packet_buffer[PKT_DEST] >= JANDY_DEV_AQLNK_MIN && packet_buffer[PKT_DEST] <= JANDY_DEV_AQLNK_MAX 
+          && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id) // We would have already read extended_device_id frame
+  {
+    process_iAqualinkStatusPacket(packet_buffer, packet_length, aqdata);
   }
   else
   {

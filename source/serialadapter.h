@@ -10,7 +10,8 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
 //void rssadapter_device_on(unsigned char devID);
 //void rssadapter_device_off(unsigned char devID);
 
-void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn);
+//void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn);
+void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn);
 //void set_aqualink_rssadapter_aux_extended_state(int buttonIndex, const unsigned char state);
 void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsigned char state);
 void get_aqualink_rssadapter_setpoints();

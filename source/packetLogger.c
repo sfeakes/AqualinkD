@@ -88,9 +88,15 @@ void logPacketError(unsigned char *packet_buffer, int packet_length) {
   _logPacket(RSSD_LOG, packet_buffer, packet_length, true, false, true);
 }
 
+/* This should never be used in production */
 void debuglogPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool is_read, bool forcelog) {
   if ( forcelog == true || getLogLevel(from) >= LOG_DEBUG )
     _logPacket(from, packet_buffer, packet_length, false, forcelog, is_read);
+}
+
+void logPacket(logmask_t from, int level, unsigned char *packet_buffer, int packet_length, bool is_read) {
+  if ( getLogLevel(from) >= level )
+    _logPacket(from, packet_buffer, packet_length, false, false, is_read);
 }
 
 bool RSSD_LOG_filter_match(unsigned char ID) {

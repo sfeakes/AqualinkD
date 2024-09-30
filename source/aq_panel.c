@@ -25,6 +25,7 @@
 #include "aq_timer.h"
 #include "allbutton_aq_programmer.h"
 #include "rs_msg_utils.h"
+#include "iaqualink.h"
 
 void initPanelButtons(struct aqualinkdata *aqdata, bool rspda, int size, bool combo, bool dual);
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
@@ -351,8 +352,19 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   if (strlen(label) <= 0) {
     button->label = name; 
   } else {
-    button->label = label; 
+    button->label = label;
   }
+  // These 3 vbuttons have a button code on iaqualink protocol, so use that for rssd_code.
+  if (strncasecmp (button->label, "ALL OFF", 7) == 0) {
+    button->rssd_code = IAQ_ALL_OFF;
+  } else if (strncasecmp (button->label, "Spa Mode", 8) == 0) {
+    button->rssd_code = IAQ_SPA_MODE;
+  } else if (strncasecmp (button->label, "Clean Mode", 10) == 0) {
+    button->rssd_code = IAQ_CLEAN_MODE;
+  } else {
+    button->rssd_code = NUL;
+  }
+
   button->code = NUL;
   button->dz_idx = DZ_NULL_IDX;
   button->special_mask |= VIRTUAL_BUTTON; // Could change to special mask vbutton
@@ -614,6 +626,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_POOL_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_POOLHT;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[17-1];
@@ -623,6 +636,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_SPA_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_SPAHT;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[19-1];
@@ -743,7 +757,8 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
 {
   aqkey *button = &aqdata->aqbuttons[deviceIndex];
 
-  if (button->special_mask & VIRTUAL_BUTTON && button->special_mask & VS_PUMP) {
+  //if ( button->special_mask & VIRTUAL_BUTTON  && button->special_mask & VS_PUMP) {
+  if ( isVS_PUMP(button->special_mask) && isVBUTTON(button->special_mask)) {
     // Virtual Button with VSP is always on.
     LOG(PANL_LOG, LOG_INFO, "received '%s' for '%s', virtual pump is always on, ignoring", (isON == false ? "OFF" : "ON"), button->name);
     button->led->state = ON;
@@ -763,9 +778,14 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // AqualinkTouch in PDA mode, we can program light. (if turing off, use standard AQ_PDA_DEVICE_ON_OFF below)
         programDeviceLightMode(aqdata, (isON?0:-1), deviceIndex); // -1 means off 0 means use current light mode
       } else {
-        char msg[PTHREAD_ARG];
-        sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
-        aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+        // If we are using AqualinkTouch with iAqualink enabled, we can send button on/off much faster using that.
+        if ( isPDA_IAQT && isIAQL_ACTIVE) {
+          set_iaqualink_aux_state(button, isON);
+        } else {
+          char msg[PTHREAD_ARG];
+          sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+          aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+        }
       }
     } else
 #endif
@@ -776,28 +796,36 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // OK Programable light, and no light mode selected. Now let's work out best way to turn it on. serial_adapter protocol will to it without questions,
         // all other will require programmig.
         if (isRSSA_ENABLED) {
-          set_aqualink_rssadapter_aux_state(deviceIndex, true);
+          set_aqualink_rssadapter_aux_state(button, true);
         } else {
           //set_light_mode("0", deviceIndex); // 0 means use current light mode
           programDeviceLightMode(aqdata, 0, deviceIndex); // 0 means use current light mode
         }
-      } else if (button->special_mask & VIRTUAL_BUTTON) {
+      } else if (isVBUTTON(button->special_mask)) {
         // Virtual buttons only supported with Aqualink Touch
+        LOG(PANL_LOG, LOG_NOTICE, "********** %s code=0x%02hhx iaq enabled=%s *****\n",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
         if (isIAQT_ENABLED) {
-          char msg[PTHREAD_ARG];
-          sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
-          aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
+          // If it's one of the pre-defined onces & iaqualink is enabled, we can set it easile with button.
+          if ( isIAQL_ACTIVE && button->rssd_code != NUL)
+          {
+            set_iaqualink_aux_state(button, isON);
+          } else {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+            aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
+          }
         } else {
           LOG(PANL_LOG, LOG_ERR, "Can only use Aqualink Touch protocol for Virtual Buttons");
         }
       } else if ( source == NET_DZMQTT && isRSSA_ENABLED ) {
         // Domoticz has a bad habbit of resending the same state back to us, when we use the PRESTATE_ONOFF option
         // since allbutton (default) is stateless, and rssaadapter is statefull, use rssaadapter for any domoricz requests
-        set_aqualink_rssadapter_aux_state(deviceIndex, isON);
+        set_aqualink_rssadapter_aux_state(button, isON);
       } else if (button->special_mask & PROGRAM_LIGHT && isRSSA_ENABLED) {
         // If off and program light, use the RS serial adapter since that is overiding the state now.
-        set_aqualink_rssadapter_aux_state(deviceIndex, isON);
+        set_aqualink_rssadapter_aux_state(button, isON);
       } else {
+        //set_iaqualink_aux_state(button, isON);
         aq_send_allb_cmd(button->code);
       }
 

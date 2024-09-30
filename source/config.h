@@ -31,6 +31,7 @@
 #define READ_RS485_JAN_JXI  (1 << 3) //    Jandy JX & LXi heater
 #define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
 #define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
+#define READ_RS485_IAQUALNK (1 << 6) // Read iAqualink messages 
 
 #define MAX_RSSD_LOG_FILTERS 4
 
@@ -125,6 +126,7 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_JXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_JXI) == READ_RS485_JAN_JXI)
 #define READ_RSDEV_LX ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LX) == READ_RS485_JAN_LX)
 #define READ_RSDEV_CHEM ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_CHEM) == READ_RS485_JAN_CHEM)
+#define READ_RSDEV_iAQLNK ((_aqconfig_.read_RS485_devmask & READ_RS485_IAQUALNK) == READ_RS485_IAQUALNK)
 
 #define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

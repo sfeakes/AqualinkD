@@ -238,9 +238,9 @@ int char2iaqtRSset(unsigned char* packetbuffer, char *msg, int msg_len)
   return ++bcnt;
 }
 
-
+/*
 void createDeviceUpdatePacket() {
-  unsigned char packets[AQ_MAXPKTLEN];
+  unsigned char packets[AQ_MAXPKTLEN_SEND];
   int cnt;
 
   packets[0] = DEV_MASTER;
@@ -257,6 +257,7 @@ void createDeviceUpdatePacket() {
 
   //send_jandy_command(NULL, packets, cnt);
 }
+*/
 
 void processPageMessage(unsigned char *message, int length)
 {
@@ -1041,10 +1042,15 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
       LOG(IAQT_LOG,LOG_DEBUG, "STARTUP Message\n");
       
       if (_aqconfig_.enable_iaqualink) {
-        LOG(IAQT_LOG,LOG_DEBUG, "Enabling iAqualink Protocol\n");
+        
         // Below will not send 0x29 since queueGetProgramData takes presidance, 
         //iaqt_queue_cmd(0x29);
-        _aqconfig_.extended_device_id2 = _aqconfig_.extended_device_id + 112; // 0x70 in dec
+        if (isPDA_PANEL) {
+          _aqconfig_.extended_device_id2 = _aqconfig_.device_id + 112;
+        } else {
+          _aqconfig_.extended_device_id2 = _aqconfig_.extended_device_id + 112; // 0x70 in dec
+        }
+        LOG(IAQT_LOG,LOG_NOTICE, "Enabling iAqualink Protocol on 0x%02hhx\n",_aqconfig_.extended_device_id2);
       }
       //LOG(IAQT_LOG,LOG_ERR, "STARTUP REMOVED GET PANEL DATA FOR TESTING\n");
       queueGetProgramData(IAQTOUCH, aq_data);
@@ -1117,10 +1123,11 @@ if not programming && poll packet {
 
         if (probesSinceLastPageCMD > 3) {
           // Seems to be a bug with wifi device ghosting command on/off, kind-a looks like our page commands don;t take sometimes so wait.
+          // This didn;t fix issue, but see
           iaqt_queue_cmd(nextPageRequestKey);
           probesSinceLastPageCMD=0;
         } else {
-          LOG(IAQT_LOG, LOG_NOTICE, "Waiting to send next page cnt %d\n",probesSinceLastPageCMD);
+          LOG(IAQT_LOG, LOG_INFO, "Waiting to send next page cnt %d\n",probesSinceLastPageCMD);
         }
       }
     } else if (in_programming_mode(aq_data) == true) {

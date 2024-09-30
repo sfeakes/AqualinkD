@@ -745,6 +745,9 @@ int startup(char *self, char *cfgFile)
 /* Point of this is to sent ack as quickly as possible, all checks should be done prior to calling this.*/
 void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type source) 
 {
+  unsigned char *cmd;
+  int size;
+
   switch (source) {
     case ALLBUTTON:
       send_extended_ack(rs_fd, (packet_buffer[PKT_CMD]==CMD_MSG_LONG?ACK_SCREEN_BUSY_SCROLL:ACK_NORMAL), pop_allb_cmd(&_aqualink_data));
@@ -770,15 +773,21 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
       if (packet_buffer[PKT_CMD] != CMD_IAQ_CTRL_READY)
         send_extended_ack(rs_fd, ACK_IAQ_TOUCH, pop_iaqt_cmd(packet_buffer[PKT_CMD]));
       else {
-        unsigned char *cmd;
-        int size = ref_iaqt_control_cmd(&cmd);
+        size = ref_iaqt_control_cmd(&cmd);
         send_jandy_command(rs_fd, cmd, size);
         rem_iaqt_control_cmd(cmd);
       }
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation type Processed packet in");
     break;
     case IAQUALNK:
-      send_iaqualink_ack(rs_fd, packet_buffer);
+      //send_iaqualink_ack(rs_fd, packet_buffer);
+      size = get_iaqualink_cmd(packet_buffer[PKT_CMD], &cmd);
+      if (size == 2){
+        send_extended_ack(rs_fd, cmd[0], cmd[1]);
+      } else {
+        send_jandy_command(rs_fd, cmd, size);
+      }
+      remove_iaqualink_cmd();
     break;
 #endif
 #ifdef AQ_PDA

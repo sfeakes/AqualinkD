@@ -102,7 +102,7 @@ void queue_aqualink_rssadapter_setpoint(unsigned char typeID, int val) {
 }
 
 /* NSF Need to delete this and use aqbuttonp[].rssd_code */
-unsigned char devID(int bIndex) {
+unsigned char RSSAdevID(int bIndex) {
   // pool = 0; spa = 1; aux1 = 2 etc
   // rssa pool / spa are different.  aux1 = 21 (0x15) then goes up from their in order.
 
@@ -141,13 +141,20 @@ void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsig
   rssadapter_device_state(button->rssd_code, state);
 }
 
+void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn)
+{
+  LOG(RSSA_LOG,LOG_DEBUG, "Turning button %s %s\n",button->label,(turnOn?"On":"Off"));
+
+  rssadapter_device_state( button->rssd_code, (turnOn?RS_SA_ON:RS_SA_OFF) );
+}
+/*
 void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn)
 {
   LOG(RSSA_LOG,LOG_DEBUG, "Turning button %d %s\n",buttonIndex,(turnOn?"On":"Off"));
 
-  rssadapter_device_state( devID(buttonIndex), (turnOn?RS_SA_ON:RS_SA_OFF) );
+  rssadapter_device_state( RSSAdevID(buttonIndex), (turnOn?RS_SA_ON:RS_SA_OFF) );
 }
-
+*/
 void increase_aqualink_rssadapter_pool_setpoint(char *args, struct aqualinkdata *aqdata) {
   int val = atoi(args);
   val = setpoint_check(POOL_HTR_SETOINT, aqdata->pool_htr_set_point + val, aqdata);
@@ -264,7 +271,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
     get_aqualink_rssadapter_colorlight_statuses(aq_data);
   }
 #endif
-  if (cnt == 0 || cnt >= 250) {
+  if (cnt == 0 || cnt >= 100) {
     LOG(RSSA_LOG,LOG_INFO, "Queue device update requests\n");
 
     if (cnt == 0) {

@@ -132,7 +132,7 @@ void send_aqt_cmd(unsigned char cmd)
  * 
  */
 
-unsigned char _iaqt_control_cmd[AQ_MAXPKTLEN];
+unsigned char _iaqt_control_cmd[AQ_MAXPKTLEN_SEND];
 int _iaqt_control_cmd_len;
 
 
@@ -153,7 +153,7 @@ int ref_iaqt_control_cmd(unsigned char **cmd)
 
 void rem_iaqt_control_cmd(unsigned char *cmd)
 {
-  memset(_iaqt_control_cmd, 0, AQ_MAXPKTLEN * sizeof(unsigned char));
+  memset(_iaqt_control_cmd, 0, AQ_MAXPKTLEN_SEND * sizeof(unsigned char));
   _iaqt_control_cmd_len = 0;
 }
 
@@ -285,7 +285,7 @@ typedef enum {icct_setrpm, icct_settime, icct_setdate} iaqtControlCmdYype;
 
 // Type is always 0 at the moment, haven't found any 
 void queue_iaqt_control_command(iaqtControlCmdYype type, int num) {
-  //unsigned char packets[AQ_MAXPKTLEN];
+  //unsigned char packets[AQ_MAXPKTLEN_SEND];
   //int cnt;
 
   if (waitfor_iaqt_ctrl_queue2empty() == false)

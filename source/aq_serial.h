@@ -57,6 +57,12 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEC_CHEM_MIN    128   // 0x80
 #define JANDY_DEC_CHEM_MAX    131   // 0x83
 
+#define JANDY_DEV_IAQLN_MIN    0xa0   // 
+#define JANDY_DEV_IAQLN_MAX    0xa3   // 0
+
+#define JANDY_DEV_AQLNK_MIN    0x30   // 
+#define JANDY_DEV_AQLNK_MAX    0x33   // 0
+
 /*
 //===== Device ID's =====//
 //=========================================================================//
@@ -127,6 +133,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 //#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
 //#define AQ_MAXPKTLEN   256  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
 #define AQ_MAXPKTLEN   512  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
+#define AQ_MAXPKTLEN_SEND 32 // Out biggest send buffer
 #define AQ_PSTLEN       5
 #define AQ_MSGLEN      16
 #define AQ_MSGLONGLEN 128
