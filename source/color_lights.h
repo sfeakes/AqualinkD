@@ -13,6 +13,8 @@
 #define RSSD_COLOR_LIGHT_OFFSET  64
 #define RSSD_DIMMER_LIGHT_OFFSET 128
 
+//#define DIMMER_LIGHT_TYPE_INDEX 10
+
 /*
 // color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
 typedef enum clight_type {

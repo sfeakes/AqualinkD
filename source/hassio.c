@@ -135,6 +135,26 @@ const char *HASSIO_VSP_DISCOVER = "{"
     "\"retain\": false"
 "}";
 
+
+const char *HASSIO_DIMMER_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"light\","
+    "\"unique_id\": \"aqualinkd_%s\","   // Aux_5
+    "\"name\": \"%s\","                 // Dimmer_name
+    "\"state_topic\": \"%s/%s\","          // aqualinkd,Aux_5
+    "\"command_topic\": \"%s/%s/set\","    // aqualinkd,Aux_5
+    "\"json_attributes_topic\": \"%s/%s/delay\"," // aqualinkd,Aux_5
+    "\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\","
+    "\"payload_on\": \"1\","
+    "\"payload_off\": \"0\","
+    "\"brightness_command_topic\": \"%s/%s%s/set\","     // aqualinkd,Aux_5,/brightness
+    "\"brightness_state_topic\":  \"%s/%s%s\","       // aqualinkd/Aux_5,/brightness
+    "\"brightness_scale\": 100,"
+    "\"qos\": 1,"
+    "\"retain\": false"
+"}";
+
 // Need to add timer attributes to the switches, once figure out how to use in homeassistant
 // ie aqualinkd/Filter_Pump/timer/duration
 
@@ -371,7 +391,20 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
         sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
-        send_mqtt(nc, topic, msg);     
+        send_mqtt(nc, topic, msg);    
+      } else if ( isPLIGHT(aqdata->aqbuttons[i].special_mask) && ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType == LC_DIMMER2 ) {
+        // Dimmer
+        sprintf(msg,HASSIO_DIMMER_DISCOVER,
+                 _aqconfig_.mqtt_aq_topic,
+                 aqdata->aqbuttons[i].name, 
+                 aqdata->aqbuttons[i].label,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,LIGHT_DIMMER_VALUE_TOPIC,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,LIGHT_DIMMER_VALUE_TOPIC);
+        sprintf(topic, "%s/light/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
+        send_mqtt(nc, topic, msg); 
       } else {
       // Switches
       //sprintf(msg,"{\"type\": \"switch\",\"unique_id\": \"%s\",\"name\": \"%s\",\"state_topic\": \"aqualinkd/%s\",\"command_topic\": \"aqualinkd/%s/set\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\",\"payload_on\": \"1\",\"payload_off\": \"0\",\"qos\": 1,\"retain\": false}" ,

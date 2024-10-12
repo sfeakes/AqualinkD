@@ -252,12 +252,13 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 //printf("Button %s is VSP\n", button->name);
     for (i=0; i < aqdata->num_pumps; i++) {
       if (button == aqdata->pumps[i].button) {       
-          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Pump_Status\":\"%d\"", 
+          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Pump_Status\":\"%d\",\"Pump_Speed\":\"%d\"", 
                   aqdata->pumps[i].rpm,
                   aqdata->pumps[i].gpm,
                   aqdata->pumps[i].watts,
                   (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")),
-                  getPumpStatus(i, aqdata));
+                  getPumpStatus(i, aqdata),
+                  getPumpSpeedAsPercent(&aqdata->pumps[i]));
 
           return buffer;
       }
@@ -268,7 +269,17 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 //printf("Button %s is ProgramableLight\n", button->name);
     for (i=0; i < aqdata->num_lights; i++) {
       if (button == aqdata->lights[i].button) {
-        length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\"", aqdata->lights[i].lightType);
+        if (aqdata->lights[i].lightType == LC_DIMMER2) {
+          length += sprintf(buffer, ",\"type_ext\": \"light_dimmer\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%d%%\" ",
+                                  aqdata->lights[i].lightType,
+                                  aqdata->lights[i].currentValue,
+                                  aqdata->lights[i].currentValue);
+        } else {
+          length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%s\" ",
+                                  aqdata->lights[i].lightType,
+                                  aqdata->lights[i].currentValue,
+                                  light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, ALLBUTTON));
+        }
         return buffer;
       }
     }
@@ -294,6 +305,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   bool homekit_f = (homekit && ( aqdata->temp_units==FAHRENHEIT || aqdata->temp_units == UNKNOWN) );
 
   length += sprintf(buffer+length, "{\"type\": \"devices\"");
+  length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"",AQUALINKD_VERSION);//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"time\":\"%s\"",aqdata->time );//"1:16 PM",
   if ( aqdata->temp_units == FAHRENHEIT )
@@ -718,7 +730,11 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
   length += sprintf(buffer+length, ",\"light_program\":{" );
   for (i=0; i < aqdata->num_lights; i++) 
   {
+    if (aqdata->lights[i].lightType == LC_DIMMER2) {
+      length += sprintf(buffer+length, "\"%s\": \"%d%%\",", aqdata->lights[i].button->name, aqdata->lights[i].currentValue );
+    } else {
       length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, RSSADAPTER) );
+    }
   }
   if (buffer[length-1] == ',')
     length--;

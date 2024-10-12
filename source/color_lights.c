@@ -123,8 +123,11 @@ const char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] 
         "50%",  // 0xb2 (simulator)  = 178 dec  same as (0x99 + 25)
         "75%",  // 0xcb (simulator)  = 203 dec
         "100%"  // 0xe4              = 228 dec
-  }
+  },
+  {/* Dimmer with full range */}
 };
+
+// DON'T FORGET TO CHANGE    #define DIMMER_LIGHT_INDEX 10   in color_lights.h
 
 
 
@@ -198,11 +201,19 @@ bool isShowMode(const char *mode)
 
 void set_currentlight_value(clight_detail *light, int index)
 {
+  // Dimmer 2 has different values (range 1 to 100)
+  if (light->lightType == LC_DIMMER2) {
+    if (index < 0 || index > 100)
+      light->currentValue = 0;
+    else
+      light->currentValue = index;
+  } else {
   // We want to leave the last color, so if 0 don't do anything, but set to 0 if bad value
-  if (index < 0 || index > LIGHT_COLOR_OPTIONS)
-    light->currentValue = 0;
-  else if (index > 0 && index < LIGHT_COLOR_OPTIONS)
-    light->currentValue = index;
+    if (index < 0 || index > LIGHT_COLOR_OPTIONS)
+      light->currentValue = 0;
+    else if (index > 0 && index < LIGHT_COLOR_OPTIONS)
+      light->currentValue = index;
+  }
 }
 
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size)

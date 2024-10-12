@@ -68,6 +68,10 @@ int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable
 uint16_t getPanelSupport( char *rev_string, int rev_len);
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
+
+clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button);
+pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button);
+
 //void panneltest();
 
 #define isPDA_PANEL ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

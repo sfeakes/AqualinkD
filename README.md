@@ -132,16 +132,20 @@ NEED TO FIX FOR THIS RELEASE.
 # pickup speed faster on iaqualinktouch after change
 -->
 
-# Updates in 2.4.1 (under development)
+# Updates in 2.5.0 (under development)
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
-  * use `device_id=0x33` in aqualinkd.conf
+  * use `device_id=0x33` in aqualinkd.conf.
+* PDA panel Rev 6.0 of newer WITH a Jandy iAqualink device attached can use `read_RS485_iAqualink = yes` to speed up device state change detection.
 * Added MQTT vsp_pump/speed/set for setting speed (RPM/GPM) by %, for automation hubs.
+* Added full dimmer range support for dimmable lights (not limited to 0,25,50,75,100 anymore)
+* Added vsp and dimmer to hassio and homebridge-aqualinkd plugin as full range dimmer controls.
+* Updated UI for support fullrange dimmer.
 * cleaned up code for spa_mode and spa for newer pannels.
 * Allow VSP to be asigned to virtual button.
 * Fixed bug with timer not starting.
-* Increase Speed of detecting device state changes. 
+* Increase Speed of detecting device state changes.
 
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)

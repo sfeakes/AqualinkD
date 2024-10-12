@@ -698,9 +698,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
           LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%s'\n",type);
         } else {
           aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
-          aqdata->lights[aqdata->num_lights].lightType = type;
-          aqdata->num_lights++;
+          aqdata->lights[aqdata->num_lights].lightType = type;          
           aqdata->aqbuttons[num].special_mask |= PROGRAM_LIGHT;
+          aqdata->aqbuttons[num].special_mask_ptr = &aqdata->lights[aqdata->num_lights];
+
+          aqdata->num_lights++;
         }
       } else {
         LOG(AQUA_LOG,LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
@@ -809,6 +811,7 @@ pump_detail *getPumpFromButtonID(struct aqualinkdata *aqdata, aqkey *button)
   if (aqdata->num_pumps < MAX_PUMPS) {
     //printf ("Creating pump %d\n",button);
     button->special_mask |= VS_PUMP;
+    button->special_mask_ptr = (void*)&aqdata->pumps[aqdata->num_pumps];
     aqdata->pumps[aqdata->num_pumps].button = button;
     aqdata->pumps[aqdata->num_pumps].pumpType = PT_UNKNOWN;
     aqdata->pumps[aqdata->num_pumps].rpm = TEMP_UNKNOWN;

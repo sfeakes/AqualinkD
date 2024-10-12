@@ -355,6 +355,9 @@ void action_delayed_request()
     LOG(AQUA_LOG,LOG_NOTICE, "Changing spa heater setpoint by %d\n", _aqualink_data.unactioned.value);
     aq_programmer(AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP, sval, &_aqualink_data); 
   } 
+  else if (_aqualink_data.unactioned.type == LIGHT_MODE) {
+    panel_device_request(&_aqualink_data, LIGHT_MODE, _aqualink_data.unactioned.id, _aqualink_data.unactioned.value, UNACTION_TIMER);
+  }
   else 
   {
     LOG(AQUA_LOG,LOG_ERR, "Unknown request of type %d\n", _aqualink_data.unactioned.type);
@@ -496,6 +499,10 @@ int startup(char *self, char *cfgFile)
     }
   } else if (isPDA_PANEL) {
     if ( (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) || _aqconfig_.device_id == 0x33 ) {
+      if ( _aqconfig_.device_id == 0x33 ) {
+        LOG(AQUA_LOG,LOG_NOTICE, "Enabeling iAqualink protocol.\n");
+        _aqconfig_.enable_iaqualink = true;
+      }
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match PDA panel, please check config!\n", _aqconfig_.device_id);
@@ -572,6 +579,9 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config rssa_device_id    = 0x%02hhx\n", _aqconfig_.rssa_device_id);
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_id   = 0x%02hhx\n", _aqconfig_.extended_device_id);
+  if (_aqconfig_.enable_iaqualink) {
+    LOG(AQUA_LOG,LOG_NOTICE, "Config enable_iaqualink  = %s\n", bool2text(_aqconfig_.enable_iaqualink));
+  }
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_prog = %s\n", bool2text(_aqconfig_.extended_device_id_programming));
 #endif
   LOG(AQUA_LOG,LOG_NOTICE, "Config serial_port       = %s\n", _aqconfig_.serial_port);

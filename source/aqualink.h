@@ -94,6 +94,7 @@ typedef struct aqualinkkey
   unsigned char rssd_code;
   int dz_idx;
   uint8_t special_mask;
+  void *special_mask_ptr;
 } aqkey;
 
 // special_mask for above aqualinkkey structure.
@@ -128,6 +129,7 @@ typedef enum action_type {
   ON_OFF,
   TIMER,
   LIGHT_MODE,
+  LIGHT_BRIGHTNESS,
   DATE_TIME
 } action_type;
 
@@ -216,7 +218,8 @@ typedef enum clight_type {
   LC_SPARE_1,
   LC_SPARE_2,
   LC_SPARE_3,
-  LC_DIMMER,
+  LC_DIMMER,  // use 0, 25, 50, 100
+  LC_DIMMER2,  // use range 0 to 100
   NUMBER_LIGHT_COLOR_TYPES // This is used to size and count so add more prior to this
 } clight_type;
 
@@ -225,7 +228,8 @@ typedef enum {
   NET_API, 
   NET_WS, 
   NET_DZMQTT,
-  NET_TIMER       // Not used yet, need to change aq_timer.c
+  NET_TIMER,       // Not used yet, need to change aq_timer.c
+  UNACTION_TIMER
 } request_source;
 
 typedef struct clightd

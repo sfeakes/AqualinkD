@@ -138,7 +138,8 @@ void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsig
   
   LOG(RSSA_LOG,LOG_DEBUG, "Sending 0x%02hhx to %s\n",state, button->label);
 
-  rssadapter_device_state(button->rssd_code, state);
+  rssadapter_device_state(button->rssd_code, state); // Set state
+  rssadapter_device_state(button->rssd_code, 0x00); // 0x00 meand Get curent state (for color lights the return state is 0)
 }
 
 void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn)
@@ -146,7 +147,12 @@ void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn)
   LOG(RSSA_LOG,LOG_DEBUG, "Turning button %s %s\n",button->label,(turnOn?"On":"Off"));
 
   rssadapter_device_state( button->rssd_code, (turnOn?RS_SA_ON:RS_SA_OFF) );
+
+  // NOTE.  If we turn off AUX1 and get this return HEX: 0x10|0x02|0x48|0x13|0x02|0x00|0x0e|0x15|0x92|0x10|0x03|
+  // The 0x0e means some from of oiption is set (ie cleaner).  Maybe try to turn cleaner off instead 0x15 is aux1 1x10 is cleaner.
 }
+
+
 /*
 void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn)
 {
@@ -352,19 +358,19 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
             aq_data->lights[i].button->rssd_code == packet[7] ) {
          
           // CHANGE TO DEBUG BEFORE RELEASE
-          if (aq_data->lights[i].lightType != LC_DIMMER) {
-            LOG(RSSA_LOG,LOG_DEBUG,"ColorLight '%s' is %s 0x%02hhx  value name '%s'\n",
-                                  aq_data->lights[i].button->label,
-                                  packet[6]==0x00?"OFF":"ON",
-                                  packet[6],
-                                  packet[6]==0x00?"--":light_mode_name( aq_data->lights[i].lightType,(packet[6] - RSSD_COLOR_LIGHT_OFFSET), RSSADAPTER) );
-          } else if (aq_data->lights[i].lightType == LC_DIMMER) {
+          if (aq_data->lights[i].lightType == LC_DIMMER || aq_data->lights[i].lightType == LC_DIMMER2) {
             LOG(RSSA_LOG,LOG_DEBUG,"DimmerLight '%s' is %s 0x%02hhx  value '%d'%%\n",
                                   aq_data->lights[i].button->label,
                                   packet[6]==0x00?"OFF":"ON",
                                   packet[6],
                                   packet[6]==0x00?0:(packet[6] - RSSD_DIMMER_LIGHT_OFFSET));
-          }
+          }else{
+            LOG(RSSA_LOG,LOG_DEBUG,"ColorLight '%s' is %s 0x%02hhx  value name '%s'\n",
+                                  aq_data->lights[i].button->label,
+                                  packet[6]==0x00?"OFF":"ON",
+                                  packet[6],
+                                  packet[6]==0x00?"--":light_mode_name( aq_data->lights[i].lightType,(packet[6] - RSSD_COLOR_LIGHT_OFFSET), RSSADAPTER) );
+          } 
 
           aq_data->lights[i].RSSDstate = (packet[6]==0x00?OFF:ON);
 #ifdef CLIGHT_PANEL_FIX 
@@ -377,13 +383,24 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
                                      aq_data->lights[i].button->led->state==OFF?"OFF":"ON");
           }
           aq_data->lights[i].button->led->state = aq_data->lights[i].RSSDstate;
-#endif
-          // Set the color index.  (packet[6] - RSSD_COLOR_LIGHT_OFFSET)-1
-          if (aq_data->lights[i].lightType != LC_DIMMER) {
+#endif 
+          switch(aq_data->lights[i].lightType) {
+            case LC_DIMMER:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25);
+            break;
+            case LC_DIMMER2:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET));
+            break;
+            default:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_COLOR_LIGHT_OFFSET));
+            break;
+          }
+          /*
+          if (aq_data->lights[i].lightType != LC_DIMMER ) {
             set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_COLOR_LIGHT_OFFSET));
           } else if (aq_data->lights[i].lightType == LC_DIMMER) {
             set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25);
-          }
+          }*/
         }
       }
 

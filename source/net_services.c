@@ -956,7 +956,21 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       send_mqtt_aux_msg(nc, _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC, _aqualink_data->lights[i].currentValue);
 
       sprintf(topic, "%s%s/name", _aqualink_data->lights[i].button->name, LIGHT_PROGRAM_TOPIC);
-      send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue, ALLBUTTON));
+      if (_aqualink_data->lights[i].lightType == LC_DIMMER2) {
+        char message[30];
+        sprintf(message, "%d%%", _aqualink_data->lights[i].currentValue);
+        send_mqtt_string_msg(nc, topic, message);
+      } else {
+        send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue, ALLBUTTON));
+      }
+      /* 
+      if (_aqualink_data->lights[i].lightType == LC_DIMMER) {
+        sprintf(topic, "%s%s", _aqualink_data->lights[i].button->name, LIGHT_DIMMER_VALUE_TOPIC);
+        send_mqtt_int_msg(nc, topic, _aqualink_data->lights[i].currentValue * 25);
+      } else*/ if (_aqualink_data->lights[i].lightType == LC_DIMMER2) {
+        sprintf(topic, "%s%s", _aqualink_data->lights[i].button->name, LIGHT_DIMMER_VALUE_TOPIC);
+        send_mqtt_int_msg(nc, topic, _aqualink_data->lights[i].currentValue);
+      }
     }
   }
 }
@@ -1264,6 +1278,22 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
         //sprintf(buf,"%.0f",value);
         //set_light_mode(buf, i);
         panel_device_request(_aqualink_data, LIGHT_MODE, i, value, from);
+        break;
+      }
+    }
+    if(!found) {
+      *rtnmsg = NO_PLIGHT_DEVICE;
+      LOG(NET_LOG,LOG_WARNING, "%s: Didn't find device that matched URI '%.*s'\n",actionName[from], uri_length, URI);
+      rtn = uBad;
+    }
+  } else if ((ri3 != NULL && (strncasecmp(ri2, "brightness", 10) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
+    found = false;
+    for (i=0; i < _aqualink_data->total_buttons; i++) {
+      if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
+          strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0)
+      {
+        found = true;
+        panel_device_request(_aqualink_data, LIGHT_BRIGHTNESS, i, value, from);
         break;
       }
     }
