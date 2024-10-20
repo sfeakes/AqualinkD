@@ -180,41 +180,46 @@ unsigned char iAqalnkDevID(aqkey *button) {
   return 0xFF;
 }
 
+void lastchecksum(unsigned char *packet, int length)
+{
+  if (getLogLevel(IAQL_LOG) >= LOG_DEBUG)
+  {
+    static unsigned char last70checksum = 0x00;
+    static unsigned char last71checksum = 0x00;
+    static unsigned char last72checksum = 0x00;
 
-void lastchecksum(unsigned char *packet, int length){
-  static unsigned char last70checksum = 0x00;
-  static unsigned char last71checksum = 0x00;
-  static unsigned char last72checksum = 0x00;
-   
-   switch (packet[PKT_CMD]){
+    switch (packet[PKT_CMD])
+    {
     case 0x70:
-      if (last70checksum != packet[length-3] && last70checksum != 0x00) {
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
-        LOG(IAQL_LOG, LOG_INFO,"******* CHECKSUM CHANGED for 0x70 *******\n");
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
+      if (last70checksum != packet[length - 3] && last70checksum != 0x00)
+      {
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
+        LOG(IAQL_LOG, LOG_INFO, "******* CHECKSUM CHANGED for 0x70 *******\n");
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
       }
-      last70checksum = packet[length-3];
-    break;
+      last70checksum = packet[length - 3];
+      break;
     case 0x71:
-      if (last71checksum != packet[length-3] && last71checksum != 0x00) {
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
-        LOG(IAQL_LOG, LOG_INFO,"******* CHECKSUM CHANGED for 0x71 *******\n");
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
+      if (last71checksum != packet[length - 3] && last71checksum != 0x00)
+      {
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
+        LOG(IAQL_LOG, LOG_INFO, "******* CHECKSUM CHANGED for 0x71 *******\n");
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
       }
-      last71checksum = packet[length-3];
-    break;
+      last71checksum = packet[length - 3];
+      break;
     case 0x72:
-      if (last72checksum != packet[length-3] && last72checksum != 0x00) {
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
-        LOG(IAQL_LOG, LOG_INFO,"******* CHECKSUM CHANGED for 0x72 *******\n");
-        LOG(IAQL_LOG, LOG_INFO,"*****************************************\n");
+      if (last72checksum != packet[length - 3] && last72checksum != 0x00)
+      {
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
+        LOG(IAQL_LOG, LOG_INFO, "******* CHECKSUM CHANGED for 0x72 *******\n");
+        LOG(IAQL_LOG, LOG_INFO, "*****************************************\n");
       }
-      last72checksum = packet[length-3];
-    break;
-   }
+      last72checksum = packet[length - 3];
+      break;
+    }
+  }
 }
-
-
 
 /*
 
@@ -471,7 +476,7 @@ bool process_iaqualink_packet(unsigned char *packet, int length, struct aqualink
     static int cnt = 0;
     //static unsigned char ID = 0;
     //static cur_swg = 0;
-    static unsigned char sendid = 0x00;
+    //static unsigned char sendid = 0x00;
 
     if (packet[PKT_CMD] == 0x53)
     {

@@ -343,8 +343,10 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   //aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   //aqdata->aqbuttons[index].special_mask = 0;
 
-  aqled *led = malloc(sizeof(aqled));
-  button->led = led;
+  //aqled *led = malloc(sizeof(aqled));
+  //button->led = led;
+
+  button->led = malloc(sizeof(aqled));
  
   char *name = malloc(sizeof(char*) * 10);
   snprintf(name, 9, "%s%d", BTN_VAUX, vindex);
@@ -362,6 +364,8 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
     button->rssd_code = IAQ_SPA_MODE;
   } else if (strncasecmp (button->label, "Clean Mode", 10) == 0) {
     button->rssd_code = IAQ_CLEAN_MODE;
+  } else if (strncasecmp (button->label, "Day Party", 9) == 0) {
+    button->rssd_code = IAQ_ONETOUCH_4;
   } else {
     button->rssd_code = NUL;
   }
@@ -810,17 +814,27 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         }
       } else if (isVBUTTON(button->special_mask)) {
         // Virtual buttons only supported with Aqualink Touch
-        LOG(PANL_LOG, LOG_NOTICE, "********** %s code=0x%02hhx iaq enabled=%s *****\n",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
+        LOG(PANL_LOG, LOG_INFO, "Set state for Vitrual Button %s code=0x%02hhx iAqualink2 enabled=%sn",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
         if (isIAQT_ENABLED) {
           // If it's one of the pre-defined onces & iaqualink is enabled, we can set it easile with button.
-          if ( isIAQL_ACTIVE && button->rssd_code != NUL)
+          
+          if ( isIAQL_ACTIVE && button->rssd_code && button->rssd_code != NUL)
           {
+            //LOG(PANL_LOG, LOG_NOTICE, "********** USE iaqualink2 ********\n");
             set_iaqualink_aux_state(button, isON);
           } else {
             char msg[PTHREAD_ARG];
             sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
-            aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
-          }
+            //if (button->rssd_code != VBUTTON_RSSD) {
+            //LOG(PANL_LOG, LOG_NOTICE, "********** USE AQ_SET_IAQTOUCH_DEVICE_ON_OFF ********\n");
+              aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
+            //} else if (button->rssd_code != VBUTTON_ONETOUCH_RSSD) {
+            //  LOG(PANL_LOG, LOG_NOTICE, "********** USE AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF ********\n");
+            //  aq_programmer(AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF, msg, aqdata);
+            //} else {
+            //  LOG(PANL_LOG, LOG_ERR, "Configuration! do not understand code for Virtual Buttons");
+            //}
+          } 
         } else {
           LOG(PANL_LOG, LOG_ERR, "Can only use Aqualink Touch protocol for Virtual Buttons");
         }
@@ -965,6 +979,25 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
                                       _aqconfig_.light_programming_initial_off,
                                       _aqconfig_.light_programming_mode );
     aq_programmer(AQ_SET_LIGHTPROGRAM_MODE, buf, aqdata);
+  } else if (isRSSA_ENABLED) {
+    // If we are using rs-serial then turn light on first.
+    if (light->button->led->state != ON) {
+      set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+    }
+    if (light->lightType == LC_DIMMER) {
+        // Value 1 = 25, 2 = 50, 3 = 75, 4 = 100 (need to convert value into binary)
+      if (value >= 1 && value <= 4) {
+        unsigned char rssd_value = value * 25;
+        set_aqualink_rssadapter_aux_extended_state(light->button, rssd_value);
+      } else {
+        LOG(PANL_LOG,LOG_ERR, "Light mode %d is not valid for '%s'\n",value, light->button->label);
+        set_aqualink_rssadapter_aux_extended_state(light->button, 100);
+      }
+    } else {
+      // Dimmer or any color light can simply be set with value
+      set_aqualink_rssadapter_aux_extended_state(light->button, value);
+    }
+  /*
   } else if (isRSSA_ENABLED && light->lightType == LC_DIMMER2) {
     // Dimmer needs to be turned on before you set dimmer level
     if (light->button->led->state != ON) {
@@ -984,6 +1017,9 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
     } else {
       LOG(PANL_LOG,LOG_ERR, "Light mode %d is not valid for '%s'\n",value, light->button->label);
     }
+  } else if (isRSSA_ENABLED && light->lightType != LC_PROGRAMABLE) {
+    // Any programmable COLOR light (that's programmed by panel)
+    set_aqualink_rssadapter_aux_extended_state(light->button, value);*/
   } else {
     //sprintf(buf, "%-5s%-5d%-5d",value, button, light->lightType);
     sprintf(buf, "%-5d%-5d%-5d",value, button, light->lightType);

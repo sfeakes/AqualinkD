@@ -579,7 +579,7 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config rssa_device_id    = 0x%02hhx\n", _aqconfig_.rssa_device_id);
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_id   = 0x%02hhx\n", _aqconfig_.extended_device_id);
-  if (_aqconfig_.enable_iaqualink) {
+  if (_aqconfig_.extended_device_id >= JANDY_DEV_AQLNK_MIN && _aqconfig_.extended_device_id <= JANDY_DEV_AQLNK_MAX) {
     LOG(AQUA_LOG,LOG_NOTICE, "Config enable_iaqualink  = %s\n", bool2text(_aqconfig_.enable_iaqualink));
   }
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_prog = %s\n", bool2text(_aqconfig_.extended_device_id_programming));
@@ -697,21 +697,18 @@ int startup(char *self, char *cfgFile)
         sprintf(ext,"Light Progm | CTYPE %-1d  |",_aqualink_data.lights[j].lightType);
       }
     }
-    if (_aqualink_data.aqbuttons[i].dz_idx > 0)
-      sprintf(ext+strlen(ext), "dzidx %-3d", _aqualink_data.aqbuttons[i].dz_idx);
-/*
-#ifdef AQ_PDA
-    if (isPDA_PANEL) {
-      LOG(AQUA_LOG,LOG_NOTICE, "Config BTN %-13s = label %-15s | PDAlabel %-15s | %s\n", 
-                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label,
-                           _aqualink_data.aqbuttons[i].pda_label, ext);
-    } else
-#endif
-*/
-    {
-      LOG(AQUA_LOG,LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
-                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
+    if (isVBUTTON(_aqualink_data.aqbuttons[i].special_mask)) {
+      if (_aqualink_data.aqbuttons[i].rssd_code != NUL) {
+        sprintf(ext,"OneTouch %d  |",_aqualink_data.aqbuttons[i].rssd_code - 15);
+      }
     }
+    if (_aqualink_data.aqbuttons[i].dz_idx > 0) {
+      sprintf(ext+strlen(ext), "dzidx %-3d", _aqualink_data.aqbuttons[i].dz_idx);
+    }
+    
+    LOG(AQUA_LOG,LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
+                           _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
+    
 
     if ( ((_aqualink_data.aqbuttons[i].special_mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)  && 
          ((_aqualink_data.aqbuttons[i].special_mask & VS_PUMP ) != VS_PUMP) &&
@@ -1177,7 +1174,7 @@ void main_loop()
       //printf("rs_fd  =% d\n",rs_fd);
       if (rs_fd < 0)
       {
-        // sleep(1);
+        sleep(1);
         sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
         LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon waiting to connect to master device...\n");
         _aqualink_data.updated = true;

@@ -21,6 +21,7 @@ void *set_aqualink_iaqtouch_time( void *ptr );
 void *set_aqualink_iaqtouch_pump_vs_program( void *ptr );
 void *set_aqualink_iaqtouch_light_colormode( void *ptr );
 void *set_aqualink_iaqtouch_device_on_off( void *ptr ); // For PDA only
+void *set_aqualink_iaqtouch_onetouch_on_off( void *ptr ); 
 
 int ref_iaqt_control_cmd(unsigned char **cmd);
 void rem_iaqt_control_cmd(unsigned char *cmd);

@@ -674,7 +674,7 @@ void _LOG(logmask_t from, int msg_level, char *message, int message_buffer_size)
     //snprintf(_loq_display_message, AQ_MSGLONGLEN-2, "%s\n",message);
     int len = rsm_strncpy(_loq_display_message, (unsigned char*)message, AQ_MSGLONGLEN-1, message_buffer_size);
     _loq_display_message[len] = '\0';
-    printf ("*** Adding ERROR to buffer '%s' **** \n",_loq_display_message);
+    //printf ("*** Adding ERROR to buffer '%s' **** \n",_loq_display_message);
   }
 
 #ifndef AQ_MANAGER

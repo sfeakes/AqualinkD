@@ -81,8 +81,6 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * http://aqualink.ip/aquapda_sim.html  <- (PDA simulator)
 #<a name="release"></a>
 # ToDo (future release)
-* Allow selecting of pre-defined VSP programs (Aqualink Touch & OneTouch protocols.)
-* Add set time to OneTouch protocol.
 * Update AqualinkD Management console to manage configuration
 * Create iAqualink Touch Simulator
 * Probably decoded enough protocols for AuqlinkD to self configure.
@@ -100,12 +98,6 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
     * Panel version
     * can't use iaquatouch panel / wireless
 
-* Added iAqualinkTouch support for PDA only panels that can use that protocol.
-  * PDA panel needs to be Rev 6.0 or newer.
-  * This makes the PDA only panels quicker and less error prone.
-  * Introduces color light support and VSP
-  * Consider this PDA support Beta.
-  * Read PDA Wiki
 -->
 
 # Call for Help.
@@ -115,21 +107,25 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 <!-- 
 NEED TO FIX FOR THIS RELEASE.
 ***** FIX NET_SERVICES.C   action_uri()   spa and spa_mode get confused. check EVERY strncmp
-* MQTT filter_pump/percent/set, maybe add max/min to pump config. / print protocol on startup
-* Pump by name and not ID. clean up code
+* DONE MQTT filter_pump/percent/set, maybe add max/min to pump config. / print protocol on startup
+* DONE Pump by name and not ID. clean up code
 * DONE look at using 0x00 for no exit on serial errors / startup
 * DONE look at virtual button support
 *   vbuton will need the PDA on iAQT protocol working.
-* change dimmer to % from steps. (will make HASIO & Homekit easier)
+* DONE change dimmer to % from steps. (will make HASIO & Homekit easier)
 * add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
 * deprecate (hide and default to yes) extended_device_id_programming
 * Move following to main and not config.c - show error is vbutton and no extended_device_id, vbutton w/ pump can be onetouch.
 * check panel version reported against config.
 # Updates in 2.4.1
 
-# install.sh change spa_mode to spa in config.js
+# DONE install.sh change spa_mode to spa in config.js
 # DONE change hassio.c to use rpm speed/percent
 # pickup speed faster on iaqualinktouch after change
+
+* with iaqualink2 no need to poll iaqtouch devices as frequently
+* update documentation on how vbutton / vpump / pump_max & min / enable_iauqalink2
+* check rs serial adapter is active if light color mode 11 is used.
 -->
 
 # Updates in 2.5.0 (under development)
@@ -146,6 +142,8 @@ NEED TO FIX FOR THIS RELEASE.
 * Allow VSP to be asigned to virtual button.
 * Fixed bug with timer not starting.
 * Increase Speed of detecting device state changes.
+* Added iAqualink2 protocol support.
+* Faster OneTouch device support
 
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)

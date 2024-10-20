@@ -22,9 +22,19 @@ void set_iaqualink_heater_setpoint(int value, bool isPool);
 #define IAQ_SPA      0x02
 #define IAQ_SPA_HTR  0x03
 //....... some missing ....
-#define IAQ_ALL_OFF 0x10 // Not sure on this
-#define IAQ_SPA_MODE 0x11
-#define IAQ_CLEAN_MODE 0x12
+//#define IAQ_ALL_OFF    0x10 
+//#define IAQ_SPA_MODE   0x11
+//#define IAQ_CLEAN_MODE 0x12
+#define IAQ_ONETOUCH_1 0x10 
+#define IAQ_ONETOUCH_2 0x11 
+#define IAQ_ONETOUCH_3 0x12 
+#define IAQ_ONETOUCH_4 0x13  // Im gessing
+#define IAQ_ONETOUCH_5 0x14  // Im gessing
+#define IAQ_ONETOUCH_6 0x15  // Im gessing
+
+#define IAQ_ALL_OFF    IAQ_ONETOUCH_1     // Using default name
+#define IAQ_SPA_MODE   IAQ_ONETOUCH_2    // Using default name
+#define IAQ_CLEAN_MODE IAQ_ONETOUCH_3  // Using default name
 
 #define IAD_SWG      0x19
 //....... some missing ....

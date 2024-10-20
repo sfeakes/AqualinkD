@@ -94,6 +94,7 @@ const func_ptr _prog_functions[AQP_RSSADAPTER_MAX] = {
      [AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM] = set_aqualink_iaqtouch_pump_vs_program, 
      [AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE] = set_aqualink_iaqtouch_light_colormode,
      [AQ_SET_IAQTOUCH_DEVICE_ON_OFF]   = set_aqualink_iaqtouch_device_on_off,
+     [AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF] = set_aqualink_iaqtouch_onetouch_on_off,
      [AQ_PDA_INIT]                     = set_aqualink_PDA_init, 
      [AQ_PDA_WAKE_INIT]                = set_aqualink_PDA_wakeinit, 
      [AQ_PDA_DEVICE_STATUS]            = get_aqualink_PDA_device_status, 
@@ -867,6 +868,9 @@ const char *ptypeName(program_type type)
     case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
       return "Set AqualinkTouch Device On/Off";
     break;
+    case AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF:
+      return "Set AqualinkTouch OneTouch On/Off";
+    break;
     case AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE:
       return "Set AqualinkTouch Light Color (using panel)";
     break;
@@ -1006,6 +1010,7 @@ const char *programtypeDisplayName(program_type type)
       return "Get Pump Assignment";
     break;
     case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
+    case AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF:
       return "Programming: setting device on/off";
     break;
 #ifdef AQ_PDA

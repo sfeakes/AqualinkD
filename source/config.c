@@ -40,6 +40,7 @@
 #include "aq_serial.h"
 #include "aq_panel.h"
 #include "aqualink.h"
+#include "iaqualink.h"
 
 #define MAXCFGLINE 256
 
@@ -49,6 +50,7 @@ char *generate_mqtt_id(char *buf, int len);
 pump_detail *getpump(struct aqualinkdata *aqdata, int button);
 bool populatePumpData(struct aqualinkdata *aqdata, char *pumpcfg ,aqkey *button, char *value);
 pump_detail *getPumpFromButtonID(struct aqualinkdata *aqdata, aqkey *button);
+aqkey *getVirtualButton(struct aqualinkdata *aqdata, int num);
 
 struct tmpPanelInfo {
   int size;
@@ -415,6 +417,10 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp(param, "extended_device_id", 18) == 0) {
     _aqconfig_.extended_device_id = strtoul(cleanalloc(value), NULL, 16);
+    // Enable enable_iaqualink by default and let people turn it off
+    //if (_aqconfig_.extended_device_id >= JANDY_DEV_AQLNK_MIN && _aqconfig_.extended_device_id <= JANDY_DEV_AQLNK_MAX) {
+    //  _aqconfig_.enable_iaqualink = true;
+    //}
     rtn=true;
    } else if (strncasecmp(param, "enable_iaqualink", 16) == 0) {
     _aqconfig_.enable_iaqualink = text2bool(value);
@@ -701,7 +707,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
           aqdata->lights[aqdata->num_lights].lightType = type;          
           aqdata->aqbuttons[num].special_mask |= PROGRAM_LIGHT;
           aqdata->aqbuttons[num].special_mask_ptr = &aqdata->lights[aqdata->num_lights];
-
+          if ( aqdata->lights[aqdata->num_lights].lightType == LC_DIMMER2 && _aqconfig_.rssa_device_id != 0x48 ) {
+            LOG(AQUA_LOG,LOG_ERR, "Config error, button '%s' has light mode '%d' set. This only supported when 'rssa_device_id' is enabled, changing to light mode '%d'\n",
+                aqdata->aqbuttons[num].label, LC_DIMMER2,LC_DIMMER);
+            aqdata->lights[aqdata->num_lights].lightType = LC_DIMMER;
+          }
           aqdata->num_lights++;
         }
       } else {
@@ -731,26 +741,56 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       aqkey *button = addVirtualButton(aqdata, label, num);
       if (button != NULL) {
         button->special_mask |= VIRTUAL_BUTTON;
+        button->led->state = OFF;
       } else {
         LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
       }
     } else if (strncasecmp(param + 17, "_pump", 5) == 0) {
-      char *vbname = malloc(sizeof(char*) * 10);
-      snprintf(vbname, 9, "%s%d", BTN_VAUX, num);
-      aqkey *vbutton = NULL;
-      for (int i = aqdata->virtual_button_start; i < aqdata->total_buttons; i++) {
-        //printf("Checking %s agasinsdt %s\n",aqdata->aqbuttons[i].name, vbname);
-        if ( strcmp( aqdata->aqbuttons[i].name, vbname) == 0 ) {
-          vbutton = &aqdata->aqbuttons[i];
-          vbutton->led->state = ON; //Virtual pump is always on 
-          if ( ! populatePumpData(aqdata, param + 18, vbutton, value) ) 
-          {
-            LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
-          }
+      aqkey *vbutton = getVirtualButton(aqdata, num);
+      if (vbutton != NULL) {
+        vbutton->led->state = ON; //Virtual pump default to on 
+        if ( ! populatePumpData(aqdata, param + 18, vbutton, value) ) 
+        {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, VSP Pumps limited to %d, ignoring : %s",MAX_PUMPS,param);
+        }
+      } else {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, could not find vitrual button for `%s`",param);
+      }
+    } else if (strncasecmp(param + 17, "_onetouchID", 11) == 0) {
+      aqkey *vbutton = getVirtualButton(aqdata, num);
+      if (vbutton != NULL) {
+        switch (strtoul(value, NULL, 10)) {
+          case 1:
+            vbutton->code = IAQ_ONETOUCH_1;
+            vbutton->rssd_code = IAQ_ONETOUCH_1;
+          break;
+          case 2:
+            vbutton->code = IAQ_ONETOUCH_2;
+            vbutton->rssd_code = IAQ_ONETOUCH_2;
+          break;
+          case 3:
+            vbutton->code = IAQ_ONETOUCH_3;
+            vbutton->rssd_code = IAQ_ONETOUCH_3;
+          break;
+          case 4:
+            vbutton->code = IAQ_ONETOUCH_4;
+            vbutton->rssd_code = IAQ_ONETOUCH_4;
+          break;
+          case 5:
+            vbutton->code = IAQ_ONETOUCH_5;
+            vbutton->rssd_code = IAQ_ONETOUCH_5;
+          break;
+          case 6:
+            vbutton->code = IAQ_ONETOUCH_5;
+            vbutton->rssd_code = IAQ_ONETOUCH_5;
+          break;
+          default:
+            vbutton->code = NUL;
+            vbutton->rssd_code = NUL;
           break;
         }
-      }
-      if (vbutton == NULL) {
+
+      } else {
         LOG(AQUA_LOG,LOG_ERR, "Config error, could not find vitrual button for `%s`",param);
       }
     }
@@ -758,6 +798,24 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
 //#endif
 
   return rtn;
+}
+
+aqkey *getVirtualButton(struct aqualinkdata *aqdata, int num)
+{
+  aqkey *vbutton = NULL;
+  char vbname[10];
+  snprintf(vbname, 9, "%s%d", BTN_VAUX, num);
+
+  for (int i = aqdata->virtual_button_start; i < aqdata->total_buttons; i++)
+  {
+    // printf("Checking %s agasinsdt %s\n",aqdata->aqbuttons[i].name, vbname);
+    if (strcmp(aqdata->aqbuttons[i].name, vbname) == 0)
+    {
+      vbutton = &aqdata->aqbuttons[i];
+      break;
+    }
+  }
+  return vbutton;
 }
 
 // pumpcfg is pointer to pumpIndex, pumpName, pumpType pumpID, (ie pull off button_??_ or vurtual_button_??_)

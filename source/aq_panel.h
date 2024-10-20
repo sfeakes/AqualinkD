@@ -12,6 +12,9 @@
 #define SPA_HEAT_INDEX  10
 */
 
+//#define VBUTTON_ONETOUCH_RSSD 0xFF
+//#define VBUTTON_RSSD 0xFE
+
 // Defined as int16_t so 16 bits to mask
 #define RSP_4      (1 << 0) // 1
 #define RSP_6      (1 << 1) // 16

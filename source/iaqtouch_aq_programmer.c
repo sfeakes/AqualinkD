@@ -380,6 +380,17 @@ bool goto_iaqt_page(const unsigned char pageID, struct aqualinkdata *aq_data) {
     }
     LOG(IAQT_LOG, LOG_DEBUG, "IAQ Touch got to Device page\n");
     return true;
+  } else if (pageID == IAQ_PAGE_ONETOUCH) {
+    send_aqt_cmd(KEY_IAQTCH_ONETOUCH);
+    if (iaqtCurrentPage() != IAQ_PAGE_ONETOUCH) {
+      unsigned char page = waitfor_iaqt_nextPage(aq_data);
+      if (page != IAQ_PAGE_ONETOUCH ) {
+        LOG(IAQT_LOG, LOG_ERR, "IAQ Touch did not find OneTouch page\n");
+        return false;
+      }
+    }
+    LOG(IAQT_LOG, LOG_DEBUG, "IAQ Touch got to OneTouch page\n");
+    return true;
   } else if (pageID == IAQ_PAGE_MENU || pageID == IAQ_PAGE_SET_TEMP || pageID == IAQ_PAGE_SET_TIME || pageID == IAQ_PAGE_SET_SWG ||
              pageID == IAQ_PAGE_SYSTEM_SETUP || pageID == IAQ_PAGE_FREEZE_PROTECT || pageID == IAQ_PAGE_LABEL_AUX || 
              pageID == IAQ_PAGE_VSP_SETUP) {
@@ -548,6 +559,39 @@ void *set_aqualink_iaqtouch_device_on_off( void *ptr )
   // just stop compiler error, ptr is not valid as it's just been freed
   return ptr;
 }
+
+
+void *set_aqualink_iaqtouch_onetouch_on_off( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+  char *buf = (char*)threadCtrl->thread_args;
+  //char device_name[15];
+  struct iaqt_page_button *button;
+
+  unsigned int device = atoi(&buf[0]);
+  unsigned int state = atoi(&buf[5]);
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF);
+
+  LOG(IAQT_LOG,LOG_INFO, "OneTouch Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].label,state);
+
+  if ( goto_iaqt_page(IAQ_PAGE_ONETOUCH, aq_data) == false )
+    goto f_end;
+
+  // See if it's on the current page
+  button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
+
+
+  f_end:
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  cleanAndTerminateThread(threadCtrl);
+
+  return ptr;
+}
+
+
 
 void *set_aqualink_iaqtouch_light_colormode( void *ptr )
 {

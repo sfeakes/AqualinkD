@@ -477,23 +477,32 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
 void iaqt_pump_update(struct aqualinkdata *aq_data, int updated) {
   const int bitmask[MAX_PUMPS] = {1,2,4,8};
   static unsigned char updates = '\0';
-  int i;
+  //int i;
 
   if (updated == -1) {
-    for(i=0; i < MAX_PUMPS; i++) {
+    for(int i=0; i < MAX_PUMPS; i++) {
       if ((updates & bitmask[i]) != bitmask[i]) {
         aq_data->pumps[i].rpm = PUMP_OFF_RPM;
         aq_data->pumps[i].gpm = PUMP_OFF_GPM;
         aq_data->pumps[i].watts = PUMP_OFF_WAT;
         aq_data->pumps[i].pStatus = PS_OFF;
+        // If Virtual pump, turn it off as well.
+        if (i < aq_data->num_pumps && isVBUTTON(aq_data->pumps[i].button->special_mask) && aq_data->pumps[i].button->led->state == ON ) {
+          LOG(IAQT_LOG,LOG_DEBUG, "Turning off virtual button pump %d - \n",aq_data->pumps[i].pumpIndex,aq_data->pumps[i].button->label);
+          aq_data->pumps[i].button->led->state = OFF;
+        }
         LOG(IAQT_LOG,LOG_DEBUG, "Clearing pump %d\n",i);
         aq_data->updated  =true;
       }
     }
     updates = '\0';
   } else if (updated >=0 && updated < MAX_PUMPS) {
-     updates |= bitmask[updated];
-     LOG(IAQT_LOG,LOG_DEBUG, "Got pump update message for pump %d\n",updated);
+    updates |= bitmask[updated];
+    LOG(IAQT_LOG,LOG_DEBUG, "Got pump update message for pump %d\n",updated);
+        if (updated < aq_data->num_pumps && isVBUTTON(aq_data->pumps[updated].button->special_mask) && aq_data->pumps[updated].button->led->state == OFF) {
+          LOG(IAQT_LOG,LOG_DEBUG, "Turning on virtual button pump %d - %s\n",aq_data->pumps[updated].pumpIndex,aq_data->pumps[updated].button->label);
+          aq_data->pumps[updated].button->led->state = ON;
+        }
   }
 }
 
@@ -874,13 +883,14 @@ void processPage(struct aqualinkdata *aq_data)
   }
 }
 
-#define REQUEST_STATUS_POLL_COUNT 10
+#define REQUEST_STATUS_POLL_COUNT  10
+#define REQUEST_DEVICES_POLL_COUNT 30 // if _aqconfig_.enable_iaqualink=true then REQUEST_STATUS_POLL_COUNT will be used.
 
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
   static bool gotInit = false; 
   static int cnt = 0;
-  static int probesSinceLastPageCMD=0;
+  //static int probesSinceLastPageCMD=0;
   static bool gotStatus = true;
   static char message[AQ_MSGLONGLEN + 1];
   bool fake_pageend = false;
@@ -1065,7 +1075,7 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
 
   // Standard ack/poll
   if (packet[3] == CMD_IAQ_POLL) {
-    probesSinceLastPageCMD++;
+    //probesSinceLastPageCMD++;
 
 #ifdef NEW_POLL_CYCLE
 /*
@@ -1121,6 +1131,8 @@ if not programming && poll packet {
           break;
         }
 
+        iaqt_queue_cmd(nextPageRequestKey);
+        /*
         if (probesSinceLastPageCMD > 3) {
           // Seems to be a bug with wifi device ghosting command on/off, kind-a looks like our page commands don;t take sometimes so wait.
           // This didn;t fix issue, but see
@@ -1129,6 +1141,7 @@ if not programming && poll packet {
         } else {
           LOG(IAQT_LOG, LOG_INFO, "Waiting to send next page cnt %d\n",probesSinceLastPageCMD);
         }
+        */
       }
     } else if (in_programming_mode(aq_data) == true) {
       // Set count to something close to max, so we will pull latest info once programming has finished.

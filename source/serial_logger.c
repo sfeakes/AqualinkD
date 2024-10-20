@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 800
 
-#define VERSION "serial_logger V2.6"
+#define VERSION "serial_logger V2.7"
 
 /*
 typedef enum used {
@@ -668,6 +668,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   bool found_lx =false;
   bool found_chem =false;
   bool found_pent_vsp =false;
+  bool found_iAqualnk =false;
 
   clock_gettime(CLOCK_REALTIME, &start_time);
   if (timePackets) {
@@ -859,6 +860,8 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
         found_lx =true;
       } else if (slog[i].ID >= JANDY_DEC_CHEM_MIN && slog[i].ID <= JANDY_DEC_CHEM_MAX) {
         found_chem =true;
+      } else if (slog[i].ID >= JANDY_DEV_AQLNK_MIN && slog[i].ID <= JANDY_DEV_AQLNK_MAX) {
+        found_iAqualnk =true;
       }
     }
   }
@@ -936,6 +939,8 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_LX = yes\n");
   if (found_chem)
     LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_Chem = yes\n");
+  if (found_iAqualnk && _panelPDA)
+    LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_iAqualink = yes\n");
 
   LOG(SLOG_LOG, LOG_NOTICE, "-------------------------\n");
 

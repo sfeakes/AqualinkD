@@ -727,7 +727,7 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     length--;
   length += sprintf(buffer+length, "}");
 
-  length += sprintf(buffer+length, ",\"light_program\":{" );
+  length += sprintf(buffer+length, ",\"light_program_names\":{" );
   for (i=0; i < aqdata->num_lights; i++) 
   {
     if (aqdata->lights[i].lightType == LC_DIMMER2) {

@@ -649,7 +649,7 @@
       resetBackgroundSize();
     }
 
-    function populateLightProgram(type=0) {
+    function populateLightProgram(type=0, current_mode="") {
       var light_program = _light_program[type];
       
       if (_lightProgramDropdown) {
@@ -676,10 +676,14 @@
         var fLen = light_program.length;
         var i;
         for (i = 0; i < fLen; i++) {
+          selected = "";
+          if (current_mode != "" && light_program[i].startsWith(current_mode)) {
+            selected = "checked";
+          } 
           if (light_program[i].endsWith(" - Show"))
-            html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
+            html2 = html2 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' "+selected+" onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i].substr(0, (light_program[i].length - 7)) + "</label></div>";
           else
-            html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
+            html1 = html1 + "<div class='option_radiocontainer'><label><span class='radio'><input type='radio' name='light_program' value='" + (i+1) + "' "+selected+" onchange='updatePwsitchOptions(this, "+type+");'><span class='option_radio-value' aria-hidden='true'></span></span>" + light_program[i] + "</label></div>";
         }
         var row;
         row = tbody.deleteRow(2);
@@ -1047,8 +1051,26 @@
         } else {
           //console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
         }
-      } catch(exception) {}
+      } catch(exception) { console.log(exception); }
       return false;
+    }
+    function getTileOnText(id) {
+      try {
+        var tile = document.getElementById(id);
+        if (tile.getAttribute('status') == 'on' || tile.getAttribute('status') == 'enabled') {
+          return document.getElementById(id + '_status').innerHTML;
+        } else {
+          //console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
+        }
+      } catch(exception) {}
+
+      return "";
+    }
+    function getTileSPvalue(id) {
+      try {
+        return parseInt(document.getElementById(id).getAttribute('spvalue'));
+      } catch(exception) {}
+      return -1;
     }
 
     function setThermostatTile(id, value, sp_value) {
@@ -1234,6 +1256,14 @@
         if (typeof object.type_ext !== 'undefined' && (object.type_ext == 'switch_program' || object.type_ext == 'light_dimmer')) {
           if (typeof object.Light_Type !== 'undefined') {
             document.getElementById(object.id).setAttribute('lighttype', object.Light_Type);
+          
+            if (typeof object.Light_Program !== 'undefined') {
+              light_mode = parseInt(object.Light_Program);
+              if ( object.Light_Type != "10" && object.type_ext != 'light_dimmer' ) {
+                document.getElementById(object.id).setAttribute('spvalue', light_mode-1);
+                //console.log("Light_Program spvalue = "+document.getElementById(object.id).getAttribute('spvalue'));
+              }
+            }
           }
           // Other switch_program types (other than light_type) GO HERE 
         } else if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_timer') {
@@ -1425,7 +1455,9 @@
           close_button = document.getElementById("swg_options_close");
           ext = '&deg;' + _temperature_units;
         } else if (type == 'switch_program') {
-          populateLightProgram(tile.getAttribute('lighttype') );
+          //var current_mode = "";
+          //try { current_mode = document.getElementById(id + '_status').innerHTML } catch(exception) {}
+          populateLightProgram(tile.getAttribute('lighttype'),getTileOnText(id));
           title = document.getElementById("pswitch_option_title");
           close_button = document.getElementById("pswitch_options_close");
           tm_slider = document.getElementById("ps_timer_slider_range");
@@ -1676,7 +1708,10 @@
               var x;
               for (x = 0; x < radio.length; x++) {
                  if (radio[x].checked == true) {
-                   send_light_mode(radio[x].value, id, document.getElementById('pswitch_option_switch_text_value').innerHTML);
+                   console.log("Light Current= "+(getTileSPvalue(id)+1)+" - "+getTileOnText(id)+"  Selected="+radio[x].value+" - "+document.getElementById('pswitch_option_switch_text_value').innerHTML);
+                   if (getTileSPvalue(id)+1 != radio[x].value) {
+                     send_light_mode(radio[x].value, id, document.getElementById('pswitch_option_switch_text_value').innerHTML);
+                   }
                    mode=true;
                    break;
                  }
@@ -1688,10 +1723,11 @@
             }
           } else if (type == 'light_dimmer') {
             var value = slider.value;
-            if (state == (tile.getAttribute('status') == 'off'))
+            if (state == (tile.getAttribute('status') == 'off')) {
               setTileState(id, state);
-            if (sp_value != slider.value && dimmer_slider_changed == true)
-            setThermostatSetpoint(id, slider.value)
+            } else if (sp_value != slider.value && dimmer_slider_changed == true) {
+              setThermostatSetpoint(id, slider.value);
+            }
           } else if (type == 'setpoint_swg') {
             //console.log ("Boost attribute = "+tile.getAttribute('boost'));
             //console.log ("state = "+state);
@@ -2224,32 +2260,44 @@
       }
       for (var obj in data.timers) {
         setTileOnText(obj.toString(),"On (timer)");
+        //setTileOnTextLine2(obj.toString(),"On (timer)");
         //console.log("TIMER "+obj.toString());
       }
       for (var obj in data.timer_durations) {
         setTileOnText(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
+        //setTileOnTextLine2(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
         //console.log("TIMER "+obj.toString()+" duration "+data.timer_durations[obj]);
       }
 
-      for (var obj in data.light_program) {
-        if (data.light_program[obj] != "") {
-          var light_mode = data.light_program[obj];
+      for (var obj in data.light_program_names) {
+        if (data.light_program_names[obj] != "") {
+          var light_mode_name = data.light_program_names[obj];
+          var light_mode = -1;
           // If aqualinkd programmed light, need to convert int to text index, if not value is text
           try {
             var light_type = document.getElementById(obj.toString()).getAttribute('lighttype');
-            if (light_type == 0) {
-              var light_mode = _light_program[light_type][parseInt(data.light_program[obj])-1];
-              if (light_mode.endsWith(" - Show"))
-              light_mode = light_mode.slice(0, -7);
-              //console.log("light program -- "+light_mode);
-            } else if (light_type == 10 || light_type == 11) {
+            if (light_type == "0") {
+              light_mode = parseInt(data.light_program_names[obj])-1;
+              var light_mode_name = _light_program[light_type][light_mode];
+              if (light_mode_name.endsWith(" - Show")) {
+                light_mode_name = light_mode_name.slice(0, -7);
+              }
+            } else if (/*light_type == 10 ||*/ light_type == 11) {
               // Fo Dimmer Lights.
-              document.getElementById(obj.toString()).setAttribute('setpoint', parseInt(light_mode));
+              light_mode = parseInt(light_mode_name);
+              document.getElementById(obj.toString()).setAttribute('setpoint', light_mode);
+            } else {
+              light_mode = _light_program[light_type].findIndex(element => element.startsWith(light_mode_name))
             }
-          } catch (e) {}
+          } catch (e) { /*console.log(e);*/ }
 
-          setTileOnText(obj.toString(),light_mode);
-          // Below is only needed for full dimmer
+          setTileOnText(obj.toString(),light_mode_name);
+          
+          try {
+            document.getElementById(obj.toString()).setAttribute('spvalue', light_mode);
+            //console.log("Light mode index "+light_mode+" - "+light_mode_name+" ----- "+_light_program[light_type][light_mode]);
+          } catch (e) { /*console.log(e);*/ }
+          
         }
       }
         
@@ -2507,7 +2555,7 @@
     }
 
     function send_light_mode(value, id, textvalue) {
-      console.log("Set light mode to "+value+" id="+id+" text="+textvalue);
+      //console.log("Set light mode to "+value+" id="+id+" text="+textvalue);
       var mode = {};
       //mode.parameter = 'POOL_LIGHT_MODE';
       //mode.parameter = 'LIGHT_MODE';

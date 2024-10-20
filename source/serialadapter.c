@@ -139,7 +139,7 @@ void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsig
   LOG(RSSA_LOG,LOG_DEBUG, "Sending 0x%02hhx to %s\n",state, button->label);
 
   rssadapter_device_state(button->rssd_code, state); // Set state
-  rssadapter_device_state(button->rssd_code, 0x00); // 0x00 meand Get curent state (for color lights the return state is 0)
+  rssadapter_device_state(button->rssd_code, 0x00); // 0x00 means Get curent state (for color lights the return state is 0)
 }
 
 void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn)
