@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "utils.h"
+
 #define RS485LOGFILE "/tmp/RS485.log"
 #define RS485BYTELOGFILE "/tmp/RS485raw.log"
 
@@ -18,10 +20,11 @@ void logPacketRead(unsigned char *packet_buffer, int packet_length);
 void logPacketWrite(unsigned char *packet_buffer, int packet_length);
 void logPacketError(unsigned char *packet_buffer, int packet_length);
 void logPacketByte(unsigned char *byte);
+void logPacket(logmask_t from, int level, unsigned char *packet_buffer, int packet_length, bool is_read) ;
+int beautifyPacket(char *buff, int buff_size, unsigned char *packet_buffer, int packet_length, bool is_read);
 
 // Only use for manual debugging
-//void debuglogPacket(unsigned char *packet_buffer, int packet_length);
-void debuglogPacket(int16_t from, unsigned char *packet_buffer, int packet_length, bool is_read);
-int beautifyPacket(char *buff, unsigned char *packet_buffer, int packet_length, bool is_read);
+void debuglogPacket(logmask_t from, unsigned char *packet_buffer, int packet_length, bool is_read, bool forcelog);
+
 
 #endif //PACKETLOGGER_H_

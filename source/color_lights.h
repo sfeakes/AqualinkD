@@ -6,8 +6,14 @@
 #include "aq_programmer.h"
 
 #define LIGHT_COLOR_NAME    16
-#define LIGHT_COLOR_OPTIONS 17
+#define LIGHT_COLOR_OPTIONS 19
 //#define LIGHT_COLOR_TYPES   LC_DIMMER+1
+
+// The status returned from RS Serial Adapter has this added as a base.  
+#define RSSD_COLOR_LIGHT_OFFSET  64
+#define RSSD_DIMMER_LIGHT_OFFSET 128
+
+//#define DIMMER_LIGHT_TYPE_INDEX 10
 
 /*
 // color light modes (Aqualink program, Jandy, Jandy LED, SAm/SAL, Color Logic, Intellibrite)
@@ -23,13 +29,22 @@ typedef enum clight_type {
 //const char *light_mode_name(clight_type type, int index);
 const char *light_mode_name(clight_type type, int index, emulation_type protocol);
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
-
+void set_currentlight_value(clight_detail *light, int index);
 
 
 //char *_color_light_options_[LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS][LIGHT_COLOR_NAME];
 
 #endif //COLOR_LIGHTS_H_
+/*
 
+Rev T.2 has the below
+Jandy colors    <- Same
+Jandy LED       <- Same
+SAm/Sal         <- Same
+IntelliBrite    <- Same
+Hayw Univ Col   <- Color Logic
+
+*/
 /*
 Color Name      Jandy Colors    Jandy LED       SAm/SAL         Color Logic     IntelliBrite      dimmer
 ---------------------------------------------------------------------------------------------------------

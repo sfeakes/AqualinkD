@@ -30,6 +30,23 @@
 #define RSP_RSSA   (1 << 14) // 128
 #define RSP_EXT_PROG (1 << 15) // 128
 
+
+// Bitmask for pannel support against board rev
+// used in getPanelSupport()
+#define RSP_SUP_ONET  (1 << 0)
+#define RSP_SUP_AQLT  (1 << 1)  // Aqualink Touch
+#define RSP_SUP_IAQL (1 << 2 ) // iAqualink Wifi
+#define RSP_SUP_RSSA  (1 << 3 ) // RS Serial Adapter
+#define RSP_SUP_VSP   (1 << 4)
+#define RSP_SUP_CHEM  (1 << 5)  // chem feeder
+#define RSP_SUP_TSCHEM (1 << 6 ) // true sense chem reader
+#define RSP_SUP_SWG   (1 << 7) // Salt water generator
+#define RSP_SUP_CLIT  (1 << 8) // color lights 
+#define RSP_SUP_DLIT  (1 << 9) // dimmer lights 
+#define RSP_SUP_VBTN  (1 << 10) // Virtual button
+#define RSP_SUP_PLAB (1 << 11) // Pump VSP by Label and not number
+
+
 //void initButtons(struct aqualinkdata *aqdata);
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
@@ -37,11 +54,24 @@ const char* getPanelString();
 
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
+void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button); 
+
 void changePanelToMode_Only();
 void addPanelOneTouchInterface();
 void addPanelIAQTouchInterface();
 void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
+
+int getPumpSpeedAsPercent(pump_detail *pump);
+int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable only needed internally
+
+uint16_t getPanelSupport( char *rev_string, int rev_len);
+
+aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
+
+clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button);
+pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button);
+
 //void panneltest();
 
 #define isPDA_PANEL ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
@@ -53,6 +83,13 @@ void changePanelToExtendedIDProgramming();
 #define isIAQT_ENABLED ((_aqconfig_.paneltype_mask & RSP_IAQT) == RSP_IAQT)
 #define isRSSA_ENABLED ((_aqconfig_.paneltype_mask & RSP_RSSA) == RSP_RSSA)
 #define isEXTP_ENABLED ((_aqconfig_.paneltype_mask & RSP_EXT_PROG) == RSP_EXT_PROG)
+
+#define isIAQL_ACTIVE ((_aqconfig_.extended_device_id2 != NUL))
+
+#define isVS_PUMP(mask) ((mask & VS_PUMP) == VS_PUMP)
+#define isVBUTTON(mask) ((mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)
+#define isPLIGHT(mask) ((mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+
 int PANEL_SIZE(); 
 //
 //#define PANEL_SIZE PANEL_SIZE()

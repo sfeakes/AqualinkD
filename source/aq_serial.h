@@ -46,6 +46,10 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEC_SWG_MAX      83   // 0x53
 #define JANDY_DEC_PUMP_MIN    120   // 0x78
 #define JANDY_DEC_PUMP_MAX    123   // 0x7b
+// Have also seen epump at 0xe0 with panel rev W that supports more pumps
+#define JANDY_DEC_PUMP2_MIN    224   // 0xe0
+#define JANDY_DEC_PUMP2_MAX    228   // 0xe3 // Their are probably more, but this is a guess
+
 #define JANDY_DEC_JXI_MIN     104   // 0x68
 #define JANDY_DEC_JXI_MAX     107   // 0x6B
 #define JANDY_DEC_LX_MIN       56   // 0x38
@@ -53,6 +57,38 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEC_CHEM_MIN    128   // 0x80
 #define JANDY_DEC_CHEM_MAX    131   // 0x83
 
+#define JANDY_DEV_IAQLN_MIN    0xa0   // 
+#define JANDY_DEV_IAQLN_MAX    0xa3   // 0
+
+#define JANDY_DEV_AQLNK_MIN    0x30   // 
+#define JANDY_DEV_AQLNK_MAX    0x33   // 0
+
+/*
+//===== Device ID's =====//
+//=========================================================================//
+DEV_MASTER_MASK     =     0x00; // MASTER(S???0               00-03  0b0 0000 0XX //
+DEV_CTL_MASK        =     0x08; // HOME CONTROLLER (RS-8?)    08-0b  0b0 0001 0XX //
+//                        0x10; // XXXXX DEVICE               10-13  0b0 0010 0XX //
+//                        0x18; // XXXXX DEVICE               18-1b  0b0 0011 0XX //
+DEV_SPA_MASK        =     0x20; // SPA DEVICE                 20-23  0b0 0100 0XX //
+DEV_RPC_MASK        =     0x28; // REMOTE POWER CENTER DEVICE 28-2b  0b0 0101 0XX //
+DEV_AQUALINK_MASK   =     0x30; // AQUALINK DEVICE            30-33  0b0 0110 0XX //
+DEV_LX_HTR_MASK     =     0x38; // LX HEATER                  38-3b  0b0 0111 0XX //
+DEV_ONETOUCH_MASK   =     0x40; // XXXXX ONE TOUCH DEVICE     40-43  0b0 1000 0XX //
+//                        0x48; // XXXXX DEVICE               48-4b  0b0 1001 0XX //
+DEV_AQUARITE_MASK   =     0x50; // AQUARITE DEVICE            50-53  0b0 1010 0XX //
+DEV_PCDOCK_MASK     =     0x58; // PCDOCK DEVICE              58-5b  0b0 1011 0XX //
+DEV_PDA_JDA_MASK    =     0x60; // AQUAPALM DEVICE            60-63  0b0 1100 0XX //
+DEV_LXI_LRZE_MASK   =     0x68; // LXi/LZRE DEVICE            68-6b  0b0 1101 0XX //
+DEV_HEATPUMP_MASK   =     0x70; // HEAT PUMP DEVICE           70-73  0b0 1110 0XX //
+JANDY_EPUMP_MASK    =     0x78; // EPUMP DEVICE               78-7b  0b0 1111 0XX //
+DEV_CHEMLINK_MASK   =     0x80; // CHEMLINK DEVICE            80-83  0b1 0000 0XX //
+Heater                    0x88; // XXXXX DEVICE               88-8b  0b1 0001 0XX //
+//                        0x90; // XXXXX DEVICE               90-93  0b1 0010 0XX //
+//                        0x98; // XXXXX DEVICE               98-9b  0b1 0011 0XX //
+DEV_AQUALINK_2_MASK =     0xA0; // AQUALINK 2                 A0-A3  0b1 0100 0XX //
+DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
+*/
 
 // PACKET DEFINES Jandy
 #define NUL  0x00
@@ -94,11 +130,19 @@ const char *getJandyDeviceName(emulation_type etype);
 
 #define AQ_MINPKTLEN    5
 //#define AQ_MAXPKTLEN   64
-#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
+//#define AQ_MAXPKTLEN   128  // Max 79 bytes so far, so 128 is a guess at the moment, just seen large packets from iAqualink
+//#define AQ_MAXPKTLEN   256  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
+#define AQ_MAXPKTLEN   512  // Still getting this at 128, so temp increase to 256 and print message over 128 in aq_serial.c
+#define AQ_MAXPKTLEN_SEND 32 // Out biggest send buffer
 #define AQ_PSTLEN       5
 #define AQ_MSGLEN      16
 #define AQ_MSGLONGLEN 128
 #define AQ_TADLEN      13
+
+// For printing warning & debug messages for packets. 
+// The below are related to AQ_MAXPKTLEN
+#define AQ_MAXPKTLEN_WARNING   128 // Print warning message if over this
+//#define AQ_PACKET_PRINT_BUFFER 1400 // Must be at least AQ_MAXPKTLEN * 5 + 100
 
 /* COMMANDS */
 #define CMD_PROBE       0x00
@@ -171,7 +215,8 @@ const char *getJandyDeviceName(emulation_type etype);
 #define KEY_AUX7      0x15
 #define KEY_POOL_HTR  0x12
 #define KEY_SPA_HTR   0x17
-#define KEY_SOLAR_HTR 0x1c
+//#define KEY_SOLAR_HTR 0x1c
+#define KEY_EXT_AUX   0x1c
 #define KEY_MENU      0x09
 #define KEY_CANCEL    0x0e
 #define KEY_LEFT      0x13
@@ -199,7 +244,7 @@ const char *getJandyDeviceName(emulation_type etype);
 #endif
 
 #define BTN_PUMP      "Filter_Pump"
-#define BTN_SPA       "Spa_Mode"
+#define BTN_SPA       "Spa"
 #define BTN_AUX1      "Aux_1"
 #define BTN_AUX2      "Aux_2"
 #define BTN_AUX3      "Aux_3"
@@ -209,10 +254,13 @@ const char *getJandyDeviceName(emulation_type etype);
 #define BTN_AUX7      "Aux_7"
 #define BTN_POOL_HTR  "Pool_Heater"
 #define BTN_SPA_HTR   "Spa_Heater"
-#define BTN_SOLAR_HTR "Solar_Heater"
+//#define BTN_SOLAR_HTR "Solar_Heater"
+#define BTN_EXT_AUX   "Extra_Aux"
 
 #define BTN_TEMP1_HTR  "Temp1_Heater"
 #define BTN_TEMP2_HTR  "Temp2_Heater"
+
+#define BTN_VAUX      "Aux_V"  // A number will be appended
 
 #ifdef AQ_RS16
 #define BTN_AUXB1      "Aux_B1"
@@ -236,7 +284,8 @@ const char *getJandyDeviceName(emulation_type etype);
 #define BTN_PDA_AUX7      "AUX7"
 #define BTN_PDA_POOL_HTR  "POOL HEAT"
 #define BTN_PDA_SPA_HTR   "SPA HEAT"
-#define BTN_PDA_SOLAR_HTR "EXTRA AUX"
+//#define BTN_PDA_SOLAR_HTR "EXTRA AUX"
+#define BTN_PDA_EXT_AUX "EXTRA AUX"
 
 #define BUTTON_LABEL_LENGTH 20
 
@@ -367,6 +416,11 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_TITLE_MESSAGE 0x2d  // This is what the product name is set to (Jandy RS) usually
 //#define CMD_IAQ_VSP_ERROR     0x2c  // Error when setting speed too high
 #define CMD_IAQ_MSG_LONG      0x2c  // This this is display popup message.  Next 2 bytes 0x00|0x01 = wait and then 0x00|0x00 clear
+
+// If
+#define CMD_IAQ_MAIN_STATUS   0x70
+#define CMD_IAQ_1TOUCH_STATUS 0x71
+#define CMD_IAQ_AUX_STATUS    0x72 // Get this on AqualinkTouch protocol when iAqualink protocol sends 0x18 (get aux status I assume)
 /*
 #define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??
 #define CMD_IAQ_0x31          0x31 // Some pump speed info
@@ -439,6 +493,10 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define IAQ_PAGE_FREEZE_PROTECT  0x11
 #define IAQ_PAGE_LABEL_AUX       0x32
 #define IAQ_PAGE_HELP            0x0c
+#define IAQ_PAGE_SERVICEMODE     0x5e // Also Timeout
+
+#define IAQ_PAGE_DEVICES_REV_Yg  0x0a  // Panel rev Yg (and maybe others use this)
+
 //#define IAQ_PAGE_START_BOOST     0x3f
 //#define IAQ_PAGE_DEGREES         0xFF // Added this as never want to actually select the page, just go to it.
 

@@ -33,6 +33,7 @@
 #include "aq_timer.h"
 #include "aq_programmer.h"
 #include "rs_msg_utils.h"
+#include "color_lights.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -44,19 +45,33 @@
 //SPA WILL TURN OFF AFTER COOL DOWN CYCLE
 
 
+bool printableChar(char ch)
+{
+  if ( (ch < 32 || ch > 126) || 
+        ch == 123 || // {
+        ch == 125 || // }
+        ch == 34 || // "
+        ch == 92    // backslash
+  ) {
+    return false;
+  }
+  return true;
 
+}
 
 int json_chars(char *dest, const char *src, int dest_len, int src_len)
 {
   int i;
   int end = dest_len < src_len ? dest_len:src_len;
   for(i=0; i < end; i++) {
+    /*
     if ( (src[i] < 32 || src[i] > 126) || 
           src[i] == 123 || // {
           src[i] == 125 || // }
           src[i] == 34 || // "
-          src[i] == 92 // backslash
-       ) // only printable chars
+          src[i] == 92    // backslash
+       ) // only printable chars*/
+    if (! printableChar(src[i]))
       dest[i] = ' ';
     else
       dest[i] = src[i];
@@ -98,6 +113,14 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return programtypeDisplayName(aqdata->active_thread.ptype);
   }
   */
+
+/*
+ printf("**** Programming=%s, length=%ld, empty=%s, Message=%s \n",
+         aqdata->active_thread.thread_id==0?"no":"yes",
+         strlen(aqdata->last_display_message),
+         rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))==true?"yes":"no",
+         aqdata->last_display_message);
+ */
  if (aqdata->active_thread.thread_id != 0) {
    if (!aqdata->is_display_message_programming || rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))){
      return programtypeDisplayName(aqdata->active_thread.ptype);
@@ -111,24 +134,11 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
     return JSON_TIMEOUT;
   }
 
-  // NSF should probably use json_chars here.
   if (aqdata->last_display_message[0] != '\0') {
     int i;
     for(i=0; i < strlen(aqdata->last_display_message); i++ ) {
-      if (aqdata->last_display_message[i] <= 31 || aqdata->last_display_message[i] >= 127) {
+      if (! printableChar(aqdata->last_display_message[i])) {
         aqdata->last_display_message[i] = ' ';
-      } else {
-        switch (aqdata->last_display_message[i]) {
-          case '"':
-          case '/':
-          case '\n':
-          case '\t':
-          case '\f':
-          case '\r':
-          case '\b':
-            aqdata->last_display_message[i] = ' ';
-          break;
-        }
       }
     }
     //printf("JSON Sending '%s'\n",aqdata->last_display_message);
@@ -242,12 +252,13 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 //printf("Button %s is VSP\n", button->name);
     for (i=0; i < aqdata->num_pumps; i++) {
       if (button == aqdata->pumps[i].button) {       
-          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Pump_Status\":\"%d\"", 
+          length += sprintf(buffer, ",\"type_ext\":\"switch_vsp\",\"Pump_RPM\":\"%d\",\"Pump_GPM\":\"%d\",\"Pump_Watts\":\"%d\",\"Pump_Type\":\"%s\",\"Pump_Status\":\"%d\",\"Pump_Speed\":\"%d\"", 
                   aqdata->pumps[i].rpm,
                   aqdata->pumps[i].gpm,
                   aqdata->pumps[i].watts,
                   (aqdata->pumps[i].pumpType==VFPUMP?"vfPump":(aqdata->pumps[i].pumpType==VSPUMP?"vsPump":"ePump")),
-                  getPumpStatus(i, aqdata));
+                  getPumpStatus(i, aqdata),
+                  getPumpSpeedAsPercent(&aqdata->pumps[i]));
 
           return buffer;
       }
@@ -258,7 +269,17 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
 //printf("Button %s is ProgramableLight\n", button->name);
     for (i=0; i < aqdata->num_lights; i++) {
       if (button == aqdata->lights[i].button) {
-        length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\"", aqdata->lights[i].lightType);
+        if (aqdata->lights[i].lightType == LC_DIMMER2) {
+          length += sprintf(buffer, ",\"type_ext\": \"light_dimmer\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%d%%\" ",
+                                  aqdata->lights[i].lightType,
+                                  aqdata->lights[i].currentValue,
+                                  aqdata->lights[i].currentValue);
+        } else {
+          length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%s\" ",
+                                  aqdata->lights[i].lightType,
+                                  aqdata->lights[i].currentValue,
+                                  light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, ALLBUTTON));
+        }
         return buffer;
       }
     }
@@ -284,6 +305,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   bool homekit_f = (homekit && ( aqdata->temp_units==FAHRENHEIT || aqdata->temp_units == UNKNOWN) );
 
   length += sprintf(buffer+length, "{\"type\": \"devices\"");
+  length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"",AQUALINKD_VERSION);//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"date\":\"%s\"",aqdata->date );//"09/01/16 THU",
   length += sprintf(buffer+length, ",\"time\":\"%s\"",aqdata->time );//"1:16 PM",
   if ( aqdata->temp_units == FAHRENHEIT )
@@ -488,9 +510,20 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
   //return length;
 }
 
-int logmaskjsonobject(int16_t flag, char* buffer)
+int logmaskjsonobject(logmask_t flag, char* buffer)
 {
   int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
+
+  if (flag == RSSD_LOG) {
+    //length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filter\":\"0x%02hhx\"},", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF), _aqconfig_.RSSD_LOG_filter[0]);
+    length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\",\"filters\":[", logmask2name(flag), flag,(isDebugLogMaskSet(flag)?JSON_ON:JSON_OFF));
+    for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
+      length += sprintf(buffer+length, "\"0x%02hhx\",", _aqconfig_.RSSD_LOG_filter[i]);
+    }
+    //"]},"
+    length += sprintf(buffer+length-1, "]},");
+    length--;
+  }
   return length;
 }
 int logleveljsonobject(int level, char* buffer)
@@ -523,11 +556,12 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   length += logmaskjsonobject(RSSA_LOG, buffer+length);
   length += logmaskjsonobject(DJAN_LOG, buffer+length);
   length += logmaskjsonobject(DPEN_LOG, buffer+length);
-  length += logmaskjsonobject(RSSD_LOG, buffer+length);
   length += logmaskjsonobject(PROG_LOG, buffer+length);
   length += logmaskjsonobject(SCHD_LOG, buffer+length);
   length += logmaskjsonobject(RSTM_LOG, buffer+length);
   length += logmaskjsonobject(SIM_LOG, buffer+length);
+
+  length += logmaskjsonobject(RSSD_LOG, buffer+length); // Make sure the last one.
   // DBGT_LOG is a compile time only, so don;t include
   if (buffer[length-1] == ',')
     length--;
@@ -693,7 +727,35 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     length--;
   length += sprintf(buffer+length, "}");
 
+  length += sprintf(buffer+length, ",\"light_program\":{" );
+  for (i=0; i < aqdata->num_lights; i++) 
+  {
+    if (aqdata->lights[i].lightType == LC_DIMMER2) {
+      length += sprintf(buffer+length, "\"%s\": \"%d%%\",", aqdata->lights[i].button->name, aqdata->lights[i].currentValue );
+    } else {
+      length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, RSSADAPTER) );
+    }
+  }
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "}");
 
+/*
+  for (i=0; i < aqdata->num_lights; i++) 
+  {
+    length += sprintf(buffer+length, ",\"Plight_%d\":{\"name\":\"%s\",\"id\":\"%s\", \"type\":\"%d\", \"value\":\"%d\", \"state\":\"%s\"}",
+                                     i+1,
+                                     aqdata->lights[i].button->label,
+                                     aqdata->lights[i].button->name,
+                                     aqdata->lights[i].lightType,
+                                     aqdata->lights[i].currentValue,
+                                     LED2text(aqdata->lights[i].RSSDstate)
+    );
+  }
+  */
+  //if (buffer[length-1] == ',')
+  //  length--;
+  //length += sprintf(buffer+length, "}");
 
 
   length += sprintf(buffer+length, "}" );

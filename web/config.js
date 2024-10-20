@@ -3,10 +3,10 @@
     // If the device isn't listed below is will NOT be shown.
     // For a complete list returned from your particular aqualinkd instance
     // use the below URL and look at the ID value for each device.
-    // http://aqualink.ip.address/?command=devices
+    // http://aqualink.ip.address/api/devices
     var devices = [
         "Filter_Pump",
-        "Spa_Mode",
+        "Spa",
         "Aux_1",
         "Aux_2",
         "Aux_3",
@@ -37,6 +37,22 @@
         "CHEM/pH",
         "CHEM/ORP",
         "Solar_Heater",
+        "Extra_Aux",
+        "Aux_V1",
+        "Aux_V2",
+        "Aux_V3",
+        "Aux_V4",
+        "Aux_V5",
+        "Aux_V6",
+        "Aux_V7",
+        "Aux_V8",
+        "Aux_V9",
+        "Aux_V10",
+        "Aux_V11",
+        "Aux_V12",
+        "Aux_V13",
+        "Aux_V14",
+        "Aux_V15",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0
@@ -89,6 +105,7 @@
       // Reload background image every X seconds.(useful if camera snapshot)
       // 0 means only load once when page loads.
       //var background_reload = 10;
+      //var background_reload = 0;
 
       // By default all Variable Speed Pumps will show RPM.
       // this will show GPM on VSP's that you can only set GPM (ie Jandy VF pumps)
@@ -139,3 +156,5 @@
 
      // REMOVE THIS.
      //document.writeln("<script type='text/javascript' src='extra/extra.js'></script>");
+
+     

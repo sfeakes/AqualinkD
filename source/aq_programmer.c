@@ -41,6 +41,7 @@
 #include "color_lights.h"
 #include "config.h"
 #include "devices_jandy.h"
+#include "iaqualink.h"
 
 #ifdef AQ_DEBUG
   #include <time.h>
@@ -585,8 +586,16 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       return;
     }
     pda_reset_sleep();
-  } else if (isPDA_PANEL && isPDA_IAQT)
+  } 
+  else if (isPDA_PANEL && isPDA_IAQT)
   {
+     if (isIAQL_ACTIVE)  { // if we have iAqualink and AqualinkTouch active on PDA, use iAqualink for setpoints.
+       if (r_type == AQ_SET_POOL_HEATER_TEMP) {
+         type = AQ_SET_IAQLINK_POOL_HEATER_TEMP;
+       } else if (r_type == AQ_SET_SPA_HEATER_TEMP) {
+         type = AQ_SET_IAQLINK_SPA_HEATER_TEMP;
+       }
+    }
     if ( get_programming_mode(type) != IAQTOUCH) {
       LOG(PROG_LOG, LOG_ERR, "Selected Programming mode '%s' '%d' not supported with PDA control panel in iAqualinkTouch mode\n",ptypeName(type),type);
       return;
@@ -627,6 +636,14 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       break;
     case AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP:
       increase_aqualink_rssadapter_spa_setpoint(args, aq_data);
+      return; // No need to create this as thread.
+      break;
+    case AQ_SET_IAQLINK_POOL_HEATER_TEMP:
+      set_iaqualink_heater_setpoint(atoi(args), true);
+      return; // No need to create this as thread.
+      break;
+    case AQ_SET_IAQLINK_SPA_HEATER_TEMP:
+      set_iaqualink_heater_setpoint(atoi(args), false);
       return; // No need to create this as thread.
       break;
     default:
@@ -821,43 +838,50 @@ const char *ptypeName(program_type type)
 #endif
 #ifdef AQ_IAQTOUCH
     case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
-      return "Set iAqualink Touch Pump VS Program";
+      return "Set AqualinkTouch Touch Pump VS Program";
     break;
     case AQ_SET_IAQTOUCH_PUMP_RPM:
-      return "Set iAqualink Touch Pump RPM";
+      return "Set AqualinkTouch Touch Pump RPM";
     break;
     case AQ_GET_IAQTOUCH_VSP_ASSIGNMENT:
-      return "Get iAqualink Touch Pump Assignment";
+      return "Get AqualinkTouch Touch Pump Assignment";
     break;
     case AQ_GET_IAQTOUCH_SETPOINTS:
-      return "Get iAqualink Touch Setpoints";
+      return "Get AqualinkTouch Touch Setpoints";
     break;
     case AQ_GET_IAQTOUCH_FREEZEPROTECT:
-      return "Get iAqualink Touch Freezeprotect";
+      return "Get AqualinkTouch Touch Freezeprotect";
     break;
     case AQ_GET_IAQTOUCH_AUX_LABELS:
-      return "Get iAqualink AUX Labels";
+      return "Get AqualinkTouch AUX Labels";
     break;
     case AQ_SET_IAQTOUCH_SWG_PERCENT:
-      return "Set iAqualink SWG Percent";
-    break;
-    case AQ_SET_IAQTOUCH_SWG_BOOST:
-      return "Set iAqualink Boost";
-    break;
-    case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
-      return "Set iAqualink Spa Heater";
+      return "Set AqualinkTouch SWG Percent";
     break;
     case AQ_SET_IAQTOUCH_POOL_HEATER_TEMP:
-      return "Set iAqualink Pool Heater";
+      return "Set AqualinkTouch Pool Heater";
     break;
     case AQ_SET_IAQTOUCH_SET_TIME:
-      return "Set iAqualink Set Time";
+      return "Set AqualinkTouch Set Time";
     break;
     case AQ_SET_IAQTOUCH_DEVICE_ON_OFF:
-      return "Set iAqualink Device On/Off";
+      return "Set AqualinkTouch Device On/Off";
     break;
     case AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE:
-      return "Set iAqualink Light Color (using panel)";
+      return "Set AqualinkTouch Light Color (using panel)";
+    break;
+    case AQ_SET_IAQTOUCH_SWG_BOOST:
+      return "Set AqualinkTouch Boost";
+    break;
+    case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
+      return "Set AqualinkTouch Spa Heater";
+    break;
+    // These to same as above, but on the iAqualink protocol, not AqualinkTouch protocol
+    case AQ_SET_IAQLINK_POOL_HEATER_TEMP:
+      return "Set iAqualink Pool Heater";
+    break;
+    case AQ_SET_IAQLINK_SPA_HEATER_TEMP:
+      return "Set iAqualink Pool Heater";
     break;
 #endif
 #ifdef AQ_PDA

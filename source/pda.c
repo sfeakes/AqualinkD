@@ -152,13 +152,21 @@ void equiptment_update_cycle(int eqID) {
     LOG(PDA_LOG,LOG_DEBUG, "Start new equipment cycle bitmask 0x%04x\n",
         update_equiptment_bitmask);
    
-    for (i=0; i < _aqualink_data->total_buttons - 2 ; i++) { // total_buttons - 2 because we don't get heaters in this cycle
+    if (pda_m_type() == PM_EQUIPTMENT_STATUS) {
+      LOG(PDA_LOG,LOG_DEBUG, "Full equiptment update\n");
+    } else {
+      LOG(PDA_LOG,LOG_DEBUG, "Main menu equiptment update (4 devices)\n");
+    }
+
+    for (i=0; i < _aqualink_data->total_buttons - 3 ; i++) { // total_buttons - 3 because we don't get heaters in this cycle
+    //for (i=0; i < _aqualink_data->total_buttons; i++) { // total_buttons - 2 because we don't get heaters in this cycle
       if ((update_equiptment_bitmask & (1 << (i))) != (1 << (i))) {
         if (_aqualink_data->aqbuttons[i].led->state != OFF) {
           _aqualink_data->aqbuttons[i].led->state = OFF;
           _aqualink_data->updated = true;
           LOG(PDA_LOG,LOG_DEBUG, "Turn off equipment id %d %s not seen in last cycle\n", i, _aqualink_data->aqbuttons[i].name);
         }
+        //LOG(PDA_LOG,LOG_DEBUG, "Thick id %d %s total = %d\n", i, _aqualink_data->aqbuttons[i].name, _aqualink_data->total_buttons);
       }
     }
 
@@ -812,6 +820,7 @@ bool process_pda_packet(unsigned char *packet, int length)
   int index = -1;
   static bool equiptment_update_loop = false;
   static bool read_equiptment_menu = false;
+  static int time_msg_cnt = 0;
 
   _aqualink_data->last_packet_type = packet[PKT_CMD];
 
@@ -829,6 +838,7 @@ bool process_pda_packet(unsigned char *packet, int length)
     break;
 
     case CMD_STATUS:
+      //LOG(PDA_LOG,LOG_DEBUG, "**** PDA Menu type %d ****\n", pda_m_type());
       _aqualink_data->last_display_message[0] = '\0';
       if (equiptment_update_loop == false && pda_m_type() == PM_EQUIPTMENT_STATUS)
       {
@@ -866,6 +876,21 @@ bool process_pda_packet(unsigned char *packet, int length)
     case CMD_MSG_LONG:
       msg = (char *)packet + PKT_DATA + 1;
       index = packet[PKT_DATA] & 0xF;
+
+      // When nothing is on, all we see it time updated, so count them and if we get 2 in a row, everyting is off.
+      if (packet[PKT_DATA] == 0x40) {  // 0x40 is ID for time.
+        time_msg_cnt++;
+        LOG(PDA_LOG,LOG_DEBUG, "**** Time message count %d ****\n",time_msg_cnt);
+        if ( time_msg_cnt >= 2) {
+          equiptment_update_cycle(-1);
+        }
+        if (time_msg_cnt >= (INT8_MAX -10)){
+          time_msg_cnt=2;
+        }
+      } else {
+        time_msg_cnt = 0;
+      }
+
       if (packet[PKT_DATA] == 0x82)
       { // Air & Water temp is always this ID
         process_pda_packet_msg_long_temp(msg);
@@ -873,6 +898,7 @@ bool process_pda_packet(unsigned char *packet, int length)
       else if (packet[PKT_DATA] == 0x40)
       { // Time is always on this ID
         process_pda_packet_msg_long_time(msg);
+        
       }
       else 
       {

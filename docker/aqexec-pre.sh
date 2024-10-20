@@ -6,10 +6,11 @@
 # This file should be placed in the config aqualinkd directory defined
 # in your docker-compose.yml (or equiv)
 #
-# MAKE SURE TO CHAGE THE IP BELOW
-#
+# MAKE SURE TO CHAGE THE IP BELOW (1.1.1.1)
+# aqualinkd.cong should have serial_port=/dev/ttyEW11
 
 echo "Starting SOCAT port binding....."
-socat -d -d pty,link=/dev/tty.Pool2,raw TCP:192.168.99.248:8899 &
+socat -d -d pty,link=/dev/ttyEW11,raw,ignoreeof TCP4:1.1.1.1:8899,ignoreeof &
+sudo docker compose up
 echo "Sleeping for SOCAT start....."
 sleep 2s

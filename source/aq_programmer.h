@@ -35,6 +35,7 @@ typedef enum emulation_type{
   ONETOUCH,
   IAQTOUCH,
   AQUAPDA,  // AQUAPALM and PDA are taken as specific type.
+  IAQUALNK, // iAqualink (wifi extra ID)
   JANDY_DEVICE, // Very rarley used.
   SIMULATOR
 } emulation_type;
@@ -93,10 +94,12 @@ typedef enum {
   AQ_GET_IAQTOUCH_AUX_LABELS,
   AQ_SET_IAQTOUCH_SWG_PERCENT,
   AQ_SET_IAQTOUCH_SWG_BOOST,
-  AQ_SET_IAQTOUCH_POOL_HEATER_TEMP,
-  AQ_SET_IAQTOUCH_SPA_HEATER_TEMP,
   AQ_SET_IAQTOUCH_SET_TIME,
   AQ_SET_IAQTOUCH_DEVICE_ON_OFF,
+  AQ_SET_IAQTOUCH_POOL_HEATER_TEMP,
+  AQ_SET_IAQTOUCH_SPA_HEATER_TEMP,
+  AQ_SET_IAQLINK_POOL_HEATER_TEMP,  // Same as above but using iAqualink not AqualinkTouch
+  AQ_SET_IAQLINK_SPA_HEATER_TEMP,   // Same as above but using iAqualink not AqualinkTouch
   AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE,
   // ******** RS Serial Adapter Delimiter make sure to change MAX/MIN below
   AQ_GET_RSSADAPTER_SETPOINTS,

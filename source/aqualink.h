@@ -18,6 +18,8 @@
 #endif
 
 
+#define CLIGHT_PANEL_FIX // Overcome bug in some jandy panels where color light status of on is not in LED status
+
 #define TIME_CHECK_INTERVAL  3600
 //#define TIME_CHECK_INTERVAL  100 // DEBUG ONLY
 #define ACCEPTABLE_TIME_DIFF 120
@@ -64,6 +66,14 @@ bool checkAqualinkTime(); // Only need to externalise this for PDA
 #define MAX_PUMPS 4
 #define MAX_LIGHTS 4
 
+bool isVirtualButtonEnabled();
+
+#define PUMP_RPM_MAX 3450
+#define PUMP_RPM_MIN 600
+#define PUMP_GPM_MAX 130
+#define PUMP_GPM_MIN 15
+
+
 enum {
  FAHRENHEIT,
  CELSIUS,
@@ -81,16 +91,18 @@ typedef struct aqualinkkey
 //  char *pda_label;
 //#endif
   unsigned char code;
+  unsigned char rssd_code;
   int dz_idx;
   uint8_t special_mask;
+  void *special_mask_ptr;
 } aqkey;
 
 // special_mask for above aqualinkkey structure.
 #define VS_PUMP        (1 << 0)
 #define PROGRAM_LIGHT  (1 << 1)
 #define TIMER_ACTIVE   (1 << 2) 
-//#define DIMMER_LIGHT   (1 << 3) // NOT USED YET 
-
+//#define DIMMER_LIGHT   (1 << 3) // NOT USED (Use PROGRAM_LIGHT or type LC_DIMMER) 
+#define VIRTUAL_BUTTON (1 << 4)
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
 struct programmingthread {
@@ -117,6 +129,7 @@ typedef enum action_type {
   ON_OFF,
   TIMER,
   LIGHT_MODE,
+  LIGHT_BRIGHTNESS,
   DATE_TIME
 } action_type;
 
@@ -167,14 +180,19 @@ typedef enum panel_vsp_status
   PS_ERROR = -4
 } panel_vsp_status;
 
+#define PUMP_NAME_LENGTH 30
 
 typedef struct pumpd
 {
   int rpm;
   int gpm;
   int watts;
+  int maxSpeed; // Max rpm or gpm depending on pump
+  int minSpeed;
   unsigned char pumpID;
   int pumpIndex;
+  char pumpName[PUMP_NAME_LENGTH];
+  //char *pumpName;
   pump_type pumpType;
   //int buttonID;
   protocolType prclType;
@@ -196,7 +214,12 @@ typedef enum clight_type {
   LC_SAL, 
   LC_CLOGIG, 
   LC_INTELLIB,
-  LC_DIMMER,
+  LC_HAYWCL,
+  LC_SPARE_1,
+  LC_SPARE_2,
+  LC_SPARE_3,
+  LC_DIMMER,  // use 0, 25, 50, 100
+  LC_DIMMER2,  // use range 0 to 100
   NUMBER_LIGHT_COLOR_TYPES // This is used to size and count so add more prior to this
 } clight_type;
 
@@ -205,13 +228,16 @@ typedef enum {
   NET_API, 
   NET_WS, 
   NET_DZMQTT,
-  NET_TIMER       // Not used yet, need to change aq_timer.c
+  NET_TIMER,       // Not used yet, need to change aq_timer.c
+  UNACTION_TIMER
 } request_source;
 
 typedef struct clightd
 {
   clight_type lightType;
   aqkey *button;
+  int currentValue;
+  aqledstate RSSDstate;  // state from rs serial adapter
 } clight_detail;
 
 
@@ -230,6 +256,7 @@ struct aqualinkdata
   aqled aqualinkleds[TOTAL_LEDS];
   aqkey aqbuttons[TOTAL_BUTTONS];
   unsigned short total_buttons;
+  unsigned short virtual_button_start;
   int air_temp;
   int pool_temp;
   int spa_temp;
@@ -282,6 +309,9 @@ struct aqualinkdata
 
   #ifdef AQ_MANAGER
   volatile bool run_slogger;
+   int slogger_packets;
+   bool slogger_debug;
+   char slogger_ids[20];
   #endif
 
   #ifdef AQ_RS16
@@ -298,6 +328,9 @@ struct aqualinkdata
   struct timespec last_active_time;
   struct timespec start_active_time;
   #endif
+
+  // Overcome color light bug, by reconnecting allbutton panel.
+  //bool reconnectAllButton;
 };
 
 

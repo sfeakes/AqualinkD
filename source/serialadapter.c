@@ -8,6 +8,8 @@
 #include "aqualink.h"
 #include "serialadapter.h"
 #include "packetLogger.h"
+#include "color_lights.h"
+#include "allbutton.h"
 
 #define RSSA_QLEN 20
 
@@ -31,6 +33,14 @@ unsigned char getAux13[] = {0x00,0x01,0x00,RS_SA_AUX13};
 unsigned char getAux14[] = {0x00,0x01,0x00,RS_SA_AUX14};
 unsigned char getAux15[] = {0x00,0x01,0x00,RS_SA_AUX15};
 #endif
+
+// processLEDstate exists in allbutton.c
+//void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from);
+void processRSSALEDstate(struct aqualinkdata *aq_data, unsigned char *packet)
+{
+  processLEDstate(aq_data, packet, RSSA_LOG);
+}
+
 
 bool push_rssa_cmd(unsigned char *cmd) {
 
@@ -91,7 +101,8 @@ void queue_aqualink_rssadapter_setpoint(unsigned char typeID, int val) {
   push_rssa_cmd(setSP);
 }
 
-unsigned char devID(int bIndex) {
+/* NSF Need to delete this and use aqbuttonp[].rssd_code */
+unsigned char RSSAdevID(int bIndex) {
   // pool = 0; spa = 1; aux1 = 2 etc
   // rssa pool / spa are different.  aux1 = 21 (0x15) then goes up from their in order.
 
@@ -111,7 +122,8 @@ unsigned char devID(int bIndex) {
   return 0x00;
 }
 
-void rssadapter_device_state(unsigned char devID, unsigned char state) {
+
+void rssadapter_device_state(const unsigned char devID, const unsigned char state) {
   unsigned char setDev[] = {0x00,0x01,state,devID};
   push_rssa_cmd(setDev);
 }
@@ -121,13 +133,34 @@ void rssadapter_device_off(unsigned char devID) {
   push_rssa_cmd(setDev);
 }
 */
+
+void set_aqualink_rssadapter_aux_extended_state(const aqkey *button, const unsigned char state) {
+  
+  LOG(RSSA_LOG,LOG_DEBUG, "Sending 0x%02hhx to %s\n",state, button->label);
+
+  rssadapter_device_state(button->rssd_code, state); // Set state
+  rssadapter_device_state(button->rssd_code, 0x00); // 0x00 meand Get curent state (for color lights the return state is 0)
+}
+
+void set_aqualink_rssadapter_aux_state(const aqkey *button, bool turnOn)
+{
+  LOG(RSSA_LOG,LOG_DEBUG, "Turning button %s %s\n",button->label,(turnOn?"On":"Off"));
+
+  rssadapter_device_state( button->rssd_code, (turnOn?RS_SA_ON:RS_SA_OFF) );
+
+  // NOTE.  If we turn off AUX1 and get this return HEX: 0x10|0x02|0x48|0x13|0x02|0x00|0x0e|0x15|0x92|0x10|0x03|
+  // The 0x0e means some from of oiption is set (ie cleaner).  Maybe try to turn cleaner off instead 0x15 is aux1 1x10 is cleaner.
+}
+
+
+/*
 void set_aqualink_rssadapter_aux_state(int buttonIndex, bool turnOn)
 {
   LOG(RSSA_LOG,LOG_DEBUG, "Turning button %d %s\n",buttonIndex,(turnOn?"On":"Off"));
 
-  rssadapter_device_state( devID(buttonIndex), (turnOn?0x81:0x80) );
+  rssadapter_device_state( RSSAdevID(buttonIndex), (turnOn?RS_SA_ON:RS_SA_OFF) );
 }
-
+*/
 void increase_aqualink_rssadapter_pool_setpoint(char *args, struct aqualinkdata *aqdata) {
   int val = atoi(args);
   val = setpoint_check(POOL_HTR_SETOINT, aqdata->pool_htr_set_point + val, aqdata);
@@ -185,6 +218,20 @@ void set_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *aqdat
 */
 }
 
+
+#ifdef CLIGHT_PANEL_FIX 
+/* This is to overcome Jandy bug where panel doesn;t show the state of color light */
+void get_aqualink_rssadapter_colorlight_statuses(struct aqualinkdata *aq_data)
+{
+  for (int i=0; i < aq_data->num_lights; i++) {
+    if (aq_data->lights[i].lightType != LC_PROGRAMABLE ) {
+      // LC_PROGRAMABLE is aqualinkd to set, so works as normal button
+      rssadapter_device_state(aq_data->lights[i].button->rssd_code, 0x00); // 0x00 meand Get curent state
+    }
+  }
+}
+#endif
+
 void get_aqualink_rssadapter_setpoints() {
   //push_rssa_cmd(getModel);
   push_rssa_cmd(getUnits);
@@ -225,9 +272,14 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
   
   //LOG(RSSA_LOG,LOG_DEBUG, " Received message\n");
   //debuglogPacket(RSSA_LOG, packet, length, true);
-
-  if (cnt == 0 || cnt >= 250) {
+#ifdef CLIGHT_PANEL_FIX 
+  if ( (cnt % 10 == 0) || cnt == 0 ) { // NSF Change to 20 and 1
+    get_aqualink_rssadapter_colorlight_statuses(aq_data);
+  }
+#endif
+  if (cnt == 0 || cnt >= 100) {
     LOG(RSSA_LOG,LOG_INFO, "Queue device update requests\n");
+
     if (cnt == 0) {
       // The below inturn calls get_aqualink_rssadapter_setpoints()
       // But do it here as it's the first init, cnt=0 will only happen once  
@@ -255,8 +307,13 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
     LOG(RSSA_LOG,LOG_DEBUG, "Probe received, will queue device update shortly\n");
     //queueGetProgramData(RSSADAPTER, aq_data);
     cnt=-5; // Connection reset, so queue the status update
-  }
-  if (packet[PKT_CMD] == 0x13) {
+  
+  } else if (packet[PKT_CMD] == CMD_STATUS) {
+    // This is identical to allbutton status packet.
+    //LOG(RSSA_LOG,LOG_DEBUG, "RS Received STATUS length %d.\n", length);
+    //debuglogPacket(RSSA_LOG, packet, length, true, true);
+    processRSSALEDstate(aq_data, packet);
+  } else if (packet[PKT_CMD] == 0x13) {
     //beautifyPacket(buff, packet, length);
     //LOG(RSSA_LOG,LOG_DEBUG, "%s", buff);
     //LOG(RSSA_LOG,LOG_DEBUG,"  Command 0x%02hhx = |0x%02hhx|0x%02hhx|0x%02hhx  %d|%d|%d\n", packet[4], packet[5], packet[6], packet[7], packet[5], packet[6], packet[7]);
@@ -293,8 +350,60 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
       LOG(RSSA_LOG,LOG_INFO,"Pool SP2 is %d\n", packet[6]);
       aq_data->spa_htr_set_point = (int) packet[6];
       rtn = true;
-    } else if (packet[4] == 0x03) {
-      // These are device status messages 
+    } else if (packet[4] == 0x03 || packet[4] == 0x02) { // 03 reply from query state, 02 reply from set state
+      // These are device status messages
+
+      for (int i=0; i < aq_data->num_lights; i++) {
+        if (aq_data->lights[i].lightType != LC_PROGRAMABLE && 
+            aq_data->lights[i].button->rssd_code == packet[7] ) {
+         
+          // CHANGE TO DEBUG BEFORE RELEASE
+          if (aq_data->lights[i].lightType == LC_DIMMER || aq_data->lights[i].lightType == LC_DIMMER2) {
+            LOG(RSSA_LOG,LOG_DEBUG,"DimmerLight '%s' is %s 0x%02hhx  value '%d'%%\n",
+                                  aq_data->lights[i].button->label,
+                                  packet[6]==0x00?"OFF":"ON",
+                                  packet[6],
+                                  packet[6]==0x00?0:(packet[6] - RSSD_DIMMER_LIGHT_OFFSET));
+          }else{
+            LOG(RSSA_LOG,LOG_DEBUG,"ColorLight '%s' is %s 0x%02hhx  value name '%s'\n",
+                                  aq_data->lights[i].button->label,
+                                  packet[6]==0x00?"OFF":"ON",
+                                  packet[6],
+                                  packet[6]==0x00?"--":light_mode_name( aq_data->lights[i].lightType,(packet[6] - RSSD_COLOR_LIGHT_OFFSET), RSSADAPTER) );
+          } 
+
+          aq_data->lights[i].RSSDstate = (packet[6]==0x00?OFF:ON);
+#ifdef CLIGHT_PANEL_FIX 
+          // Set LED to the correct state, but only print warning if light is on and panel states off.
+          if (aq_data->lights[i].RSSDstate == ON && aq_data->lights[i].button->led->state == OFF) {
+            // 0x00 is off, 0x01 is usually on, but get 0x44 for color light 0x4e=gemstone, 0x41=vodo
+            LOG(RSSA_LOG,LOG_DEBUG,"ColorLight '%s' is out of sync with panel, light is '%s', panel states '%s', Fixed Jany bug!\n",
+                                     aq_data->lights[i].button->label,
+                                     packet[6]==0x00?"OFF":"ON",
+                                     aq_data->lights[i].button->led->state==OFF?"OFF":"ON");
+          }
+          aq_data->lights[i].button->led->state = aq_data->lights[i].RSSDstate;
+#endif 
+          switch(aq_data->lights[i].lightType) {
+            case LC_DIMMER:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25);
+            break;
+            case LC_DIMMER2:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET));
+            break;
+            default:
+              set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_COLOR_LIGHT_OFFSET));
+            break;
+          }
+          /*
+          if (aq_data->lights[i].lightType != LC_DIMMER ) {
+            set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_COLOR_LIGHT_OFFSET));
+          } else if (aq_data->lights[i].lightType == LC_DIMMER) {
+            set_currentlight_value(&aq_data->lights[i], (packet[6] - RSSD_DIMMER_LIGHT_OFFSET) / 25);
+          }*/
+        }
+      }
+
 #ifdef AQ_RS16
       if (packet[7] == RS_SA_AUX12) {
         LOG(RSSA_LOG,LOG_INFO,"AUX12 %d\n", packet[6]);
@@ -311,6 +420,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         rtn = setLEDstate(aq_data->aqbuttons[16].led,  packet[6], aq_data);
       }
 #endif
+      
     }
   }
 
@@ -420,7 +530,7 @@ In return
 0x10|0x02|0x48|0x13   |0x02   |0x00   |0x0d|0x10|0x8c|0x10|0x03| 
 0x10|0x02|0x48|MsgType|Status1|Status2|0x0e|DeviceID|0xXX|0x10|0x03|
 MsgType  - Byte 3 = 0x13 (some state message)??
-StatType - Byte 4 = 0x02 or 0x03 (not sure meaning)  Status Type ????
+StatType - Byte 4 = 0x02 reply from setstate / 0x03 reply from getstatus (I THINK)
 Status1  - Byte 5 = 0x00 0x01  (???)  if Byte4 is 0x02 then this is state 0x00=off 0x01=on /
 Status2  - Byte 6 = 0x00 0x01   0x0e(option switch set can't change???)   if byte4 is 0x03, this this looks to be state
 DeviceID - Byte 7 = Should match request.

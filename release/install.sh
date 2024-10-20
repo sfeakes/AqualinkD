@@ -57,8 +57,13 @@ if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "igno
       BINEXT="-armhf"
     ;;
     *)
-      echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
-      BINEXT=""
+      if [ -f $BUILD/$SOURCEBIN-$ARCH ]; then
+        echo "Arch $ARCH is not officially supported, but we found a suitable binary"
+        BINEXT="-$ARCH"
+      else
+        echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
+        BINEXT=""
+      fi
     ;;
   esac
 
@@ -123,6 +128,20 @@ else
     echo "Please make sure the version if Cron supports chron.d, if not the AqualinkD Scheduler will not work"
   fi
 fi
+
+# V2.3.9 has kind-a breaking change for config.js, so check existing and rename if needed
+#        we added Aux_V? to the button list
+if [ -f "$WEBLocation/config.js" ]; then
+  # Test is if has AUX_V1 in file AND "Spa" is in file (Spa_mode changed to Spa)
+  if  ! grep -q 'Aux_V1' $WEBLocation/$file || ! grep -q '"Spa"' $WEBLocation/$file; then
+    dateext=`date +%Y%m%d_%H_%M_%S`
+    echo "AqualinkD web config is old, making copy to $WEBLocation/config.js.$dateext"
+    echo "Please make changes to new version $WEBLocation/config.js"
+    mv $WEBLocation/config.js $WEBLocation/config.js.$dateext
+  fi
+fi
+
+
 
 # copy files to locations, but only copy cfg if it doesn;t already exist
 

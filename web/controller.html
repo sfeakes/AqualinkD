@@ -640,6 +640,7 @@
       document.getElementById('vspswitch_options').classList.remove("hide");
       document.getElementById('timer_options').classList.remove("hide");
       document.getElementById('scheduler_options').classList.remove("hide");
+      document.getElementById('dimmerlight_options').classList.remove("hide");
       //document.getElementById('simulator_iframe').classList.remove("hide");
       setColors();
       load_background();
@@ -683,7 +684,7 @@
         var row;
         row = tbody.deleteRow(2);
         row = tbody.insertRow(2);
-        if (type == 6) {
+        if (type == 10) {
           row.innerHTML = "<td align='center'>Dimmer</td><td align='center'></td>";
         } else {
           row.innerHTML = "<td align='center'>Solid Color</td><td align='center'>Light Show</td>";
@@ -915,7 +916,8 @@
         subdiv.setAttribute('id', id + '_status');
         subdiv.textContent = formatSatus(status);
         div.appendChild(subdiv);
-        if (type == "switch" && (subtype != "switch_program" && subtype != "switch_vsp" && subtype != "switch_timer") ) {
+        if (type == "switch" && (subtype != "switch_program" && subtype != "switch_vsp" && 
+                                subtype != "switch_timer" && subtype != "light_dimmer") ) {
         //if (type == "switch" && subtype != "switch_program" ) {
           div.setAttribute('onclick', "switchTileState('" + id + "')");
           //console.log("add onclick switchtilestate to "+id);
@@ -956,6 +958,7 @@
       tile.setAttribute('setpoint', sp_value);
       send_setpoint(id);
     }
+
 
 /*
     function setTileValue(id, value) {
@@ -1018,7 +1021,7 @@
         }
       } catch (e) {
           // NSF Do we need to create the device?
-          console.log('ERROR id=' + id + ' Line 837 | element = '+document.getElementById(id));
+          console.log('ERROR id=' + id + ' Line '+new Error().lineNumber+' | element = '+document.getElementById(id));
       }
       //document.getElementById(id + '_tile_icon_value').textContent = value;
       var tile;
@@ -1028,7 +1031,8 @@
 
     function setTileOnText(id, text) {
       try {
-        if (document.getElementById(id).getAttribute('status') == 'on') {
+        var tile = document.getElementById(id);
+        if (tile.getAttribute('status') == 'on' || tile.getAttribute('status') == 'enabled') {
           document.getElementById(id + '_status').innerHTML = text;
         } else {
           //console.log("Tile "+id+" status is '"+document.getElementById(id).getAttribute('status')+"' not setting text to '"+text+"'");
@@ -1227,7 +1231,7 @@
 
         add_tile(object.id, object.name, object.state, 'switch', ext_type, 'hk/' + img + '-off.png', 'hk/' + img + '-on.png');
         setTileOn(object.id, object.status, null);
-        if (typeof object.type_ext !== 'undefined' && object.type_ext == 'switch_program') {
+        if (typeof object.type_ext !== 'undefined' && (object.type_ext == 'switch_program' || object.type_ext == 'light_dimmer')) {
           if (typeof object.Light_Type !== 'undefined') {
             document.getElementById(object.id).setAttribute('lighttype', object.Light_Type);
           }
@@ -1276,6 +1280,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_program') {
           active_option = document.getElementById('pswitch_options');
@@ -1284,6 +1289,16 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
+          //document.getElementById('simulator_iframe').style.display = 'none';
+        } else if (id != null && document.getElementById(id).getAttribute('type') == 'light_dimmer') {
+          active_option = document.getElementById('dimmerlight_options');
+          document.getElementById('thermostat_options').style.display = 'none';
+          document.getElementById('swg_options').style.display = 'none';
+          document.getElementById('vspswitch_options').style.display = 'none';
+          document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_swg') {
           active_option = document.getElementById('swg_options');
@@ -1292,6 +1307,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_freeze') {
           active_option = document.getElementById('swg_options');
@@ -1300,6 +1316,7 @@
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_vsp') {
           active_option = document.getElementById('vspswitch_options');
@@ -1308,6 +1325,7 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'switch_timer') {
           active_option = document.getElementById('timer_options');
@@ -1316,6 +1334,7 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('scheduler_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } else if (id != null && document.getElementById(id).getAttribute('type') == 'scheduler') {
           active_option = document.getElementById('scheduler_options');
@@ -1324,6 +1343,7 @@
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('vspswitch_options').style.display = 'none';
           document.getElementById('timer_options').style.display = 'none';
+          document.getElementById('dimmerlight_options').style.display = 'none';
           //document.getElementById('simulator_iframe').style.display = 'none';
         } /*else if (id != null && document.getElementById(id).getAttribute('type') == 'simulator') {
           active_option = document.getElementById('simulator_iframe');
@@ -1361,6 +1381,8 @@
             document.getElementById("timer_options").click();
           else if (document.getElementById('scheduler_options').style.display == 'flex')
             document.getElementById("scheduler_options").click();
+          else if (document.getElementById('dimmerlight_options').style.display == 'flex')
+            document.getElementById("dimmerlight_options").click();
         }
         document.getElementById('thermostat_options').style.display = 'none';
         document.getElementById('swg_options').style.display = 'none';
@@ -1368,6 +1390,7 @@
         document.getElementById('vspswitch_options').style.display = 'none';
         document.getElementById('timer_options').style.display = 'none';
         document.getElementById('scheduler_options').style.display = 'none';
+        document.getElementById('dimmerlight_options').style.display = 'none';
         //document.getElementById('simulator_iframe').style.display = 'none';
         document.getElementById('wrapper').classList.remove("opaque");
         return;
@@ -1388,6 +1411,7 @@
         var tm_ext;
         var oswitch;
         var vsp_slider_changed = false;
+        var dimmer_slider_changed = false;
         if (type == 'setpoint_swg') {
           slider = document.getElementById("swg_option_slider_range");
           slider_output = document.getElementById("swg_option_slider_text_value");
@@ -1424,6 +1448,14 @@
           close_button = document.getElementById("scheduler_options_close");
         //} else if (type == 'simulator') {
         //  close_button = document.getElementById("simulator_iframe_close");
+        } else if (type == 'light_dimmer') {
+          slider = document.getElementById("dimmeroption_slider_range");
+          slider_output = document.getElementById("dimmeroption_slider_text_value");
+          tm_slider = document.getElementById("dimmer_timer_slider_range");
+          tm_slider_output = document.getElementById("dimmer_timer_slider_text_value");
+          title = document.getElementById("dimmerswitch_option_title");
+          close_button = document.getElementById("dimmerswitch_option_close");
+          ext = "%";
         } else {
           slider = document.getElementById("option_slider_range");
           slider_output = document.getElementById("option_slider_text_value");
@@ -1472,6 +1504,11 @@
             slider.step = 5;
             ext = ' RPM';
           }
+        } else if (type == 'light_dimmer') {
+          slider.min = 0;
+          slider.max = 100;
+          slider.step = 1;
+          ext = ' %';
         }
         
         if (type == 'scheduler') {
@@ -1479,6 +1516,7 @@
         } else if (type == 'simulator') {
         //  title.innerHTML = "Simulator";
         } else {
+          //console.log("Set "+id+" to "+document.getElementById(id + '_name').innerHTML);
           title.innerHTML = document.getElementById(id + '_name').innerHTML;
         }
 
@@ -1531,6 +1569,24 @@
           }
           oswitch.onclick = function() {
             oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          }
+        } else if (type == 'light_dimmer') {
+          slider.value = sp_value;
+          oswitch = document.getElementById("dimmeroption_switch");
+          oswitch.checked = tile_state;
+          var oswitch_output = document.getElementById("dimmeroption_switch_text_value");
+          slider_output.innerHTML = slider.value + ext;
+          oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+          slider.oninput = function() {
+            dimmer_slider_changed = true;
+            slider_output.innerHTML = this.value + ext;
+            if (this.value <= 0 && oswitch.checked == true) {
+              oswitch.checked = false;
+              oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            } else if (oswitch.checked != true) {
+              oswitch.checked = true;
+              oswitch_output.innerHTML = ((oswitch.checked) ? "On" : "Off");
+            }
           }
         } else if (type == 'switch_timer') {
           oswitch = document.getElementById("timer_switch");
@@ -1630,6 +1686,12 @@
              // if (state == (tile.getAttribute('status') == 'off')) // Only bother with this if we didn;t set the light mode.
                 setTileState(id, state);
             }
+          } else if (type == 'light_dimmer') {
+            var value = slider.value;
+            if (state == (tile.getAttribute('status') == 'off'))
+              setTileState(id, state);
+            if (sp_value != slider.value && dimmer_slider_changed == true)
+            setThermostatSetpoint(id, slider.value)
           } else if (type == 'setpoint_swg') {
             //console.log ("Boost attribute = "+tile.getAttribute('boost'));
             //console.log ("state = "+state);
@@ -2162,9 +2224,33 @@
       }
       for (var obj in data.timers) {
         setTileOnText(obj.toString(),"On (timer)");
+        //console.log("TIMER "+obj.toString());
       }
       for (var obj in data.timer_durations) {
         setTileOnText(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
+        //console.log("TIMER "+obj.toString()+" duration "+data.timer_durations[obj]);
+      }
+
+      for (var obj in data.light_program) {
+        if (data.light_program[obj] != "") {
+          var light_mode = data.light_program[obj];
+          // If aqualinkd programmed light, need to convert int to text index, if not value is text
+          try {
+            var light_type = document.getElementById(obj.toString()).getAttribute('lighttype');
+            if (light_type == 0) {
+              var light_mode = _light_program[light_type][parseInt(data.light_program[obj])-1];
+              if (light_mode.endsWith(" - Show"))
+              light_mode = light_mode.slice(0, -7);
+              //console.log("light program -- "+light_mode);
+            } else if (light_type == 10 || light_type == 11) {
+              // Fo Dimmer Lights.
+              document.getElementById(obj.toString()).setAttribute('setpoint', parseInt(light_mode));
+            }
+          } catch (e) {}
+
+          setTileOnText(obj.toString(),light_mode);
+          // Below is only needed for full dimmer
+        }
       }
         
 
@@ -2193,7 +2279,8 @@
        // If we have 2 lines, then BOTTOM (line #1) is ERROR (not priming) or what the pump needs to control (RPM for all except VF which is GPM)
        //                          TOP (line #2) is (priming/RPM/GPM).
        
-      // 1,0,-1 are all good states, anything else error 
+      // 1,0,-1 are all good states, anything else error
+      try {
       if (status >= 1 || status <= -3) {
         if (status == -3) {
           setTileOnText(tileid, 'Pump Offline');
@@ -2233,6 +2320,10 @@
       
       setTileOnText(tileid, bLine);
       setTileOnTextLine2(tileid, tLine);
+      } catch (e) {
+        // NSF Do we need to create the device?
+        console.log('ERROR id=' + tileid + ' Line '+new Error().lineNumber+' | element = '+document.getElementById(tileid));
+      }
     }
 
     function deviceSort(a, b) {
@@ -2407,6 +2498,8 @@
         message.uri = id+"/percent/set";
       else if (type == "switch_vsp")
         message.uri = id+"/RPM/set";
+      else if (type == "light_dimmer")
+        message.uri = id+"/brightness/set";
       else
         message.uri = id+"/setpoint/set";
 //console.log("Send value back "+temperature.parameter+" "+temperature.value);
@@ -2520,6 +2613,7 @@
         </table>
       </div>
     </div>
+
     <div id='thermostat_options' class='options hide'>
       <div id='thermostat_options_pane' class='options_pane' onclick='event.stopPropagation();'>
         <table border='0' cellpadding='10px'>
@@ -2569,6 +2663,7 @@
         </table>
       </div>
     </div>
+
     <div id='swg_options' class='options hide'>
       <div id='swg_options_pane' class='options_pane' onclick='event.stopPropagation();'>
         <table border='0' cellpadding='10px'>
@@ -2605,6 +2700,7 @@
         </table>
       </div>
     </div>
+
     <div id='pswitch_options' class='options hide'>
       <div id='pswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
         <table id='pswitch_table' border='0' cellpadding='10px' width="100%">
@@ -2651,6 +2747,7 @@
         </table>
       </div>
     </div>
+
     <div id='vspswitch_options' class='options hide'>
       <div id='vspswitch_options_pane' class='options_pane' onclick='event.stopPropagation();'>
         <table border='0' cellpadding='10px'>
@@ -2700,6 +2797,55 @@
         </table>
       </div>
     </div>
+    
+    <div id='dimmerlight_options' class='options hide'>
+      <div id='dimmerlight_options_pane' class='options_pane' onclick='event.stopPropagation();'>
+        <table border='0' cellpadding='10px'>
+          <tr class='options_title'>
+            <th colspan='2'><span id="dimmerswitch_option_title"></span>
+            </th>
+          </tr>
+          <tr>
+            <td align='right' width='50%'><span class="option_text" id='dimmeroption_switch_text_value'></span>
+            </td>
+            <td align='left' width='50%'>
+              <label class="option_switch">
+                <input type="checkbox" id='dimmeroption_switch'>
+                <span class="option_switch_slide"></span>
+              </label>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="dimmeroption_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='dimmeroption_slider_range'>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'><span class="option_text" id="dimmer_timer_slider_text_value"></span>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2'>
+              <div class="slidecontainer">
+                <input type="range" class="option_slider" id='dimmer_timer_slider_range'>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td colspan='2' align='center'>
+              <input type="button" value="close" id='dimmerswitch_option_close' class='options_button'>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  
     <div id='timer_options' class='options hide'>
       <div id='timer_options_pane' class='options_pane' onclick='event.stopPropagation();'>
         <table border='0' cellpadding='10px'>

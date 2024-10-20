@@ -20,7 +20,7 @@
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
-#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
+//#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
 
@@ -31,6 +31,9 @@
 #define READ_RS485_JAN_JXI  (1 << 3) //    Jandy JX & LXi heater
 #define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
 #define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
+#define READ_RS485_IAQUALNK (1 << 6) // Read iAqualink messages 
+
+#define MAX_RSSD_LOG_FILTERS 4
 
 struct aqconfig
 {
@@ -44,7 +47,10 @@ struct aqconfig
   int16_t paneltype_mask;
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   unsigned char extended_device_id;
+  unsigned char extended_device_id2;
   bool extended_device_id_programming;
+  bool enable_iaqualink;
+  //bool enable_RS_device_value_print;
 #endif
   bool deamonize;
 #ifndef AQ_MANAGER // Need to uncomment and clean up referances in future.
@@ -83,11 +89,11 @@ struct aqconfig
   bool force_ps_setpoints;
   bool force_frzprotect_setpoints;
   bool force_chem_feeder;
-  int swg_zero_ignore;
+  //int swg_zero_ignore; // This can be removed since this was due to VSP that's been fixed.
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
   bool log_raw_bytes; // Read as bytes
-  unsigned char RSSD_LOG_filter;
+  unsigned char RSSD_LOG_filter[MAX_RSSD_LOG_FILTERS];
   //bool log_raw_RS_bytes;
   /*
 #ifdef AQ_RS_EXTRA_OPTS
@@ -120,6 +126,7 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_JXI ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_JXI) == READ_RS485_JAN_JXI)
 #define READ_RSDEV_LX ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LX) == READ_RS485_JAN_LX)
 #define READ_RSDEV_CHEM ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_CHEM) == READ_RS485_JAN_CHEM)
+#define READ_RSDEV_iAQLNK ((_aqconfig_.read_RS485_devmask & READ_RS485_IAQUALNK) == READ_RS485_IAQUALNK)
 
 #define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)

@@ -87,6 +87,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * Create iAqualink Touch Simulator
 * Probably decoded enough protocols for AuqlinkD to self configure.
 
+
 <!--
 * NEED TO FIX for PDA and iAQT protocol.
   * Not always doing on/off
@@ -110,11 +111,61 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 # Call for Help.
 * The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
 
-# Updates in 2.3.8 (Dev)
+
+<!-- 
+NEED TO FIX FOR THIS RELEASE.
+***** FIX NET_SERVICES.C   action_uri()   spa and spa_mode get confused. check EVERY strncmp
+* MQTT filter_pump/percent/set, maybe add max/min to pump config. / print protocol on startup
+* Pump by name and not ID. clean up code
+* DONE look at using 0x00 for no exit on serial errors / startup
+* DONE look at virtual button support
+*   vbuton will need the PDA on iAQT protocol working.
+* change dimmer to % from steps. (will make HASIO & Homekit easier)
+* add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
+* deprecate (hide and default to yes) extended_device_id_programming
+* Move following to main and not config.c - show error is vbutton and no extended_device_id, vbutton w/ pump can be onetouch.
+* check panel version reported against config.
+# Updates in 2.4.1
+
+# install.sh change spa_mode to spa in config.js
+# DONE change hassio.c to use rpm speed/percent
+# pickup speed faster on iaqualinktouch after change
+-->
+
+# Updates in 2.5.0 (under development)
+* PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
+  * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
+  * Please consider this very much BETA at the moment.
+  * use `device_id=0x33` in aqualinkd.conf.
+* PDA panel Rev 6.0 of newer WITH a Jandy iAqualink device attached can use `read_RS485_iAqualink = yes` to speed up device state change detection.
+* Added MQTT vsp_pump/speed/set for setting speed (RPM/GPM) by %, for automation hubs.
+* Added full dimmer range support for dimmable lights (not limited to 0,25,50,75,100 anymore)
+* Added vsp and dimmer to hassio and homebridge-aqualinkd plugin as full range dimmer controls.
+* Updated UI for support fullrange dimmer.
+* cleaned up code for spa_mode and spa for newer pannels.
+* Allow VSP to be asigned to virtual button.
+* Fixed bug with timer not starting.
+* Increase Speed of detecting device state changes.
+
+# Updates in Release 2.4.0
+* <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
+* Fixed bugs with particular Jandy panel versions and color lights.
+* Added support for more color lights, and sped up programming
 * Code & Repo refactor
 * Decoded more Pentair VSP pump status.
-* Changed VSP pump status handling (display more in web UI)
-* VSP Pump status & other attributes in HASSIO
+* Changed VSP pump status handling (display more in web UI).
+* VSP Pump status & other attributes in HASSIO.
+* Dual temperature sensors supported.
+* Updates to serial_logger.
+* Changes to aqmanager for adding more options for decoding protocols.
+* Support for packets changes from panels REV Yg
+* Support VSP by label (not pump number), REV Yg
+* Added support for One Touch Buttons & Virtual Buttons.
+  * look at `virtual_button??_label` in aqualinkd.conf
+  * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
+
+# Updates in Release 2.3.8
+* Release removed.  Bug with light program 0.
 
 # Updates in Release 2.3.7
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.

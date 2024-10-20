@@ -56,7 +56,7 @@ int _blocking_fds = -1;
 
 static struct termios _oldtio;
 
-static struct timespec last_serial_read_time;
+static struct timespec _last_serial_read_time;
 
 void send_packet(int fd, unsigned char *packet, int length);
 //unsigned char getProtocolType(unsigned char* packet);
@@ -76,6 +76,8 @@ emulation_type getJandyDeviceType(unsigned char ID) {
     return AQUAPDA;
   if (ID >= 0x30 && ID <= 0x33)
     return IAQTOUCH;
+   if (ID >= 0xa0 && ID <= 0xa3)
+    return IAQUALNK;
 
 /*
   if (ID >= 0x00 && ID <= 0x03)
@@ -222,7 +224,10 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
         return "iAq pMessage";
     break;
     case CMD_IAQ_PAGE_BUTTON:
-        return "iAq pButton";
+       if (packet[PKT_DEST] == 0x00) // To master is iAqualink2 send command
+         return "iAqualnk sendCmd";
+       else
+         return "iAq pButton";
     break;
     case CMD_IAQ_POLL:
       return "iAq Poll";
@@ -247,6 +252,15 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
     break;
     case CMD_IAQ_MSG_LONG:
       return "iAq Popup message";
+    break;
+    case CMD_IAQ_MAIN_STATUS:
+      return "iAq Main status";
+    break;
+    case CMD_IAQ_1TOUCH_STATUS:
+      return "iAq 1Tch status";
+    break;
+    case CMD_IAQ_AUX_STATUS:
+      return "iAq AUX status";
     break;
     case RSSA_DEV_STATUS:
       // This is a fail reply 0x10|0x02|0x48|0x13|0x02|0x00|0x10|0x00|0x7f|0x10|0x03|
@@ -284,6 +298,10 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
         return "LXi error";
       else
         return "LXi status";
+    break;
+
+    case 0x53:
+      return "iAqalnk Poll";
     break;
 
     default:
@@ -329,7 +347,7 @@ bool check_jandy_checksum(unsigned char* packet, int length)
     LOG(RSSD_LOG,LOG_INFO, "Ignoring bad checksum, seems to be bug in Jandy protocol\n");
     if (getLogLevel(RSSD_LOG) >= LOG_DEBUG) {
       static char buf[1000];
-      beautifyPacket(buf,packet,length,true);
+      beautifyPacket(buf,1000, packet,length,true);
       LOG(RSSD_LOG,LOG_DEBUG, "Packetin question %s\n",buf);
     }
     return true;
@@ -826,13 +844,14 @@ void send_packet(int fd, unsigned char *packet, int length)
     struct timespec min_frame_wait_time;
     struct timespec frame_wait_time;
     struct timespec remainder_time;
+    //struct timespec diff;
 
     min_frame_wait_time.tv_sec = 0;
     min_frame_wait_time.tv_nsec = _aqconfig_.frame_delay * 1000000;
 
     do {
       clock_gettime(CLOCK_REALTIME, &now);
-      timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+      timespec_subtract(&elapsed_time, &now, &_last_serial_read_time);
       if (timespec_subtract(&frame_wait_time, &min_frame_wait_time, &elapsed_time)) {
         break;
       }
@@ -869,10 +888,10 @@ void send_packet(int fd, unsigned char *packet, int length)
   */
 
   // MAYBE Change this back to debug serial
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial write %d bytes\n",length-2);
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial write %d bytes, type 0x%02hhx cmd 0x%02hhx\n",length-2,packet[5],packet[6]);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
-    logPacketWrite(&packet[1], length-2);
+    logPacketWrite(&packet[1], length-1);
 /*
   if (getLogLevel(PDA_LOG) == LOG_DEBUG) {
     char buff[1024];
@@ -895,7 +914,7 @@ void send_packet(int fd, unsigned char *packet, int length)
   //if (_aqconfig_.frame_delay > 0) {
 #ifndef SERIAL_LOGGER
   if (_aqconfig_.frame_delay > 0) {
-    timespec_subtract(&elapsed_time, &now, &last_serial_read_time);
+    timespec_subtract(&elapsed_time, &now, &_last_serial_read_time);
     LOG(RSTM_LOG, LOG_DEBUG, "Time from recv to %s send is %.3f sec\n",
                             (_blocking_mode?"blocking":"non-blocking"), 
                             roundf3(timespec2float(&elapsed_time)));
@@ -985,6 +1004,8 @@ int get_packet_lograw(int fd, unsigned char* packet)
 }
 int _get_packet(int fd, unsigned char* packet, bool rawlog)
 */
+
+
 int get_packet(int fd, unsigned char* packet)
 {
   unsigned char byte = 0x00;
@@ -1128,7 +1149,7 @@ int get_packet(int fd, unsigned char* packet)
     // Break out of the loop if we exceed maximum packet
     // length.
     if (index >= AQ_MAXPKTLEN) {
-      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large\n");
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet too large for buffer, stopped reading\n");
       logPacketError(packet, index);
       //log_packet(LOG_WARNING, "Bad receive packet ", packet, index);
       return AQSERR_2LARGE;
@@ -1136,9 +1157,15 @@ int get_packet(int fd, unsigned char* packet)
     }
   }
   
-  // Clean out rest of buffer, make sure their is nothing else
-/*  Doesn't work for shit due to probe message speed, need to come back and re-think
-*/
+
+  // Report any unusual size packets.
+  if (index >= AQ_MAXPKTLEN_WARNING) {
+    // Aqualink2 packets 0x72 and 0x71 can be very large, so supress if it one of those.
+    if (packet[PKT_CMD] != CMD_IAQ_AUX_STATUS && packet[PKT_CMD] != CMD_IAQ_1TOUCH_STATUS) {
+      LOG(RSSD_LOG,LOG_WARNING, "Serial packet seems too large at length %d\n", index);
+      logPacketError(packet, index);
+    }
+  }
 
   //LOG(RSSD_LOG,LOG_DEBUG, "Serial checksum, length %d got 0x%02hhx expected 0x%02hhx\n", index, packet[index-3], generate_checksum(packet, index));
   if (jandyPacketStarted) {
@@ -1156,6 +1183,8 @@ int get_packet(int fd, unsigned char* packet)
       return AQSERR_CHKSUM;
     }
   }
+
+ 
 /* 
   if (generate_checksum(packet, index) != packet[index-3]){
     LOG(RSSD_LOG,LOG_WARNING, "Serial read bad checksum, ignoring\n");
@@ -1169,27 +1198,34 @@ int get_packet(int fd, unsigned char* packet)
     return AQSERR_2SMALL;
   }
 
-  //if (_aqconfig_.frame_delay > 0) {
 
   if (_aqconfig_.frame_delay > 0 || getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
     clock_gettime(CLOCK_REALTIME, &packet_end_time);
     if (getLogLevel(RSTM_LOG) >= LOG_DEBUG) {
-      timespec_subtract(&packet_elapsed, &packet_end_time, &last_serial_read_time);
+      timespec_subtract(&packet_elapsed, &packet_end_time, &_last_serial_read_time);
+      /*
+      LOG(RSTM_LOG, LOG_NOTICE, "Start sec=%ld nsec=%ld\n",_last_serial_read_time.tv_sec,_last_serial_read_time.tv_nsec);
+      LOG(RSTM_LOG, LOG_NOTICE, "End sec=%ld nsec=%ld\n",packet_end_time.tv_sec,packet_end_time.tv_nsec);
+      LOG(RSTM_LOG, LOG_NOTICE, "Elapsed sec=%ld nsec=%ld Time between packets (%.3f sec)\n",packet_elapsed.tv_sec,packet_elapsed.tv_nsec, roundf3(timespec2float(&packet_elapsed)) );
+      */
       LOG(RSTM_LOG, LOG_DEBUG, "Time between packets (%.3f sec)\n", roundf3(timespec2float(&packet_elapsed)) );
+
     }
-    if (_aqconfig_.frame_delay > 0) {
-      memcpy(&last_serial_read_time, &packet_end_time, sizeof(struct timespec));
-    }
+    //if (_aqconfig_.frame_delay > 0) {
+    memcpy(&_last_serial_read_time, &packet_end_time, sizeof(struct timespec));
+    //}
   }
 
-  //clock_gettime(CLOCK_REALTIME, &last_serial_read_time);
+  //clock_gettime(CLOCK_REALTIME, &_last_serial_read_time);
   //}
-  LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
+  //LOG(RSSD_LOG,LOG_DEBUG_SERIAL, "Serial read %d bytes\n",index);
   if (_aqconfig_.log_protocol_packets || getLogLevel(RSSD_LOG) >= LOG_DEBUG_SERIAL)
     logPacketRead(packet, index);
   // Return the packet length.
   return index;
 }
+
+
 
 #else // PLAYBACKMODE
 

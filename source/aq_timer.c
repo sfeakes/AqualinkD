@@ -88,6 +88,7 @@ void start_timer(struct aqualinkdata *aq_data, /*aqkey *button,*/ int deviceInde
   tmthread->thread_id = 0;
   tmthread->duration_min = duration;
   tmthread->next = NULL;
+  tmthread->started_at = time(0); // This will get reset once we actually start. But need it here incase someone calls get_timer_left() before we start
 
   if( pthread_create( &tmthread->thread_id , NULL ,  timer_worker, (void*)tmthread) < 0) {
     LOG(TIMR_LOG, LOG_ERR, "could not create timer thread for button '%s'\n",button->name);
@@ -113,19 +114,22 @@ void start_timer(struct aqualinkdata *aq_data, /*aqkey *button,*/ int deviceInde
   }
 }
 
-#define WAIT_TIME_BEFORE_ON_CHECK 1000 // 1 second
+#define WAIT_TIME_BEFORE_ON_CHECK 1000
+//#define WAIT_TIME_BEFORE_ON_CHECK 1000000 // 1 second
 
 void *timer_worker( void *ptr )
 {
   struct timerthread *tmthread;
   tmthread = (struct timerthread *) ptr;
   int retval = 0;
+  int cnt=0;
 
   LOG(TIMR_LOG, LOG_NOTICE, "Start timer for '%s'\n",tmthread->button->name);
 
   // Add mask so we know timer is active
   tmthread->button->special_mask |= TIMER_ACTIVE;
 
+/*
 #ifndef PRESTATE_ONOFF
   delay(WAIT_TIME_BEFORE_ON_CHECK);
   LOG(TIMR_LOG, LOG_DEBUG, "wait finished for button state '%s'\n",tmthread->button->name);
@@ -138,6 +142,19 @@ void *timer_worker( void *ptr )
     } else {
       LOG(TIMR_LOG, LOG_NOTICE, "turning on '%s'\n",tmthread->button->name);
       panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
+    }
+  }
+*/
+
+  while (tmthread->button->led->state == OFF) {
+    LOG(TIMR_LOG, LOG_DEBUG, "waiting for button state '%s' to change\n",tmthread->button->name);
+    delay(WAIT_TIME_BEFORE_ON_CHECK);
+    if (cnt++ == 5 && !isPDA_PANEL) {
+       LOG(TIMR_LOG, LOG_NOTICE, "turning on '%s'\n",tmthread->button->name);
+       panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, true, NET_TIMER);
+    } else if (cnt == 10) {
+       LOG(TIMR_LOG, LOG_ERR, "button state never turned on'%s'\n",tmthread->button->name);
+       break;
     }
   }
 
@@ -162,11 +179,23 @@ void *timer_worker( void *ptr )
 
   LOG(TIMR_LOG, LOG_NOTICE, "End timer for '%s'\n",tmthread->button->name);    
 
-  if (tmthread->button->led->state != OFF) {
+  // We need to detect if we ended on time or were killed.  
+  // If killed the device is probable off (or being set to off), so we should probably poll a few times before turning off.
+  // Either that of change ap_panel to not turn off device if timer is set.
+
+  //LOG(TIMR_LOG, LOG_NOTICE, "End timer duration '%d'\n",tmthread->duration_min); 
+
+  // if duration_min is 0 we were killed, if not we got here on timeout, so turn off device.
+
+  if (tmthread->duration_min != 0 && tmthread->button->led->state != OFF) {
     LOG(TIMR_LOG, LOG_INFO, "Timer waking turning '%s' off\n",tmthread->button->name);
     panel_device_request(tmthread->aq_data, ON_OFF, tmthread->deviceIndex, false, NET_TIMER);
-  } else {
+  } else if (tmthread->button->led->state == OFF) {
     LOG(TIMR_LOG, LOG_INFO, "Timer waking '%s' is already off\n",tmthread->button->name);
+  }
+  
+  if (tmthread->button->led->state != OFF) {
+    // Need to wait
   }
 
   // remove mask so we know timer is dead

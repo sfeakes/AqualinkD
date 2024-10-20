@@ -19,6 +19,7 @@
 #endif
 
 #define LOGBUFFER 256
+#define LARGELOGBUFFER 1400 // / Must be at least AQ_MAXPKTLEN * 5 + 100
 
 //#define MAXLEN 256
 
@@ -27,7 +28,9 @@
 #define roundf(a) (float) ((a*100)/100) // 2 decimal places
 #define roundf3(a) (float) ((a*1000)/1000) // 3 decimal places
 
-// Defined as int16_t so 16 bits to mask
+
+typedef  int32_t logmask_t;
+// Defined as int32_t so 32 bits to mask
 #define AQUA_LOG (1 << 0) // Aqualink Generic / catchall
 #define NET_LOG  (1 << 1) // Network
 // Control protocols
@@ -40,13 +43,16 @@
 #define DJAN_LOG (1 << 7) // Jange Device
 #define DPEN_LOG (1 << 8) // Pentair Device
 // misc
-#define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB?
+#define RSSD_LOG (1 << 9) // RS485 Connection /dev/ttyUSB DO NOT CHANGE THIS, UI HARDCODED to 512. 
 #define PROG_LOG (1 << 10) // Programmer
 #define SCHD_LOG (1 << 11) // Scheduler Timer
 #define RSTM_LOG (1 << 12) // RS packet Time
-#define SIM_LOG (1 << 13) // Simulator
+#define SIM_LOG  (1 << 13) // Simulator
 
 #define DBGT_LOG (1 << 14) // Debug Timer
+
+#define SLOG_LOG (1 << 15) // Serial_Logger
+#define IAQL_LOG (1 << 16) // iAqualink
 
 #define TIMR_LOG SCHD_LOG
 #define PANL_LOG PROG_LOG
@@ -72,7 +78,7 @@ void setLoggingPrms(int level , bool deamonized, char *error_messages);
 #else
 void setLoggingPrms(int level , bool deamonized, char* log_file, char *error_messages);
 #endif
-int getLogLevel(int16_t from);
+int getLogLevel(logmask_t from);
 int getSystemLogLevel();
 void setSystemLogLevel( int level);
 void daemonise ( char *pidFile, void (*main_function)(void) );
@@ -80,11 +86,11 @@ void daemonise ( char *pidFile, void (*main_function)(void) );
 
 
 
-void addDebugLogMask(int16_t flag);
-void removeDebugLogMask(int16_t flag);
+void addDebugLogMask(logmask_t flag);
+void removeDebugLogMask(logmask_t flag);
 void clearDebugLogMask();
-bool isDebugLogMaskSet(int16_t flag);
-const char* logmask2name(int16_t mask);
+bool isDebugLogMaskSet(logmask_t flag);
+const char* logmask2name(logmask_t mask);
 const char* loglevel2name(int level);
 //#define logMessage(msg_level, format, ...) LOG (1, msg_level, format, ##__VA_ARGS__)
 
@@ -93,8 +99,10 @@ const char* loglevel2name(int level);
 
 
 //void LOG(int from, int level, char *format, ...);
-void LOG(int16_t from, int msg_level, const char *format, ...);
-void LOGSystemError (int errnum, int16_t from, const char *on_what);
+void LOG(const logmask_t from, const int msg_level, const char *format, ...);
+void LOG_LARGEMSG(const logmask_t from, const int msg_level, const char * buffer, const int buffer_length);
+
+void LOGSystemError (int errnum, logmask_t from, const char *on_what);
 void displayLastSystemError (const char *on_what);
 
 int count_characters(const char *str, char character);
@@ -133,9 +141,6 @@ void cleanInlineDebug();
 char *getInlineLogFName();
 bool islogFileReady();
 #endif
-
-
-//const char *logmask2name(int16_t from);
 
 //#ifndef _UTILS_C_
   extern bool _daemon_;

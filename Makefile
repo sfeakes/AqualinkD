@@ -13,7 +13,7 @@ AQ_RS16 = true
 AQ_PDA  = true
 AQ_ONETOUCH = true
 AQ_IAQTOUCH = true
-AQ_MANAGER =true
+AQ_MANAGER = true
 
 #AQ_RS_EXTRA_OPTS = false
 #AQ_CONTAINER = false // this is for compiling for containers
@@ -31,7 +31,8 @@ CC_AMD64 = x86_64-linux-gnu-gcc
 #LIBS := -lpthread -lm
 #LIBS := -l pthread -l m
 #LIBS := -l pthread -l m -static # Take out -static, just for dev
-LIBS := -lpthread -lm
+# from documentation -lrt would be needed for glibc 2.17 & prior (debug clock realtime messages), but seems to be needed for armhf 2.24
+LIBS := -lpthread -lm -lrt
 
 # Standard compile flags
 GCCFLAGS = -Wall -O3
@@ -98,7 +99,7 @@ ifeq ($(AQ_ONETOUCH), true)
 endif
 
 ifeq ($(AQ_IAQTOUCH), true)
-  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c
+  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_IAQTOUCH
 endif
 
@@ -213,13 +214,26 @@ SLOG_AMD64 = ./release/serial_logger-amd64
 
 # Before the below works, you need to build the aqualinkd-releasebin docker for compiling.
 # sudo docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# Something like below
+#releasebuilddocker:
+#	sudo docker build -f ./docker/Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+#	$(info Docker for building release binaries has been created)
+
 release:
 	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make buildrelease 
+	$(info Binaries for release have been built)
+
+quick:
+	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make quickbuild 
 	$(info Binaries for release have been built)
 
 # This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
 buildrelease: clean armhf arm64 
 	$(shell cd release && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
+
+# This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
+quickbuild: armhf arm64 
+	$(shell cd release && [ ! -f "./aqualinkd-armhf" ] && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
 
 
 # Rules to pass to make.

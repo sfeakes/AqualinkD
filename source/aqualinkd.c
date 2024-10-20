@@ -49,6 +49,7 @@
 #include "onetouch_aq_programmer.h"
 #include "iaqtouch.h"
 #include "iaqtouch_aq_programmer.h"
+#include "iaqualink.h"
 #include "version.h"
 #include "rs_msg_utils.h"
 #include "serialadapter.h"
@@ -78,6 +79,7 @@ char *_cfgFile;
 int _cmdln_loglevel = -1;
 bool _cmdln_debugRS485 = false;
 bool _cmdln_lograwRS485 = false;
+bool _cmdln_nostartupcheck = false;
 
 #ifdef AQ_TM_DEBUG
   //struct timespec _rs_packet_readitme;
@@ -125,6 +127,10 @@ void intHandler(int sig_num)
   if (serial_blockingmode())
     close_blocking_serial_port();
 #endif
+}
+
+bool isVirtualButtonEnabled() {
+  return _aqualink_data.virtual_button_start>0?true:false;
 }
 
 // Should move to panel.
@@ -349,6 +355,9 @@ void action_delayed_request()
     LOG(AQUA_LOG,LOG_NOTICE, "Changing spa heater setpoint by %d\n", _aqualink_data.unactioned.value);
     aq_programmer(AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP, sval, &_aqualink_data); 
   } 
+  else if (_aqualink_data.unactioned.type == LIGHT_MODE) {
+    panel_device_request(&_aqualink_data, LIGHT_MODE, _aqualink_data.unactioned.id, _aqualink_data.unactioned.value, UNACTION_TIMER);
+  }
   else 
   {
     LOG(AQUA_LOG,LOG_ERR, "Unknown request of type %d\n", _aqualink_data.unactioned.type);
@@ -455,6 +464,10 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
       _cmdln_lograwRS485 = true;
+    }
+    else if (strcmp(argv[i], "-nc") == 0)
+    {
+      _cmdln_nostartupcheck = true;
     }    
   }
 
@@ -478,7 +491,7 @@ int startup(char *self, char *cfgFile)
 
   // Sanity check on Device ID's against panel type
   if (isRS_PANEL) {
-    if (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) {
+    if ( (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) || _aqconfig_.device_id == 0x00) {
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match RS panel, please check config!\n", _aqconfig_.device_id);
@@ -486,6 +499,10 @@ int startup(char *self, char *cfgFile)
     }
   } else if (isPDA_PANEL) {
     if ( (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) || _aqconfig_.device_id == 0x33 ) {
+      if ( _aqconfig_.device_id == 0x33 ) {
+        LOG(AQUA_LOG,LOG_NOTICE, "Enabeling iAqualink protocol.\n");
+        _aqconfig_.enable_iaqualink = true;
+      }
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match PDA panel, please check config!\n", _aqconfig_.device_id);
@@ -527,7 +544,6 @@ int startup(char *self, char *cfgFile)
     _aqualink_data.total_buttons = 12;
   */
 
-
   if (_cmdln_loglevel != -1)
     _aqconfig_.log_level = _cmdln_loglevel;
 
@@ -563,6 +579,9 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config rssa_device_id    = 0x%02hhx\n", _aqconfig_.rssa_device_id);
 #if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_id   = 0x%02hhx\n", _aqconfig_.extended_device_id);
+  if (_aqconfig_.enable_iaqualink) {
+    LOG(AQUA_LOG,LOG_NOTICE, "Config enable_iaqualink  = %s\n", bool2text(_aqconfig_.enable_iaqualink));
+  }
   LOG(AQUA_LOG,LOG_NOTICE, "Config extra_device_prog = %s\n", bool2text(_aqconfig_.extended_device_id_programming));
 #endif
   LOG(AQUA_LOG,LOG_NOTICE, "Config serial_port       = %s\n", _aqconfig_.serial_port);
@@ -621,8 +640,7 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config light_pgm_mode    = %.2f\n", _aqconfig_.light_programming_mode);
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol     = %s\n", bool2text(_aqconfig_.log_protocol_packets));
   LOG(AQUA_LOG,LOG_NOTICE, "Debug RS485 protocol raw = %s\n", bool2text(_aqconfig_.log_raw_bytes));
-  if ( _aqconfig_.RSSD_LOG_filter != NUL)
-    LOG(AQUA_LOG,LOG_NOTICE, "Log RS485 packets from   = 0x%02hhx\n", _aqconfig_.RSSD_LOG_filter);
+
   //LOG(AQUA_LOG,LOG_NOTICE, "Use PDA 4 auxiliary info = %s\n", bool2text(_aqconfig_.use_PDA_auxiliary));
   //LOG(AQUA_LOG,LOG_NOTICE, "Read Pentair Packets     = %s\n", bool2text(_aqconfig_.read_pentair_packets));
   // logMessage (LOG_NOTICE, "Config serial_port = %s\n", config_parameters->serial_port);
@@ -635,10 +653,10 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
   LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
   LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
-
+/*
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
-
+*/
   if (_aqconfig_.ftdi_low_latency == true)
     LOG(AQUA_LOG,LOG_NOTICE, "Serial FTDI low latency  = %s\n", bool2text(_aqconfig_.ftdi_low_latency));
 
@@ -668,7 +686,10 @@ int startup(char *self, char *cfgFile)
     ext[0] = '\0';
     for (j = 0; j < _aqualink_data.num_pumps; j++) {
       if (_aqualink_data.pumps[j].button == &_aqualink_data.aqbuttons[i]) {
-        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d |",_aqualink_data.pumps[j].pumpID, _aqualink_data.pumps[j].pumpIndex);
+        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d | %s",
+                  _aqualink_data.pumps[j].pumpID, 
+                  _aqualink_data.pumps[j].pumpIndex, 
+                  _aqualink_data.pumps[j].pumpName[0]=='\0'?"":_aqualink_data.pumps[j].pumpName);
       }
     }
     for (j = 0; j < _aqualink_data.num_lights; j++) {
@@ -691,7 +712,23 @@ int startup(char *self, char *cfgFile)
       LOG(AQUA_LOG,LOG_NOTICE, "Config BTN %-13s = label %-15s | %s\n", 
                            _aqualink_data.aqbuttons[i].name, _aqualink_data.aqbuttons[i].label, ext);  
     }
+
+    if ( ((_aqualink_data.aqbuttons[i].special_mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)  && 
+         ((_aqualink_data.aqbuttons[i].special_mask & VS_PUMP ) != VS_PUMP) &&
+          (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) ){
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must be on of the folowing (0x30,0x31,0x32,0x33) to use virtual button : '%s'",_aqualink_data.aqbuttons[i].label);
+    }
   }
+/*
+  for (i=0; i < _aqualink_data.total_buttons; i++) 
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Button index=%d, label=%s, code=0x%02hhx, rssd code=0x%02hhx\n", 
+                             i, 
+                             _aqualink_data.aqbuttons[i].label,
+                             _aqualink_data.aqbuttons[i].code,
+                             _aqualink_data.aqbuttons[i].rssd_code);
+  }
+*/
 
   if (_aqconfig_.deamonize == true)
   {
@@ -718,6 +755,9 @@ int startup(char *self, char *cfgFile)
 /* Point of this is to sent ack as quickly as possible, all checks should be done prior to calling this.*/
 void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type source) 
 {
+  unsigned char *cmd;
+  int size;
+
   switch (source) {
     case ALLBUTTON:
       send_extended_ack(rs_fd, (packet_buffer[PKT_CMD]==CMD_MSG_LONG?ACK_SCREEN_BUSY_SCROLL:ACK_NORMAL), pop_allb_cmd(&_aqualink_data));
@@ -743,12 +783,21 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
       if (packet_buffer[PKT_CMD] != CMD_IAQ_CTRL_READY)
         send_extended_ack(rs_fd, ACK_IAQ_TOUCH, pop_iaqt_cmd(packet_buffer[PKT_CMD]));
       else {
-        unsigned char *cmd;
-        int size = ref_iaqt_control_cmd(&cmd);
+        size = ref_iaqt_control_cmd(&cmd);
         send_jandy_command(rs_fd, cmd, size);
         rem_iaqt_control_cmd(cmd);
       }
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation type Processed packet in");
+    break;
+    case IAQUALNK:
+      //send_iaqualink_ack(rs_fd, packet_buffer);
+      size = get_iaqualink_cmd(packet_buffer[PKT_CMD], &cmd);
+      if (size == 2){
+        send_extended_ack(rs_fd, cmd[0], cmd[1]);
+      } else {
+        send_jandy_command(rs_fd, cmd, size);
+      }
+      remove_iaqualink_cmd();
     break;
 #endif
 #ifdef AQ_PDA
@@ -863,7 +912,8 @@ void main_loop()
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
 
-  for (i=0; i < MAX_PUMPS; i++) {
+  //for (i=0; i < MAX_PUMPS; i++) {
+  for (i=0; i < _aqualink_data.num_pumps; i++) {
     _aqualink_data.pumps[i].rpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].gpm = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].watts = TEMP_UNKNOWN;
@@ -872,6 +922,20 @@ void main_loop()
     _aqualink_data.pumps[i].status = TEMP_UNKNOWN;
     _aqualink_data.pumps[i].pStatus = PS_OFF;
     _aqualink_data.pumps[i].pressureCurve = TEMP_UNKNOWN;
+
+    if (_aqualink_data.pumps[i].maxSpeed <= 0) {
+      _aqualink_data.pumps[i].maxSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MAX:PUMP_RPM_MAX);
+    }
+    if (_aqualink_data.pumps[i].minSpeed <= 0) {
+      _aqualink_data.pumps[i].minSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MIN:PUMP_RPM_MIN);
+    }
+
+    //printf("arrayindex=%d, pump=%d, min=%d, max=%d\n",i,_aqualink_data.pumps[i].pumpIndex, _aqualink_data.pumps[i].minSpeed ,_aqualink_data.pumps[i].maxSpeed);
+  }
+
+  for (i=0; i < MAX_LIGHTS; i++) {
+     _aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
+     _aqualink_data.lights[i].RSSDstate = OFF;
   }
 
   if (_aqconfig_.force_swg == true) {
@@ -971,22 +1035,26 @@ void main_loop()
     got_probe_rssa = true;
   
   if (_aqconfig_.device_id == 0x00) {
-    LOG(AQUA_LOG,LOG_NOTICE, "Searching for valid ID, please configure one for faster startup\n");
+    LOG(AQUA_LOG,LOG_WARNING, "Searching for valid ID, please configure `device_id` for faster startup\n");
   }
 
   LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
   i=0;
 
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
-  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true)
+  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true && _cmdln_nostartupcheck == false)
   {
-    if (blank_read == blank_read_reconnect) {
+    if (blank_read == blank_read_reconnect / 2) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
 #ifdef AQ_CONTAINER
         // Reset blank reads here, we want to ignore TTY errors in container to keep it running
         blank_read = 1;
 #endif
-    } else if (blank_read == blank_read_reconnect*2) {
+      if (_aqconfig_.device_id == 0x00) {
+        blank_read = 1; // if device id=0x00 it's code for don't exit
+      }
+      _aqualink_data.updated = true; // Make sure to show erros if ui is up
+    } else if (blank_read == blank_read_reconnect*2 ) {
       LOG(AQUA_LOG,LOG_ERR, "I'm done, exiting, please check '%s'\n",_aqconfig_.serial_port);
       stopPacketLogger();
       close_serial_port(rs_fd);
@@ -1137,8 +1205,15 @@ void main_loop()
     if (_aqualink_data.run_slogger) {
        LOG(AQUA_LOG,LOG_WARNING, "Starting serial_logger, this will take some time!\n");
        broadcast_aqualinkstate_error(CONNECTION_RUNNING_SLOG);
-       serial_logger(rs_fd, _aqconfig_.serial_port, getSystemLogLevel());
+
+       if (_aqualink_data.slogger_debug)
+         addDebugLogMask(SLOG_LOG);
+
+       serial_logger(rs_fd, _aqconfig_.serial_port, _aqualink_data.slogger_debug?LOG_DEBUG:getSystemLogLevel(), _aqualink_data.slogger_packets, _aqualink_data.slogger_ids);
        _aqualink_data.run_slogger = false;
+
+       if (_aqualink_data.slogger_debug)
+         removeDebugLogMask(SLOG_LOG);
     }
 #endif
 
@@ -1209,10 +1284,14 @@ void main_loop()
       }
 
       // Process and packets of devices we are acting as
-      if (packet_length > 0 && getProtocolType(packet_buffer) == JANDY &&
+      if (packet_length > 0 && getProtocolType(packet_buffer) == JANDY && packet_buffer[PKT_DEST] != 0x00 &&
           (packet_buffer[PKT_DEST] == _aqconfig_.device_id ||
            packet_buffer[PKT_DEST] == _aqconfig_.rssa_device_id ||
-           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id ))
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id ||
+           packet_buffer[PKT_DEST] == _aqconfig_.extended_device_id2
+#endif
+           ))
       {
         switch(getJandyDeviceType(packet_buffer[PKT_DEST])){
           case ALLBUTTON:
@@ -1234,6 +1313,10 @@ void main_loop()
           case AQUAPDA:
             _aqualink_data.updated = process_pda_packet(packet_buffer, packet_length);
             caculate_ack_packet(rs_fd, packet_buffer, AQUAPDA);
+          break;
+          case IAQUALNK:
+            _aqualink_data.updated = process_iaqualink_packet(packet_buffer, packet_length, &_aqualink_data);
+            caculate_ack_packet(rs_fd, packet_buffer, IAQUALNK);
           break;
           default:
           break;

@@ -54,6 +54,9 @@ Pull revision from string  examples
 '    REV. O.2    '
 'B0029221 REV T.0.1'
 '   REV T.0.1'
+
+AllButton: Control Panel version B0316823 REV Yg
+
 */
 bool rsm_get_revision(char *dest, const char *src, int src_len)
 {
@@ -156,9 +159,9 @@ bool rsm_isempy(const char *src, int length)
   int i;
   for(i=0; i < length; i++) {
     if  (src[i] > 32 && src[i] < 127) // 32 is space
-      return true;
+      return false;
   }
-  return false;
+  return true;
 }
 /*
   Can probably replace this with rsm_strncasestr in all code.

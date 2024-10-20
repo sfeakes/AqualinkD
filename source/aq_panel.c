@@ -24,9 +24,12 @@
 #include "serialadapter.h"
 #include "aq_timer.h"
 #include "allbutton_aq_programmer.h"
+#include "rs_msg_utils.h"
+#include "iaqualink.h"
 
 void initPanelButtons(struct aqualinkdata *aqdata, bool rspda, int size, bool combo, bool dual);
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
+
 
 char *name2label(char *str)
 {
@@ -44,6 +47,76 @@ char *name2label(char *str)
   newst[len] = '\0';
   
   return newst;
+}
+
+// This has NOT been tested.
+uint16_t getPanelSupport( char *rev_string, int rev_len)
+{
+  uint16_t supported = 0;
+  
+  char REV[5];
+
+  if (! rsm_get_revision(REV, rev_string, rev_len) ) {
+    LOG(PANL_LOG,LOG_ERR, "Couldn't get panel revision from '%s'\n",rev_string);
+    return 0; // No point in continue
+  } else if (REV[0] > 90 || REV[0] < 65) { // > Z or < A
+    LOG(PANL_LOG,LOG_WARNING, "Panel revision is not understood '%s', please report this issue");
+  }
+
+
+  // Get the actual rev letter
+  //if ( rsm_get_revision(REV, rev_string, rev_len) ) {
+    // Rev >=I == one touch protocol
+    // Rev >=O == VSP
+    // Rev >=Q == iaqualink touch protocol.
+    // REv >= P == chemlink
+    // Rev >= I serial adapter.
+    // Rev >= F == Dommer.  But need serial protocol so set to I
+    // Rev >= L == JandyColors Smart Light Control
+    // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
+    // Rev >= N Hayward ColorLogic LED Light
+    // Rev >= O.1== Jandy WaterColors LED ( 9 colors )
+    // Rev >= T.0.1 == limited color light
+    // Rec >= T.2 == more color lights
+    // Rev >= Q Aqualink Touch protocol
+    // Rev >= R iAqualink (wifi adapter) protocol
+    // Rev >= L PC Dock
+    // Rev >= W pump label (not number)
+    // Rev >= Yg Virtual Device called Label Auxiliraries
+
+    if (REV[0] > 89 || ( REV[0] == 89 && REV[1] >= 103))
+      supported |= RSP_SUP_VBTN;
+
+    if (REV[0] >= 81) // Q in ascii
+      supported |= RSP_SUP_AQLT;
+
+    if (REV[0] >= 82) // R
+      supported |= RSP_SUP_IAQL;
+    
+    if (REV[0] >= 80) // P in ascii
+      supported |= RSP_SUP_CHEM;
+
+    if (REV[0] >= 79) // O in ascii
+      supported |= RSP_SUP_VSP;
+
+    if (REV[0] >= 73){ // I in ascii
+      supported |= RSP_SUP_ONET;
+      supported |= RSP_SUP_RSSA;
+      supported |= RSP_SUP_SWG;
+    }
+    
+    if (REV[0] >= 76) // L in ascii
+      supported |= RSP_SUP_CLIT;
+
+    if (REV[0] >= 73) // I in ascii, dimmer came out in F, but we use the serial adapter to set, so use that as support
+      supported |= RSP_SUP_DLIT;
+
+    //if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
+    //  supported |= RSP_SUP_CLIT4;
+    
+  //}
+
+  return supported;
 }
 
 void changePanelToMode_Only() {
@@ -108,7 +181,6 @@ setPanel("RS-6 Combo");
 setPanel("RS-8 Combo");
 }
 */
-
 
 char _panelString[60];
 void setPanelString()
@@ -254,6 +326,80 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
   setPanel(aqdata, rs, size, combo, dual);
 }
 
+aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
+  if (aqdata->total_buttons + 1 >= TOTAL_BUTTONS) {
+    return NULL;
+  }
+  if (aqdata->virtual_button_start <= 0) {
+    aqdata->virtual_button_start = aqdata->total_buttons;
+  }
+  aqkey *button = &aqdata->aqbuttons[aqdata->total_buttons++];
+
+  //aqdata->aqbuttons[index].led = ;
+  //aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
+  //aqdata->aqbuttons[index].label = // copy label;
+  //aqdata->aqbuttons[index].name = // aux_v?;  ? is vindex 
+  //aqdata->aqbuttons[index].code = NUL;
+  //aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
+  //aqdata->aqbuttons[index].special_mask = 0;
+
+  aqled *led = malloc(sizeof(aqled));
+  button->led = led;
+ 
+  char *name = malloc(sizeof(char*) * 10);
+  snprintf(name, 9, "%s%d", BTN_VAUX, vindex);
+  button->name = name; 
+
+  if (strlen(label) <= 0) {
+    button->label = name; 
+  } else {
+    button->label = label;
+  }
+  // These 3 vbuttons have a button code on iaqualink protocol, so use that for rssd_code.
+  if (strncasecmp (button->label, "ALL OFF", 7) == 0) {
+    button->rssd_code = IAQ_ALL_OFF;
+  } else if (strncasecmp (button->label, "Spa Mode", 8) == 0) {
+    button->rssd_code = IAQ_SPA_MODE;
+  } else if (strncasecmp (button->label, "Clean Mode", 10) == 0) {
+    button->rssd_code = IAQ_CLEAN_MODE;
+  } else {
+    button->rssd_code = NUL;
+  }
+
+  button->code = NUL;
+  button->dz_idx = DZ_NULL_IDX;
+  button->special_mask |= VIRTUAL_BUTTON; // Could change to special mask vbutton
+
+  return button;  
+}
+
+// So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
+// (value-600) / (3450-600) * 100   
+// (value) / 100 * (3450-600) + 600
+
+//{{ (((value | float(0) - %d) / %d) * 100) | int }} - minspeed, (maxspeed - minspeed),
+//{{ ((value | float(0) / 100) * %d) + %d | int }} - (maxspeed - minspeed), minspeed)
+
+int getPumpSpeedAsPercent(pump_detail *pump) {
+  int pValue = pump->pumpType==VFPUMP?pump->gpm:pump->rpm;
+
+  if (pValue < pump->minSpeed) {
+      return 0;
+  }
+
+  // Below will return 0% if pump is at min, so return max (caculation, 1)
+  return AQ_MAX( (int)((float)(pValue - pump->minSpeed) / (float)(pump->maxSpeed - pump->minSpeed) * 100) + 0.5, 1);
+}
+
+int convertPumpPercentToSpeed(pump_detail *pump, int pValue) {
+  if (pValue >= 100)
+    return pump->maxSpeed;
+  else if (pValue <= 0)
+    return pump->minSpeed;
+  
+  return ( ((float)(pValue / (float)100) * (pump->maxSpeed - pump->minSpeed) + pump->minSpeed)) + 0.5;
+}
+
 // 4,6,8,10,12,14
 void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual) {
 
@@ -265,6 +411,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_PUMP;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_PUMP;
   index++;
   
   if (combo) {
@@ -275,6 +422,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_SPA;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_SPA;
     index++;
   }
   
@@ -285,6 +433,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX1;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX1;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[4-1];
@@ -294,6 +443,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX2;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX2;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[3-1];
@@ -303,6 +453,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_AUX3;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_AUX3;
   index++;
   
   
@@ -314,6 +465,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX4;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX4;
     index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[8-1];
@@ -323,6 +475,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX5;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX5;
     index++; 
   }
 
@@ -334,6 +487,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX6;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX6;
     index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[1-1];
@@ -343,6 +497,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUX7;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX7;
     index++;
   }
 #ifdef AQ_RS16
@@ -364,6 +519,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB1;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX8;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[12-1];
@@ -373,6 +529,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB2;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX9;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[1-1];
@@ -382,6 +539,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB3;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX10;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[13-1];  
@@ -391,6 +549,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB4;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX11;
     index++;
   }
 
@@ -402,6 +561,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB5;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX12;
     index++;
  
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[22-1];  // doesn't actually exist
@@ -411,6 +571,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB6;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX13;
     index++;
   
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[23-1];  // doesn't actually exist
@@ -419,6 +580,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].name = BTN_AUXB7;
     aqdata->aqbuttons[index].code = KEY_AUXB7;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX14;
    index++;
 
     aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[24-1]; // doesn't actually exist
@@ -428,6 +590,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->aqbuttons[index].code = KEY_AUXB8;
     aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
     aqdata->aqbuttons[index].special_mask = 0;
+    aqdata->aqbuttons[index].rssd_code = RS_SA_AUX15;
     index++;
   }
 #endif // AQ_RS16
@@ -442,6 +605,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
       aqdata->aqbuttons[index].code = KEY_AUX6;
       aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
       aqdata->aqbuttons[index].special_mask = 0;
+      aqdata->aqbuttons[index].rssd_code = RS_SA_AUX6;
       index++;
     }
     //Dual panels (2/10 & 2/14) have no AUX7, they go from AUX6 to AUXB1, but the keycodes are the same as other panels
@@ -463,6 +627,7 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_POOL_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_POOLHT;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[17-1];
@@ -472,20 +637,21 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
   aqdata->aqbuttons[index].code = KEY_SPA_HTR;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
+  aqdata->aqbuttons[index].rssd_code = RS_SA_SPAHT;
   index++;
   
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[19-1];
   aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
-  aqdata->aqbuttons[index].label = rs?name2label(BTN_SOLAR_HTR):BTN_PDA_SOLAR_HTR;
-  aqdata->aqbuttons[index].name = BTN_SOLAR_HTR;
-  aqdata->aqbuttons[index].code = KEY_SOLAR_HTR;
+  aqdata->aqbuttons[index].label = rs?name2label(BTN_EXT_AUX):BTN_PDA_EXT_AUX;
+  aqdata->aqbuttons[index].name = BTN_EXT_AUX;
+  aqdata->aqbuttons[index].code = KEY_EXT_AUX;
   aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
   aqdata->aqbuttons[index].special_mask = 0;
   index++;
 
+  // Set the sizes for button index
   aqdata->total_buttons = index;
-
-  //aqdata->single_device = !combo;
+  aqdata->virtual_button_start = 0;
 
   #ifdef AQ_RS16
     aqdata->rs16_vbutton_start = 13 - (combo?0:1);
@@ -521,6 +687,9 @@ const char* getRequestName(request_source source)
     break;
     case NET_TIMER:
       return "Timer";
+    break;
+    case UNACTION_TIMER:
+      return "UnactionTimer";
     break;
   }
 
@@ -575,6 +744,9 @@ const char* getActionName(action_type type)
     case DATE_TIME:
       return "Date Time";
     break;
+    case LIGHT_BRIGHTNESS:
+      return "Light Brightness";
+    break;
   }
 
   static char buf[25];
@@ -592,6 +764,14 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
 {
   aqkey *button = &aqdata->aqbuttons[deviceIndex];
 
+  //if ( button->special_mask & VIRTUAL_BUTTON  && button->special_mask & VS_PUMP) {
+  if ( isVS_PUMP(button->special_mask) && isVBUTTON(button->special_mask)) {
+    // Virtual Button with VSP is always on.
+    LOG(PANL_LOG, LOG_INFO, "received '%s' for '%s', virtual pump is always on, ignoring", (isON == false ? "OFF" : "ON"), button->name);
+    button->led->state = ON;
+    return false;
+  }
+
   if ((button->led->state == OFF && isON == false) ||
       (isON > 0 && (button->led->state == ON || button->led->state == FLASH ||
                      button->led->state == ENABLE))) {
@@ -605,9 +785,14 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // AqualinkTouch in PDA mode, we can program light. (if turing off, use standard AQ_PDA_DEVICE_ON_OFF below)
         programDeviceLightMode(aqdata, (isON?0:-1), deviceIndex); // -1 means off 0 means use current light mode
       } else {
-        char msg[PTHREAD_ARG];
-        sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
-        aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+        // If we are using AqualinkTouch with iAqualink enabled, we can send button on/off much faster using that.
+        if ( isPDA_IAQT && isIAQL_ACTIVE) {
+          set_iaqualink_aux_state(button, isON);
+        } else {
+          char msg[PTHREAD_ARG];
+          sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+          aq_programmer(AQ_PDA_DEVICE_ON_OFF, msg, aqdata);
+        }
       }
     } else
 #endif
@@ -618,23 +803,52 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         // OK Programable light, and no light mode selected. Now let's work out best way to turn it on. serial_adapter protocol will to it without questions,
         // all other will require programmig.
         if (isRSSA_ENABLED) {
-          set_aqualink_rssadapter_aux_state(deviceIndex, true);
+          set_aqualink_rssadapter_aux_state(button, true);
         } else {
           //set_light_mode("0", deviceIndex); // 0 means use current light mode
           programDeviceLightMode(aqdata, 0, deviceIndex); // 0 means use current light mode
         }
+      } else if (isVBUTTON(button->special_mask)) {
+        // Virtual buttons only supported with Aqualink Touch
+        LOG(PANL_LOG, LOG_NOTICE, "********** %s code=0x%02hhx iaq enabled=%s *****\n",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
+        if (isIAQT_ENABLED) {
+          // If it's one of the pre-defined onces & iaqualink is enabled, we can set it easile with button.
+          if ( isIAQL_ACTIVE && button->rssd_code != NUL)
+          {
+            set_iaqualink_aux_state(button, isON);
+          } else {
+            char msg[PTHREAD_ARG];
+            sprintf(msg, "%-5d%-5d", deviceIndex, (isON == false ? OFF : ON));
+            aq_programmer(AQ_SET_IAQTOUCH_DEVICE_ON_OFF, msg, aqdata);
+          }
+        } else {
+          LOG(PANL_LOG, LOG_ERR, "Can only use Aqualink Touch protocol for Virtual Buttons");
+        }
       } else if ( source == NET_DZMQTT && isRSSA_ENABLED ) {
         // Domoticz has a bad habbit of resending the same state back to us, when we use the PRESTATE_ONOFF option
         // since allbutton (default) is stateless, and rssaadapter is statefull, use rssaadapter for any domoricz requests
-        set_aqualink_rssadapter_aux_state(deviceIndex, isON);
+        set_aqualink_rssadapter_aux_state(button, isON);
+      //} else if ( source == NET_TIMER && isRSSA_ENABLED ) {
+        // Timer will sometimes send duplicate, so use RSSA since that protocol has on/off rather than toggle
+      //  set_aqualink_rssadapter_aux_state(button, isON);
+      } else if (button->special_mask & PROGRAM_LIGHT && isRSSA_ENABLED) {
+        // If off and program light, use the RS serial adapter since that is overiding the state now.
+        set_aqualink_rssadapter_aux_state(button, isON);
       } else {
+        //set_iaqualink_aux_state(button, isON);
+        //set_aqualink_rssadapter_aux_state(button, isON);
         aq_send_allb_cmd(button->code);
       }
+
+#ifdef CLIGHT_PANEL_FIX 
+      if (isRSSA_ENABLED) {get_aqualink_rssadapter_colorlight_statuses(aqdata);}
+#endif
+
 // Pre set device to state, next status will correct if state didn't take, but this will stop multiple ON messages setting on/off
 //#ifdef PRESTATE_ONOFF
       if (_aqconfig_.device_pre_state) {
         if ((button->code == KEY_POOL_HTR || button->code == KEY_SPA_HTR ||
-             button->code == KEY_SOLAR_HTR) &&
+             button->code == KEY_EXT_AUX) &&
             isON > 0) {
           button->led->state = ENABLE; // if heater and set to on, set pre-status to enable.
         //_aqualink_data->updated = true;
@@ -679,24 +893,62 @@ bool programDeviceValue(struct aqualinkdata *aqdata, action_type type, int value
   return true;
 }
 
+
+void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int button, bool expectMultiple) 
+{
+  clight_detail *light = getProgramableLight(aqdata, button);
+
+  if (!isRSSA_ENABLED) {
+    LOG(PANL_LOG,LOG_ERR, "Light mode brightness is only supported with `rssa_device_id` set\n");
+    return;
+  }
+
+  if (light == NULL) {
+    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
+    return;
+  }
+
+  // DIMMER is 0,25,50,100 DIMMER2 is range
+  if (light->lightType == LC_DIMMER) {
+    value = round(value / 25);
+  }
+
+  if (!expectMultiple) {
+    programDeviceLightMode(aqdata, value, button);
+    return;
+  }
+
+  time(&aqdata->unactioned.requested);
+  aqdata->unactioned.value = value;
+  aqdata->unactioned.type = LIGHT_MODE;
+  aqdata->unactioned.id = button;
+
+  return;
+}
+
+
 //void programDeviceLightMode(struct aqualinkdata *aqdata, char *value, int button) 
+//void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button) 
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button) 
 {
-  int i;
-  clight_detail *light = NULL;
 #ifdef AQ_PDA
   if (isPDA_PANEL && !isPDA_IAQT) {
     LOG(PANL_LOG,LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
 #endif
+  /*
+  int i;
+  clight_detail *light = NULL;
   for (i=0; i < aqdata->num_lights; i++) {
     if (&aqdata->aqbuttons[button] == aqdata->lights[i].button) {
       // Found the programmable light
       light = &aqdata->lights[i];
       break;
     }
-  }
+  }*/
+
+  clight_detail *light = getProgramableLight(aqdata, button);
 
   if (light == NULL) {
     LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
@@ -713,11 +965,33 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
                                       _aqconfig_.light_programming_initial_off,
                                       _aqconfig_.light_programming_mode );
     aq_programmer(AQ_SET_LIGHTPROGRAM_MODE, buf, aqdata);
+  } else if (isRSSA_ENABLED && light->lightType == LC_DIMMER2) {
+    // Dimmer needs to be turned on before you set dimmer level
+    if (light->button->led->state != ON) {
+      set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+    }
+    set_aqualink_rssadapter_aux_extended_state(light->button, value);
+  } else if (isRSSA_ENABLED && light->lightType == LC_DIMMER) {
+    // Dimmer needs to be turned on first
+    if (light->button->led->state != ON) {
+      set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+    }
+    // Value 1 = 25, 2 = 50, 3 = 75, 4 = 100 (need to convert value into binary)
+    if (value >= 1 && value <= 4) {
+      // If value is not on of those vales, then ignore
+      unsigned char rssd_value = value * 25;
+      set_aqualink_rssadapter_aux_extended_state(light->button, rssd_value);
+    } else {
+      LOG(PANL_LOG,LOG_ERR, "Light mode %d is not valid for '%s'\n",value, light->button->label);
+    }
   } else {
     //sprintf(buf, "%-5s%-5d%-5d",value, button, light->lightType);
     sprintf(buf, "%-5d%-5d%-5d",value, button, light->lightType);
     aq_programmer(AQ_SET_LIGHTCOLOR_MODE, buf, aqdata);
   }
+
+  // Use function so can be called from programming thread if we decide to in future.
+  updateButtonLightProgram(aqdata, value, button);
 }
 
 /*
@@ -759,8 +1033,16 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
       //start_timer(aqdata, &aqdata->aqbuttons[deviceIndex], deviceIndex, value);
       start_timer(aqdata, deviceIndex, value);
     break;
+    case LIGHT_BRIGHTNESS:
+      programDeviceLightBrightness(aqdata, value, deviceIndex, (source==NET_MQTT?true:false));
+    break;
     case LIGHT_MODE:
-      programDeviceLightMode(aqdata, value, deviceIndex);
+      if (value <= 0) {
+        // Consider this a bad/malformed request to turn the light off.
+        panel_device_request(aqdata, ON_OFF, deviceIndex, 0, source);
+      } else {
+        programDeviceLightMode(aqdata, value, deviceIndex);
+      }
     break;
     case POOL_HTR_SETOINT:
     case SPA_HTR_SETOINT:
@@ -785,9 +1067,46 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
 }
 
 
+// Programmable light has been updated, so update the status in AqualinkD
+void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button)
+{
+  /*
+  int i;
+  clight_detail *light = NULL;
 
+  for (i=0; i < aqdata->num_lights; i++) {
+    if (&aqdata->aqbuttons[button] == aqdata->lights[i].button) {
+      // Found the programmable light
+      light = &aqdata->lights[i];
+      break;
+    }
+  }
+  */
+  clight_detail *light = getProgramableLight(aqdata, button);
 
+  if (light == NULL) {
+    LOG(PANL_LOG,LOG_ERR, "Button not found for light  button index=%d\n",button);
+    return;
+  }
 
+   light->currentValue = value;
+}
+
+clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button) 
+{
+  if ( isPLIGHT(aqdata->aqbuttons[button].special_mask) ) {
+    return (clight_detail *)aqdata->aqbuttons[button].special_mask_ptr;
+  } 
+  return NULL;
+}
+
+pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button)
+{
+  if ( isVS_PUMP(aqdata->aqbuttons[button].special_mask) ) {
+    return (pump_detail *)aqdata->aqbuttons[button].special_mask_ptr;
+  } 
+  return NULL;
+}
 
 #ifdef DO_NOT_COMPILE
 

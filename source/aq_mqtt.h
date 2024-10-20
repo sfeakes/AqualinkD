@@ -53,6 +53,11 @@
 #define PUMP_MODE_TOPIC "/Mode"
 #define PUMP_STATUS_TOPIC "/Status"
 #define PUMP_PPC_TOPIC "/PPC"
+#define PUMP_SPEED_TOPIC "/Speed"
+
+#define LIGHT_PROGRAM_TOPIC "/program"
+#define LIGHT_DIMMER_VALUE_TOPIC "/brightness"
+
 /*
 #define AIR_TEMPERATURE   "Air"
 #define POOL_TEMPERATURE  "Pool_Water"

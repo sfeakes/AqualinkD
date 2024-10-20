@@ -59,9 +59,9 @@ bool processSimulatorPacket(unsigned char *packet, int packet_length, struct aqu
   aqdata->simulator_packet_length = packet_length;
 
   if ( getLogLevel(SIM_LOG) >= LOG_DEBUG ) {
-    char buff[1000];
+    char buff[1024];
     //sprintf("Sending control command:")
-    beautifyPacket(buff, packet, packet_length, false);
+    beautifyPacket(buff, 1024, packet, packet_length, false);
     LOG(SIM_LOG,LOG_DEBUG, "Received message : %s", buff);
   }
 
