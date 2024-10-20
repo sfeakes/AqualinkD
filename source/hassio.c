@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -110,9 +109,6 @@ const char *HASSIO_SWG_DISCOVER = "{"
 // (value-600) / (3450-600) * 100   
 // (value) / 100 * (3450-600) + 600
 
-
-\
-
 const char *HASSIO_VSP_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
@@ -160,11 +156,11 @@ const char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
+    "\"state_class\": \"measurement\","
     "\"unique_id\": \"aqualinkd_%s\","
     "\"name\": \"%s Temp\","
     "\"state_topic\": \"%s/%s\","
     "\"value_template\": \"{{ value_json }}\","
-    /*"\"unit_of_measurement\": \"°F\","*/
     "\"unit_of_measurement\": \"%s\","
     "\"device_class\": \"temperature\","
     "\"icon\": \"%s\""
@@ -174,6 +170,7 @@ const char *HASSIO_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
+    "\"state_class\": \"measurement\","
     "\"unique_id\": \"aqualinkd_%s\","
     "\"name\": \"%s\","
     "\"state_topic\": \"%s/%s\","
@@ -199,6 +196,7 @@ const char *HASSIO_PUMP_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
+    "\"state_class\": \"measurement\","
     "\"unique_id\": \"aqualinkd_%s%d_%s\","
     "\"name\": \"%s %s %s\","
     "\"state_topic\": \"%s/%s%s\","
@@ -212,6 +210,7 @@ const char *HASSIO_PUMP_SENSOR_DISCOVER2 = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
+    "\"state_class\": \"measurement\","
     "\"unique_id\": \"aqualinkd_%s%d_%s\","
     "\"name\": \"%s %s %s\","
     "\"state_topic\": \"%s/%s%s\","
@@ -445,13 +444,6 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     sprintf(msg, HASSIO_SWG_TEXT_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"SWG Msg",_aqconfig_.mqtt_aq_topic,SWG_EXTENDED_TOPIC);
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
-    /*
-    // SWG Display message (move to SWG area)
-    rsm_char_replace(idbuf, SWG_STATUS_MSG_TOPIC, "/", "_"); 
-    sprintf(msg, HASSIO_TEXT_SENSOR_DISCOVER,idbuf,"SWG Msg",_aqconfig_.mqtt_aq_topic,SWG_STATUS_MSG_TOPIC);
-    sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
-    send_mqtt(nc, topic, msg);
-    */
   }
 
   // Temperatures
