@@ -186,6 +186,19 @@ const char *HASSIO_SENSOR_DISCOVER = "{"
     "\"icon\": \"%s\""
 "}";
 
+const char *HASSIO_SERVICE_MODE_ENUM_SENSOR_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"sensor\","
+    "\"unique_id\": \"aqualinkd_%s\","
+    "\"name\": \"%s\","
+    "\"state_topic\": \"%s/%s\","
+    "\"device_class\": \"enum\","
+    "\"options\": [\"auto\",\"service\",\"timeout\"],"
+    "\"value_template\": \"{%% set values = { '0':'auto', '1':'service', '2':'timeout'} %%}{{ values[value] if value in values.keys() }}\","
+    "\"icon\": \"%s\""
+"}";
+
 const char *HASSIO_ONOFF_SENSOR_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
     "\"availability\": {" HASS_AVAILABILITY "},"
@@ -218,9 +231,8 @@ const char *HASSIO_BATTERY_SENSOR_DISCOVER = "{"
     "\"unique_id\": \"aqualinkd_%s\","
     "\"name\": \"%s\","
     "\"state_topic\": \"%s/%s\","
-    "\"payload_on\": \"1\","
-    "\"payload_off\": \"0\","
-    "\"value_template\": \"{%% set values = { '0':'off', '1':'on'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
+    "\"payload_on\": \"0\","
+    "\"payload_off\": \"1\","
     "\"device_class\": \"battery\""
 "}";
 
@@ -302,7 +314,7 @@ const char *HASSIO_SWG_TEXT_SENSOR_DISCOVER = "{"
                                         "'128':'Check PCB',"
                                         "'253':'General Fault',"
                                         "'254':'Unknown',"
-                                        "'255':'Off'} %%}"
+                                        "'255':'off'} %%}"
                      "{{ values[value] if value in values.keys() else 'off' }}\","
     "\"icon\": \"mdi:card-text\""
 "}";
@@ -553,7 +565,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   }
 
   // Misc stuff
-  sprintf(msg, HASSIO_ONOFF_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC,"Service Mode",_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC, "mdi:account-wrench");
+  sprintf(msg, HASSIO_SERVICE_MODE_ENUM_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC,"Service Mode",_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC, "mdi:account-wrench");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, SERVICE_MODE_TOPIC);
   send_mqtt(nc, topic, msg);
 
