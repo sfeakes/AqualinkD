@@ -50,6 +50,8 @@ const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'heat'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
     "\"temperature_state_topic\": \"%s/%s/setpoint\","
+    "\"action_template\": \"{%% set values = { '0':'off', '1':'heating'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
+    "\"action_topic\": \"%s/%s\","
     /*"\"temperature_state_template\": \"{{ value_json }}\","*/
     "%s,"
     "\"qos\": 1,"
@@ -74,6 +76,8 @@ const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'auto'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
     "\"temperature_state_topic\": \"%s/%s/setpoint\","
+    "\"action_template\": \"{%% set values = { '0':'off', '1':'cooling'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
+    "\"action_topic\": \"%s/%s\","
     /*"\"temperature_state_template\": \"{{ value_json }}\""*/
      "%s"
 "}";
@@ -290,58 +294,6 @@ const char *HASSIO_SWG_TEXT_SENSOR_DISCOVER = "{"
     "\"icon\": \"mdi:card-text\""
 "}";
 
-/*
-char *HASSIO_TEXT_DISCOVER = "{"
-   "\"device\": {" HASS_DEVICE "},"
-   "\"type\": \"text\","
-   "\"unique_id\": \"aqualinkd_%s\","
-   "\"name\": \"%s\","
-   "\"command_topic\": \"junk/null\","
-   "\"state_topic\": \"%s/%s\""
-"}";
-*/
-/*
-char *HASSIO_SERVICE_MODE_DISCOVER = "{"
-  "\"type\": \"sensor\","
-  "\"unique_id\": \"aqualinkd_Service_Mode\","
-  "\"name\": \"Service Mode\","
-  "\"state_topic\": \"aqualinkd/Service_Mode\","
-  "\"value_template\": \"{% set values = { '0':'off', '1':'on'} %}{{ values[value] if value in values.keys() else 'off' }}\","
-  "\"icon\": \"mdi:account-wrench\""
-"}";
-*/
-
-/*
-Others to add
-
-{
-    "type": "text",
-    "unique_id": "display",
-    "name": "AqualinkD Display Message",
-    "command_topic": "junk/null",
-    "state_topic": "aqualinkd/Display_Message"
-}
-
-{
-  "type": "sensor",
-  "unique_id": "Service_Mode",
-  "name": "Service Mode",
-  "state_topic": "aqualinkd/Service_Mode",
-  "value_template": "{% set values = { '0':'off', '1':'on'} %}{{ values[value] if value in values.keys() else 'off' }}",
-  "icon": "mdi:account-wrench"
-}
-
-mdi:pump
-
-mdi:water-outline // orph, ph, ppm, swg
-
-mdi:water-thermometer // water
-mdi:thermometer // air
-
-mdi:account-wrench // server
-*/
-
-
 void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connection *nc)
 {
   if (_aqconfig_.mqtt_hass_discover_topic == NULL)
@@ -370,6 +322,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
         sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg);     
@@ -397,6 +350,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT_ENABELED,
+            _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));

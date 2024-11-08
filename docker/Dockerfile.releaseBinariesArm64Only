@@ -1,0 +1,63 @@
+
+#####################################
+#
+# Build container to compile AqualnkD Release binaries (armhf and arm64)
+#
+# armhf is 32 bit armv6l (armhf) stretch and newer - work on all Pi's running 32bit (Pi1 to Pi4)
+# arm64 is 64 bit aarch64 buster and newer - work on Pi3/Pi4/2w running 64bit os
+#
+# docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make arm64
+#
+#  clean method
+#  docker system prune
+#
+# armhf = 
+#    COLLECT_GCC=arm-linux-gnueabihf-gcc
+#    COLLECT_LTO_WRAPPER=/opt/cross-pi-gcc/libexec/gcc/arm-linux-gnueabihf/6.3.0/lto-wrapper
+#    Target: arm-linux-gnueabihf
+#    Configured with: ../gcc-6.3.0/configure --prefix=/opt/cross-pi-gcc --target=arm-linux-gnueabihf --enable-languages=c,c++,fortran --with-arch=armv6 --with-fpu=vfp --with-float=hard --disable-multilib --enable-linker-build-id
+#    Thread model: posix
+#    gcc version 6.3.0 (GCC)
+#    GLIBC version 2.24
+#
+# arm64 =
+#    COLLECT_GCC=aarch64-linux-gnu-gcc
+#    COLLECT_LTO_WRAPPER=/usr/lib/gcc-cross/aarch64-linux-gnu/8/lto-wrapper
+#    Target: aarch64-linux-gnu
+#    Configured with: ../src/configure -v --with-pkgversion='Debian 8.3.0-2' --with-bugurl=file:///usr/share/doc/gcc-8/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++ --prefix=/usr --with-gcc-major-version-only --program-suffix=-8 --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --with-sysroot=/ --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-libquadmath --disable-libquadmath-support --enable-plugin --enable-default-pie --with-system-zlib --disable-libphobos --enable-multiarch --enable-fix-cortex-a53-843419 --disable-werror --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=aarch64-linux-gnu --program-prefix=aarch64-linux-gnu- --includedir=/usr/aarch64-linux-gnu/include
+#    Thread model: posix
+#    gcc version 8.3.0 (Debian 8.3.0-2)   
+#    GLIBC 2.28-10+deb10u3
+#####################################
+
+FROM debian:buster
+
+# ############
+# Get arm64 build environment.
+#
+
+RUN apt-get update && \
+    apt-get install -y \
+    build-essential \
+    gcc-aarch64-linux-gnu \
+    binutils-arm-linux-gnueabi \
+    file
+
+RUN dpkg --add-architecture arm64
+RUN apt-get update && \
+    apt-get install -y libsystemd-dev:arm64
+
+RUN mkdir /build
+WORKDIR /build
+
+# Add a user called `build` uid 1001 & gid 10000
+# You chould change RB_UID & RB_GID to what works on your build setup
+ENV RB_USER=build
+ENV RB_UID=1001
+ENV RB_GID=1000
+RUN groupadd -g $RB_GID $RB_USER  2> /dev/null; exit 0
+RUN useradd $RB_USER -u $RB_UID -g $RB_GID -m -s /bin/bash
+RUN echo "$RB_USER   ALL=(ALL:ALL) ALL" >> /etc/sudoers
+
+USER $RB_USER
