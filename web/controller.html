@@ -1708,7 +1708,7 @@
               var x;
               for (x = 0; x < radio.length; x++) {
                  if (radio[x].checked == true) {
-                   console.log("Light Current= "+(getTileSPvalue(id)+1)+" - "+getTileOnText(id)+"  Selected="+radio[x].value+" - "+document.getElementById('pswitch_option_switch_text_value').innerHTML);
+                   //console.log("Light Current= "+(getTileSPvalue(id)+1)+" - "+getTileOnText(id)+"  Selected="+radio[x].value+" - "+document.getElementById('pswitch_option_switch_text_value').innerHTML);
                    if (getTileSPvalue(id)+1 != radio[x].value) {
                      send_light_mode(radio[x].value, id, document.getElementById('pswitch_option_switch_text_value').innerHTML);
                    }
@@ -2275,12 +2275,16 @@
           var light_mode = -1;
           // If aqualinkd programmed light, need to convert int to text index, if not value is text
           try {
-            var light_type = document.getElementById(obj.toString()).getAttribute('lighttype');
+            var light_type = document.getElementById(obj.toString()).getAttribute('lighttype'); 
             if (light_type == "0") {
               light_mode = parseInt(data.light_program_names[obj])-1;
-              var light_mode_name = _light_program[light_type][light_mode];
-              if (light_mode_name.endsWith(" - Show")) {
-                light_mode_name = light_mode_name.slice(0, -7);
+              // For backward compatibility we could get a name here or number (number is is lights modes are in config.js vs aqualinkd.conf)
+              //console.log("Light "+light_mode);
+              if (! isNaN(light_mode)) {
+                light_mode_name = _light_program[light_type][light_mode];
+                if (light_mode_name.endsWith(" - Show")) {
+                  light_mode_name = light_mode_name.slice(0, -7);
+                }
               }
             } else if (/*light_type == 10 ||*/ light_type == 11) {
               // Fo Dimmer Lights.
@@ -2291,7 +2295,8 @@
             }
           } catch (e) { /*console.log(e);*/ }
 
-          setTileOnText(obj.toString(),light_mode_name);
+          if (light_mode_name != "-999%" && light_mode_name != "Off")
+            setTileOnText(obj.toString(),light_mode_name);
           
           try {
             document.getElementById(obj.toString()).setAttribute('spvalue', light_mode);

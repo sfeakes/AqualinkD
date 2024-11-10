@@ -8,6 +8,7 @@
 #include "rs_msg_utils.h"
 #include "devices_jandy.h"
 #include "allbutton_aq_programmer.h"
+#include "color_lights.h"
 
 /* Below can also be called from serialadapter.c */
 void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from)
@@ -65,6 +66,17 @@ void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmas
     if ( aq_data->lights[i].RSSDstate == ON && aq_data->lights[i].button->led->state != ON ) {
       aq_data->lights[i].button->led->state = aq_data->lights[i].RSSDstate;
       //LOG(from,LOG_WARNING,"Fix Jandy bug, color light '%s' is on, setting status to match!\n", aq_data->lights[i].button->label);
+    }
+    
+    // Below is for aqualinkd programmable light, set color mode to last if something else turns it on or off.
+    if (aq_data->lights[i].lightType == LC_PROGRAMABLE && ! in_light_programming_mode(aq_data)) {
+      if (aq_data->lights[i].button->led->state == OFF && aq_data->lights[i].currentValue != 0) {
+        set_currentlight_value(&aq_data->lights[i], 0);
+        //LOG(ALLB_LOG,LOG_NOTICE,"****** SET LIGHT MODE 0 ******\n");
+      } else if (aq_data->lights[i].button->led->state == ON && aq_data->lights[i].currentValue == 0 && aq_data->lights[i].lastValue != 0) {
+        set_currentlight_value(&aq_data->lights[i], aq_data->lights[i].lastValue);
+        //LOG(ALLB_LOG,LOG_NOTICE,"****** SET LIGHT MODE %d ******\n",aq_data->lights[i].lastValue);
+      }
     }
   }
 #endif

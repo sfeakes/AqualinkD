@@ -10,6 +10,7 @@
 #include "aq_mqtt.h"
 #include "rs_msg_utils.h"
 #include "config.h"
+#include "color_lights.h"
 #include "version.h"
 
 
@@ -50,9 +51,7 @@ const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
     "\"temperature_state_topic\": \"%s/%s/setpoint\","
     /*"\"temperature_state_template\": \"{{ value_json }}\","*/
-    "%s,"
-    "\"qos\": 1,"
-    "\"retain\": false"
+    "%s"
 "}";
 
 const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
@@ -126,9 +125,7 @@ const char *HASSIO_VSP_DISCOVER = "{"
     //"\"percentage_value_template\": \"{%% if value | float(0) > %d %%} {{ (((value | float(0) - %d) / %d) * 100) | int }}{%% else %%} 1{%% endif %%}\"," // min,min,(max-min)
     //"\"percentage_command_template\": \"{{ ((value | float(0) / 100) * %d) + %d | int }}\","   // (3450-130), 600
     "\"speed_range_max\": 100,"
-    "\"speed_range_min\": 1," //  18|12  600rpm|15gpm
-    "\"qos\": 1,"
-    "\"retain\": false"
+    "\"speed_range_min\": 1" //  18|12  600rpm|15gpm
 "}";
 
 
@@ -146,9 +143,21 @@ const char *HASSIO_DIMMER_DISCOVER = "{"
     "\"payload_off\": \"0\","
     "\"brightness_command_topic\": \"%s/%s%s/set\","     // aqualinkd,Aux_5,/brightness
     "\"brightness_state_topic\":  \"%s/%s%s\","       // aqualinkd/Aux_5,/brightness
-    "\"brightness_scale\": 100,"
-    "\"qos\": 1,"
-    "\"retain\": false"
+    "\"brightness_scale\": 100"
+"}";
+
+const char *HASSIO_SELECTOR_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"select\","
+    "\"unique_id\": \"aqualinkd_%s_selector\","    // Aux_5
+    "\"name\": \"%s program\","                             // light name
+    "\"state_topic\": \"%s/%s/program/name\","      // aqualinkd,Aux_5
+    "\"state_template\": \"{{ this.attributes.options(value) }}\","
+    "\"command_topic\": \"%s/%s/program/set\","     // aqualinkd,Aux_5
+    "\"options\": [ %s ],"                          // "Off", "Voodoo Lounge", "Deep Blue Sea"
+    "\"command_template\": \"{{ this.attributes.options.index(value) }}\","
+    "\"icon\": \"%s\""
 "}";
 
 // Need to add timer attributes to the switches, once figure out how to use in homeassistant
@@ -167,8 +176,7 @@ const char *HASSIO_SWITCH_DISCOVER = "{"
     "\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\","
     "\"payload_on\": \"1\","
     "\"payload_off\": \"0\","
-    "\"qos\": 1,"
-    "\"retain\": false"
+    "\"icon\": \"%s\""
 "}";
 
 const char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
@@ -176,7 +184,7 @@ const char *HASSIO_TEMP_SENSOR_DISCOVER = "{"
     "\"availability\": {" HASS_AVAILABILITY "},"
     "\"type\": \"sensor\","
     "\"state_class\": \"measurement\","
-    "\"unique_id\": \"aqualinkd_%s\","
+    "\"unique_id\": \"aqualinkd_%s_temp\","
     "\"name\": \"%s Temp\","
     "\"state_topic\": \"%s/%s\","
     "\"value_template\": \"{{ value_json }}\","
@@ -404,6 +412,36 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
                  _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,LIGHT_DIMMER_VALUE_TOPIC);
         sprintf(topic, "%s/light/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg); 
+      } else if ( isPLIGHT(aqdata->aqbuttons[i].special_mask) ) {
+        // Color Lights & Dimmer as selector switch
+        // Build the 
+        
+        char buf[512];
+        build_color_light_jsonarray(((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType, buf, 512  );
+        sprintf(msg,HASSIO_SELECTOR_DISCOVER,
+                 _aqconfig_.mqtt_aq_topic,
+                 aqdata->aqbuttons[i].name, 
+                 aqdata->aqbuttons[i].label,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+                 _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+                 buf,
+                 "mdi:lightbulb");
+        sprintf(topic, "%s/select/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
+        send_mqtt(nc, topic, msg);
+        
+         // Duplicate normal switch as we want a duplicate
+        sprintf(msg, HASSIO_SWITCH_DISCOVER,
+             _aqconfig_.mqtt_aq_topic,
+             aqdata->aqbuttons[i].name, 
+             aqdata->aqbuttons[i].label, 
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             "mdi:lightbulb");
+        sprintf(topic, "%s/switch/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
+        send_mqtt(nc, topic, msg);
+       
       } else {
       // Switches
       //sprintf(msg,"{\"type\": \"switch\",\"unique_id\": \"%s\",\"name\": \"%s\",\"state_topic\": \"aqualinkd/%s\",\"command_topic\": \"aqualinkd/%s/set\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\",\"payload_on\": \"1\",\"payload_off\": \"0\",\"qos\": 1,\"retain\": false}" ,
@@ -414,7 +452,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
-             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name);
+             _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
+             "mdi:toggle-switch-variant");
         sprintf(topic, "%s/switch/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg);
       }
@@ -458,7 +497,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,SWG_BOOST_TOPIC,
              _aqconfig_.mqtt_aq_topic,SWG_BOOST_TOPIC,
              _aqconfig_.mqtt_aq_topic,SWG_BOOST_TOPIC,
-             _aqconfig_.mqtt_aq_topic,SWG_BOOST_TOPIC);
+             _aqconfig_.mqtt_aq_topic,SWG_BOOST_TOPIC,
+             "mdi:toggle-switch-variant");
     sprintf(topic, "%s/switch/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
 

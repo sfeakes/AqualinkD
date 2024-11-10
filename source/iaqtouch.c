@@ -555,7 +555,7 @@ pump_detail *matchPump(const logmask_t from, struct aqualinkdata *aq_data, char 
   {
     if (pump == NULL)
     {
-      LOG(from, LOG_WARNING, "Got pump message '%s' but can't find pump # %d, please update aqualinkd.conf\n", name, pi);
+      LOG(from, LOG_INFO, "Got pump message '%s' but can't find pump # %d, please update aqualinkd.conf\n", name, pi);
     }
     else if (pump->pumpType == PT_UNKNOWN)
     {
@@ -627,7 +627,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         pump->pStatus = PS_OK;
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"GPM:") == 0) {
       if (pump != NULL) {
@@ -635,7 +635,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         pump->pStatus = PS_OK;
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"Watts:") == 0) {
       if (pump != NULL) {
@@ -643,7 +643,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         //pump->ppStatus = DON"T SET, WE GET WATTS IN PRIMING
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"*** Priming ***") == 0) {
       pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
@@ -653,7 +653,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         pump->pStatus = PS_PRIMING;
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Offline)") == 0) {
       pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
@@ -663,7 +663,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         pump->pStatus = PS_OFFLINE;
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
     } else if (rsm_strcmp(_deviceStatus[i],"(Priming Error)") == 0) {
       pump = matchPump(IAQT_LOG, aq_data, _deviceStatus[i-1], &pi);
@@ -673,7 +673,7 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         pump->pStatus = PS_ERROR;
         aq_data->updated = true;
       } else
-        LOG(IAQT_LOG,LOG_WARNING, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
+        LOG(IAQT_LOG,LOG_INFO, "Got pump message '%s' but can't find pump\n",_deviceStatus[i]);
       continue;
       // Need to catch messages like 
       // *** Priming ***

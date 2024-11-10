@@ -803,7 +803,7 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
     {
       // Check for panel programmable light. if so simple ON isn't going to work well
       // Could also add "light mode" check, as this is only valid for panel configured light not aqualinkd configured light.
-      if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT && button->led->state == OFF) {
+      if (isPLIGHT(button->special_mask) && button->led->state == OFF) {
         // OK Programable light, and no light mode selected. Now let's work out best way to turn it on. serial_adapter protocol will to it without questions,
         // all other will require programmig.
         if (isRSSA_ENABLED) {
@@ -812,9 +812,14 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
           //set_light_mode("0", deviceIndex); // 0 means use current light mode
           programDeviceLightMode(aqdata, 0, deviceIndex); // 0 means use current light mode
         }
+
+        // If aqualinkd programmable light, it will come on at last state, so set that.
+        if ( /*isPLIGHT(button->special_mask) &&*/ ((clight_detail *)button->special_mask_ptr)->lightType == LC_PROGRAMABLE ) {
+          ((clight_detail *)button->special_mask_ptr)->currentValue = ((clight_detail *)button->special_mask_ptr)->lastValue;
+        }
       } else if (isVBUTTON(button->special_mask)) {
         // Virtual buttons only supported with Aqualink Touch
-        LOG(PANL_LOG, LOG_INFO, "Set state for Vitrual Button %s code=0x%02hhx iAqualink2 enabled=%sn",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
+        LOG(PANL_LOG, LOG_INFO, "Set state for Virtual Button %s code=0x%02hhx iAqualink2 enabled=%s\n",button->name, button->rssd_code, isIAQT_ENABLED?"Yes":"No");
         if (isIAQT_ENABLED) {
           // If it's one of the pre-defined onces & iaqualink is enabled, we can set it easile with button.
           
@@ -845,7 +850,7 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
       //} else if ( source == NET_TIMER && isRSSA_ENABLED ) {
         // Timer will sometimes send duplicate, so use RSSA since that protocol has on/off rather than toggle
       //  set_aqualink_rssadapter_aux_state(button, isON);
-      } else if (button->special_mask & PROGRAM_LIGHT && isRSSA_ENABLED) {
+      } else if (isPLIGHT(button->special_mask) && isRSSA_ENABLED) {
         // If off and program light, use the RS serial adapter since that is overiding the state now.
         set_aqualink_rssadapter_aux_state(button, isON);
       } else {
@@ -854,8 +859,16 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
         aq_send_allb_cmd(button->code);
       }
 
+
+      // If we turned off a aqualinkd programmable light, set the mode to 0
+      if (isPLIGHT(button->special_mask) && ! isON && ((clight_detail *)button->special_mask_ptr)->lightType ==  LC_PROGRAMABLE ) {
+        updateButtonLightProgram(aqdata, 0, deviceIndex);
+      }
+
 #ifdef CLIGHT_PANEL_FIX 
-      if (isRSSA_ENABLED) {get_aqualink_rssadapter_colorlight_statuses(aqdata);}
+      if (isPLIGHT(button->special_mask) && isRSSA_ENABLED) {
+        get_aqualink_rssadapter_button_status(button);
+      }
 #endif
 
 // Pre set device to state, next status will correct if state didn't take, but this will stop multiple ON messages setting on/off
@@ -1125,7 +1138,9 @@ void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button
     return;
   }
 
-   light->currentValue = value;
+  light->currentValue = value;
+  if (value > 0)
+    light->lastValue = value;
 }
 
 clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button) 

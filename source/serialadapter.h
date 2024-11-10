@@ -23,6 +23,7 @@ void increase_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *
 
 #ifdef CLIGHT_PANEL_FIX 
   void get_aqualink_rssadapter_colorlight_statuses(struct aqualinkdata *aqdata);
+  void get_aqualink_rssadapter_button_status(aqkey *button);
 #endif
 
 /*

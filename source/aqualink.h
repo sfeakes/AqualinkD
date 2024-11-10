@@ -237,6 +237,7 @@ typedef struct clightd
   clight_type lightType;
   aqkey *button;
   int currentValue;
+  int lastValue;         // Used for AqualinkD self programming
   aqledstate RSSDstate;  // state from rs serial adapter
 } clight_detail;
 

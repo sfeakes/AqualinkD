@@ -136,14 +136,17 @@ NEED TO FIX FOR THIS RELEASE.
 * PDA panel Rev 6.0 of newer WITH a Jandy iAqualink device attached can use `read_RS485_iAqualink = yes` to speed up device state change detection.
 * Added MQTT vsp_pump/speed/set for setting speed (RPM/GPM) by %, for automation hubs.
 * Added full dimmer range support for dimmable lights (not limited to 0,25,50,75,100 anymore)
-* Added vsp and dimmer to hassio and homebridge-aqualinkd plugin as full range dimmer controls.
+* Added vsp and dimmer to Hassio and homebridge-aqualinkd plugin as full range dimmer controls.
+* Added color lights & dimmer to Hassio as selectors.
 * Updated UI for support fullrange dimmer.
 * cleaned up code for spa_mode and spa for newer pannels.
 * Allow VSP to be asigned to virtual button.
 * Fixed bug with timer not starting.
 * Increase Speed of detecting device state changes.
 * Added iAqualink2 protocol support.
-* Faster OneTouch device support
+* Chaged color light logic.
+* Faster OneTouch device support.
+
 
 # Updates in Release 2.4.0
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)

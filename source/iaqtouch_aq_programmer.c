@@ -560,7 +560,8 @@ void *set_aqualink_iaqtouch_device_on_off( void *ptr )
   return ptr;
 }
 
-
+/*
+ // Not complete, and not needed with 
 void *set_aqualink_iaqtouch_onetouch_on_off( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -590,6 +591,7 @@ void *set_aqualink_iaqtouch_onetouch_on_off( void *ptr )
 
   return ptr;
 }
+*/
 
 
 

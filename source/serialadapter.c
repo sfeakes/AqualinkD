@@ -11,7 +11,7 @@
 #include "color_lights.h"
 #include "allbutton.h"
 
-#define RSSA_QLEN 20
+#define RSSA_QLEN 40
 
 unsigned char _rssa_queue[RSSA_QLEN][4];
 int _rssa_q_length = 0;
@@ -43,7 +43,6 @@ void processRSSALEDstate(struct aqualinkdata *aq_data, unsigned char *packet)
 
 
 bool push_rssa_cmd(unsigned char *cmd) {
-
   if (_rssa_q_length >= RSSA_QLEN ) {
     LOG(RSSA_LOG,LOG_ERR, "Queue overflow, last command ignored!\n");
     return false;
@@ -219,8 +218,13 @@ void set_aqualink_rssadapter_spa_setpoint(char *args, struct aqualinkdata *aqdat
 }
 
 
-#ifdef CLIGHT_PANEL_FIX 
+#ifdef CLIGHT_PANEL_FIX
 /* This is to overcome Jandy bug where panel doesn;t show the state of color light */
+void get_aqualink_rssadapter_button_status(aqkey *button)
+{
+  if (button->rssd_code != NUL)
+    rssadapter_device_state(button->rssd_code, 0x00);
+}
 void get_aqualink_rssadapter_colorlight_statuses(struct aqualinkdata *aq_data)
 {
   for (int i=0; i < aq_data->num_lights; i++) {

@@ -56,6 +56,7 @@
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0
+      // As version 2.5.0 Please use aqualinkd.conf for this configuration.
       var light_program = [
         "Voodoo Lounge - Show",
         "Blue Sea",

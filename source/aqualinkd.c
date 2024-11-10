@@ -931,7 +931,8 @@ void main_loop()
   }
 
   for (i=0; i < MAX_LIGHTS; i++) {
-     _aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
+     //_aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
+     _aqualink_data.lights[i].currentValue = 0;
      _aqualink_data.lights[i].RSSDstate = OFF;
   }
 

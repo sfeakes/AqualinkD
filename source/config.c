@@ -41,6 +41,7 @@
 #include "aq_panel.h"
 #include "aqualink.h"
 #include "iaqualink.h"
+#include "color_lights.h"
 
 #define MAXCFGLINE 256
 
@@ -673,9 +674,22 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "device_pre_state", 16) == 0) {
     _aqconfig_.device_pre_state = text2bool(value);
     rtn=true;
-  }
-
-  else if (strncasecmp(param, "button_", 7) == 0) {
+  } else if (strncasecmp(param, "light_program_", 14) == 0) {
+    int num = strtoul(param + 14, NULL, 10);
+    if ( num >= LIGHT_COLOR_OPTIONS ) {
+      LOG(AQUA_LOG,LOG_ERR, "Config error, light_program_%d is out of range\n",num);
+    }
+    char *name = cleanalloc(value);
+    int len = strlen(name);
+    if ( strncmp(name+len-7, " - Show", 7) == 0 ) {
+      name[len-7] = '\0';
+      //printf("Value '%s' index %d is show\n",name,num);
+      set_aqualinkd_light_mode_name(name,num,true);
+    } else {
+      set_aqualinkd_light_mode_name(name,num,false);
+    }
+    rtn=true;
+  } else if (strncasecmp(param, "button_", 7) == 0) {
     // Check we have inichalized panel information, if not use any settings we may have
     if (_aqconfig_.paneltype_mask == 0)
       setPanel(aqdata, _tmpPanel->rs, _tmpPanel->size, _tmpPanel->combo, _tmpPanel->dual);
@@ -781,8 +795,8 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
             vbutton->rssd_code = IAQ_ONETOUCH_5;
           break;
           case 6:
-            vbutton->code = IAQ_ONETOUCH_5;
-            vbutton->rssd_code = IAQ_ONETOUCH_5;
+            vbutton->code = IAQ_ONETOUCH_6;
+            vbutton->rssd_code = IAQ_ONETOUCH_6;
           break;
           default:
             vbutton->code = NUL;

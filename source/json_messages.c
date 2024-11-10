@@ -278,7 +278,8 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
           length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%s\" ",
                                   aqdata->lights[i].lightType,
                                   aqdata->lights[i].currentValue,
-                                  light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, ALLBUTTON));
+                                  get_currentlight_mode_name(aqdata->lights[i], ALLBUTTON));
+                                  //light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, ALLBUTTON));
         }
         return buffer;
       }
@@ -733,7 +734,8 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     if (aqdata->lights[i].lightType == LC_DIMMER2) {
       length += sprintf(buffer+length, "\"%s\": \"%d%%\",", aqdata->lights[i].button->name, aqdata->lights[i].currentValue );
     } else {
-      length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, RSSADAPTER) );
+      //length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, RSSADAPTER) );
+      length += sprintf(buffer+length, "\"%s\": \"%s\",", aqdata->lights[i].button->name, get_currentlight_mode_name(aqdata->lights[i], RSSADAPTER) );
     }
   }
   if (buffer[length-1] == ',')

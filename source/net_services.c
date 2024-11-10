@@ -950,6 +950,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 
   // Loop over programmable lights
   for (i=0; i < _aqualink_data->num_lights; i++) {
+    //LOG(NET_LOG,LOG_NOTICE, "Light %10s | %d | lmode=%.2d cmode=%.2d | name=%s\n",_aqualink_data->lights[i].button->label,_aqualink_data->lights[i].button->led->state,_aqualink_data->lights[i].lastValue,_aqualink_data->lights[i].currentValue,get_currentlight_mode_name(_aqualink_data->lights[i], RSSADAPTER));
     char topic[50];
     if ( _aqualink_data->lights[i].currentValue != TEMP_UNKNOWN && _aqualink_data->lights[i].currentValue != _last_mqtt_aqualinkdata.lights[i].currentValue ) {
       _last_mqtt_aqualinkdata.lights[i].currentValue = _aqualink_data->lights[i].currentValue;
@@ -961,7 +962,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
         sprintf(message, "%d%%", _aqualink_data->lights[i].currentValue);
         send_mqtt_string_msg(nc, topic, message);
       } else {
-        send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue, ALLBUTTON));
+        //send_mqtt_string_msg(nc, topic, light_mode_name(_aqualink_data->lights[i].lightType, _aqualink_data->lights[i].currentValue, RSSADAPTER));
+        send_mqtt_string_msg(nc, topic, get_currentlight_mode_name(_aqualink_data->lights[i], RSSADAPTER));
       }
       /* 
       if (_aqualink_data->lights[i].lightType == LC_DIMMER) {

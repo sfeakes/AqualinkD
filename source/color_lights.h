@@ -27,10 +27,14 @@ typedef enum clight_type {
 } clight_type;
 */
 //const char *light_mode_name(clight_type type, int index);
+const char *get_currentlight_mode_name(clight_detail light, emulation_type protocol);
 const char *light_mode_name(clight_type type, int index, emulation_type protocol);
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
+int build_color_light_jsonarray(int index, char* buffer, int size);
+
 void set_currentlight_value(clight_detail *light, int index);
 
+bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow);
 
 //char *_color_light_options_[LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS][LIGHT_COLOR_NAME];
 
