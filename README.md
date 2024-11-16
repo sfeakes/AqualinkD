@@ -128,7 +128,7 @@ NEED TO FIX FOR THIS RELEASE.
 * check rs serial adapter is active if light color mode 11 is used.
 -->
 
-# Updates in 2.5.0 (under development)
+# Updates in 2.5.0
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
