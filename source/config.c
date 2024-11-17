@@ -235,6 +235,11 @@ bool mac(char *buf, int len, bool useDelimiter)
           continue;
         }
 
+        if ((ioctl(fd, SIOCGIFFLAGS, &s) < 0) || !(s.ifr_flags & IFF_RUNNING))
+        {
+          continue;
+        } 
+
         int i;
         int step=2;
         if (useDelimiter) {step=3;}
