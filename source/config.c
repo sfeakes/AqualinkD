@@ -105,6 +105,7 @@ void init_parameters (struct aqconfig * parms)
   parms->mqtt_server = DEFAULT_MQTT_SERVER;
   parms->mqtt_user = DEFAULT_MQTT_USER;
   parms->mqtt_passwd = DEFAULT_MQTT_PASSWD;
+  parms->mqtt_hass_discover_use_mac = false;
 
   parms->dzidx_air_temp = TEMP_UNKNOWN;
   parms->dzidx_pool_water_temp = TEMP_UNKNOWN;
@@ -211,7 +212,7 @@ char *cleanallocindex(char*str, int index)
 }
 */
 // Find the first network interface with valid MAC and put mac address into buffer upto length
-bool mac(char *buf, int len)
+bool mac(char *buf, int len, bool useDelimiter)
 {
   struct ifreq s;
   int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -225,7 +226,6 @@ bool mac(char *buf, int len)
       strcpy(s.ifr_name, intf->if_name);
       if (0 == ioctl(fd, SIOCGIFHWADDR, &s))
       {
-        int i;
         if ( s.ifr_addr.sa_data[0] == 0 &&
              s.ifr_addr.sa_data[1] == 0 &&
              s.ifr_addr.sa_data[2] == 0 &&
@@ -234,10 +234,19 @@ bool mac(char *buf, int len)
              s.ifr_addr.sa_data[5] == 0 ) {
           continue;
         }
-        for (i = 0; i < 6 && i * 2 < len; ++i)
+
+        int i;
+        int step=2;
+        if (useDelimiter) {step=3;}
+        
+        for (i = 0; i < 6 && i * step < len; ++i)
         {
-          sprintf(&buf[i * 2], "%02x", (unsigned char)s.ifr_addr.sa_data[i]);
+          sprintf(&buf[i * step], "%02x", (unsigned char)s.ifr_addr.sa_data[i]);
+          if (useDelimiter && i<5) {
+            buf[i * step + 2] = ':';
+          }
         }
+
         return true;
       }
     }
@@ -257,7 +266,7 @@ char *generate_mqtt_id(char *buf, int len) {
   if (i < len) {
     buf[i++] = '_';
     // If we can't get MAC to pad mqtt id then use PID
-    if (!mac(&buf[i], len - i)) {
+    if (!mac(&buf[i], len - i, false)) {
       sprintf(&buf[i], "%.*d", (len-i), getpid());
     }
   }
@@ -484,6 +493,9 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     rtn=true;
   } else if (strncasecmp(param, "mqtt_passwd", 11) == 0) {
     _aqconfig_.mqtt_passwd = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, "mqtt_hass_discover_use_mac", 26) == 0) {
+    _aqconfig_.mqtt_hass_discover_use_mac = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "air_temp_dzidx", 14) == 0) {
     _aqconfig_.dzidx_air_temp = strtoul(value, NULL, 10);

@@ -63,6 +63,7 @@ struct aqconfig
   char *mqtt_server;
   char *mqtt_user;
   char *mqtt_passwd;
+  bool mqtt_hass_discover_use_mac;
   char mqtt_ID[MQTT_ID_LEN+1];
   int dzidx_air_temp;
   int dzidx_pool_water_temp;
@@ -151,7 +152,7 @@ void init_config();
 
 bool writeCfg (struct aqualinkdata *aqdata);
 bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value);
-
+bool mac(char *buf, int len, bool useDelimiter);
 char *cleanalloc(char*str);
 
 #endif

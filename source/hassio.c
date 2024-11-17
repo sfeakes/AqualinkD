@@ -23,6 +23,7 @@ void send_mqtt(struct mg_connection *nc, const char *toppic, const char *message
                         " \"model\": \"" AQUALINKD_NAME "\"," \
                         " \"name\": \"AqualinkD\"," \
                         " \"manufacturer\": \"" AQUALINKD_SHORT_NAME "\"," \
+                        "%s" \
                         " \"suggested_area\": \"pool\""
 
 #define HASS_AVAILABILITY "\"payload_available\" : \"1\"," \
@@ -354,6 +355,15 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   char msg[JSON_STATUS_SIZE];
   char topic[250];
   char idbuf[128];
+  char connections[128];
+
+  if (_aqconfig_.mqtt_hass_discover_use_mac) {
+    char macaddress[20];
+    mac(macaddress, 20, true);
+    sprintf(connections, "\"connections\": [[\"mac\", \"%s\"]],", macaddress);
+  } else {
+    connections[0] = '\0';
+  }
 
   LOG(NET_LOG,LOG_INFO, "MQTT: Publishing discover messages to '%s'\n", _aqconfig_.mqtt_hass_discover_topic);
 
@@ -364,6 +374,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
       if ( (strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (_aqconfig_.force_ps_setpoints || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) ||
            (strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (_aqconfig_.force_ps_setpoints || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) ) {
         sprintf(msg,HASSIO_CLIMATE_DISCOVER,
+             connections,
              _aqconfig_.mqtt_aq_topic,
              aqdata->aqbuttons[i].name, 
              aqdata->aqbuttons[i].label,
@@ -380,6 +391,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
       } else if ( isPLIGHT(aqdata->aqbuttons[i].special_mask) && ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType == LC_DIMMER2 ) {
         // Dimmer
         sprintf(msg,HASSIO_DIMMER_DISCOVER,
+                connections,
                  _aqconfig_.mqtt_aq_topic,
                  aqdata->aqbuttons[i].name, 
                  aqdata->aqbuttons[i].label,
@@ -397,6 +409,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
         char buf[512];
         build_color_light_jsonarray(((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType, buf, 512  );
         sprintf(msg,HASSIO_SELECTOR_DISCOVER,
+                 connections,
                  _aqconfig_.mqtt_aq_topic,
                  aqdata->aqbuttons[i].name, 
                  aqdata->aqbuttons[i].label,
@@ -409,6 +422,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
         
          // Duplicate normal switch as we want a duplicate
         sprintf(msg, HASSIO_SWITCH_DISCOVER,
+             connections,
              _aqconfig_.mqtt_aq_topic,
              aqdata->aqbuttons[i].name, 
              aqdata->aqbuttons[i].label, 
@@ -424,6 +438,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
       // Switches
       //sprintf(msg,"{\"type\": \"switch\",\"unique_id\": \"%s\",\"name\": \"%s\",\"state_topic\": \"aqualinkd/%s\",\"command_topic\": \"aqualinkd/%s/set\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_topic\": \"aqualinkd/%s/delay\",\"json_attributes_template\": \"{{ {'delay': value|int} | tojson }}\",\"payload_on\": \"1\",\"payload_off\": \"0\",\"qos\": 1,\"retain\": false}" ,
         sprintf(msg, HASSIO_SWITCH_DISCOVER,
+             connections,
              _aqconfig_.mqtt_aq_topic,
              aqdata->aqbuttons[i].name, 
              aqdata->aqbuttons[i].label, 
@@ -441,6 +456,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   // Freezeprotect
   if ( _aqconfig_.force_frzprotect_setpoints || (aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) ) {
     sprintf(msg, HASSIO_FREEZE_PROTECT_DISCOVER,
+            connections,
             _aqconfig_.mqtt_aq_topic,
             FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,
@@ -457,6 +473,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
 
     sprintf(msg, HASSIO_SWG_DISCOVER,
+            connections,
             _aqconfig_.mqtt_aq_topic,
             SWG_TOPIC,
             _aqconfig_.mqtt_aq_topic,SWG_TOPIC,
@@ -470,6 +487,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
 
     rsm_char_replace(idbuf, SWG_BOOST_TOPIC, "/", "_");
     sprintf(msg, HASSIO_SWITCH_DISCOVER,
+             connections,
              _aqconfig_.mqtt_aq_topic,
              idbuf, 
              "SWG Boost", 
@@ -482,31 +500,31 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     send_mqtt(nc, topic, msg);
 
     rsm_char_replace(idbuf, SWG_PERCENT_TOPIC, "/", "_");
-    sprintf(msg, HASSIO_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"SWG Percent",_aqconfig_.mqtt_aq_topic,SWG_PERCENT_TOPIC, "%", "mdi:water-outline");
+    sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"SWG Percent",_aqconfig_.mqtt_aq_topic,SWG_PERCENT_TOPIC, "%", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
 
     rsm_char_replace(idbuf, SWG_PPM_TOPIC, "/", "_");
-    sprintf(msg, HASSIO_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"SWG PPM",_aqconfig_.mqtt_aq_topic,SWG_PPM_TOPIC, "ppm", "mdi:water-outline");
+    sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"SWG PPM",_aqconfig_.mqtt_aq_topic,SWG_PPM_TOPIC, "ppm", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
 
     rsm_char_replace(idbuf, SWG_EXTENDED_TOPIC, "/", "_"); 
-    sprintf(msg, HASSIO_SWG_TEXT_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"SWG Msg",_aqconfig_.mqtt_aq_topic,SWG_EXTENDED_TOPIC);
+    sprintf(msg, HASSIO_SWG_TEXT_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"SWG Msg",_aqconfig_.mqtt_aq_topic,SWG_EXTENDED_TOPIC);
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
   }
 
   // Temperatures
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Pool","Pool",_aqconfig_.mqtt_aq_topic,POOL_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,"Pool","Pool",_aqconfig_.mqtt_aq_topic,POOL_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Pool");
   send_mqtt(nc, topic, msg);
 
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Spa","Spa",_aqconfig_.mqtt_aq_topic,SPA_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,"Spa","Spa",_aqconfig_.mqtt_aq_topic,SPA_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:water-thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Spa");
   send_mqtt(nc, topic, msg);
 
-  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,"Air","Air",_aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:thermometer");
+  sprintf(msg, HASSIO_TEMP_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,"Air","Air",_aqconfig_.mqtt_aq_topic,AIR_TEMP_TOPIC,(_aqconfig_.convert_mqtt_temp?"°C":"°F"),"mdi:thermometer");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, "Air");
   send_mqtt(nc, topic, msg);
   
@@ -516,6 +534,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     // Create a FAN for pump against the button it' assigned to
     // In the future maybe change this to the pump# or change the sensors to button???
     sprintf(msg, HASSIO_VSP_DISCOVER,
+            connections,
             _aqconfig_.mqtt_aq_topic,
             aqdata->pumps[i].button->name,units,
             aqdata->pumps[i].button->label,
@@ -534,6 +553,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     if (aqdata->pumps[i].pumpType==VFPUMP || aqdata->pumps[i].pumpType==VSPUMP) {
       // We have GPM info
       sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"GPM",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","GPM",
@@ -545,6 +565,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
       if (READ_RSDEV_vsfPUMP ) {
         // All Pentair hame some other info we gather.
         sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER2,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"PPC",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Presure Curve",
@@ -561,6 +582,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
         send_mqtt(nc, topic, msg);
 */
         sprintf(msg, HASSIO_PUMP_TEXT_SENSOR_DISCOVER,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"Mode",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Mode",
@@ -572,6 +594,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     }
 
     sprintf(msg, HASSIO_PUMP_TEXT_SENSOR_DISCOVER,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"Status",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Status",
@@ -582,6 +605,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
 
     // All pumps have the below.
     sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"RPM",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","RPM",
@@ -591,6 +615,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     send_mqtt(nc, topic, msg);
 
      sprintf(msg, HASSIO_PUMP_SENSOR_DISCOVER,
+              connections,
               _aqconfig_.mqtt_aq_topic,
               "Pump",pn,"Watts",
               aqdata->pumps[i].button->label,(rsm_strncasestr(aqdata->pumps[i].button->label,"pump",strlen(aqdata->pumps[i].button->label))!=NULL)?"":"Pump","Watts",
@@ -603,20 +628,20 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   // Chem feeder (ph/orp)
   if (_aqconfig_.force_chem_feeder || aqdata->ph != TEMP_UNKNOWN) { 
     rsm_char_replace(idbuf, CHEM_PH_TOPIC, "/", "_");
-    sprintf(msg, HASSIO_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry pH",_aqconfig_.mqtt_aq_topic,CHEM_PH_TOPIC, "pH", "mdi:water-outline");
+    sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry pH",_aqconfig_.mqtt_aq_topic,CHEM_PH_TOPIC, "pH", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
   }
 
   if (_aqconfig_.force_chem_feeder || aqdata->orp != TEMP_UNKNOWN) { 
     rsm_char_replace(idbuf, CHEM_ORP_TOPIC, "/", "_");
-    sprintf(msg, HASSIO_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry ORP",_aqconfig_.mqtt_aq_topic,CHEM_ORP_TOPIC, "orp", "mdi:water-outline");
+    sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry ORP",_aqconfig_.mqtt_aq_topic,CHEM_ORP_TOPIC, "orp", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
   }
 
   // Misc stuff
-  sprintf(msg, HASSIO_SERVICE_MODE_ENUM_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC,"Service Mode",_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC, "mdi:account-wrench");
+  sprintf(msg, HASSIO_SERVICE_MODE_ENUM_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC,"Service Mode",_aqconfig_.mqtt_aq_topic,SERVICE_MODE_TOPIC, "mdi:account-wrench");
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, SERVICE_MODE_TOPIC);
   send_mqtt(nc, topic, msg);
 
@@ -625,11 +650,11 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   sprintf(topic, "%s/text/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, DISPLAY_MSG_TOPIC);
   */
   // It actually works better posting this to sensor and not text.  
-  sprintf(msg, HASSIO_TEXT_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,DISPLAY_MSG_TOPIC,"Display Msg",_aqconfig_.mqtt_aq_topic,DISPLAY_MSG_TOPIC);
+  sprintf(msg, HASSIO_TEXT_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,DISPLAY_MSG_TOPIC,"Display Msg",_aqconfig_.mqtt_aq_topic,DISPLAY_MSG_TOPIC);
   sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, DISPLAY_MSG_TOPIC);
   send_mqtt(nc, topic, msg);
   
-  sprintf(msg, HASSIO_BATTERY_SENSOR_DISCOVER,_aqconfig_.mqtt_aq_topic,BATTERY_STATE,BATTERY_STATE,_aqconfig_.mqtt_aq_topic,BATTERY_STATE);
+  sprintf(msg, HASSIO_BATTERY_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,BATTERY_STATE,BATTERY_STATE,_aqconfig_.mqtt_aq_topic,BATTERY_STATE);
   sprintf(topic, "%s/binary_sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic,BATTERY_STATE);
   send_mqtt(nc, topic, msg);
    
