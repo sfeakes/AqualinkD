@@ -27,6 +27,7 @@
 #include "aqualink.h"
 #include "aq_scheduler.h"
 #include "config.h"
+#include "aq_panel.h"
 //#include "utils.h"
 
 
@@ -286,4 +287,48 @@ int build_schedules_js(char* buffer, int size)
   regfree(&regexCompiled);
 
   return length;
+}
+
+bool event_happened_set_device_state(reset_event_type type, struct aqualinkdata *aq_data)
+{
+  // Check time is between hours.
+  bool scheduledOn = false;
+
+  time_t now = time(NULL);
+  struct tm *tm_struct = localtime(&now);
+
+  int hour = tm_struct->tm_hour;
+  if (hour >= _aqconfig_.sched_chk_pumpon_hour && hour < _aqconfig_.sched_chk_pumpoff_hour ) {
+    scheduledOn = true;
+  }
+
+  // Check event type.
+  switch(type){
+    case POWER_ON:
+      if (scheduledOn && _aqconfig_.sched_chk_poweron && aq_data->aqbuttons[0].led->state == OFF) {
+        LOG(SCHD_LOG,LOG_INFO, "Powered on, schedule is set for pump running and pump is off, turning pump on\n");
+        panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
+      } else {
+        LOG(SCHD_LOG,LOG_DEBUG, "Powered on, schedule is not set and/or pump is already on, leaving\n");
+      }
+    break;
+    case FREEZE_PROTECT_OFF:
+      if (scheduledOn && _aqconfig_.sched_chk_freezeprotectoff && aq_data->aqbuttons[0].led->state == OFF) {
+        LOG(SCHD_LOG,LOG_INFO, "Freeze Protect off, schedule is set for pump running and pump is off, turning pump on\n");
+        panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
+      } else {
+        LOG(SCHD_LOG,LOG_DEBUG, "Freeze Protect off, schedule is not set and/or pump is already on, leaving\n");
+      }
+    break;
+    case BOOST_OFF:
+      if (scheduledOn && _aqconfig_.sched_chk_boostoff && aq_data->aqbuttons[0].led->state == OFF) {
+        LOG(SCHD_LOG,LOG_INFO, "Boost off, schedule is set for pump running and pump is off, turning pump on\n");
+        panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
+      } else {
+        LOG(SCHD_LOG,LOG_DEBUG, "Boost off, schedule is not set and/or pump is already on, leaving\n");
+      }
+    break;
+  }
+
+  return true;
 }

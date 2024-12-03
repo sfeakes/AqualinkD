@@ -155,6 +155,13 @@ void init_parameters (struct aqconfig * parms)
 #endif
 
   parms->enable_scheduler = true;
+
+  parms->sched_chk_poweron = false;
+  parms->sched_chk_freezeprotectoff = false;
+  parms->sched_chk_boostoff = false;
+  parms->sched_chk_pumpon_hour = 0;
+  parms->sched_chk_pumpoff_hour = 0;
+
   parms->ftdi_low_latency = true;
   parms->frame_delay = 0;
   parms->device_pre_state = true;
@@ -681,6 +688,21 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
 #endif
   } else if (strncasecmp (param, "enable_scheduler", 16) == 0) {
     _aqconfig_.enable_scheduler = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "scheduler_check_poweron", 23) == 0) {
+    _aqconfig_.sched_chk_poweron = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "scheduler_check_freezeprotectoff", 32) == 0) {
+    _aqconfig_.sched_chk_freezeprotectoff = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "scheduler_check_boostoff", 24) == 0) {
+    _aqconfig_.sched_chk_boostoff = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp (param, "scheduler_check_pumpon_hour", 27) == 0) {
+    _aqconfig_.sched_chk_pumpon_hour = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp (param, "scheduler_check_pumpoff_hour", 28) == 0) {
+    _aqconfig_.sched_chk_pumpoff_hour = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp (param, "ftdi_low_latency", 16) == 0) {
     _aqconfig_.ftdi_low_latency = text2bool(value);

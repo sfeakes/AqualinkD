@@ -105,6 +105,11 @@ struct aqconfig
   bool mqtt_timed_update;
   bool sync_panel_time;
   bool enable_scheduler;
+  bool sched_chk_poweron;
+  bool sched_chk_freezeprotectoff;
+  bool sched_chk_boostoff;
+  int  sched_chk_pumpon_hour;
+  int  sched_chk_pumpoff_hour;
   bool ftdi_low_latency;
   int frame_delay;
   bool device_pre_state;

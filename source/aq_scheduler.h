@@ -25,6 +25,14 @@ typedef struct aqs_cron
 
 int build_schedules_js(char* buffer, int size);
 int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize);
+
+typedef enum reset_event_type{
+  POWER_ON,
+  FREEZE_PROTECT_OFF,
+  BOOST_OFF
+} reset_event_type;
+
+bool event_happened_set_device_state(reset_event_type type, struct aqualinkdata *aq_data);
 //void read_schedules();
 //void write_schedules();
 

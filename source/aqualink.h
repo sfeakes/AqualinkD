@@ -228,7 +228,7 @@ typedef enum {
   NET_API, 
   NET_WS, 
   NET_DZMQTT,
-  NET_TIMER,       // Not used yet, need to change aq_timer.c
+  NET_TIMER,       // Timer or Scheduler (eg poweron/freezeprotect check)
   UNACTION_TIMER
 } request_source;
 

@@ -9,6 +9,7 @@
 #include "devices_jandy.h"
 #include "allbutton_aq_programmer.h"
 #include "color_lights.h"
+#include "aq_scheduler.h"
 
 /* Below can also be called from serialadapter.c */
 void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from)
@@ -223,8 +224,14 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     aq_data->last_display_message[1] = '\0';
 
     // Anything that wasn't on during the last set of messages, turn off
-    if ((msg_loop & MSG_FREEZE) != MSG_FREEZE)
-       aq_data->frz_protect_state = default_frz_protect_state;
+    if ((msg_loop & MSG_FREEZE) != MSG_FREEZE) {
+      if (aq_data->frz_protect_state != default_frz_protect_state) {
+        LOG(ALLB_LOG,LOG_INFO, "Freeze protect turned off\n");
+        event_happened_set_device_state(FREEZE_PROTECT_OFF, aq_data);
+        // Add code to check Pump if to turn it on (was scheduled) ie time now is inbetween ON / OFF schedule 
+      }
+      aq_data->frz_protect_state = default_frz_protect_state;
+    }
 
     if ((msg_loop & MSG_SERVICE) != MSG_SERVICE &&
         (msg_loop & MSG_TIMEOUT) != MSG_TIMEOUT ) {
@@ -277,6 +284,11 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     }
     */
     if ((msg_loop & MSG_BOOST) != MSG_BOOST) {
+      if (aq_data->boost == true) {
+        LOG(ALLB_LOG,LOG_INFO, "Boost turned off\n");
+        event_happened_set_device_state(BOOST_OFF, aq_data);
+        // Add code to check Pump if to turn it on (was scheduled) ie time now is inbetween ON / OFF schedule
+      }
       aq_data->boost = false;
       aq_data->boost_msg[0] = '\0';
       aq_data->boost_duration = 0;
@@ -420,7 +432,8 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   else if (stristr(msg, LNG_MSG_FREEZE_PROTECTION_ACTIVATED) != NULL)
   {
     msg_loop |= MSG_FREEZE;
-    aq_data->frz_protect_state = default_frz_protect_state;
+    //aq_data->frz_protect_state = default_frz_protect_state;
+    aq_data->frz_protect_state = ON;
     //freeze_msg_count = 0;
     strcpy(aq_data->last_display_message, msg); // Also display the message on web UI
   }
@@ -502,6 +515,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     {
       //LOG(ALLBUTTON,LOG_NOTICE, "Standard protocol initialization complete\n");
       queueGetProgramData(ALLBUTTON, aq_data);
+      event_happened_set_device_state(POWER_ON, aq_data);
       //queueGetExtendedProgramData(ALLBUTTON, aq_data, _aqconfig_.use_panel_aux_labels);
       _initWithRS = true;
     }
