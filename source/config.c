@@ -42,6 +42,7 @@
 #include "aqualink.h"
 #include "iaqualink.h"
 #include "color_lights.h"
+#include "aq_scheduler.h"
 
 #define MAXCFGLINE 256
 
@@ -156,9 +157,10 @@ void init_parameters (struct aqconfig * parms)
 
   parms->enable_scheduler = true;
 
-  parms->sched_chk_poweron = false;
-  parms->sched_chk_freezeprotectoff = false;
-  parms->sched_chk_boostoff = false;
+  parms->schedule_event_mask = 0;
+  //parms->sched_chk_poweron = false;
+  //parms->sched_chk_freezeprotectoff = false;
+  //parms->sched_chk_boostoff = false;
   parms->sched_chk_pumpon_hour = 0;
   parms->sched_chk_pumpoff_hour = 0;
 
@@ -690,19 +692,27 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.enable_scheduler = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "scheduler_check_poweron", 23) == 0) {
-    _aqconfig_.sched_chk_poweron = text2bool(value);
+    if (text2bool(value)) {
+      _aqconfig_.schedule_event_mask |= AQS_POWER_ON;
+    }
     rtn=true;
   } else if (strncasecmp (param, "scheduler_check_freezeprotectoff", 32) == 0) {
-    _aqconfig_.sched_chk_freezeprotectoff = text2bool(value);
+    if (text2bool(value)) {
+      _aqconfig_.schedule_event_mask |= AQS_FRZ_PROTECT_OFF;
+    }
     rtn=true;
   } else if (strncasecmp (param, "scheduler_check_boostoff", 24) == 0) {
-    _aqconfig_.sched_chk_boostoff = text2bool(value);
+    if (text2bool(value)) {
+      _aqconfig_.schedule_event_mask |= AQS_BOOST_OFF;
+    }
     rtn=true;
   } else if (strncasecmp (param, "scheduler_check_pumpon_hour", 27) == 0) {
     _aqconfig_.sched_chk_pumpon_hour = strtoul(value, NULL, 10);
+    _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
     rtn=true;
   } else if (strncasecmp (param, "scheduler_check_pumpoff_hour", 28) == 0) {
     _aqconfig_.sched_chk_pumpoff_hour = strtoul(value, NULL, 10);
+    _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
     rtn=true;
   } else if (strncasecmp (param, "ftdi_low_latency", 16) == 0) {
     _aqconfig_.ftdi_low_latency = text2bool(value);

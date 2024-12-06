@@ -201,7 +201,8 @@ int build_schedules_js(char* buffer, int size)
 
   if ( !_aqconfig_.enable_scheduler) {
     LOG(SCHD_LOG,LOG_WARNING, "Schedules are disabled\n");
-    length += sprintf(buffer, "{\"message\":\"Error Schedules disabled\"}");
+    if (size > 0)
+      length += sprintf(buffer, "{\"message\":\"Error Schedules disabled\"}");
     return length;
   }
 
@@ -220,22 +221,26 @@ int build_schedules_js(char* buffer, int size)
   regmatch_t groupArray[maxGroups];
   //static char buf[100];
 
-  length += sprintf(buffer+length,"{\"type\": \"schedules\",");
+  if (size > 0)
+    length += sprintf(buffer+length,"{\"type\": \"schedules\",");
 
   if (0 != (rc = regcomp(&regexCompiled, regexString, REG_EXTENDED))) {
       LOG(SCHD_LOG,LOG_ERR, "regcomp() failed, returning nonzero (%d)\n", rc);
-      length += sprintf(buffer+length,"\"message\": \"Error reading schedules\"}");
+      if (size > 0)
+        length += sprintf(buffer+length,"\"message\": \"Error reading schedules\"}");
       return length;
    }
 
   fp = fopen(CRON_FILE, "r");
   if (fp == NULL) {
     LOG(SCHD_LOG,LOG_WARNING, "Open file failed '%s'\n", CRON_FILE);
-    length += sprintf(buffer+length,"\"message\": \"Error reading schedules\"}");
+    if (size > 0)
+      length += sprintf(buffer+length,"\"message\": \"Error reading schedules\"}");
     return length;
   }
 
-  length += sprintf(buffer+length,"\"schedules\": [ ");
+  if (size > 0)
+    length += sprintf(buffer+length,"\"schedules\": [ ");
 
   while ((read_size = getline(&line, &len, fp)) != -1) {
     //printf("Read from cron:-\n  %s", line);
@@ -264,7 +269,8 @@ int build_schedules_js(char* buffer, int size)
         sprintf(cline.url, "%.*s",    (groupArray[9].rm_eo - groupArray[9].rm_so), (line + groupArray[9].rm_so));
         sprintf(cline.value, "%.*s",  (groupArray[10].rm_eo - groupArray[10].rm_so), (line + groupArray[10].rm_so));
         LOG(SCHD_LOG,LOG_INFO, "Read from cron. Enabled:%d Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.enabled,cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
-        length += sprintf(buffer+length, "{\"enabled\":\"%d\", \"min\":\"%s\",\"hour\":\"%s\",\"daym\":\"%s\",\"month\":\"%s\",\"dayw\":\"%s\",\"url\":\"%s\",\"value\":\"%s\"},",
+        if (size > 0) {
+          length += sprintf(buffer+length, "{\"enabled\":\"%d\", \"min\":\"%s\",\"hour\":\"%s\",\"daym\":\"%s\",\"month\":\"%s\",\"dayw\":\"%s\",\"url\":\"%s\",\"value\":\"%s\"},",
                 cline.enabled,
                 cline.minute,
                 cline.hour,
@@ -273,15 +279,35 @@ int build_schedules_js(char* buffer, int size)
                 cline.dayw,
                 cline.url,
                 cline.value);
+        }
         //LOG(SCHD_LOG,LOG_DEBUG, "Read from cron Day %d | Time %d:%d | Zone %d | Runtime %d\n",day,hour,minute,zone,runtime);
+
+        // Test / get for pump start and end time
+        if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+          // Could also check that dayw is *
+          if ( cline.enabled && strstr(cline.url, AQS_PUMP_URL ))
+          {
+            int value = strtoul(cline.value, NULL, 10);
+            int hour = strtoul(cline.hour, NULL, 10);
+            if (value == 0) {
+              if (hour > _aqconfig_.sched_chk_pumpoff_hour) // NSF this picks up the greatest offhour, (do we want the smallest???) 
+                _aqconfig_.sched_chk_pumpoff_hour = hour;
+            } else if (value == 1){
+              if (hour < _aqconfig_.sched_chk_pumpon_hour || _aqconfig_.sched_chk_pumpon_hour == 0)
+                _aqconfig_.sched_chk_pumpon_hour = hour;
+            } 
+          }
+        }
       }
     } else {
       LOG(SCHD_LOG,LOG_DEBUG, "regexp no match (%d) %s\n", rc, line);
     }
   }
 
-  buffer[--length] = '\0';
-  length += sprintf(buffer+length,"]}\n");
+  if (size > 0) {
+    buffer[--length] = '\0';
+    length += sprintf(buffer+length,"]}\n");
+  }
 
   fclose(fp);
   regfree(&regexCompiled);
@@ -289,10 +315,26 @@ int build_schedules_js(char* buffer, int size)
   return length;
 }
 
+void get_cron_pump_times()
+{
+  build_schedules_js(NULL, 0);
+  return;
+}
+
+
 bool event_happened_set_device_state(reset_event_type type, struct aqualinkdata *aq_data)
 {
+  if (! isAQS_START_PUMP_EVENT_ENABLED) {
+    LOG(SCHD_LOG,LOG_DEBUG, "Event scheduler is not enabled\n");
+    return false;
+  }
   // Check time is between hours.
   bool scheduledOn = false;
+
+  if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+    get_cron_pump_times();
+    LOG(SCHD_LOG,LOG_DEBUG, "Pump on times from scheduler are between hours %.2d & %.2d\n",_aqconfig_.sched_chk_pumpon_hour, _aqconfig_.sched_chk_pumpoff_hour);
+  }
 
   time_t now = time(NULL);
   struct tm *tm_struct = localtime(&now);
@@ -304,28 +346,31 @@ bool event_happened_set_device_state(reset_event_type type, struct aqualinkdata 
 
   // Check event type.
   switch(type){
-    case POWER_ON:
-      if (scheduledOn && _aqconfig_.sched_chk_poweron && aq_data->aqbuttons[0].led->state == OFF) {
+    case AQS_POWER_ON:
+      if (scheduledOn && isAQS_POWER_ON_ENABED && aq_data->aqbuttons[0].led->state == OFF) {
         LOG(SCHD_LOG,LOG_INFO, "Powered on, schedule is set for pump running and pump is off, turning pump on\n");
         panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
       } else {
-        LOG(SCHD_LOG,LOG_DEBUG, "Powered on, schedule is not set and/or pump is already on, leaving\n");
+        //LOG(SCHD_LOG,LOG_DEBUG, "Powered on, schedule is not set and/or pump is already on, leaving\n");
+        LOG(SCHD_LOG,LOG_DEBUG, "Powered on, schedule Pump on is %sset, time is %sbetween scheduled hours, Pump is %s, (not changing)\n",(isAQS_POWER_ON_ENABED?"":"not "),(scheduledOn?"":" not"), (aq_data->aqbuttons[0].led->state ==OFF?"Off":"On"));
       }
     break;
-    case FREEZE_PROTECT_OFF:
-      if (scheduledOn && _aqconfig_.sched_chk_freezeprotectoff && aq_data->aqbuttons[0].led->state == OFF) {
+    case AQS_FRZ_PROTECT_OFF:
+      if (scheduledOn && isAQS_FRZ_PROTECT_OFF_ENABED && aq_data->aqbuttons[0].led->state == OFF) {
         LOG(SCHD_LOG,LOG_INFO, "Freeze Protect off, schedule is set for pump running and pump is off, turning pump on\n");
         panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
       } else {
-        LOG(SCHD_LOG,LOG_DEBUG, "Freeze Protect off, schedule is not set and/or pump is already on, leaving\n");
+        //LOG(SCHD_LOG,LOG_DEBUG, "Freeze Protect off, schedule is not set and/or pump is already on, leaving\n");
+        LOG(SCHD_LOG,LOG_DEBUG, "Freeze Protect off, schedule Pump on is %sset, time is %sbetween scheduled hours, Pump is %s, (not changing)\n",(isAQS_FRZ_PROTECT_OFF_ENABED?"":"not "),(scheduledOn?"":" not"), (aq_data->aqbuttons[0].led->state ==OFF?"Off":"On"));
       }
     break;
-    case BOOST_OFF:
-      if (scheduledOn && _aqconfig_.sched_chk_boostoff && aq_data->aqbuttons[0].led->state == OFF) {
+    case AQS_BOOST_OFF:
+      if (scheduledOn && isAQS_BOOST_OFF_ENABED && aq_data->aqbuttons[0].led->state == OFF) {
         LOG(SCHD_LOG,LOG_INFO, "Boost off, schedule is set for pump running and pump is off, turning pump on\n");
         panel_device_request(aq_data, ON_OFF, 0, true, NET_TIMER);
       } else {
-        LOG(SCHD_LOG,LOG_DEBUG, "Boost off, schedule is not set and/or pump is already on, leaving\n");
+        //LOG(SCHD_LOG,LOG_DEBUG, "Boost off, schedule is not set and/or pump is already on, leaving\n");
+        LOG(SCHD_LOG,LOG_DEBUG, "Boost off, schedule Pump on is %sset, time is %sbetween scheduled hours, Pump is %s, (not changing)\n",(isAQS_BOOST_OFF_ENABED?"":"not "),(scheduledOn?"":" not"), (aq_data->aqbuttons[0].led->state ==OFF?"Off":"On"));
       }
     break;
   }
