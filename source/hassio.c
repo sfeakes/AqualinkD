@@ -44,8 +44,6 @@ const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"payload_on\": \"1\","
     "\"payload_off\": \"0\","
     "\"current_temperature_topic\": \"%s/%s\","
-    "\"min_temp\": 36,"
-    "\"max_temp\": 104,"
     "\"mode_command_topic\": \"%s/%s/set\","
     "\"mode_state_topic\": \"%s/%s/enabled\","
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'heat'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
@@ -54,7 +52,10 @@ const char *HASSIO_CLIMATE_DISCOVER = "{"
     "\"action_template\": \"{%% set values = { '0':'off', '1':'heating'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"action_topic\": \"%s/%s\","
     /*"\"temperature_state_template\": \"{{ value_json }}\","*/
-    "%s"
+    "\"min_temp\": %.2f,"
+    "\"max_temp\": %.2f,"
+    "\"temperature_unit\": \"%s\""
+    //"%s"
 "}";
 
 const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
@@ -69,8 +70,6 @@ const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"payload_on\": \"1\","
     "\"payload_off\": \"0\","
     "\"current_temperature_topic\": \"%s/%s\","
-    "\"min_temp\": 34,"
-    "\"max_temp\": 42,"
     "\"mode_state_topic\": \"%s/%s\","
     "\"mode_state_template\": \"{%% set values = { '0':'off', '1':'auto'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
@@ -78,14 +77,19 @@ const char *HASSIO_FREEZE_PROTECT_DISCOVER = "{"
     "\"action_template\": \"{%% set values = { '0':'off', '1':'cooling'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
     "\"action_topic\": \"%s/%s\","
     /*"\"temperature_state_template\": \"{{ value_json }}\""*/
-     "%s"
+    "\"min_temp\": %0.2f,"
+    "\"max_temp\": %0.2f,"
+    "\"temperature_unit\": \"%s\""
+    //"%s"
 "}";
 
+/*
 const char *HASSIO_CONVERT_CLIMATE_TOF = "\"temperature_state_template\": \"{{ (value | float(0) * 1.8 + 32 + 0.5) | int }}\","
                            "\"current_temperature_template\": \"{{ (value | float(0) * 1.8 + 32 + 0.5 ) | int }}\","
                            "\"temperature_command_template\": \"{{ ((value | float(0) -32 ) / 1.8 + 0.5) | int }}\"";
 
 const char *HASSIO_NO_CONVERT_CLIMATE = "\"temperature_state_template\": \"{{ value_json }}\"";
+*/
 
 const char *HASSIO_SWG_DISCOVER = "{"
     "\"device\": {" HASS_DEVICE "},"
@@ -385,7 +389,10 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name, 
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
-             (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
+             //(_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
+             (_aqconfig_.convert_mqtt_temp?degFtoC(36):36.00),
+             (_aqconfig_.convert_mqtt_temp?degFtoC(104):104.00),
+             (_aqconfig_.convert_mqtt_temp?"C":"F"));
         sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg);    
       } else if ( isPLIGHT(aqdata->aqbuttons[i].special_mask) && ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType == LC_DIMMER2 ) {
@@ -464,7 +471,10 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
-            (_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
+            //(_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
+            (_aqconfig_.convert_mqtt_temp?degFtoC(34):34.00),
+            (_aqconfig_.convert_mqtt_temp?degFtoC(42):42.00),
+            (_aqconfig_.convert_mqtt_temp?"C":"F"));
     sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, FREEZE_PROTECT);
     send_mqtt(nc, topic, msg);
   }

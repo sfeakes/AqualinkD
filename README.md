@@ -131,6 +131,7 @@ NEED TO FIX FOR THIS RELEASE.
 
 # Updates in 2.5.1 (dev)
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
+* Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
 
 # Updates in 2.5.0
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
