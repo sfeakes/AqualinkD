@@ -26,7 +26,7 @@ typedef struct aqs_cron
 
 int build_schedules_js(char* buffer, int size);
 int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize);
-
+void get_cron_pump_times();
 
 #define AQS_PUMP_URL BTN_PUMP "/set"
 

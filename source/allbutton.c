@@ -196,6 +196,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   //static int boost_msg_count = 0;
   static int16_t msg_loop = 0;
   static aqledstate default_frz_protect_state = OFF;
+  static bool boostInLastLoop = false;
   // NSF replace message with msg
 #ifdef AQ_RS16
   int16_t rs16;
@@ -284,7 +285,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     }
     */
     if ((msg_loop & MSG_BOOST) != MSG_BOOST) {
-      if (aq_data->boost == true) {
+      if (aq_data->boost == true || boostInLastLoop == true) {
         LOG(ALLB_LOG,LOG_INFO, "Boost turned off\n");
         event_happened_set_device_state(AQS_BOOST_OFF, aq_data);
         // Add code to check Pump if to turn it on (was scheduled) ie time now is inbetween ON / OFF schedule
@@ -292,6 +293,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
       aq_data->boost = false;
       aq_data->boost_msg[0] = '\0';
       aq_data->boost_duration = 0;
+      boostInLastLoop = false;
       //if (aq_data->swg_percent >= 101)
       //  aq_data->swg_percent = 0;
     }
@@ -578,6 +580,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
       aq_data->boost = true;
       msg_loop |= MSG_BOOST;
       msg_loop |= MSG_SWG;
+      boostInLastLoop = true;
       //convert_boost_to_duration(aq_data->boost_msg)
       //if (aq_data->ar_swg_status != SWG_STATUS_ON) {aq_data->ar_swg_status = SWG_STATUS_ON;}
       if (aq_data->swg_percent != 101) {changeSWGpercent(aq_data, 101);}

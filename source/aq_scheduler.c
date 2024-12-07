@@ -258,7 +258,9 @@ int build_schedules_js(char* buffer, int size)
       // Group 9 is URL
       // Group 10 is value
       if (groupArray[8].rm_so == (size_t)-1) {
-        LOG(SCHD_LOG,LOG_ERR, "No matching information from cron file\n");
+        if (size > 0) {
+          LOG(SCHD_LOG,LOG_ERR, "No matching information from cron file\n");
+        }
       } else {
         cline.enabled = (line[groupArray[1].rm_so] == '#')?false:true;
         sprintf(cline.minute, "%.*s", (groupArray[2].rm_eo - groupArray[2].rm_so), (line + groupArray[2].rm_so));
@@ -268,8 +270,8 @@ int build_schedules_js(char* buffer, int size)
         sprintf(cline.dayw, "%.*s",   (groupArray[6].rm_eo - groupArray[6].rm_so), (line + groupArray[6].rm_so)); 
         sprintf(cline.url, "%.*s",    (groupArray[9].rm_eo - groupArray[9].rm_so), (line + groupArray[9].rm_so));
         sprintf(cline.value, "%.*s",  (groupArray[10].rm_eo - groupArray[10].rm_so), (line + groupArray[10].rm_so));
-        LOG(SCHD_LOG,LOG_INFO, "Read from cron. Enabled:%d Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.enabled,cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
         if (size > 0) {
+          LOG(SCHD_LOG,LOG_INFO, "Read from cron. Enabled:%d Min:%s Hour:%s DayM:%s Month:%s DayW:%s URL:%s Value:%s\n",cline.enabled,cline.minute,cline.hour,cline.daym,cline.month,cline.dayw,cline.url,cline.value);
           length += sprintf(buffer+length, "{\"enabled\":\"%d\", \"min\":\"%s\",\"hour\":\"%s\",\"daym\":\"%s\",\"month\":\"%s\",\"dayw\":\"%s\",\"url\":\"%s\",\"value\":\"%s\"},",
                 cline.enabled,
                 cline.minute,
@@ -300,7 +302,9 @@ int build_schedules_js(char* buffer, int size)
         }
       }
     } else {
-      LOG(SCHD_LOG,LOG_DEBUG, "regexp no match (%d) %s\n", rc, line);
+      if (size > 0) {
+        LOG(SCHD_LOG,LOG_DEBUG, "regexp no match (%d) %s", rc, line);
+      }
     }
   }
 
