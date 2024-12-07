@@ -129,7 +129,7 @@ NEED TO FIX FOR THIS RELEASE.
 -->
 
 
-# Updates in 2.5.1 (dev)
+# Updates in 2.5.1
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
 
