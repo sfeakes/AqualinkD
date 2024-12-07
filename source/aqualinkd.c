@@ -55,6 +55,7 @@
 #include "serialadapter.h"
 #include "simulator.h"
 #include "debug_timer.h"
+#include "aq_scheduler.h"
 
 #ifdef AQ_MANAGER
 #include "serial_logger.h"
@@ -653,6 +654,14 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
   LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
   LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
+
+  if (isAQS_START_PUMP_EVENT_ENABLED) {
+    get_cron_pump_times();
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s %s %s\n",isAQS_POWER_ON_ENABED?"PowerON":"",AQS_FRZ_PROTECT_OFF?"FreezeProtect":"",AQS_BOOST_OFF?"Boost":"");
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump between times = %d:00 and %d:00\n",_aqconfig_.sched_chk_pumpon_hour,_aqconfig_.sched_chk_pumpoff_hour);
+  } else {
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s\n", bool2text(false));
+  }
 /*
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
