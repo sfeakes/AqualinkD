@@ -100,8 +100,7 @@ void broadcast_log(char *msg){
 void intHandler(int dummy) {
   _keepRunning = false;
   LOG(SLOG_LOG, LOG_NOTICE, "Stopping!\n");
-  if (_playback_file)  // If we are reading file, loop is irevelent
-    exit(0);
+  exit(0);
 }
 #else
 int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets, char *slogger_ids) 
