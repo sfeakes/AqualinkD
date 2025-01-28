@@ -307,7 +307,7 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
   size_t plen;
   int rtn;
 
-  while ( (rtn = sd_journal_next(journal)) > 0) // need to capture return of this
+  while ( (rtn = sd_journal_next(journal)) > 0)
   {
     if (sd_journal_get_data(journal, "MESSAGE", &log, &len) < 0) {
         build_logmsg_JSON(msg, LOG_ERR, "Failed to get journal message", WS_LOG_LENGTH,29);
@@ -323,7 +323,7 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
     }
   }
   if (rtn < 0) {
-    build_logmsg_JSON(msg, LOG_ERR, "Failed to get seen to next journal message", WS_LOG_LENGTH,42);
+    build_logmsg_JSON(msg, LOG_ERR, "Failed to seek to next journal message", WS_LOG_LENGTH,42);
     ws_send_logmsg(_mgr.active_connections, msg);
     sd_journal_close(journal);
     active = false;
@@ -339,6 +339,8 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
         //LOG(NET_LOG, LOG_WARNING, "**** %d Too many blank reads, resetting!! ****\n",cnt);
         return _broadcast_systemd_logmessages(aqMgrActive, true);
       }
+      cnt = 0;  // Reset this so we don't keep hitting this when we don't print the message above.
+      
       //LOG(NET_LOG, LOG_WARNING, "**** Reset didn't work ****\n",cnt);
       //return false;
     }
@@ -975,10 +977,20 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       }
     }
   }
+
+  // Loop over sensors
+  for (i=0; i < _aqualink_data->num_sensors; i++) {
+    if ( _aqualink_data->sensors[i].value != TEMP_UNKNOWN && _last_mqtt_aqualinkdata.sensors[i].value != _aqualink_data->sensors[i].value) {
+      char topic[50];
+      sprintf(topic, "%s/%s", SENSOR_TOPIC, _aqualink_data->sensors[i].label);
+      send_mqtt_float_msg(nc, topic, _aqualink_data->sensors[i].value);
+      _last_mqtt_aqualinkdata.sensors[i].value = _aqualink_data->sensors[i].value;
+    }
+  }
 }
 
 
-typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uLogDownload, uNotAvailable} uriAtype;
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uLogDownload, uNotAvailable, uConfig, uSaveConfig} uriAtype;
 //typedef enum {NET_MQTT=0, NET_API, NET_WS, DZ_MQTT} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS", "DZ"};
 
@@ -1067,6 +1079,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     return uSetSchedules;
   } else if (strncmp(ri1, "schedules", 9) == 0) {
     return uSchedules;
+  } else if (strncmp(ri1, "config/set", 10) == 0) {
+    return uSaveConfig;
+  } else if (strncmp(ri1, "config", 6) == 0) {
+    return uConfig;
   } else if (strncmp(ri1, "simulator", 9) == 0 && from == NET_WS) { // Only valid from websocket.
     if (ri2 != NULL && strncmp(ri2, "onetouch", 8) == 0) {
       start_simulator(_aqualink_data, ONETOUCH);
@@ -1678,7 +1694,7 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           DEBUG_TIMER_START(&tid2);
           int size = build_schedules_js(message, JSON_BUFFER_SIZE);
           DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() build_schedules_js took");
-          mg_send_head(nc, 200, size, CONTENT_JS);
+          mg_send_head(nc, 200, size, CONTENT_JSON);
           mg_send(nc, message, size); 
         }
         break;
@@ -1688,10 +1704,22 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           DEBUG_TIMER_START(&tid2);
           int size = save_schedules_js(http_msg->body.p, http_msg->body.len, message, JSON_BUFFER_SIZE);
           DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() save_schedules_js took");
-          mg_send_head(nc, 200, size, CONTENT_JS);
+          mg_send_head(nc, 200, size, CONTENT_JSON);
           mg_send(nc, message, size); 
         }
         break;
+#ifdef CONFIG_EDITOR
+        case uConfig:
+        {
+          char message[JSON_BUFFER_SIZE];
+          DEBUG_TIMER_START(&tid2);
+          int size = build_aqualink_config_JSON(message, JSON_BUFFER_SIZE, _aqualink_data);
+          DEBUG_TIMER_STOP(tid2, NET_LOG, "action_web_request() build_aqualink_config_JSON took");
+          mg_send_head(nc, 200, size, CONTENT_JSON);
+          mg_send(nc, message, size); 
+        }
+        break;
+#endif
 #ifndef AQ_MANAGER
         case uDebugStatus:
         {
@@ -1757,7 +1785,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     pda_reset_sleep();
 #endif
    
-  strncpy(buffer, (char *)wm->data, wm->size);
+  strncpy(buffer, (char *)wm->data, MIN(wm->size, 99));
   buffer[wm->size] = '\0';
 
   parseJSONrequest(buffer, &jsonkv);
@@ -1849,6 +1877,27 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() save_schedules_js took");
       ws_send(nc, message); 
     }
+    break;
+#ifdef CONFIG_EDITOR
+    case uConfig:
+    {
+      DEBUG_TIMER_START(&tid);
+      char message[JSON_BUFFER_SIZE];
+      build_aqualink_config_JSON(message, JSON_BUFFER_SIZE, _aqualink_data);
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() build_aqualink_config_JSON took");
+      ws_send(nc, message);
+    }
+    break;
+    case uSaveConfig:
+    {
+      DEBUG_TIMER_START(&tid);
+      char message[JSON_BUFFER_SIZE];
+      save_config_js((char *)wm->data, wm->size, message, JSON_BUFFER_SIZE);
+      DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() save_config_js took");
+      ws_send(nc, message);
+    }
+    break;
+#endif
     case uBad:
     default:
       if (msg == NULL)
@@ -2078,6 +2127,10 @@ void reset_last_mqtt_status()
 
   for (i=0; i < _aqualink_data->num_lights; i++) {
      _last_mqtt_aqualinkdata.lights[i].currentValue = TEMP_UNKNOWN;
+  }
+
+  for (i=0; i < _aqualink_data->num_sensors; i++) {
+    _last_mqtt_aqualinkdata.sensors[i].value = TEMP_UNKNOWN;
   }
 
 }

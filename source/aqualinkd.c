@@ -396,6 +396,7 @@ int main(int argc, char *argv[])
 
   _aqualink_data.num_pumps = 0;
   _aqualink_data.num_lights = 0;
+  _aqualink_data.num_sensors = 0;
 
 #ifdef AQ_TM_DEBUG
   addDebugLogMask(DBGT_LOG);
@@ -656,7 +657,9 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
 
   if (isAQS_START_PUMP_EVENT_ENABLED) {
-    get_cron_pump_times();
+    if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+      get_cron_pump_times();
+    }
     LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s %s %s\n",isAQS_POWER_ON_ENABED?"PowerON":"",AQS_FRZ_PROTECT_OFF?"FreezeProtect":"",AQS_BOOST_OFF?"Boost":"");
     LOG(AQUA_LOG,LOG_NOTICE, "Start Pump between times = %d:00 and %d:00\n",_aqconfig_.sched_chk_pumpon_hour,_aqconfig_.sched_chk_pumpoff_hour);
   } else {
@@ -725,6 +728,11 @@ int startup(char *self, char *cfgFile)
       LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must be on of the folowing (0x30,0x31,0x32,0x33) to use virtual button : '%s'",_aqualink_data.aqbuttons[i].label);
     }
   }
+
+  for (i = 0; i < _aqualink_data.num_sensors; i++)
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Config Sensor %02d         = label %-15s | %s\n", i+1, _aqualink_data.sensors[i].label, _aqualink_data.sensors[i].path);
+  }
 /*
   for (i=0; i < _aqualink_data.total_buttons; i++) 
   {
@@ -735,6 +743,10 @@ int startup(char *self, char *cfgFile)
                              _aqualink_data.aqbuttons[i].rssd_code);
   }
 */
+#ifdef CONFIG_EDITOR
+  check_print_config(&_aqualink_data);
+  writeCfg(&_aqualink_data);
+#endif
 
   if (_aqconfig_.deamonize == true)
   {
@@ -943,6 +955,10 @@ void main_loop()
      //_aqualink_data.lights[i].currentValue = TEMP_UNKNOWN;
      _aqualink_data.lights[i].currentValue = 0;
      _aqualink_data.lights[i].RSSDstate = OFF;
+  }
+
+  for (i=0; i < _aqualink_data.num_sensors; i++) {
+    _aqualink_data.sensors[i].value = TEMP_UNKNOWN;
   }
 
   if (_aqconfig_.force_swg == true) {
@@ -1174,6 +1190,7 @@ void main_loop()
     blank_read_reconnect = blank_read_reconnect * 50;
 #endif
 
+  int loopnum=0;
   blank_read = 0;
   // OK, Now go into infinate loop
   while (_keepRunning == true)
@@ -1374,6 +1391,15 @@ void main_loop()
         action_delayed_request();
       }
     }
+
+    if ( _aqualink_data.num_sensors > 0 && ++loopnum >= 200 ) {
+      loopnum=0;
+      for (int i=0; i < _aqualink_data.num_sensors; i++) {
+        if (read_sensor(&_aqualink_data.sensors[i]) ) {
+          _aqualink_data.updated = true;
+        }
+      }
+    }    
 
     //tcdrain(rs_fd); // Make sure buffer has been sent.
     //delay(10);

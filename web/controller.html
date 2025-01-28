@@ -2513,6 +2513,7 @@
     }
     function set_schedules(msg) {
       msg.uri = "schedules/set";
+      //console.log(JSON.stringify(msg));
       socket_di.send(JSON.stringify(msg));
       //socket_di.send(msg);
     }

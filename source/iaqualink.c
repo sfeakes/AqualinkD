@@ -481,7 +481,7 @@ bool process_iaqualink_packet(unsigned char *packet, int length, struct aqualink
     if (packet[PKT_CMD] == 0x53)
     {
       cnt++;
-      if (cnt == 20) {
+      if (cnt == 20) { // 20 is probably too low, should increase.  (only RS16 and below)
         cnt=0;
 /*
         sendid=sendid==0x18?0x60:0x18;

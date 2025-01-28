@@ -286,6 +286,31 @@ const char* loglevel2name(int level)
   return elevel2text(level);
 }
 
+const char* loglevel2cgn_name(int level)
+{
+  switch(level) {
+    case LOG_ERR:
+      return "ERROR";
+      break;
+    case LOG_WARNING:
+      return "WARNING";
+      break;
+    case LOG_NOTICE:
+      return "NOTICE";
+      break;
+    case LOG_INFO:
+      return "INFO";
+      break;
+    case LOG_DEBUG_SERIAL:
+      return "DEBUG_SERIAL";
+      break;
+    case LOG_DEBUG:
+    default:
+      return "DEBUG";
+      break;
+  }
+}
+
 const char* logmask2name(logmask_t from)
 {
   switch (from) {

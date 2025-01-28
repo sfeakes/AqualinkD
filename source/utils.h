@@ -92,6 +92,7 @@ void clearDebugLogMask();
 bool isDebugLogMaskSet(logmask_t flag);
 const char* logmask2name(logmask_t mask);
 const char* loglevel2name(int level);
+const char* loglevel2cgn_name(int level);
 //#define logMessage(msg_level, format, ...) LOG (1, msg_level, format, ##__VA_ARGS__)
 
 

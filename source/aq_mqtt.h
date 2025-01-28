@@ -58,6 +58,8 @@
 #define LIGHT_PROGRAM_TOPIC "/program"
 #define LIGHT_DIMMER_VALUE_TOPIC "/brightness"
 
+#define SENSOR_TOPIC "Sensor"
+
 /*
 #define AIR_TEMPERATURE   "Air"
 #define POOL_TEMPERATURE  "Pool_Water"

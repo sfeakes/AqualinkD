@@ -185,13 +185,21 @@ setPanel("RS-8 Combo");
 char _panelString[60];
 void setPanelString()
 {
-  snprintf(_panelString, sizeof(_panelString), "%s%s-%d %s%s%s",
+  snprintf(_panelString, sizeof(_panelString), "%s%s-%s%d %s",
       isRS_PANEL?"RS":"",
       isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
+      isDUAL_EQPT_PANEL?"2/":"",
       PANEL_SIZE(),
+      isDUAL_EQPT_PANEL?"Dual Equipment":(
+        isCOMBO_PANEL?"Combo Pool/Spa":(isSINGLE_DEV_PANEL?"Only Pool/Spa":"")
+      )
+      );
+      
+/*
       isCOMBO_PANEL?"Combo Pool/Spa":"",
       isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
       isDUAL_EQPT_PANEL?" Dual Equipment":"");
+*/
 }
 const char* getPanelString()
 {
@@ -406,6 +414,10 @@ int convertPumpPercentToSpeed(pump_detail *pump, int pValue) {
 
 // 4,6,8,10,12,14
 void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual) {
+
+  // Since we are resetting all special buttons here (.special_mask), we need to clean out the lights and pumps.
+  aqdata->num_lights = 0;
+  aqdata->num_pumps = 0;
 
   int index = 0;
   aqdata->aqbuttons[index].led = &aqdata->aqualinkleds[7-1];

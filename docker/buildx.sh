@@ -57,7 +57,7 @@ if echo $DOCKER_TAGS | grep -q $VERSION; then
   fi
 fi
 
-# Login first
+# Login first Run as root not with sudo on my build machine.
 # cat ~/.docker.token | docker login --username sfeakes --password-stdin
 
 echo "Building Docker container for $IMAGE using branch $VERSION"

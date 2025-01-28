@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include "aq_serial.h"
 #include "aq_programmer.h"
+#include "sensors.h"
 //#include "aq_panel.h"  // Moved to later in file to overcome circular dependancy. (crappy I know)
 
 
@@ -65,6 +66,7 @@ bool checkAqualinkTime(); // Only need to externalise this for PDA
 
 #define MAX_PUMPS 4
 #define MAX_LIGHTS 4
+#define MAX_SENSORS 4
 
 bool isVirtualButtonEnabled();
 
@@ -307,6 +309,9 @@ struct aqualinkdata
   // Multiple threads update this value.
   volatile bool updated;
   char self[AQ_MSGLEN*2];
+
+  int num_sensors;
+  external_sensor sensors[MAX_SENSORS];
 
   #ifdef AQ_MANAGER
   volatile bool run_slogger;

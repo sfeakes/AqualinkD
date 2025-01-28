@@ -6,6 +6,8 @@
 #include "aq_serial.h"
 #include "aqualink.h"
 
+//#define CONFIG_DEV_TEST
+//#define CONFIG_EDITOR
 
 //#define DEFAULT_LOG_LEVEL    10 
 #define DEFAULT_LOG_LEVEL    LOG_NOTICE
@@ -86,10 +88,15 @@ struct aqconfig
   //bool read_pentair_packets;
   uint8_t read_RS485_devmask;
   bool use_panel_aux_labels;
+
+  //uint8_t force_device_devmask; // should change the below to devmask
+  
   bool force_swg;
   bool force_ps_setpoints;
   bool force_frzprotect_setpoints;
   bool force_chem_feeder;
+  
+
   //int swg_zero_ignore; // This can be removed since this was due to VSP that's been fixed.
   bool display_warnings_web;
   bool log_protocol_packets; // Read & Write as packets
@@ -105,7 +112,8 @@ struct aqconfig
   bool mqtt_timed_update;
   bool sync_panel_time;
   bool enable_scheduler;
-  int16_t schedule_event_mask;
+  int8_t schedule_event_mask; // Was int16_t, but no need
+  //int16_t schedule_event_mask;
   //bool sched_chk_poweron;
   //bool sched_chk_freezeprotectoff;
   //bool sched_chk_boostoff;
@@ -138,6 +146,17 @@ struct aqconfig _aqconfig_;
 #define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
 
+/*
+#define FORCE_SWG_SP           (1 << 0)
+#define FORCE_POOLSPA_SP       (1 << 1)
+#define FORCE_FREEZEPROTECT_SP (1 << 2)
+#define FORCE_CHEM_FEEDER      (1 << 3)
+
+#define ENABLE_SWG           ((_aqconfig_.force_device_devmask & FORCE_SWG_SP) == FORCE_SWG_SP)
+#define ENABLE_HEATERs       ((_aqconfig_.force_device_devmask & FORCE_POOLSPA_SP) == FORCE_POOLSPA_SP)
+#define ENABLE_FREEZEPROTECT ((_aqconfig_.force_device_devmask & FORCE_FREEZEPROTECT_SP) == FORCE_FREEZEPROTECT_SP)
+#define ENABLE_CHEM_FEEDER   ((_aqconfig_.force_device_devmask & FORCE_CHEM_FEEDER) == FORCE_CHEM_FEEDER)
+*/
 
 /*
 #ifndef CONFIG_C
@@ -159,6 +178,189 @@ void init_config();
 bool writeCfg (struct aqualinkdata *aqdata);
 bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value);
 bool mac(char *buf, int len, bool useDelimiter);
-char *cleanalloc(char*str);
+char *cleanalloc(char *str);
+char *ncleanalloc(char *str, int length);
+
+const char *pumpType2String(pump_type ptype);
+
+#ifdef CONFIG_EDITOR
+int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize);
+void check_print_config (struct aqualinkdata *aqdata);
+#endif
+
+#if defined(CONFIG_DEV_TEST) || defined(CONFIG_EDITOR)
+typedef enum cfg_value_type{
+  CFG_STRING,
+  CFG_INT,
+  CFG_FLOAT,
+  CFG_HEX,
+  CFG_BOOL,
+  CFG_BITMASK,
+  CFG_SPECIAL
+} cfg_value_type;
+#endif
+
+#ifdef CONFIG_DEV_TEST 
+typedef struct cfgParam {
+  void *value_ptr;
+  //int max_value; // Max length of string (maybe mad int as well)
+  cfg_value_type value_type;
+  char *name;
+  char *valid_values;
+  uint8_t mask;
+} cfgParam;
+
+#ifndef CONFIG_C
+extern cfgParam _cfgParams[];
+extern int _numCfgParams;
+#else
+cfgParam _cfgParams[100];
+int _numCfgParams;
+#endif // CONFIG_C
+#endif // CONFIG_DEV_TEST
+
+// Below are missed
+//RSSD_LOG_filter
+//debug_log_mask
+#define CFG_V_BOOL                              "[\"Yes\", \"No\"]"
+
+#define CFG_N_serial_port                       "serial_port"
+#define CFG_C_serial_port                       11
+#define CFG_N_log_level                         "log_level"
+#define CFG_V_log_level                         "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]"
+#define CFG_C_log_level                         9
+#define CFG_N_socket_port                       "socket_port"
+#define CFG_C_socket_port                       11
+#define CFG_N_web_directory                     "web_directory"
+#define CFG_C_web_directory                     13
+#define CFG_N_device_id                         "device_id"
+#define CFG_V_device_id                         "[\"0x0a\", \"0x0b\", \"0x09\", \"0x08\", \"0x60\", \"0xFF\"]"
+#define CFG_C_device_id                         9
+#define CFG_N_rssa_device_id                    "rssa_device_id"
+#define CFG_V_rssa_device_id                    "[\"0x00\", \"0x48\", \"0xFF\"]"
+#define CFG_C_rssa_device_id                    14
+
+#define CFG_N_RSSD_LOG_filter                   "RSSD_LOG_filter"
+#define CFG_C_RSSD_LOG_filter                   15
+
+#define CFG_N_panel_type                        "panel_type"
+#define CFG_C_panel_type                        10
+#define CFG_N_extended_device_id                "extended_device_id"
+#define CFG_V_extended_device_id                "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\", \"0xFF\"]"
+#define CFG_C_extended_device_id                18
+
+#define CFG_N_sync_panel_time                   "sync_panel_time"
+#define CFG_C_sync_panel_time                   15 
+
+//#define CFG_N_extended_device_id2               "extended_device_id2"
+//#define CFG_C_extended_device_id2               20
+#define CFG_N_extended_device_id_programming    "extended_device_id_programming"
+#define CFG_C_extended_device_id_programming    30
+#define CFG_N_enable_iaqualink                  "enable_iaqualink"
+#define CFG_C_enable_iaqualink                  16
+#define CFG_N_log_file                          "log_file"
+#define CFG_C_log_file                          8
+#define CFG_N_mqtt_aq_topic                     "mqtt_aq_topic"
+#define CFG_C_mqtt_aq_topic                     13
+#define CFG_N_mqtt_server                       "mqtt_address"
+#define CFG_C_mqtt_server                       12
+#define CFG_N_mqtt_user                         "mqtt_user"
+#define CFG_C_mqtt_user                         9
+#define CFG_N_mqtt_passwd                       "mqtt_passwd"
+#define CFG_C_mqtt_passwd                       11
+#define CFG_N_mqtt_hass_discover_topic          "mqtt_ha_discover_topic"
+#define CFG_C_mqtt_hass_discover_topic          24
+#define CFG_N_mqtt_hass_discover_use_mac        "mqtt_ha_discover_use_mac"
+#define CFG_C_mqtt_hass_discover_use_mac        27
+#define CFG_N_mqtt_timed_update                 "mqtt_timed_update"
+#define CFG_C_mqtt_timed_update                 17
+//#define CFG_N_mqtt_ID                           "mqtt_ID"
+//#define CFG_C_mqtt_ID                           7
+#define CFG_N_mqtt_dz_sub_topic                 "mqtt_dz_sub_topic"
+#define CFG_C_mqtt_dz_sub_topic                 17
+#define CFG_N_mqtt_dz_pub_topic                 "mqtt_dz_pub_topic"
+#define CFG_C_mqtt_dz_pub_topic                 17
+#define CFG_N_dzidx_air_temp                    "dzidx_air_temp"
+#define CFG_C_dzidx_air_temp                    14
+#define CFG_N_dzidx_pool_water_temp             "dzidx_pool_water_temp"
+#define CFG_C_dzidx_pool_water_temp             21
+#define CFG_N_dzidx_spa_water_temp              "dzidx_spa_water_temp"
+#define CFG_C_dzidx_spa_water_temp              20
+#define CFG_N_dzidx_swg_percent                 "dzidx_SWG_percent"
+#define CFG_C_dzidx_swg_percent                 17
+#define CFG_N_dzidx_swg_ppm                     "dzidx_SWG_PPM"
+#define CFG_C_dzidx_swg_ppm                     13
+#define CFG_N_dzidx_swg_status                  "dzidx_SWG_Status"
+#define CFG_C_dzidx_swg_status                  16
+#define CFG_N_light_programming_mode            "light_programming_mode"
+#define CFG_C_light_programming_mode            22
+#define CFG_N_light_programming_initial_on      "light_programming_initial_on"
+#define CFG_C_light_programming_initial_on      28
+#define CFG_N_light_programming_initial_off     "light_programming_initial_off"
+#define CFG_C_light_programming_initial_off     29
+#define CFG_N_override_freeze_protect           "override_freeze_protect"
+#define CFG_C_override_freeze_protect           23
+#define CFG_N_pda_sleep_mode                    "pda_sleep_mode"
+#define CFG_C_pda_sleep_mode                    14
+#define CFG_N_convert_mqtt_temp                 "mqtt_convert_temp_to_c"
+#define CFG_C_convert_mqtt_temp                 22
+#define CFG_N_convert_dz_temp                   "dz_convert_temp_to_c"
+#define CFG_C_convert_dz_temp                   20
+#define CFG_N_report_zero_spa_temp              "report_zero_spa_temp"
+#define CFG_C_report_zero_spa_temp              20
+#define CFG_N_report_zero_pool_temp             "report_zero_pool_temp"
+#define CFG_C_report_zero_pool_temp             21
+#define CFG_N_read_RS485_devmask                "read_RS485_devmask"
+#define CFG_C_read_RS485_devmask                18
+#define CFG_N_use_panel_aux_labels              "use_panel_aux_labels"
+#define CFG_C_use_panel_aux_labels              20
+#define CFG_N_force_swg                         "force_swg"
+#define CFG_C_force_swg                         9
+#define CFG_N_force_ps_setpoints                "force_ps_setpoints"
+#define CFG_C_force_ps_setpoints                18
+#define CFG_N_force_frzprotect_setpoints        "force_frzprotect_setpoints"
+#define CFG_C_force_frzprotect_setpoints        26
+#define CFG_N_force_chem_feeder                 "force_chem_feeder"
+#define CFG_C_force_chem_feeder                 17
+#define CFG_N_display_warnings_web              "display_warnings_web"
+#define CFG_C_display_warnings_web              20
+#define CFG_N_log_protocol_packets              "log_protocol_packets"
+#define CFG_C_log_protocol_packets              20
+#define CFG_N_device_pre_state                  "device_pre_state"
+#define CFG_C_device_pre_state                  16
+
+#define CFG_N_read_RS485_swg                    "read_RS485_swg"
+#define CFG_C_read_RS485_swg                    14
+#define CFG_N_read_RS485_ePump                  "read_RS485_ePump"
+#define CFG_C_read_RS485_ePump                  16
+#define CFG_N_read_RS485_vsfPump                "read_RS485_vsfPump"
+#define CFG_C_read_RS485_vsfPump                18
+#define CFG_N_read_RS485_JXi                    "read_RS485_JXi"
+#define CFG_C_read_RS485_JXi                    14
+#define CFG_N_read_RS485_LX                     "read_RS485_LX"
+#define CFG_C_read_RS485_LX                     13
+#define CFG_N_read_RS485_Chem                   "read_RS485_Chem"
+#define CFG_C_read_RS485_Chem                   15
+#define CFG_N_read_RS485_iAqualink              "read_RS485_iAqualink"
+#define CFG_C_read_RS485_iAqualink              20
+
+
+#define CFG_N_enable_scheduler                  "enable_scheduler"
+#define CFG_C_enable_scheduler                  16
+#define CFG_N_scheduler_check_poweron           "scheduler_check_poweron"
+#define CFG_C_scheduler_check_poweron           23
+#define CFG_N_scheduler_check_freezeprotectoff  "scheduler_check_freezeprotectoff"
+#define CFG_C_scheduler_check_freezeprotectoff  32
+#define CFG_N_scheduler_check_boostoff          "scheduler_check_boostoff"
+#define CFG_C_scheduler_check_boostoff          24
+#define CFG_N_scheduler_check_pumpon_hour       "scheduler_check_pumpon_hour"
+#define CFG_C_scheduler_check_pumpon_hour       27
+#define CFG_N_scheduler_check_pumpoff_hour      "scheduler_check_pumpoff_hour"
+#define CFG_C_scheduler_check_pumpoff_hour      28
+
+#define CFG_N_ftdi_low_latency                  "ftdi_low_latency"
+#define CFG_C_ftdi_low_latency                  16
+#define CFG_N_rs485_frame_delay                 "rs485_frame_delay"
+#define CFG_C_rs485_frame_delay                 17
 
 #endif

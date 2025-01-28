@@ -35,6 +35,7 @@ int build_color_light_jsonarray(int index, char* buffer, int size);
 void set_currentlight_value(clight_detail *light, int index);
 
 bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow);
+const char *get_aqualinkd_light_mode_name(int index, bool *isShow);
 
 //char *_color_light_options_[LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS][LIGHT_COLOR_NAME];
 

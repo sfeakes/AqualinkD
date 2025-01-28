@@ -34,6 +34,7 @@
 #include "aq_programmer.h"
 #include "rs_msg_utils.h"
 #include "color_lights.h"
+#include "iaqualink.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -539,6 +540,12 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
 
   length += sprintf(buffer+length, "{\"type\": \"aqmanager\"");
   length += sprintf(buffer+length, ",\"deamonized\": \"%s\"", (_aqconfig_.deamonize?JSON_ON:JSON_OFF) );
+#ifdef CONFIG_EDITOR
+  length += sprintf(buffer+length, ",\"config_editor\": \"yes\"");
+#else
+  length += sprintf(buffer+length, ",\"config_editor\": \"no\"");
+#endif
+  
   /*
   length += sprintf(buffer+length, ",\"panel_type\":\"%s\"",getPanelString());
   length += sprintf(buffer+length, ",\"version\":\"%s\"",aqdata->version );//8157 REV MMM",
@@ -742,22 +749,18 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
     length--;
   length += sprintf(buffer+length, "}");
 
-/*
-  for (i=0; i < aqdata->num_lights; i++) 
+
+  length += sprintf(buffer+length, ",\"sensors\":{" );
+  for (i=0; i < aqdata->num_sensors; i++) 
   {
-    length += sprintf(buffer+length, ",\"Plight_%d\":{\"name\":\"%s\",\"id\":\"%s\", \"type\":\"%d\", \"value\":\"%d\", \"state\":\"%s\"}",
-                                     i+1,
-                                     aqdata->lights[i].button->label,
-                                     aqdata->lights[i].button->name,
-                                     aqdata->lights[i].lightType,
-                                     aqdata->lights[i].currentValue,
-                                     LED2text(aqdata->lights[i].RSSDstate)
-    );
+    //printf("Sensor value %f %.2f\n",aqdata->sensors[i].value,aqdata->sensors[i].value);
+    if (aqdata->sensors[i].value != TEMP_UNKNOWN) {
+      length += sprintf(buffer+length, "\"%s\": \"%.2f\",", aqdata->sensors[i].label, aqdata->sensors[i].value );
+    }
   }
-  */
-  //if (buffer[length-1] == ',')
-  //  length--;
-  //length += sprintf(buffer+length, "}");
+  if (buffer[length-1] == ',')
+    length--;
+  length += sprintf(buffer+length, "}");
 
 
   length += sprintf(buffer+length, "}" );
@@ -1050,4 +1053,323 @@ bool parseJSONmqttrequest(const char *str, size_t len, int *idx, int *nvalue, ch
   return false;
 }
 
+/*
+int json_cfg_element_OLD(char* buffer, int size, const char *name, const void *value, cfg_value_type type, char *valid_val) {
+  int result = 0;
 
+  char valid_values[256];
+
+  if (valid_val != NULL) {
+    sprintf(valid_values,",\"valid values\":%s",valid_val);
+  }
+
+  switch(type){
+    case CFG_INT:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%d\", \"type\":\"int\" %s}", name, *(int *)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_STRING:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"string\" %s}", name, (char *)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_BOOL:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"bool\" %s}", name, bool2text(*(bool *)value), (valid_val==NULL?"":valid_values));
+    break;
+    case CFG_HEX:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"0x%02hhx\", \"type\":\"hex\" %s}", name, *(unsigned char *)value, (valid_val==NULL?"":valid_values) );
+    break;
+  }
+
+  if (result <= 0 || result >= size) {
+    LOG(NET_LOG,LOG_ERR, "Buffer full in build_aqualink_config_JSON(), result truncated!");
+    return 0;
+  }
+
+  return result;
+}
+*/
+
+#ifdef CONFIG_EDITOR
+
+int json_cfg_element(char* buffer, int size, const char *name, const void *value, cfg_value_type type, uint8_t mask, char *valid_val) {
+  int result = 0;
+
+  char valid_values[256];
+
+  if (valid_val != NULL) {
+    sprintf(valid_values,",\"valid values\":%s",valid_val);
+  }
+
+  switch(type){
+    case CFG_INT:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%d\", \"type\":\"int\" %s}", name, *(int *)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_STRING:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"string\" %s}", name, *(char **)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_BOOL:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"bool\" %s}", name, bool2text(*(bool *)value), (valid_val==NULL?"":valid_values));
+    break;
+    case CFG_HEX:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"0x%02hhx\", \"type\":\"hex\" %s}", name, *(unsigned char *)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_FLOAT:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%f\", \"type\":\"float\" %s}", name, *(float *)value, (valid_val==NULL?"":valid_values) );
+    break;
+    case CFG_BITMASK:
+      result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"bool\" %s}", name, (*(uint8_t *)value & mask) == mask? bool2text(true):bool2text(false) ,CFG_V_BOOL );
+    break;
+    case CFG_SPECIAL:
+      if (strncasecmp(name, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
+        //fprintf(fp, "%s=%s\n", _cfgParams[i].name, loglevel2cgn_name(_aqconfig_.log_level));
+        //result = json_cfg_element(buffer+length, size-length, CFG_N_log_level, &stringptr, CFG_STRING, "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]"));
+        //stringptr = loglevel2cgn_name(_aqconfig_.log_level);
+        result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"%s\", \"type\":\"string\" %s}",name,loglevel2cgn_name(*(int *)value), "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]");
+      } else {
+        result = snprintf(buffer, size, ",\"%s\" : {\"value\":\"Something went wrong\", \"type\":\"string\"}",name);
+      }
+    break;
+  }
+
+  if (result <= 0 || result >= size) {
+    LOG(NET_LOG,LOG_ERR, "Buffer full in build_aqualink_config_JSON(), result truncated!");
+    return 0;
+  }
+
+  return result;
+}
+
+
+
+/*
+const char *pumpType2String(pump_type ptype) {
+  switch (ptype) {
+    case EPUMP:
+      return "JANDY ePUMP";
+    break;
+    case VSPUMP:
+      return "Pentair VF";
+    break;
+    case VFPUMP:
+      return "Pentair VS";
+    break;
+    case PT_UNKNOWN:
+    default:
+      return "unknown";
+    break;
+  }
+}
+*/
+
+int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_data)
+{
+  memset(&buffer[0], 0, size);
+  int length = 0;
+  int result;
+  int i;
+  char buf[256];
+  const char *stringptr;
+
+  if ((result = snprintf(buffer+length, size-length, "{\"type\": \"config\"")) < 0 || result >= size-length) {
+    length += snprintf(buffer+length, size-length, "}");
+    return length;
+  } else {
+    length += result;
+  }
+
+  if ((result = snprintf(buffer+length, size-length, ",\"status\": \"!!!! NOT FULLY IMPLIMENTED YET !!!!\"")) < 0 || result >= size-length) {
+    length += snprintf(buffer+length, size-length, "}");
+    return length;
+  } else {
+    length += result;
+  }
+
+  #ifdef CONFIG_DEV_TEST
+  for (int i=0; i <= _numCfgParams; i++) {
+    if ((result = json_cfg_element(buffer+length, size-length, _cfgParams[i].name, _cfgParams[i].value_ptr, _cfgParams[i].value_type, _cfgParams[i].mask, _cfgParams[i].valid_values)) <= 0)
+      return length;
+    else
+      length += result;
+  }
+  #endif
+
+
+  // TODO add custom light modes/colors
+
+  // TODO add RSSD LOG FILTERS
+
+  // TODO add devmask for reading RS485 external
+
+
+
+/*
+  if ((result = json_cfg_element(buffer+length, size-length, "config_file", _aqconfig_.config_file, CFG_STRING, NULL)) <= 0)
+    return length;
+  else
+    length += result;
+*/
+  stringptr = getPanelString();
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_panel_type, &stringptr, CFG_STRING, 0, NULL)) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_device_id, &_aqconfig_.device_id, CFG_HEX,  0, "[\"0x0a\", \"0x0b\", \"0x09\", \"0x08\", \"0x60\", \"0xFF\"]")) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_rssa_device_id, &_aqconfig_.rssa_device_id, CFG_HEX,  0, "[\"0x00\", \"0x48\", \"0xFF\"]")) <= 0)
+    return length;
+  else
+    length += result;
+
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_extended_device_id, &_aqconfig_.extended_device_id, CFG_HEX,  0, "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\", \"0xFF\"]")) <= 0)
+    return length;
+  else
+    length += result;
+  
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_extended_device_id, &_aqconfig_.extended_device_id_programming, CFG_BOOL,  0, "[\"YES\", \"NO\"]")) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_enable_iaqualink, &_aqconfig_.enable_iaqualink, CFG_BOOL,  0, "[\"YES\", \"NO\"]")) <= 0)
+    return length;
+  else
+    length += result;
+#endif
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_serial_port, &_aqconfig_.serial_port, CFG_STRING,  0, NULL)) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_socket_port, &_aqconfig_.socket_port, CFG_STRING,  0, NULL )) <= 0)
+    return length;
+  else
+    length += result;
+
+  stringptr = loglevel2cgn_name(_aqconfig_.log_level);
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_log_level, &stringptr, CFG_STRING,  0, "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]")) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_web_directory, &_aqconfig_.web_directory, CFG_STRING,  0, NULL)) <= 0)
+    return length;
+  else
+    length += result;
+
+
+
+
+
+
+
+
+  if ((result = json_cfg_element(buffer+length, size-length, "sched_chk_pumpon_hour", &_aqconfig_.sched_chk_pumpon_hour, CFG_INT,  0, NULL )) <= 0)
+    return length;
+  else
+    length += result;
+
+
+  // OTHERS
+
+  
+
+  // OTHERS
+
+  if ((result = json_cfg_element(buffer+length, size-length, "force_swg", &_aqconfig_.force_swg, CFG_BOOL, 0, "[\"YES\", \"NO\"]")) <= 0)
+    return length;
+  else
+    length += result;
+
+  if ((result = json_cfg_element(buffer+length, size-length, "use_panel_aux_labels", &_aqconfig_.use_panel_aux_labels, CFG_BOOL, 0, NULL)) <= 0)
+    return length;
+  else
+    length += result;
+
+
+  // All buttons
+
+  for (i = 0; i < aq_data->total_buttons; i++)
+  {
+    char prefix[30];
+    if (isVBUTTON(aq_data->aqbuttons[i].special_mask)) {
+      sprintf(prefix,"virtual_button_%.2d",(i+1)-aq_data->virtual_button_start);
+    } else {
+      sprintf(prefix,"button_%.2d",i+1);
+    }
+    
+    sprintf(buf,"%s_label", prefix);
+    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->aqbuttons[i].label, CFG_STRING, 0, NULL)) <= 0)
+      return length;
+    else
+      length += result;
+
+    if (isVS_PUMP(aq_data->aqbuttons[i].special_mask)) 
+    {
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpIndex > 0) {
+        sprintf(buf,"%s_pumpIndex", prefix);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpIndex, CFG_INT, 0, NULL)) <= 0)
+          return length;
+        else
+          length += result;
+      }
+      
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpID != NUL) {
+        sprintf(buf,"%s_pumpID", prefix);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpID, CFG_HEX, 0, NULL)) <= 0)
+          return length;
+        else
+          length += result;
+      }
+
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpName[0] != '\0') {
+        sprintf(buf,"%s_pumpName", prefix);
+        stringptr = ((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpName;
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, NULL)) <= 0)
+          return length;
+        else
+          length += result;
+      }
+
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType != PT_UNKNOWN) {
+        sprintf(buf,"%s_pumpType", prefix);
+        stringptr = pumpType2String(((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, "[\"JANDY ePUMP\",\"Pentair VS\",\"Pentair VF\"]")) <= 0)
+          return length;
+        else
+          length += result;
+      }
+    } else if (isPLIGHT(aq_data->aqbuttons[i].special_mask)) {
+      if (((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType > 0) {
+        sprintf(buf,"%s_lightMode", prefix);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType, CFG_INT, 0, NULL)) <= 0)
+          return length;
+        else
+          length += result;
+      }
+    } else if ( (isVBUTTON(aq_data->aqbuttons[i].special_mask) && aq_data->aqbuttons[i].rssd_code >= IAQ_ONETOUCH_1 && aq_data->aqbuttons[i].rssd_code <= IAQ_ONETOUCH_6 ) ) {
+        sprintf(buf,"%s_onetouchID", prefix);
+        int oID = (aq_data->aqbuttons[i].rssd_code - 15);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &oID, CFG_INT, 0, "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]")) <= 0)
+          return length;
+        else
+          length += result;
+      } 
+  }
+
+
+  if ((result = snprintf(buffer+length, size-length, "}")) < 0) {
+    return 0;
+  } else {
+    length += result;
+  }
+
+
+  return length;
+}
+
+
+#endif

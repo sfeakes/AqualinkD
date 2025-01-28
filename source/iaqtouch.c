@@ -883,13 +883,26 @@ void processPage(struct aqualinkdata *aq_data)
   }
 }
 
-#define REQUEST_STATUS_POLL_COUNT  10
-#define REQUEST_DEVICES_POLL_COUNT 30 // if _aqconfig_.enable_iaqualink=true then REQUEST_STATUS_POLL_COUNT will be used.
+// if enable_iaqualink this poll count can be increased if we sit on the device status page
+// all device status are quicker to update in enable_iaqualink, so leaves just pump/swg info to get.
+#define FULL_STATUS_POLL_COUNT     200 // We did have this at 20, but put too much load on panel, (couldn't program light)
+#define DEVICE_STATUS_POLL_COUNT  20 // This must be less than FULL_STATUS_POLL_COUNT
+
+//#define REQUEST_DEVICES_POLL_COUNT 30 // if _aqconfig_.enable_iaqualink=true then REQUEST_STATUS_POLL_COUNT will be used.
+
+static int _pollCnt;
+
+// running through status while programming a lighgt seems to confuse the panel, so let
+// other people reset our poll count.
+void reset_iaqTouchPollCounter()
+{
+  _pollCnt = 0;
+}
 
 bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkdata *aq_data)
 {
   static bool gotInit = false; 
-  static int cnt = 0;
+  //static int _pollCnt = 0;
   //static int probesSinceLastPageCMD=0;
   static bool gotStatus = true;
   static char message[AQ_MSGLONGLEN + 1];
@@ -1095,20 +1108,33 @@ if not programming && poll packet {
     else if status goto Home
   }
   increase counter
+
+  The above sits on device page.
+  Should we sit on status page to get better updates of VSP/SWG?  would make sence if iaqualink is enabeled
+  since that gets all device updates quicker and cleaner.
+  if we a PDA only, then sit on devices page.
+  if iaqualink is not enabeled, still sit on status page.
+  So why did I update this to sit on devices page???????????
+  RS16 should also probably sit on devices page.
 }*/
     if (in_programming_mode(aq_data) == false) {
+      //LOG(IAQT_LOG,LOG_DEBUG, "Poll counter = %d\n",_pollCnt);
+
       if (_currentPage == IAQ_PAGE_HOME) {
         iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08); // This is "other devices on/off" page
-        cnt = 0;
+        _pollCnt = 0;
       }
+
       //if ( (isPDA_PANEL || isVirtualButtonEnabled() || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
       // Just sent Status Page request if none of the above are active
       //}
       // After we send devices page in above if statment, kick us through a loop of
       // devices devices1 devices2 devices2 status.
+      // We probably only need to go over this loop if iaqualink2 is NOT enabled.
+      // But may be better to simply increase FULL_STATUS_POLL_COUNT when it's not enabled.
       uint8_t nextPageRequestKey = KEY_IAQTCH_HOME;
 
-      if (cnt++ > REQUEST_STATUS_POLL_COUNT) {
+      if (_pollCnt++ > FULL_STATUS_POLL_COUNT) {
         switch(_currentPage) {
           case IAQ_PAGE_DEVICES:
           case IAQ_PAGE_DEVICES_REV_Yg:
@@ -1132,27 +1158,22 @@ if not programming && poll packet {
         }
 
         iaqt_queue_cmd(nextPageRequestKey);
-        /*
-        if (probesSinceLastPageCMD > 3) {
-          // Seems to be a bug with wifi device ghosting command on/off, kind-a looks like our page commands don;t take sometimes so wait.
-          // This didn;t fix issue, but see
-          iaqt_queue_cmd(nextPageRequestKey);
-          probesSinceLastPageCMD=0;
-        } else {
-          LOG(IAQT_LOG, LOG_INFO, "Waiting to send next page cnt %d\n",probesSinceLastPageCMD);
-        }
-        */
+      
+      } else if ( (_pollCnt % DEVICE_STATUS_POLL_COUNT == 0) && 
+                  _currentPage == IAQ_PAGE_DEVICES || _currentPage == IAQ_PAGE_DEVICES_REV_Yg) {
+        iaqt_queue_cmd(KEY_IAQTCH_STATUS); // This will force us to go to status, then it'll jump back to devices, then force status again
       }
     } else if (in_programming_mode(aq_data) == true) {
       // Set count to something close to max, so we will pull latest info once programming has finished.
       // This is good for VSP GPM programming as it takes number of seconds to register once finished programming.
       // -5 seems to be too quick for VSP/GPM so using 10
-      cnt = REQUEST_STATUS_POLL_COUNT - 10; 
+      // This is probably not needed any more, since we grab status quite often now.
+      _pollCnt = FULL_STATUS_POLL_COUNT - 10; 
     }
 #else
-    //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",cnt);
+    //LOG(IAQT_LOG,LOG_DEBUG, "poll count %d\n",_pollCnt);
     // Load status page every 50 messages
-    if (cnt++ > REQUEST_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
+    if (_pollCnt++ > FULL_STATUS_POLL_COUNT && in_programming_mode(aq_data) == false ) {
       if (isPDA_PANEL || PANEL_SIZE() >= 16) {
         iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
       } else {
@@ -1160,12 +1181,12 @@ if not programming && poll packet {
       }
       gotStatus = false; // Reset if we got status page, for fix panel bug.
       //aq_programmer(AQ_GET_IAQTOUCH_VSP_ASSIGNMENT, NULL, aq_data);
-      cnt = 0;
-    } else if (gotStatus == false && cnt > 3) {
+      _pollCnt = 0;
+    } else if (gotStatus == false && _pollCnt > 3) {
       // Fix bug with control panel where after a few hours status page disapears and you need to hit menu.
-      LOG(IAQT_LOG,LOG_INFO, "Overcomming Jandy control panel bug, (missing status, goto menu)\n",cnt);
+      LOG(IAQT_LOG,LOG_INFO, "Overcomming Jandy control panel bug, (missing status, goto menu)\n",_pollCnt);
       iaqt_queue_cmd(KEY_IAQTCH_HOME);
-      cnt = REQUEST_STATUS_POLL_COUNT - 5;
+      _pollCnt = FULL_STATUS_POLL_COUNT - 5;
      /* 
       if (isPDA_PANEL) {
         iaqt_queue_cmd(KEY_IAQTCH_HOMEP_KEY08);
@@ -1179,7 +1200,7 @@ if not programming && poll packet {
       // Set count to something close to max, so we will pull latest info once programming has finished.
       // This is good for VSP GPM programming as it takes number of seconds to register once finished programming.
       // -5 seems to be too quick for VSP/GPM so using 10
-      cnt = REQUEST_STATUS_POLL_COUNT - 10; 
+      _pollCnt = FULL_STATUS_POLL_COUNT - 10; 
     }
 
     // On poll no need to kick programming threads

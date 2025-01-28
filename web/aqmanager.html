@@ -10,7 +10,11 @@
     <meta name='apple-mobile-web-app-status-bar-style' content='black'>
     <link href="aqualinkd.png" rel="apple-touch-icon">
     <link href="aqualinkd.png" rel="icon">
+    <script type="text/javascript" src="confighelp.js"></script>
     <style>
+        :root {
+            --max-config-height: 870px;  
+        }
         html {}
 
         body {
@@ -51,6 +55,19 @@
             /*border: 1px solid red;*/
             row-gap: 20px;
             /*overflow-y: scroll; this only works if we know the height, we can caculate but not important at moment */
+        }
+
+        .configpopup {
+          top: 10px;
+      /*left: 10px;*/
+          position: fixed;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 100vw;
+      /*
+      height: 100%;
+      */
         }
 
         /*
@@ -239,6 +256,49 @@
             background-color: #f1f1f1;
             font-size: 14px;
         }
+
+        /* FOR CONFIG PUPUP */
+
+        .config_options {
+            top: 10px;
+            position: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            
+            /*height: 100vw;*/
+        }
+        .config_options_pane {
+            background-color: var(--options_pane_background);
+            border: 2px solid var(--options_pane_bordercolor);
+            border-radius: 20px;
+            justify-content: center;
+            align-items: center;
+            width: 700px;
+            /*max-height: 870px;*/
+            max-height: var(--max-config-height);
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .config_options_added {
+            background-color: white;
+        }
+        .hide {
+            display: none;
+            filter: alpha(opacity=0);
+            opacity: 0.0;
+        }
+        /*
+        .helptxt {
+            font-size: x-small;  
+        }
+        */
+        /*
+        tr{
+            border-bottom: 1px solid black;
+        }
+            */
     </style>
 
     <script type='text/javascript'>
@@ -413,7 +473,7 @@
         }
 
         function downloadFile(filePath, lines) {
-            console.log("Lines=" + lines);
+            //console.log("Lines=" + lines);
 
             var link = document.createElement('a');
             link.href = filePath + "/" + lines;
@@ -460,7 +520,283 @@
             } catch (Error) { }
         }
 
+        var _config = {};
 
+        function editconfig(caller) {
+          var msg = {
+            uri: "config"
+          };
+          send_command(msg);
+        }
+
+        function saveconfig(caller) {
+          
+          var json = {
+            uri: "config/set"
+          };
+          
+          var values = {}
+          for (var obj in _config) {
+            if (_config[obj].value !== undefined) {
+              //json.values.push('"'+obj+'" : "'+_config[obj].value+'"' );
+              //json.values.push(obj : _config[obj].value  );
+              values[obj] = _config[obj].value;
+            }
+          }
+          json["values"] = values;
+
+          //console.log (JSON.stringify(json));
+
+          send_command(json);
+          closeconfig();
+        }
+
+        function closeconfig() {
+          const configtable = document.getElementById("config_table");
+          while (configtable.rows.length > 1) {
+            configtable.deleteRow(1); // Delete the first data row (index 1)
+          }
+
+          document.getElementById("config_options").classList.add("hide");
+          document.getElementById("config_options_pane").classList.add("hide");
+        }
+
+        function showConfig(data) {
+          var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+          //console.log("Height="+h);
+          document.documentElement.style.setProperty('--max-config-height', (h-30)+'px');
+
+          document.getElementById("config_options").classList.remove("hide");
+          document.getElementById("config_options_pane").classList.remove("hide");
+          const configtable = document.getElementById("config_table");
+          //console.log (data);
+          _config = data;
+          var lastBtnNum = 1; // Use 1 so only hits if on button_02
+          var vBtnCnt = 0;
+          
+          for (var obj in data) {
+            var isBtn = false;
+            if (_confighelp[obj.toString()] !== undefined) {
+              //console.log("FOUND HELP");
+              //console.log(_confighelp[obj.toString()]);
+              const newRow = configtable.insertRow();
+              const cell1 = newRow.insertCell();
+              cell1.colSpan = 3;
+              cell1.style.fontSize = "small";
+              cell1.textContent=_confighelp[obj.toString()];
+            }
+
+            if (obj.toString().includes("button")) {
+              isBtn = true;
+              const num = parseInt(obj.toString().match(/[0-9]+/));
+              //console.log("lastnum="+lastBtnNum+" num="+num);
+              if (num && num != lastBtnNum) {       
+                const newRow = configtable.insertRow();
+                newRow.style.borderBottom = "1px solid black";
+                /*
+                const cell1 = newRow.insertCell();
+                const cell2 = newRow.insertCell();
+                const cell3 = newRow.insertCell();
+                //cell1.colSpan = 3;
+                cell1.style.fontSize = "small";
+                if (obj.toString().includes("virtual")) {
+                  vBtnCnt++;
+                }
+                if (vBtnCnt > 1) {
+                  cell1.textContent = "Add Virtual Button";
+                } else {
+                  cell1.style.paddingLeft = "20px";
+                  cell1.textContent = "Add Button_"+lastBtnNum+"_??????";
+                  cell2.innerHTML = '<select key="button_'+lastBtnNum+'_ADD"><option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="lightMode">lightMode</option></select>';
+                  cell2.addEventListener('change', cfgButtonAdd);
+                }*/
+                lastBtnNum = num;
+              }
+            }
+
+            if (data[obj].value !== undefined) {
+              //console.log(obj.toString() + " = " + data[obj].value);
+              const newRow = configtable.insertRow();
+              if (! isBtn) {
+                newRow.style.borderBottom = "1px solid black";
+              }
+              const cell1 = newRow.insertCell();
+              const cell2 = newRow.insertCell();
+              const cell3 = newRow.insertCell();
+              cell1.textContent = obj.toString();
+              cell1.style.paddingLeft = "20px";
+              cell3.textContent = " ";
+              if (data[obj]["valid values"] !== undefined) {
+                //console.log(data[obj]["valid values"]);
+                const input = document.createElement("select");
+                array = data[obj]["valid values"];
+                for (var i = 0; i < array.length; i++) {
+                  var option = document.createElement("option");
+                  option.value = array[i];
+                  option.text = array[i];
+                  if (array[i] == data[obj].value) {
+                    option.selected = true;
+                  }
+                  input.setAttribute('key', obj.toString());
+                  input.addEventListener('change', cfgValueChanged);
+                  input.appendChild(option);
+                }
+                cell2.appendChild(input);
+              } else if (data[obj].type == "string") {
+                const input = document.createElement("input");
+                input.type = "text"; 
+                input.value = data[obj].value;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+              } else if (data[obj].type == "int") {
+                const input = document.createElement("input");
+                input.type = "number"; 
+                input.value = data[obj].value;
+                input.size = 4;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+              } else if (data[obj].type == "hex") {
+                const input = document.createElement("input");
+                input.type = "text"; 
+                input.value = data[obj].value;
+                input.size = 4;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+              } else if (data[obj].type == "float") {
+                console.log("NEED TO IMPLIMENT float about line 669");
+                cell2.textContent = data[obj].value;
+              } else {
+                cell2.textContent = data[obj].value;
+              }
+            }
+          }
+          //var jsonString= JSON.stringify(_config);
+          //console.log (jsonString);
+
+          var newRow = configtable.insertRow();
+          newRow.style.borderTop = "1px solid black";
+          var cell1 = newRow.insertCell();
+          cell1.colSpan = 3;
+          cell1.textContent = "Add Button or Virtual Button";
+
+          newRow = configtable.insertRow();
+          newRow.style.borderBottom = "1px solid black";
+          cell1 = newRow.insertCell();
+          var cell2 = newRow.insertCell();
+          var cell3 = newRow.insertCell();
+
+          cell1.innerHTML = '<select id="button_type_ADD"><option value="" selected="true"></option><option value="button">button</option><option value="virtual_button">virtual button</option></select> \
+                             <input disabled id="button_number_ADD" type="number" min="1" max="30" size="2"></input> \
+                             <select disabled id="button_option_ADD"><option value="" selected="true">';
+          cell1.addEventListener('change', cfgEnbleButtonOptions);
+          //cell2.innerHTML = '<input disabled id="button_value_ADD">';
+          cell2.innerHTML = '<div id="button_valuetype_ADD"></div>';
+          cell2.addEventListener('change', cfgEnbleButtonOptions);
+          cell3.innerHTML = '<input id="addButton" type="submit" value="Add" onClick="cfgButtonAdd()"></input>';
+          //cell3.addEventListener('change', cfgEnbleButtonOptions);
+          disablebutton("addButton");
+        }
+
+        function cfgEnbleButtonOptions(event) {
+          btnType = document.getElementById("button_type_ADD");
+          btnNum = document.getElementById("button_number_ADD");
+          btnOption = document.getElementById("button_option_ADD");
+          btnValueType = document.getElementById("button_valuetype_ADD");
+          
+          if (event.srcElement.id == "button_type_ADD"){
+            btnNum.disabled = false;
+            if (event.srcElement.value == "button") {
+              btnNum.max=20;
+              btnOption.innerHTML = '<option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="lightMode">lightMode</option>';
+            } else if (event.srcElement.value == "virtual_button") {
+              btnNum.max=10;
+              btnOption.innerHTML = '<option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="onetouchID">onetouchID</option>';
+            }
+          } else if (event.srcElement.id == "button_number_ADD"){
+            btnOption.disabled = false;
+          } else if (event.srcElement.id == "button_option_ADD"){
+            //btnValue.disabled = false;
+            //console.log(event.srcElement.value);
+            switch(event.srcElement.value) {
+              case "pumpIndex":
+                //btnValueType.innerHTML = '<select id="button_value_ADD"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>';
+                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="4" size="1"></input>';
+              break;
+              case "pumpID":
+                btnValueType.innerHTML = '<input id="button_value_ADD" type="text" size="4" value="0x60"></imput>';
+              break;
+              case "pumpType":
+                btnValueType.innerHTML = '<select id="button_value_ADD"><option value="JANDY ePUMP">JANDY ePUMP</option><option value="Pentair VS">Pentair VS</option><option value="Pentair VF">Pentair VF</option></select>';
+              break;
+              case "pumpName":
+                btnValueType.innerHTML = '<input id="button_value_ADD" type="text"></imput>';
+              break;
+              case "lightMode":
+                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="11" size="2"></input>';
+              break;
+              case "onetouchID":
+                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="6" size="2"></input>';
+              break;
+            }
+          }
+
+          // Get this here since the previous statment can change it.
+          btnValue = document.getElementById("button_value_ADD");
+
+          if (btnType.value != "" && btnNum.value != "" && btnOption.value != "" && btnValue && btnValue.value != "") {
+            enablebutton("addButton");
+          } else {
+            disablebutton("addButton");
+          }
+        }
+
+        function cfgValueChanged(event) {
+          //console.log("Config set "+event.srcElement.getAttribute('key')+" to "+event.srcElement.value)
+          _config[event.srcElement.getAttribute('key')].value = event.srcElement.value;
+        }
+
+        function cfgButtonAdd(){
+          //console.log(document.getElementById("button_type_ADD").value);
+          //console.log(document.getElementById("button_number_ADD").value);
+          //console.log(document.getElementById("button_option_ADD").value);
+          //console.log(document.getElementById("button_value_ADD").value);
+
+          var button = document.getElementById("button_type_ADD").value + "_" + ("0" + document.getElementById("button_number_ADD").value).slice (-2);
+          var buttonName = button+"_"+document.getElementById("button_option_ADD").value;
+          var buttonValue = document.getElementById("button_value_ADD").value;
+          //console.log("Looking for "+button);
+          const configtable = document.getElementById("config_table");
+          var found=false;
+          for (let i = 0; i < configtable.rows.length; i++) {
+            try{
+              if ( configtable.rows[i].cells[0].childNodes[0].nodeValue.includes(button)  ) {
+                //console.log("**** FOUND *****");
+                found=true;
+              } else if (found == true) {
+                //console.log("** ADD HERE **");
+                const newRow = configtable.insertRow(i);
+                newRow.classList.add("config_options_added");
+                var cell1 = newRow.insertCell();
+                var cell2 = newRow.insertCell();
+                var cell3 = newRow.insertCell();
+                newRow.style.borderBottom = "1px solid black";
+                cell1.style.paddingLeft = "20px";
+                cell1.innerHTML = buttonName;
+                cell2.innerHTML = buttonValue;
+                //cell3.innerHTML = '<input id="addButton" type="submit" value="Delete" onClick="cfgButtonDelete()"></input>';
+                var js = {};
+                js.value = buttonValue
+                _config[buttonName] = js;
+                //console.log(_config);
+                break;
+              }
+              //console.log(configtable.rows[i].cells[0].childNodes[0].nodeValue);
+            } catch (e){}
+          }
+        }
 
         function update_status(data) {
             /*
@@ -518,6 +854,11 @@
             if (data['deamonized'] == 'off') {
                 //console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
                 disablebutton("restart");
+            }
+            if (data['config_editor'] == 'yes') {
+                enablebutton("editconfig");
+            } else {
+                disablebutton("editconfig");
             }
 
             /*
@@ -577,7 +918,7 @@
                         var filterentry = document.getElementById("rssd_filter");
                         filterentry.value = "";
                         for (var id in data['debugmasks'][obj].filters) {
-                          console.log("Filter "+data['debugmasks'][obj].filters[id]);
+                          //console.log("Filter "+data['debugmasks'][obj].filters[id]);
                           if (data['debugmasks'][obj].filters[id] != "0x00") {
                             if (filterentry.value.length == 0) {
                               filterentry.value = data['debugmasks'][obj].filters[id];
@@ -651,6 +992,8 @@
                         update_status(data);
                     } else if (data.type == 'aux_labels') {
                         //set_labels(data);
+                    } else if (data.type == 'config') {
+                        showConfig(data);
                     }
                 }
                 socket_di.onclose = function () {
@@ -669,7 +1012,7 @@
         }
 
         function send_command(cmd) {
-            console.log("Send " + JSON.stringify(cmd));
+            //console.log("Send " + JSON.stringify(cmd));
             socket_di.send(JSON.stringify(cmd));
 
         }
@@ -786,6 +1129,7 @@
 
 <body onload="init();init_collapsible();">
     <div class="wrapper">
+        
         <div class="aqualinkd">
             <iframe id="aqd" src="/" width="100%" height="350px"></iframe>
         </div>
@@ -889,8 +1233,14 @@
                 </div>
                 <button class="collapsible">Config</button>
                 <div class="content" id="config">
-                    <!-- Will be populated on load -->
-                    <label>Not Implimented</label>
+                    <table border='0'>
+                        <tr>
+                            <td align="center">
+                                <input id="editconfig" type="button" onclick="editconfig(this);"
+                                    value="edit config"></input>
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </div>
         </div>
@@ -900,6 +1250,34 @@
                 <!--<div class="inner">END</div>-->
             </div>
         </div>
+        <!-- <div id="config_options" class="config_options hide" style="display: flex;" onclick="closeconfig();"> -->
+        <div id="config_options" class="config_options hide" style="display: flex;">
+            <div id="config_options_pane" class="config_options_pane hide">
+              <table id="config_table" border="0" cellpadding="1px" width="100%" style="border-collapse: collapse;">
+                <tbody><tr class="options_title">
+                  <th colspan="3"><span>AqualinkD Configuration</span>
+                  </th>
+                </tr>
+                <tr>
+                  <td align="right" width="50%">
+                    Key
+                  </td>
+                  <td align="left" width="50%">
+                    Value
+                  </td>
+                </tr>
+                </tbody>
+              </table>
+              <table border="0" cellpadding="0px" width="100%"><tr>
+                <td align="right" style="width:50%;padding-right: 10px;">
+                  <input id="saveconfig" type="button" onclick="saveconfig(this);" value="Save Config"></input>
+                </td>
+                <td align="left" style="width:50%;padding-left: 10px;">
+                  <input id="saveconfig" type="button" onclick="closeconfig(this);" value="Close (without saving)"></input> 
+                </td>
+            </tr></table>
+            </div>
+          </div>
         <!--<iframe src='about:blank' id="logdownload"></iframe>-->
     </div>
 </body>

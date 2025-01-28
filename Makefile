@@ -83,7 +83,7 @@ endif
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c allbutton.c allbutton_aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-       serial_logger.c mongoose.c hassio.c simulator.c timespec_subtract.c
+       serial_logger.c mongoose.c hassio.c simulator.c sensors.c timespec_subtract.c
 
 
 AQ_FLAGS =
@@ -227,12 +227,20 @@ quick:
 	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make quickbuild 
 	$(info Binaries for release have been built)
 
+debugbinaries:
+	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make debugbuild 
+	$(info Binaries for release have been built)
+
 # This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
 buildrelease: clean armhf arm64 
 	$(shell cd release && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
 
 # This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
 quickbuild: armhf arm64 
+	$(shell cd release && [ ! -f "./aqualinkd-armhf" ] && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
+
+debugbuild: CFLAGS = $(DFLAGS)
+debugbuild: armhf arm64 
 	$(shell cd release && [ ! -f "./aqualinkd-armhf" ] && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
 
 

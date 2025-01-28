@@ -59,6 +59,7 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
 //int build_device_JSON(struct aqualinkdata *aqdata, int programable_switch1, int programable_switch2, char* buffer, int size, bool homekit);
 int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool homekit);
 int build_aqualink_simulator_packet_JSON(struct aqualinkdata *aqdata, char* buffer, int size);
+int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_data);
 
 #endif /* JSON_MESSAGES_H_ */
 

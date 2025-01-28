@@ -27,6 +27,7 @@ float rsm_atof(const char* str);
 char *rsm_strncpycut(char *dest, const char *src, int dest_len, int src_len);
 //char *rsm_char_replace(char *replaced , char *search, const char find, const char replace);
 char *rsm_char_replace(char *replaced , char *search,  char *find,  char *replace);
+char *rsm_nchar_replace(char *replaced, int replaced_len, char *search,  char *find,  char *replace);
 int rsm_HHMM2min(char *message);
 
 #endif //RS_MSG_UTILS_H_

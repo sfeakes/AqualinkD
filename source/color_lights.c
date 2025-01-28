@@ -16,6 +16,7 @@ Intelibright
 Haywood Universal Color
 
 */
+bool isShowMode(const char *mode);
 
 /****** This list MUST be in order of clight_type enum *******/
 char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
@@ -170,9 +171,21 @@ bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow)
     }
   }
 
+  // TODO NSF check isShow and add a custom one if needed
   _color_light_options[0][index] = name;
 
   return true;
+}
+
+const char *get_aqualinkd_light_mode_name(int index, bool *isShow)
+{
+  // if index 1 is "1" then none are set.
+  if ( strcmp(_color_light_options[0][1], "1") == 0) {
+    return NULL;
+  }
+
+  *isShow = isShowMode(_color_light_options[0][index]);
+  return _color_light_options[0][index];
 }
 
 const char *get_currentlight_mode_name(clight_detail light, emulation_type protocol) 
@@ -223,6 +236,9 @@ const char *light_mode_name(clight_type type, int index, emulation_type protocol
 
 bool isShowMode(const char *mode)
 {
+  if (mode == NULL)
+    return false;
+    
   if (strcmp(mode, "Color Splash") == 0 ||
       strcmp(mode, "Slow Splash") == 0 ||
       strcmp(mode, "Fast Splash") == 0 ||

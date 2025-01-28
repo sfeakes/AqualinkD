@@ -212,7 +212,7 @@ int build_schedules_js(char* buffer, int size)
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
   
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
-  char *regexString="(#{0,1})([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
+  const char *regexString="(#{0,1})([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(\\/api\\/.*\\/set).* value=([0-9]+).*";
 
   //char *regexString="([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s([^\\s]+)\\s.*(/api/.*/set).*value=([0-9]+).*";
 

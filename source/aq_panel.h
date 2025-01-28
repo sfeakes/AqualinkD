@@ -107,10 +107,16 @@ int PANEL_SIZE();
 */
 
 
+
+// If we need to increase virtual buttons, then increase below.
+
+// NEED TO FIX, IF WE CHANGE TO ANOTHING OTHER THAN 0 CORE DUMP (we also had "panel_type = RS-16 Combo" in config)
+#define VIRTUAL_BUTTONS 0
+
 #ifndef AQ_RS16
-#define TOTAL_BUTTONS 12
+#define TOTAL_BUTTONS 12+VIRTUAL_BUTTONS
 #else
-#define TOTAL_BUTTONS 20
+#define TOTAL_BUTTONS 20+VIRTUAL_BUTTONS // Biggest jandy panel
 // This needs to be called AFTER and as well as initButtons
 void initButtons_RS16(struct aqualinkdata *aqdata);
 #endif

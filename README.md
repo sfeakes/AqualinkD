@@ -132,6 +132,9 @@ NEED TO FIX FOR THIS RELEASE.
 # Updates in 2.5.1
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
+* Added support for monitoring SBC system sensors, like CPU / GPU / Board (CPU temp being most useful).
+* Reduced load on panel over AqualinkTouch protocol.
+* Fixed higher than normal CPU load when leaving aqmanager open and sending no messages (leaving aqmanager open for over 14days).
 
 # Updates in 2.5.0
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.

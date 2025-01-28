@@ -372,12 +372,38 @@ int rsm_strncmp(const char *haystack, const char *needle, int length)
 
 char *rsm_char_replace(char *replaced , char *search,  char *find,  char *replace)
 {
+  return rsm_nchar_replace(replaced, 0, search, find, replace);
+  /*
   int len;
   int i;
   char *fp = find;
   char *rp = replace;
 
   len = strlen(search);
+  for(i = 0; i < len; i++){
+    if (search[i] == *fp)
+      replaced[i] = *rp;
+    else
+      replaced[i] = search[i];
+  }
+  replaced[i] = '\0';
+
+  return replaced;
+  */
+}
+
+char *rsm_nchar_replace(char *replaced, int replaced_len, char *search,  char *find,  char *replace)
+{
+  int len;
+  int i;
+  char *fp = find;
+  char *rp = replace;
+
+  len = strlen(search);
+
+  if (replaced_len > 0)
+    len = AQ_MIN(len, replaced_len);
+
   for(i = 0; i < len; i++){
     if (search[i] == *fp)
       replaced[i] = *rp;

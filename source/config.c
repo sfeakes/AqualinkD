@@ -33,6 +33,7 @@
 //#include <sys/types.h>
 #include <unistd.h>
 #include <net/if.h>
+#include <regex.h>
 
 #define CONFIG_C
 #include "config.h"
@@ -43,6 +44,8 @@
 #include "iaqualink.h"
 #include "color_lights.h"
 #include "aq_scheduler.h"
+#include "aq_panel.h"
+#include "rs_msg_utils.h"
 
 #define MAXCFGLINE 256
 
@@ -53,6 +56,9 @@ pump_detail *getpump(struct aqualinkdata *aqdata, int button);
 bool populatePumpData(struct aqualinkdata *aqdata, char *pumpcfg ,aqkey *button, char *value);
 pump_detail *getPumpFromButtonID(struct aqualinkdata *aqdata, aqkey *button);
 aqkey *getVirtualButton(struct aqualinkdata *aqdata, int num);
+struct aqualinkdata *_aqdata = NULL;
+
+
 
 struct tmpPanelInfo {
   int size;
@@ -66,8 +72,359 @@ struct tmpPanelInfo *_tmpPanel;
 /*
 * initialize data to default values
 */
+
+/* odd ball
+
+   
+   ftdi_low_latency
+   rs485_frame_delay
+
+   display_warnings_in_web
+   sync_panel_time
+   overide_freeze_protect
+*/
+
 void init_parameters (struct aqconfig * parms)
 {
+  #ifdef CONFIG_DEV_TEST
+  _numCfgParams = 0;
+ 
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.socket_port;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_socket_port;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.serial_port;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_serial_port;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.log_level;
+  _cfgParams[_numCfgParams].value_type = CFG_SPECIAL; // Set with _aqconfig_.log_level = text2elevel(cleanalloc(value));
+  _cfgParams[_numCfgParams].name = CFG_N_log_level;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_log_level;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.device_id;
+  _cfgParams[_numCfgParams].value_type = CFG_HEX;
+  _cfgParams[_numCfgParams].name = CFG_N_device_id;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_device_id;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.rssa_device_id;
+  _cfgParams[_numCfgParams].value_type = CFG_HEX;
+  _cfgParams[_numCfgParams].name = CFG_N_rssa_device_id;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_rssa_device_id;
+
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.extended_device_id_programming;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL; 
+  _cfgParams[_numCfgParams].name = CFG_N_extended_device_id_programming;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_BOOL;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.extended_device_id;
+  _cfgParams[_numCfgParams].value_type = CFG_HEX; 
+  _cfgParams[_numCfgParams].name = CFG_N_extended_device_id;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_extended_device_id;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.enable_iaqualink;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL; 
+  _cfgParams[_numCfgParams].name = CFG_N_enable_iaqualink;
+  _cfgParams[_numCfgParams].valid_values = CFG_V_BOOL;
+#endif
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.web_directory;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_web_directory;
+
+#ifndef AQ_MANAGER
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.log_file;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_log_file;
+#endif
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_server;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_server;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_user;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_user;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_passwd;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_passwd;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_aq_topic;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_aq_topic;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_hass_discover_topic;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_hass_discover_topic;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_hass_discover_use_mac;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_hass_discover_use_mac;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_timed_update;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_timed_update;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.convert_mqtt_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_convert_mqtt_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_dz_sub_topic;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_dz_sub_topic;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_dz_pub_topic;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_dz_pub_topic;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_dz_pub_topic;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_mqtt_dz_pub_topic;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_air_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_air_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_pool_water_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_pool_water_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_spa_water_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_spa_water_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_swg_percent;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_percent;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_swg_ppm;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_ppm;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.dzidx_swg_status;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_status;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.convert_dz_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_convert_dz_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.light_programming_mode;
+  _cfgParams[_numCfgParams].value_type = CFG_FLOAT;
+  _cfgParams[_numCfgParams].name = CFG_N_light_programming_mode;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.light_programming_initial_on;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_light_programming_initial_on;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.light_programming_initial_off;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_light_programming_initial_off;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_swg;
+  _cfgParams[_numCfgParams].mask = READ_RS485_SWG;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_ePump;
+  _cfgParams[_numCfgParams].mask = READ_RS485_JAN_PUMP;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_vsfPump;
+  _cfgParams[_numCfgParams].mask = READ_RS485_PEN_PUMP;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_JXi;
+  _cfgParams[_numCfgParams].mask = READ_RS485_JAN_JXI;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_LX;
+  _cfgParams[_numCfgParams].mask = READ_RS485_JAN_LX;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_Chem;
+  _cfgParams[_numCfgParams].mask = READ_RS485_JAN_CHEM;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.read_RS485_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_read_RS485_iAqualink;
+  _cfgParams[_numCfgParams].mask = READ_RS485_IAQUALNK;
+
+  // ADD FORCE OPTIONS HERE
+  /*
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_device_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_force_swg;
+  _cfgParams[_numCfgParams].mask = FORCE_SWG_SP;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_device_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_force_ps_setpoints;
+  _cfgParams[_numCfgParams].mask = FORCE_POOLSPA_SP;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_device_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_force_frzprotect_setpoints;
+  _cfgParams[_numCfgParams].mask = FORCE_FREEZEPROTECT_SP;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_device_devmask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_force_chem_feeder;
+  _cfgParams[_numCfgParams].mask = FORCE_CHEM_FEEDER;
+*/
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_swg;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_force_swg;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_ps_setpoints;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_force_ps_setpoints;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_frzprotect_setpoints;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_force_frzprotect_setpoints;
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_chem_feeder;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_force_chem_feeder;
+
+
+   /*    End change force */
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.enable_scheduler;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_enable_scheduler;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.schedule_event_mask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_scheduler_check_poweron;
+  _cfgParams[_numCfgParams].mask = AQS_POWER_ON;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.schedule_event_mask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_scheduler_check_freezeprotectoff;
+  _cfgParams[_numCfgParams].mask = AQS_FRZ_PROTECT_OFF;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.schedule_event_mask;
+  _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
+  _cfgParams[_numCfgParams].name = CFG_N_scheduler_check_boostoff;
+  _cfgParams[_numCfgParams].mask = AQS_BOOST_OFF;
+
+
+     // ADD ched on/off OPTIONS HERE
+  /*
+  ****  CFG_N_scheduler_check_pumpon_hour
+  ****  CFG_N_scheduler_check_pumpoff_hour
+    
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.sched_chk_pumpon_hour;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_scheduler_check_pumpon_hour;
+  // Valid values 0 to 11 (or 12)
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.sched_chk_pumpoff_hour;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_scheduler_check_pumpoff_hour;
+   // Valid values 0 to 11 (or 12)
+  */
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.ftdi_low_latency;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_ftdi_low_latency;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.frame_delay;
+  _cfgParams[_numCfgParams].value_type = CFG_INT;
+  _cfgParams[_numCfgParams].name = CFG_N_rs485_frame_delay;
+
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.sync_panel_time;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_sync_panel_time;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.display_warnings_web;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = "display_warnings_in_web";
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.override_freeze_protect;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_override_freeze_protect;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.report_zero_spa_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_report_zero_spa_temp;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.report_zero_pool_temp;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_report_zero_pool_temp;
+
+#ifdef AQ_PDA
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.pda_sleep_mode;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_pda_sleep_mode;
+#endif
+
+  #endif
+
   // Set default panel if it get's missed from config
   _tmpPanel = malloc(sizeof(struct tmpPanelInfo));
   _tmpPanel->size = 8;
@@ -113,6 +470,7 @@ void init_parameters (struct aqconfig * parms)
   parms->dzidx_spa_water_temp = TEMP_UNKNOWN;
   parms->dzidx_swg_percent = TEMP_UNKNOWN;
   parms->dzidx_swg_ppm = TEMP_UNKNOWN;
+  parms->dzidx_swg_status = TEMP_UNKNOWN;
   //parms->dzidx_pool_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   //parms->dzidx_spa_thermostat = TEMP_UNKNOWN; // removed until domoticz has a better virtual thermostat
   parms->light_programming_mode = 0;
@@ -171,8 +529,45 @@ void init_parameters (struct aqconfig * parms)
   generate_mqtt_id(parms->mqtt_ID, MQTT_ID_LEN);
 }
 
+
+/*
+
+strlcpy is pulled from here.
+https://github.com/freebsd/freebsd-src/blob/master/sys/libkern/strlcpy.c
+*/
+/*
+ * Copy string src to buffer dst of size dsize.  At most dsize-1
+ * chars will be copied.  Always NUL terminates (unless dsize == 0).
+ * Returns strlen(src); if retval >= dsize, truncation occurred.
+ */
+size_t strlcpy(char * __restrict dst, const char * __restrict src, size_t dsize)
+{
+	const char *osrc = src;
+	size_t nleft = dsize;
+
+	/* Copy as many bytes as will fit. */
+	if (nleft != 0) {
+		while (--nleft != 0) {
+			if ((*dst++ = *src++) == '\0')
+				break;
+		}
+	}
+
+	/* Not enough room in dst, add NUL and traverse rest of src. */
+	if (nleft == 0) {
+		if (dsize != 0)
+			*dst = '\0';		/* NUL-terminate dst */
+		while (*src++)
+			;
+	}
+
+	return(src - osrc - 1);	/* count does not include NUL */
+}
+
 char *cleanalloc(char*str)
 {
+  return ncleanalloc(str, 0);
+  /*
   if (str == NULL)
     return str;
 
@@ -183,7 +578,29 @@ char *cleanalloc(char*str)
   strcpy ( result, str );
   //printf("Result=%s\n",result);
   return result;
+  */
 }
+
+char *ncleanalloc(char*str, int length)
+{
+  if (str == NULL)
+    return str;
+
+  char *result;
+  str = cleanwhitespace(str);
+  
+  
+  if (length > 0 ) {
+    result = (char*)malloc(length);  
+    strlcpy ( result, str, length );
+  } else {
+    result = (char*)malloc(strlen(str)+1);  
+    strcpy ( result, str );
+  }
+  //printf("Result=%s\n",result);
+  return result;
+}
+
 /*
 char *cleanallocindex(char*str, int index)
 {
@@ -289,168 +706,104 @@ char *generate_mqtt_id(char *buf, int len) {
 
   return buf;
 }
-/*
-void readCfg_OLD (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
-{
-  FILE * fp ;
-  char bufr[MAXCFGLINE];
-  //const char delim[2] = ";";
-  //char *buf;
-  //int line = 0;
-  //int tokenindex = 0;
-  char *b_ptr;
 
-  if( (fp = fopen(cfgFile, "r")) != NULL){
-    while(! feof(fp)){
-      if (fgets(bufr, MAXCFGLINE, fp) != NULL)
-      {
-        b_ptr = &bufr[0];
-        char *indx;
-        // Eat leading whitespace
-        while(isspace(*b_ptr)) b_ptr++;
-        if ( b_ptr[0] != '\0' && b_ptr[0] != '#')
-        {
-          indx = strchr(b_ptr, '=');  
-          if ( indx != NULL) 
-          {
-            if (strncasecmp (b_ptr, "socket_port", 11) == 0) {
-              //_aqconfig_.socket_port = cleanint(indx+1);
-              _aqconfig_.socket_port = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "serial_port", 11) == 0) {
-              _aqconfig_.serial_port = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "log_level", 9) == 0) {
-              _aqconfig_.log_level = text2elevel(cleanalloc(indx+1));
-              // should fee mem here
-            } else if (strncasecmp (b_ptr, "device_id", 9) == 0) {
-              _aqconfig_.device_id = strtoul(cleanalloc(indx+1), NULL, 16);
-              // should fee mem here
-            } else if (strncasecmp (b_ptr, "web_directory", 13) == 0) {
-              _aqconfig_.web_directory = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "log_file", 8) == 0) {
-              _aqconfig_.log_file = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_address", 12) == 0) {
-              _aqconfig_.mqtt_server = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_dz_sub_topic", 17) == 0) {
-              _aqconfig_.mqtt_dz_sub_topic = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_dz_pub_topic", 17) == 0) {
-              _aqconfig_.mqtt_dz_pub_topic = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_aq_topic", 13) == 0) {
-              _aqconfig_.mqtt_aq_topic = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_user", 9) == 0) {
-              _aqconfig_.mqtt_user = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "mqtt_passwd", 11) == 0) {
-              _aqconfig_.mqtt_passwd = cleanalloc(indx+1);
-            } else if (strncasecmp (b_ptr, "air_temp_dzidx", 14) == 0) {
-              _aqconfig_.dzidx_air_temp = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "pool_water_temp_dzidx", 21) == 0) {
-              _aqconfig_.dzidx_pool_water_temp = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "spa_water_temp_dzidx", 20) == 0) {
-              _aqconfig_.dzidx_spa_water_temp = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "light_programming_mode", 21) == 0) {
-              _aqconfig_.light_programming_mode = atof(cleanalloc(indx+1)); // should free this
-            } else if (strncasecmp (b_ptr, "light_programming_initial_on", 28) == 0) {
-              _aqconfig_.light_programming_initial_on = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "light_programming_initial_off", 29) == 0) {
-              _aqconfig_.light_programming_initial_off = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "light_programming_button", 21) == 0) {
-              _aqconfig_.light_programming_button = strtoul(indx+1, NULL, 10) - 1;
-            } else if (strncasecmp (b_ptr, "SWG_percent_dzidx", 17) == 0) {
-              _aqconfig_.dzidx_swg_percent = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "SWG_PPM_dzidx", 13) == 0) {
-              _aqconfig_.dzidx_swg_ppm = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "SWG_Status_dzidx", 14) == 0) {
-              _aqconfig_.dzidx_swg_status = strtoul(indx+1, NULL, 10);
-            } else if (strncasecmp (b_ptr, "override_freeze_protect", 23) == 0) {
-              _aqconfig_.override_freeze_protect = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "pda_mode", 8) == 0) {
-              _aqconfig_.pda_mode = text2bool(indx+1);
-              set_pda_mode(_aqconfig_.pda_mode);
-            } else if (strncasecmp (b_ptr, "convert_mqtt_temp_to_c", 22) == 0) {
-              _aqconfig_.convert_mqtt_temp = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "convert_dz_temp_to_c", 21) == 0) {
-              _aqconfig_.convert_dz_temp = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "flash_mqtt_buttons", 18) == 0) {
-              _aqconfig_.flash_mqtt_buttons = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
-              _aqconfig_.report_zero_pool_temp = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "report_zero_spa_temp", 20) == 0) {
-              _aqconfig_.report_zero_spa_temp = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "report_zero_pool_temp", 21) == 0) {
-              _aqconfig_.report_zero_pool_temp = text2bool(indx+1);
-            } else if (strncasecmp (b_ptr, "button_", 7) == 0) {
-              int num = strtoul(b_ptr+7, NULL, 10) - 1;
-              //logMessage (LOG_DEBUG, "Button %d\n", strtoul(b_ptr+7, NULL, 10));
-              if (strncasecmp (b_ptr+9, "_label", 6) == 0) {
-                //logMessage (LOG_DEBUG, "     Label %s\n", cleanalloc(indx+1));
-                aqdata->aqbuttons[num].label = cleanalloc(indx+1);
-              } else if (strncasecmp (b_ptr+9, "_dzidx", 6) == 0) {
-                //logMessage (LOG_DEBUG, "     dzidx %d\n", strtoul(indx+1, NULL, 10));
-                aqdata->aqbuttons[num].dz_idx = strtoul(indx+1, NULL, 10);
-              } else if (strncasecmp (b_ptr+9, "_PDA_label", 10) == 0) {
-                //logMessage (LOG_DEBUG, "     dzidx %d\n", strtoul(indx+1, NULL, 10));
-                aqdata->aqbuttons[num].pda_label = cleanalloc(indx+1);
-              }
-            }
-          } 
-          //line++;
-        }
-      }
-    }
-    fclose(fp);
-  } else {
-    
-    displayLastSystemError(cfgFile);
-    exit (EXIT_FAILURE);
-  }
-}
-*/
 
 bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
+ 
 
+#ifdef CONFIG_DEV_TEST
+  //int val;
+  //char *sval;
+  for (int i=0; i <= _numCfgParams; i++) {
+    //printf ("** Test against '%s' %d\n",_cfgParams[i].name, (int)strlen(_cfgParams[i].name));
+    if (strncasecmp(param, _cfgParams[i].name, (int)strlen(_cfgParams[i].name) ) == 0) {
+      //printf ("MATCH = %s\n",param);
+      rtn=true;
+
+      // Any special 
+      if ( _cfgParams[i].valid_values != NULL ) {
+        //printf("Checking %s in %s\n",value,_cfgParams[i].valid_values);
+        if ( rsm_strstr(_cfgParams[i].valid_values, cleanwhitespace(value)) == NULL) {
+          LOG(AQUA_LOG,LOG_ERR, "Config entry '%s',  %s is not valid\n",param, value);
+          //rtn=false;
+          return false;
+        }
+      }
+
+      switch (_cfgParams[i].value_type) {
+        case CFG_STRING:   
+          *(char **)_cfgParams[i].value_ptr = cleanalloc(value);
+          //printf("Set Value = %s\n",_aqconfig_.testChar );
+        break;
+        case CFG_INT:
+          // convert int to string and check in valid values
+          *(int *)_cfgParams[i].value_ptr = strtoul(cleanwhitespace(value), NULL, 10);
+          //*(int *)_cfgParams[i].value_ptr = strtoul(value, NULL, 10); // Should we use cleanalloc ?????
+          //printf("Set Value = %d\n",_aqconfig_.testInt );
+        break;
+        case CFG_BOOL:
+          *(bool *)_cfgParams[i].value_ptr = text2bool(value);
+          //printf("Set Value = %d\n",_aqconfig_.testBool );
+        break;
+        case CFG_HEX:
+          // Convert to 0x%02hhx and check it exists
+          *(unsigned char *)_cfgParams[i].value_ptr = strtoul(cleanwhitespace(value), NULL, 16); 
+          //*(unsigned char *)_cfgParams[i].value_ptr = strtoul(cleanalloc(value), NULL, 16); // Need to free this
+          //printf("Set Value = 0x%02hhx\n",_aqconfig_.testHex );
+        break;
+        case CFG_FLOAT:
+          // NSF look to use strtof below
+          *(float *)_cfgParams[i].value_ptr = atof(cleanalloc(value)); // should free this
+          //printf("Set Value = %d\n",_aqconfig_.testInt );
+        break;
+        case CFG_BITMASK:
+          if (text2bool(value))
+            *(uint8_t *)_cfgParams[i].value_ptr |= _cfgParams[i].mask;
+          else
+            *(uint8_t *)_cfgParams[i].value_ptr &= ~_cfgParams[i].mask;
+        break;
+        case CFG_SPECIAL:
+          if (strncasecmp(param, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
+            *(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
+            //*(int *)_cfgParams[i].value_ptr = text2elevel(cleanalloc(value));
+          } else {
+            LOG(AQUA_LOG,LOG_ERR, "ADD SPECIAL CONFIG FOR '%s'\n",param);
+          }
+        break;
+      }
+
+      return rtn;
+    }
+  }
+  //_cfgParams[_numCfgParams].value_ptr = _aqconfig_.testChar;
+  //_cfgParams[_numCfgParams].value_type = CFG_STRING;
+  //_cfgParams[_numCfgParams].name = "testChar";
+  
+  LOG(AQUA_LOG,LOG_ERR, "Missing cfg for %s\n",param);
+
+#endif
+
+   // Values we don't want in general config.
   if (strncasecmp(param, "debug_log_mask", 14) == 0) {
     addDebugLogMask(strtoul(value, NULL, 10));
     rtn=true;
-  } else if (strncasecmp(param, "socket_port", 11) == 0) {
-    _aqconfig_.socket_port = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "serial_port", 11) == 0) {
-    _aqconfig_.serial_port = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "log_level", 9) == 0) {
-    _aqconfig_.log_level = text2elevel(cleanalloc(value));
-    rtn=true;
-  } else if (strncasecmp(param, "device_id", 9) == 0) {
-    _aqconfig_.device_id = strtoul(cleanalloc(value), NULL, 16);
-    rtn=true;
-  } else if (strncasecmp(param, "rssa_device_id", 14) == 0) {
-    _aqconfig_.rssa_device_id = strtoul(cleanalloc(value), NULL, 16);
-    rtn=true;
-  } else if (strncasecmp(param, "RSSD_LOG_filter", 15) == 0) {
+  } else if (strncasecmp(param, CFG_N_RSSD_LOG_filter, CFG_C_RSSD_LOG_filter) == 0) {
     for (int i=0; i < MAX_RSSD_LOG_FILTERS; i++) {
       if (_aqconfig_.RSSD_LOG_filter[i] == NUL) {
         _aqconfig_.RSSD_LOG_filter[i] = strtoul(cleanalloc(value), NULL, 16);
         break;
       }
     }
+    rtn=true; 
+  } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
+    _aqconfig_.log_raw_bytes = text2bool(value);
     rtn=true;
-#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
-  } else if (strncasecmp (param, "extended_device_id_programming", 30) == 0) {
-    // Has to be before the below.
-    _aqconfig_.extended_device_id_programming = text2bool(value);
+  } else if (strncasecmp (param, "debug_RSProtocol_packets", 24) == 0) {
+    _aqconfig_.log_protocol_packets = text2bool(value);
     rtn=true;
-  } else if (strncasecmp(param, "extended_device_id", 18) == 0) {
-    _aqconfig_.extended_device_id = strtoul(cleanalloc(value), NULL, 16);
-    // Enable enable_iaqualink by default and let people turn it off
-    //if (_aqconfig_.extended_device_id >= JANDY_DEV_AQLNK_MIN && _aqconfig_.extended_device_id <= JANDY_DEV_AQLNK_MAX) {
-    //  _aqconfig_.enable_iaqualink = true;
-    //}
-    rtn=true;
-   } else if (strncasecmp(param, "enable_iaqualink", 16) == 0) {
-    _aqconfig_.enable_iaqualink = text2bool(value);
-    _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK; // This should not be set if we are reading dieectly so turn off mask
-    rtn=true;
-#endif
+    
+  // Build panel without string
   } else if (strncasecmp(param, "panel_type_size", 15) == 0) {
     _tmpPanel->size = strtoul(value, NULL, 10);
     rtn=true;
@@ -466,50 +819,18 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "panel_type_rs", 13) == 0) {
     _tmpPanel->rs = text2bool(value);
     rtn=true;
-   } else if (strncasecmp(param, "panel_type", 10) == 0) { // This must be last so it doesn't get picked up by other settings
+  } else if (strncasecmp(param, CFG_N_panel_type, CFG_C_panel_type) == 0) { // This must be last so it doesn't get picked up by other settings
     setPanelByName(aqdata, cleanwhitespace(value));
     rtn=true;
-  } else if (strncasecmp(param, "rs_panel_size", 13) == 0) {
-    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'rs_panel_size' no longer supported, please use 'panel_type'\n");
-    _tmpPanel->size = strtoul(value, NULL, 10);
-    rtn=true;
-  } else if (strncasecmp(param, "web_directory", 13) == 0) {
-    _aqconfig_.web_directory = cleanalloc(value);
-    rtn=true;
-#ifndef AQ_MANAGER
-  } else if (strncasecmp(param, "log_file", 8) == 0) {
-    _aqconfig_.log_file = cleanalloc(value);
-    rtn=true;
-#endif
-  } else if (strncasecmp(param, "mqtt_address", 12) == 0) {
-    _aqconfig_.mqtt_server = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_dz_sub_topic", 17) == 0) {
-    _aqconfig_.mqtt_dz_sub_topic = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_dz_pub_topic", 17) == 0) {
-    _aqconfig_.mqtt_dz_pub_topic = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_hassio_discover_topic", 26) == 0) {
+  } else if ((strncasecmp(param, CFG_N_mqtt_hass_discover_topic, CFG_C_mqtt_hass_discover_topic) == 0) ||
+             (strncasecmp(param, "mqtt_hassio_discover_topic", 26) == 0) || 
+             (strncasecmp(param, "mqtt_hass_discover_topic", 24) == 0)) {
     _aqconfig_.mqtt_hass_discover_topic = cleanalloc(value);
-    /*  It might also make sence to also set these to true. Since aqualinkd does not know the state at the time discover topics are published.
-      _aqconfig_.force_swg;
-      _aqconfig_.force_ps_setpoints;
-      _aqconfig_.force_frzprotect_setpoints;
-      force_chem_feeder
-    */
     rtn=true;
-  } else if (strncasecmp(param, "mqtt_aq_topic", 13) == 0) {
-    _aqconfig_.mqtt_aq_topic = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_user", 9) == 0) {
-    _aqconfig_.mqtt_user = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_passwd", 11) == 0) {
-    _aqconfig_.mqtt_passwd = cleanalloc(value);
-    rtn=true;
-  } else if (strncasecmp(param, "mqtt_hass_discover_use_mac", 26) == 0) {
-    _aqconfig_.mqtt_hass_discover_use_mac = text2bool(value);
+
+  // Old names that we will map.
+  } else if  (strncasecmp (param, "keep_paneltime_synced", 21) == 0) {
+    _aqconfig_.sync_panel_time = text2bool(value);
     rtn=true;
   } else if (strncasecmp(param, "air_temp_dzidx", 14) == 0) {
     _aqconfig_.dzidx_air_temp = strtoul(value, NULL, 10);
@@ -520,15 +841,130 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp(param, "spa_water_temp_dzidx", 20) == 0) {
     _aqconfig_.dzidx_spa_water_temp = strtoul(value, NULL, 10);
     rtn=true;
-  } else if (strncasecmp(param, "light_programming_mode", 21) == 0) {
+  } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
+    _aqconfig_.dzidx_swg_percent = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, "SWG_PPM_dzidx", 13) == 0) {
+    _aqconfig_.dzidx_swg_ppm = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param,"SWG_Status_dzidx", 16) == 0) {
+    _aqconfig_.dzidx_swg_status = strtoul(value, NULL, 10);
+    rtn=true;   
+  } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
+    _aqconfig_.convert_mqtt_temp = text2bool(value);
+    rtn=true;
+   } else if (strncasecmp(param, "convert_dz_temp_to_c", 20) == 0) {
+    _aqconfig_.convert_dz_temp = text2bool(value);
+    rtn=true;
+
+
+
+  // Below should be deleted once complete
+  } else if (strncasecmp(param, CFG_N_socket_port, CFG_C_socket_port) == 0) {
+    _aqconfig_.socket_port = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_serial_port, CFG_C_serial_port) == 0) {
+    _aqconfig_.serial_port = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_log_level, CFG_C_log_level) == 0) {
+    _aqconfig_.log_level = text2elevel(cleanalloc(value));
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_device_id, CFG_C_device_id) == 0) {
+    _aqconfig_.device_id = strtoul(cleanalloc(value), NULL, 16);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_rssa_device_id, CFG_C_rssa_device_id) == 0) {
+    _aqconfig_.rssa_device_id = strtoul(cleanalloc(value), NULL, 16);
+    rtn=true;
+  
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  } else if (strncasecmp (param, CFG_N_extended_device_id_programming, CFG_C_extended_device_id_programming) == 0) {
+    // Has to be before the below.
+    _aqconfig_.extended_device_id_programming = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_extended_device_id, CFG_C_extended_device_id) == 0) {
+    _aqconfig_.extended_device_id = strtoul(cleanalloc(value), NULL, 16);
+    // Enable enable_iaqualink by default and let people turn it off
+    //if (_aqconfig_.extended_device_id >= JANDY_DEV_AQLNK_MIN && _aqconfig_.extended_device_id <= JANDY_DEV_AQLNK_MAX) {
+    //  _aqconfig_.enable_iaqualink = true;
+    //}
+    rtn=true;
+   } else if (strncasecmp(param, CFG_N_enable_iaqualink, CFG_C_enable_iaqualink) == 0) {
+    _aqconfig_.enable_iaqualink = text2bool(value);
+    _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK; // This should not be set if we are reading dieectly so turn off mask
+    rtn=true;
+#endif
+
+  } else if (strncasecmp(param, "rs_panel_size", 13) == 0) {
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'rs_panel_size' no longer supported, please use 'panel_type'\n");
+    _tmpPanel->size = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_web_directory, CFG_C_web_directory) == 0) {
+    _aqconfig_.web_directory = cleanalloc(value);
+    rtn=true;
+#ifndef AQ_MANAGER
+  } else if (strncasecmp(param, CFG_N_log_file, CFG_C_log_file) == 0) {
+    _aqconfig_.log_file = cleanalloc(value);
+    rtn=true;
+#endif
+  } else if (strncasecmp(param, CFG_N_mqtt_server, CFG_C_mqtt_server) == 0) {
+    _aqconfig_.mqtt_server = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_mqtt_dz_sub_topic, CFG_C_mqtt_dz_sub_topic) == 0) {
+    _aqconfig_.mqtt_dz_sub_topic = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_mqtt_dz_pub_topic, CFG_C_mqtt_dz_pub_topic) == 0) {
+    _aqconfig_.mqtt_dz_pub_topic = cleanalloc(value);
+    rtn=true;
+
+    /*  It might also make sence to also set these to true. Since aqualinkd does not know the state at the time discover topics are published.
+      _aqconfig_.force_swg;
+      _aqconfig_.force_ps_setpoints;
+      _aqconfig_.force_frzprotect_setpoints;
+      force_chem_feeder
+    */
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_mqtt_aq_topic, CFG_C_mqtt_aq_topic) == 0) {
+    _aqconfig_.mqtt_aq_topic = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_mqtt_user, CFG_C_mqtt_user) == 0) {
+    _aqconfig_.mqtt_user = cleanalloc(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_mqtt_passwd, CFG_C_mqtt_passwd) == 0) {
+    _aqconfig_.mqtt_passwd = cleanalloc(value);
+    rtn=true;
+  } else if ((strncasecmp(param, CFG_N_mqtt_hass_discover_use_mac, CFG_C_mqtt_hass_discover_use_mac) == 0) ||
+             (strncasecmp(param, "mqtt_hassio_discover_use_mac", 28) == 0) ||
+             (strncasecmp(param, "mqtt_hass_discover_use_mac", 26) == 0)) {
+    _aqconfig_.mqtt_hass_discover_use_mac = text2bool(value);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_air_temp, CFG_C_dzidx_air_temp) == 0) {
+    _aqconfig_.dzidx_air_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_pool_water_temp, CFG_C_dzidx_pool_water_temp) == 0) {
+    _aqconfig_.dzidx_pool_water_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_spa_water_temp, CFG_C_dzidx_spa_water_temp) == 0) {
+    _aqconfig_.dzidx_spa_water_temp = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_swg_percent, CFG_C_dzidx_swg_percent) == 0) {
+    _aqconfig_.dzidx_swg_percent = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_swg_ppm, CFG_C_dzidx_swg_ppm) == 0) {
+    _aqconfig_.dzidx_swg_ppm = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_dzidx_swg_status, CFG_C_dzidx_swg_status) == 0) {
+    _aqconfig_.dzidx_swg_status = strtoul(value, NULL, 10);
+    rtn=true;
+  } else if (strncasecmp(param, CFG_N_light_programming_mode, CFG_C_light_programming_mode) == 0) {
     _aqconfig_.light_programming_mode = atof(cleanalloc(value)); // should free this
     rtn=true;
-  } else if (strncasecmp(param, "light_programming_initial_on", 28) == 0) {
+  } else if (strncasecmp(param, CFG_N_light_programming_initial_on, CFG_C_light_programming_initial_on) == 0) {
     _aqconfig_.light_programming_initial_on = strtoul(value, NULL, 10);
     rtn=true;
-  } else if (strncasecmp(param, "light_programming_initial_off", 29) == 0) {
+  } else if (strncasecmp(param, CFG_N_light_programming_initial_off, CFG_C_light_programming_initial_off) == 0) {
     _aqconfig_.light_programming_initial_off = strtoul(value, NULL, 10);
     rtn=true;
+    /*
   } else if (strncasecmp(param, "light_programming_button_spa", 28) == 0) {
     LOG(AQUA_LOG,LOG_ERR, "Config error, 'light_programming_button_spa' no longer supported\n");
     //_aqconfig_.light_programming_button_spa = strtoul(value, NULL, 10) - 1;
@@ -538,45 +974,32 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     LOG(AQUA_LOG,LOG_ERR, "Config error, 'light_programming_button' & 'light_programming_button_pool' are no longer supported\n");
     //_aqconfig_.light_programming_button_pool = strtoul(value, NULL, 10) - 1;
     rtn=true;
-  } else if (strncasecmp(param, "SWG_percent_dzidx", 17) == 0) {
-    _aqconfig_.dzidx_swg_percent = strtoul(value, NULL, 10);
-    rtn=true;
-  } else if (strncasecmp(param, "SWG_PPM_dzidx", 13) == 0) {
-    _aqconfig_.dzidx_swg_ppm = strtoul(value, NULL, 10);
-    rtn=true;
-  } else if (strncasecmp(param, "SWG_Status_dzidx", 14) == 0) {
-    _aqconfig_.dzidx_swg_status = strtoul(value, NULL, 10);
-    rtn=true;
-  } else if (strncasecmp(param, "override_freeze_protect", 23) == 0) {
+    */
+  } else if (strncasecmp(param, CFG_N_override_freeze_protect, CFG_C_override_freeze_protect) == 0) {
     _aqconfig_.override_freeze_protect = text2bool(value);
     rtn=true;
 #ifdef AQ_PDA
-  } else if (strncasecmp(param, "pda_mode", 8) == 0) {
-    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'pda_mode' is no longer supported, please use rs_panel_type\n");
-    //_aqconfig_.pda_mode = text2bool(value);
-    //set_pda_mode(_aqconfig_.pda_mode);
-    _tmpPanel->rs = !text2bool(value);
-    rtn=true;
-  } else if (strncasecmp(param, "pda_sleep_mode", 8) == 0) {
+  } else if (strncasecmp(param, CFG_N_pda_sleep_mode, CFG_C_pda_sleep_mode) == 0) {
     _aqconfig_.pda_sleep_mode = text2bool(value);
     rtn=true;
 #endif
-  } else if (strncasecmp(param, "convert_mqtt_temp_to_c", 22) == 0) {
+  } else if (strncasecmp(param, CFG_N_convert_mqtt_temp, CFG_C_convert_mqtt_temp) == 0) {
     _aqconfig_.convert_mqtt_temp = text2bool(value);
     rtn=true;
-  } else if (strncasecmp(param, "convert_dz_temp_to_c", 20) == 0) {
+  } else if (strncasecmp(param, CFG_N_convert_dz_temp, CFG_C_convert_dz_temp) == 0) {
     _aqconfig_.convert_dz_temp = text2bool(value);
     rtn=true;
     /*
   } else if (strncasecmp(param, "flash_mqtt_buttons", 18) == 0) {
     _aqconfig_.flash_mqtt_buttons = text2bool(value);
     rtn=true;*/
-  } else if (strncasecmp(param, "report_zero_spa_temp", 20) == 0) {
+  } else if (strncasecmp(param, CFG_N_report_zero_spa_temp, CFG_C_report_zero_spa_temp) == 0) {
     _aqconfig_.report_zero_spa_temp = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "report_zero_pool_temp", 21) == 0) {
+  } else if (strncasecmp (param, CFG_N_report_zero_pool_temp, CFG_C_report_zero_pool_temp) == 0) {
     _aqconfig_.report_zero_pool_temp = text2bool(value);
     rtn=true;
+    /*
   } else if (strncasecmp (param, "read_all_devices", 16) == 0) {
     LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_all_devices' is no longer supported, please using one or all of 'read_RS485_swg','read_RS485_ePump','read_RS485_vsfPump'\n");
     if (text2bool(value)) {
@@ -594,43 +1017,44 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_swg", 14) == 0) {
+    */
+  } else if (strncasecmp (param, CFG_N_read_RS485_swg, CFG_C_read_RS485_swg) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_SWG;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_SWG;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_ePump", 16) == 0) {
+  } else if (strncasecmp (param, CFG_N_read_RS485_ePump, CFG_C_read_RS485_ePump) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_PUMP;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_PUMP;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_vsfPump", 16) == 0) {
+  } else if (strncasecmp (param, CFG_N_read_RS485_vsfPump, CFG_C_read_RS485_vsfPump) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_PEN_PUMP;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_PEN_PUMP;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_JXi", 14) == 0) {
+  } else if (strncasecmp (param, CFG_N_read_RS485_JXi, CFG_C_read_RS485_JXi) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_JXI;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_JXI;
     rtn=true;
-   } else if (strncasecmp (param, "read_RS485_LX", 13) == 0) {
+   } else if (strncasecmp (param, CFG_N_read_RS485_LX, CFG_C_read_RS485_LX) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_LX;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_LX;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_Chem", 14) == 0) {
+  } else if (strncasecmp (param, CFG_N_read_RS485_Chem, CFG_C_read_RS485_Chem) == 0) {
     if (text2bool(value))
       _aqconfig_.read_RS485_devmask |= READ_RS485_JAN_CHEM;
     else
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_JAN_CHEM;
     rtn=true;
-  } else if (strncasecmp (param, "read_RS485_iAqualink", 20) == 0) {
+  } else if (strncasecmp (param, CFG_N_read_RS485_iAqualink, CFG_C_read_RS485_iAqualink) == 0) {
     /* This should not be used with enable_iaqualink */
     if (text2bool(value)) {
       if (_aqconfig_.enable_iaqualink)
@@ -641,19 +1065,19 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
     }
     rtn=true;
-  } else if (strncasecmp (param, "use_panel_aux_labels", 20) == 0) {
+  } else if (strncasecmp (param, CFG_N_use_panel_aux_labels, CFG_C_use_panel_aux_labels) == 0) {
     _aqconfig_.use_panel_aux_labels = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "force_SWG", 9) == 0) {
+  } else if (strncasecmp (param, CFG_N_force_swg, CFG_C_force_swg) == 0) {
     _aqconfig_.force_swg = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "force_ps_setpoints", 18) == 0) {
+  } else if (strncasecmp (param, CFG_N_force_ps_setpoints, CFG_C_force_ps_setpoints) == 0) {
     _aqconfig_.force_ps_setpoints = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "force_frzprotect_setpoints", 26) == 0) {
+  } else if (strncasecmp (param, CFG_N_force_frzprotect_setpoints, CFG_C_force_frzprotect_setpoints) == 0) {
     _aqconfig_.force_frzprotect_setpoints = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "force_chem_feeder", 17) == 0) {
+  } else if (strncasecmp (param, CFG_N_force_chem_feeder, CFG_C_force_chem_feeder) == 0) {
     _aqconfig_.force_chem_feeder = text2bool(value);
     rtn=true;
   } else if (strncasecmp (param, "debug_RSProtocol_bytes", 22) == 0) {
@@ -670,10 +1094,11 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   } else if (strncasecmp (param, "display_warnings_in_web", 23) == 0) {
     _aqconfig_.display_warnings_web = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "mqtt_timed_update", 17) == 0) {
+  } else if (strncasecmp (param, CFG_N_mqtt_timed_update, CFG_C_mqtt_timed_update) == 0) {
     _aqconfig_.mqtt_timed_update = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "keep_paneltime_synced", 21) == 0) {
+  } else if ((strncasecmp (param, CFG_N_sync_panel_time, CFG_C_sync_panel_time) == 0) || 
+            (strncasecmp (param, "keep_paneltime_synced", 21)) == 0) {
     _aqconfig_.sync_panel_time = text2bool(value);
     rtn=true;
 #ifdef AQ_NO_THREAD_NETSERVICE
@@ -688,36 +1113,36 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
     _aqconfig_.thread_netservices = text2bool(value);
     rtn=true;
 #endif
-  } else if (strncasecmp (param, "enable_scheduler", 16) == 0) {
+  } else if (strncasecmp (param, CFG_N_enable_scheduler, CFG_C_enable_scheduler) == 0) {
     _aqconfig_.enable_scheduler = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "scheduler_check_poweron", 23) == 0) {
+  } else if (strncasecmp (param, CFG_N_scheduler_check_poweron, CFG_C_scheduler_check_poweron) == 0) {
     if (text2bool(value)) {
       _aqconfig_.schedule_event_mask |= AQS_POWER_ON;
     }
     rtn=true;
-  } else if (strncasecmp (param, "scheduler_check_freezeprotectoff", 32) == 0) {
+  } else if (strncasecmp (param, CFG_N_scheduler_check_freezeprotectoff, CFG_C_scheduler_check_freezeprotectoff) == 0) {
     if (text2bool(value)) {
       _aqconfig_.schedule_event_mask |= AQS_FRZ_PROTECT_OFF;
     }
     rtn=true;
-  } else if (strncasecmp (param, "scheduler_check_boostoff", 24) == 0) {
+  } else if (strncasecmp (param, CFG_N_scheduler_check_boostoff, CFG_C_scheduler_check_boostoff) == 0) {
     if (text2bool(value)) {
       _aqconfig_.schedule_event_mask |= AQS_BOOST_OFF;
     }
     rtn=true;
-  } else if (strncasecmp (param, "scheduler_check_pumpon_hour", 27) == 0) {
+  } else if (strncasecmp (param, CFG_N_scheduler_check_pumpon_hour, CFG_C_scheduler_check_pumpon_hour) == 0) {
     _aqconfig_.sched_chk_pumpon_hour = strtoul(value, NULL, 10);
     _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
     rtn=true;
-  } else if (strncasecmp (param, "scheduler_check_pumpoff_hour", 28) == 0) {
+  } else if (strncasecmp (param, CFG_N_scheduler_check_pumpoff_hour, CFG_C_scheduler_check_pumpoff_hour) == 0) {
     _aqconfig_.sched_chk_pumpoff_hour = strtoul(value, NULL, 10);
     _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
     rtn=true;
-  } else if (strncasecmp (param, "ftdi_low_latency", 16) == 0) {
+  } else if (strncasecmp (param, CFG_N_ftdi_low_latency, CFG_C_ftdi_low_latency) == 0) {
     _aqconfig_.ftdi_low_latency = text2bool(value);
     rtn=true;
-  } else if (strncasecmp (param, "rs485_frame_delay", 17) == 0) {
+  } else if (strncasecmp (param, CFG_N_rs485_frame_delay, CFG_C_rs485_frame_delay) == 0) {
     _aqconfig_.frame_delay = strtoul(value, NULL, 10);
     rtn=true;
   } else if (strncasecmp (param, "device_pre_state", 16) == 0) {
@@ -761,8 +1186,13 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       rtn=true;
 #endif
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
-      if (aqdata->num_lights < MAX_LIGHTS) {
-        int type = strtoul(value, NULL, 10);
+      int type = strtoul(value, NULL, 10);
+      // See if light is existing button / light
+      if (isPLIGHT(aqdata->aqbuttons[num].special_mask)) {
+        ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType = type;
+      }
+      else if (aqdata->num_lights < MAX_LIGHTS) 
+      {
         if (type < LC_PROGRAMABLE || type > NUMBER_LIGHT_COLOR_TYPES) {
           LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%s'\n",type);
         } else {
@@ -857,6 +1287,31 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, could not find vitrual button for `%s`",param);
       }
     }
+  } else if (strncasecmp(param, "sensor_", 7) == 0) {
+    int num = strtoul(param + 7, NULL, 10) - 1;
+    if (num > MAX_SENSORS || num < 0) {
+      LOG(AQUA_LOG,LOG_ERR, "Config error, Maximum of %d sensors allowd `%s` ignored!",MAX_SENSORS,param);
+    } else {
+      if ( num + 1 > aqdata->num_sensors ) {
+        aqdata->num_sensors = num + 1;
+      }
+      if (strncasecmp(param + 9, "_label", 6) == 0) {
+        aqdata->sensors[num].label = ncleanalloc(value, AQ_MSGLEN);
+        rtn=true;
+      } else if (strncasecmp(param + 9, "_path", 5) == 0) {
+        aqdata->sensors[num].path = cleanalloc(value);
+        rtn=true;
+      } else if (strncasecmp(param + 9, "_factor", 7) == 0) {
+        aqdata->sensors[num].factor = atof(value);
+        //printf("Factor = %f - %s\n",aqdata->sensors[num].factor, value);
+        if (aqdata->sensors[num].factor == 0) {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, couldn't understand `%s` from `%s`, using 1!",value,param);
+          aqdata->sensors[num].factor = 1;
+        }
+      }
+      rtn=true;
+    }
+
   }
 //#endif
 
@@ -995,6 +1450,7 @@ void init_config()
 //void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
 void read_config (struct aqualinkdata *aqdata, char *cfgFile)
 {
+  _aqdata = aqdata;
   FILE * fp ;
   char bufr[MAXCFGLINE];
   //const char delim[2] = ";";
@@ -1020,8 +1476,12 @@ void read_config (struct aqualinkdata *aqdata, char *cfgFile)
           indx = strchr(b_ptr, '=');  
           if ( indx != NULL) 
           {
-            if ( ! setConfigValue(aqdata, b_ptr, indx+1))
-              LOG(AQUA_LOG,LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr)-1, b_ptr);
+            if ( ! setConfigValue(aqdata, b_ptr, indx+1)) {
+              //LOG(AQUA_LOG,LOG_ERR, "Unknown config parameter '%.*s'\n",strlen(b_ptr), b_ptr);
+              char *end = b_ptr + strlen(b_ptr) - 1;
+              while(end > b_ptr && isspace(*end)) end--;
+              LOG(AQUA_LOG,LOG_ERR, "Unknown config parameter '%.*s'\n",end-b_ptr+1, b_ptr);
+            }
           } 
         }
       }
@@ -1071,6 +1531,146 @@ char *errorlevel2text(int level)
   return "";
 }
 
+#ifdef CONFIG_EDITOR
+
+#define MAX_PRINTLEN 30
+void check_print_config (struct aqualinkdata *aqdata)
+{
+  int i, j;
+  char name[MAX_PRINTLEN];
+
+
+  // Sanity checks
+  /* 
+    _cfgParams[_numCfgParams].mask = READ_RS485_IAQUALNK;
+    if ( bitmask READ_RS485_IAQUALNK && _aqconfig_.enable_iaqualink ) error and use (_aqconfig_.enable_iaqualink, disable bitmask
+      if (_aqconfig_.enable_iaqualink)
+        LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_RS485_iAqualink' is not valid when 'enable_iaqualink=yes', ignoring read_RS485_iAqualink!\n");
+      else
+        _aqconfig_.read_RS485_devmask |= READ_RS485_IAQUALNK;
+    } else {
+      _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
+    }
+  */
+
+  /*
+    PDA sleep and PDA ID.
+  */
+
+  /*  Need to handle this case
+   } else if (strncasecmp (param, CFG_N_scheduler_check_pumpon_hour, CFG_C_scheduler_check_pumpon_hour) == 0) {
+    _aqconfig_.sched_chk_pumpon_hour = strtoul(value, NULL, 10);
+    _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
+    rtn=true;
+  } else if (strncasecmp (param, CFG_N_scheduler_check_pumpoff_hour, CFG_C_scheduler_check_pumpoff_hour) == 0) {
+    _aqconfig_.sched_chk_pumpoff_hour = strtoul(value, NULL, 10);
+    _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
+    rtn=true;
+
+  // maybebelow.  But this would only work the first time the config it read. (might need to clear CFG???)
+   if
+    _aqconfig_.sched_chk_pumpon_hour != TEMP_UNKNOWN || 
+    _aqconfig_.sched_chk_pumpoff_hour != TEMP_UNKNOWN
+  then
+    _aqconfig_.schedule_event_mask |= AQS_DONT_USE_CRON_PUMP_TIME;
+  */
+
+
+
+  for ( i=0; i <= _numCfgParams; i++) {
+    rsm_nchar_replace(name, MAX_PRINTLEN, _cfgParams[i].name, "_", " ");
+    switch (_cfgParams[i].value_type) {
+      case CFG_STRING:
+        if (*(char **)_cfgParams[i].value_ptr == NULL)
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s =\n", name);
+        else
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %s\n",name, *(char **)_cfgParams[i].value_ptr);
+      break;
+      case CFG_INT:
+        if (*(int *)_cfgParams[i].value_ptr == TEMP_UNKNOWN)
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s =\n", name);
+        else
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %d\n", name, *(int *)_cfgParams[i].value_ptr);
+      break;
+      case CFG_BOOL:
+        LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %s\n", name, bool2text(*(bool *)_cfgParams[i].value_ptr));
+      break;
+      case CFG_HEX:
+        LOG(AQUA_LOG,LOG_NOTICE, "%-30s = 0x%02hhx\n", name, *(unsigned char *)_cfgParams[i].value_ptr);
+      break;
+      case CFG_FLOAT:
+        LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %f\n", name, *(float *)_cfgParams[i].value_ptr);
+      break;
+      case CFG_BITMASK:
+        LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %s\n", _cfgParams[i].name, (*(uint8_t *)_cfgParams[i].value_ptr & _cfgParams[i].mask) == _cfgParams[i].mask?bool2text(true):bool2text(false));
+      break;
+      case CFG_SPECIAL:
+        if (strncasecmp(_cfgParams[i].name, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s = %s\n", _cfgParams[i].name, loglevel2cgn_name(_aqconfig_.log_level));
+        } else {
+          LOG(AQUA_LOG,LOG_NOTICE, "%-30s = NEED TO ADD CODE TO HANDLE THIS\n",name);
+        }
+      break;
+    }
+  }
+
+  if (isAQS_START_PUMP_EVENT_ENABLED) {
+    if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+      get_cron_pump_times();
+    }
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s %s %s\n",isAQS_POWER_ON_ENABED?"PowerON":"",AQS_FRZ_PROTECT_OFF?"FreezeProtect":"",AQS_BOOST_OFF?"Boost":"");
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump between times = %d:00 and %d:00\n",_aqconfig_.sched_chk_pumpon_hour,_aqconfig_.sched_chk_pumpoff_hour);
+  } else {
+    LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s\n", bool2text(false));
+  }
+
+  
+  //for (i = 0; i < TOTAL_BUTONS; i++)
+  for (i = 0; i < aqdata->total_buttons; i++)
+  {
+    //char ext[] = " VSP ID None | AL ID 0 ";
+    char ext[40];
+    ext[0] = '\0';
+    for (j = 0; j < aqdata->num_pumps; j++) {
+      if (aqdata->pumps[j].button == &aqdata->aqbuttons[i]) {
+        sprintf(ext, "VSP ID 0x%02hhx | PumpID %-1d | %s",
+                  aqdata->pumps[j].pumpID, 
+                  aqdata->pumps[j].pumpIndex, 
+                  aqdata->pumps[j].pumpName[0]=='\0'?"":aqdata->pumps[j].pumpName);
+      }
+    }
+    for (j = 0; j < aqdata->num_lights; j++) {
+      if (aqdata->lights[j].button == &aqdata->aqbuttons[i]) {
+        sprintf(ext,"Light Progm | CTYPE %-1d  |",aqdata->lights[j].lightType);
+      }
+    }
+    if (isVBUTTON(aqdata->aqbuttons[i].special_mask)) {
+      if (aqdata->aqbuttons[i].rssd_code != NUL) {
+        sprintf(ext,"OneTouch %d  |",aqdata->aqbuttons[i].rssd_code - 15);
+      }
+    }
+    if (aqdata->aqbuttons[i].dz_idx > 0) {
+      sprintf(ext+strlen(ext), "dzidx %-3d",aqdata->aqbuttons[i].dz_idx);
+    }
+    
+    LOG(AQUA_LOG,LOG_NOTICE, "Button %-13s = label %-15s | %s\n", 
+                           aqdata->aqbuttons[i].name, aqdata->aqbuttons[i].label, ext);  
+    
+
+    if ( ((aqdata->aqbuttons[i].special_mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)  && 
+         ((aqdata->aqbuttons[i].special_mask & VS_PUMP ) != VS_PUMP) &&
+          (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33 ) ){
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, extended_device_id must be on of the folowing (0x30,0x31,0x32,0x33) to use virtual button : '%s'",aqdata->aqbuttons[i].label);
+    }
+  }
+
+  for (i = 0; i < aqdata->num_sensors; i++)
+  {
+    LOG(AQUA_LOG,LOG_NOTICE, "Config Sensor %02d         = label %-15s | %s\n", i+1, aqdata->sensors[i].label,aqdata->sensors[i].path);
+  }
+
+}
+
 /*
 bool remount_root_ro(bool readonly) {
   // NSF Check if config is RO_ROOT set
@@ -1094,6 +1694,7 @@ bool remount_root_ro(bool readonly) {
  return true;
 }
 */
+
 void writeCharValue (FILE *fp, char *msg, char *value)
 {
   if (value == NULL)
@@ -1109,10 +1710,255 @@ void writeIntValue (FILE *fp, char *msg, int value)
     fprintf(fp, "%s = %d\n", msg, value);
 }
 
+int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize)
+{
+  int i;
+  //int start=0;
+  //int end=0;
+  //bool inarray = false;
+  printf("\n%.*s\n",inSize,inBuf);
+
+  const char *regexString=" *\"([^\",:]+) *\" *: *\"([^\",:]+)\" *,*";
+  size_t maxGroups = 3;
+  size_t maxMatches = 100;
+  //size_t maxGroups = 3;
+  regmatch_t groupArray[maxGroups];
+  regex_t regexCompiled;
+  int rc;
+  char * cursor = NULL;
+  unsigned int m;
+
+  char key[64];
+  char value[64];
+
+  const char *sptr = strstr( inBuf, "values" );
+
+  if (_aqdata == NULL) {
+    LOG(AQUA_LOG,LOG_ERR, "Saving config, not initialized:\n'%.*s'\n", inSize, inBuf);
+    return sprintf(outBuf, "{\"message\":\"ERROR saving config\"}"); 
+  }
+
+  if (sptr == NULL) {
+    LOG(AQUA_LOG,LOG_ERR, "Saving config, invalid JSON:\n'%.*s'\n", inSize, inBuf);
+    return sprintf(outBuf, "{\"message\":\"ERROR in Config\"}"); 
+  }
+
+  for (i=(sptr - inBuf); i < inSize; i++) {
+    if ( inBuf[i] == '{' ) {
+      //inarray=true;
+      //start=i;
+    } else if ( inBuf[i] == '}' ) {
+      //inarray=false;
+      //end=i;
+    }
+  }
+
+  //printf("\nVALUES='%.*s'\n",(end - start)-2 ,&inBuf[start+1]);
+
+  if (0 != (rc = regcomp(&regexCompiled, regexString, REG_EXTENDED))) {
+    LOG(AQUA_LOG,LOG_ERR, "Saving config regcomp() failed, returning nonzero (%d)\n", rc);
+    return sprintf(outBuf, "{\"message\":\"ERROR in Config\"}"); 
+  }
+
+  //cursor = inBuf+start+1;
+  for (m = 0; m < maxMatches; m ++)
+  {
+    if (regexec(&regexCompiled, cursor, maxGroups, groupArray, 0))
+        break;  // No more matches
+
+    snprintf(key, 64, "%.*s", (groupArray[1].rm_eo - groupArray[1].rm_so), (cursor + groupArray[1].rm_so));
+    snprintf(value, 64, "%.*s",   (groupArray[2].rm_eo - groupArray[2].rm_so), (cursor + groupArray[2].rm_so));
+    printf("**** Pair = %s : %s \n",key,value);
+
+    setConfigValue(_aqdata ,key,value);
+
+    cursor += groupArray[0].rm_eo;
+/*
+    unsigned int offset = 0;
+    unsigned int g = 0;
+    for (g = 0; g < maxGroups; g++)
+    {
+          if (groupArray[g].rm_so == (size_t)-1)
+            break;  // No more groups
+
+          if (g == 0)
+            offset = groupArray[g].rm_eo;
+
+          char cursorCopy[strlen(cursor) + 1];
+          strcpy(cursorCopy, cursor);
+          cursorCopy[groupArray[g].rm_eo] = 0;
+          printf("**** Match %u, Group %u: [%2u-%2u]: %s\n",
+                 m, g, groupArray[g].rm_so, groupArray[g].rm_eo,
+                 cursorCopy + groupArray[g].rm_so);
+    }
+    cursor += offset;
+    */
+  }
+
+  regfree(&regexCompiled);
+  return sprintf(outBuf, "{\"message\":\"Saved Config\"}"); 
+}
+
+#endif
+#ifdef CONFIG_EDITOR
+
+const char *pumpType2String(pump_type ptype) {
+  switch (ptype) {
+    case EPUMP:
+      return "JANDY ePUMP";
+    break;
+    case VSPUMP:
+      return "Pentair VF";
+    break;
+    case VFPUMP:
+      return "Pentair VS";
+    break;
+    case PT_UNKNOWN:
+    default:
+      return "unknown";
+    break;
+  }
+}
 
 bool writeCfg (struct aqualinkdata *aqdata)
 { 
+  int i;
+  FILE *fp;
+  char *lastName = NULL;
+  
   LOG(AQUA_LOG,LOG_ERR, "writeCfg() not implimented\n");
+
+  //fp = fopen(_aqconfig_.config_file, "w");
+  fp = fopen("/tmp/aqualinkd.conf", "w");
+
+  if (fp == NULL) {
+    LOG(AQUA_LOG,LOG_ERR, "Open config file failed '%s'\n", _aqconfig_.config_file);
+    //remount_root_ro(true);
+    //fprintf(stdout, "Open file failed 'sprinkler.cron'\n");
+    return false;
+  }
+  
+  //char fp[100];
+
+  for ( i=0; i <= _numCfgParams; i++) {
+    //printf("Writing %s\n",_cfgParams[i].name);
+    // Group values by fist letter, if the same group together.
+    if (lastName != NULL && lastName[0] != _cfgParams[i].name[0]) {
+      if ( lastName != NULL && rsm_strstr(lastName, "device_id") != NULL && rsm_strstr(_cfgParams[i].name, "device_id") != NULL ) {
+
+      } else {
+        fprintf(fp,"\n");
+      }
+    }
+
+    switch (_cfgParams[i].value_type) {
+      case CFG_STRING:
+        if (*(char **)_cfgParams[i].value_ptr == NULL)
+          fprintf(fp, "#%s=\n", _cfgParams[i].name);
+        else
+          fprintf(fp, "%s=%s\n", _cfgParams[i].name, *(char **)_cfgParams[i].value_ptr);
+      break;
+      case CFG_INT:
+        if (*(int *)_cfgParams[i].value_ptr == TEMP_UNKNOWN)
+          fprintf(fp, "#%s=\n", _cfgParams[i].name);
+        else
+          fprintf(fp, "%s=%d\n", _cfgParams[i].name, *(int *)_cfgParams[i].value_ptr);
+      break;
+        case CFG_BOOL:
+          fprintf(fp, "%s=%s\n", _cfgParams[i].name, bool2text(*(bool *)_cfgParams[i].value_ptr));
+        break;
+        case CFG_HEX:
+          fprintf(fp, "%s=0x%02hhx\n", _cfgParams[i].name, *(unsigned char *)_cfgParams[i].value_ptr);
+        break;
+         case CFG_FLOAT:
+          fprintf(fp, "%s=%f\n", _cfgParams[i].name, *(float *)_cfgParams[i].value_ptr);
+        break;
+        case CFG_BITMASK:
+          fprintf(fp, "%s=%s\n", _cfgParams[i].name, (*(uint8_t *)_cfgParams[i].value_ptr & _cfgParams[i].mask) == _cfgParams[i].mask? bool2text(true):bool2text(false));
+        break;
+        case CFG_SPECIAL:
+          if (strncasecmp(_cfgParams[i].name, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
+            fprintf(fp, "%s=%s\n", _cfgParams[i].name, loglevel2cgn_name(_aqconfig_.log_level));
+          } else {
+            fprintf(fp, "%s=NEED TO ADD CODE TO HANDLE THIS\n",_cfgParams[i].name);
+          }
+        break;
+    }
+    lastName = _cfgParams[i].name;
+  }
+
+  fprintf(fp,"\n");
+
+  // Add custom censors
+  for (i = 0; i < aqdata->num_sensors; i++)
+  {
+    fprintf(fp,"\nsensor_%.2d_path=%s\n",i+1,aqdata->sensors->path);
+    fprintf(fp,"sensor_%.2d_label=%s\n",i+1,aqdata->sensors->label);
+    fprintf(fp,"sensor_%.2d_factor=%f\n",i+1,aqdata->sensors->factor);
+  }
+
+  fprintf(fp,"\n");
+  //  add custom light modes/colors
+  bool isShow;
+  const char *lname;
+  for (i=1; i < LIGHT_COLOR_OPTIONS; i++) {
+    if ((lname = get_aqualinkd_light_mode_name(i, &isShow)) != NULL) {
+      fprintf(fp,"light_program_%.2d=%s%s\n",i,lname,isShow?" - show":"");
+    } else {
+      break;
+    }
+  }
+
+  fprintf(fp,"\n");
+  // Buttons
+  for (i = 0; i < aqdata->total_buttons; i++)
+  {
+    char prefix[30];
+    if (isVBUTTON(aqdata->aqbuttons[i].special_mask)) {
+      sprintf(prefix,"virtual_button_%.2d",(i+1)-aqdata->virtual_button_start);
+    } else {
+      sprintf(prefix,"button_%.2d",i+1);
+    }
+    
+    fprintf(fp,"\n%s_label=%s\n", prefix, aqdata->aqbuttons[i].label);
+
+
+    if (isVS_PUMP(aqdata->aqbuttons[i].special_mask)) 
+    {
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpIndex > 0) {
+        fprintf(fp,"%s_pumpIndex=%d\n", prefix, ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpIndex);
+      }
+      
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpID != NUL) {
+        fprintf(fp,"%s_pumpID=0x%02hhx\n", prefix, ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpID);
+      }
+
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpName[0] != '\0') {
+        fprintf(fp,"%s_pumpName=%s\n", prefix, ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpName);
+      }
+
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpType != PT_UNKNOWN) {
+        fprintf(fp,"%s_pumpType=%s\n", prefix, pumpType2String(((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpType));
+      }
+    } else if (isPLIGHT(aqdata->aqbuttons[i].special_mask)) {
+      //if (((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType > 0) {
+      fprintf(fp,"%s_lightMode=%d\n", prefix, ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType);
+      //}
+    } else if ( (isVBUTTON(aqdata->aqbuttons[i].special_mask) && aqdata->aqbuttons[i].rssd_code >= IAQ_ONETOUCH_1 && aqdata->aqbuttons[i].rssd_code <= IAQ_ONETOUCH_6 ) ) {
+      fprintf(fp,"%s_onetouchID=%d\n", prefix, (aqdata->aqbuttons[i].rssd_code - 15));
+    }
+
+    
+    
+  }
+
+
+  //remount_root_ro(fs);
+
+  fprintf(fp,"\n");
+  fclose(fp);
+
+
   /*
   FILE *fp;
   int i;
@@ -1189,3 +2035,4 @@ bool writeCfg (struct aqualinkdata *aqdata)
   return true;
 }
 
+#endif
