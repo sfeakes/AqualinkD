@@ -113,11 +113,11 @@ switch:
     retain: false
     icon: mdi:lightbulb
   - platform: mqtt
-    unique_id: aqualink_spa_mode
-    name: "Spa Mode"
-    state_topic: "aqualinkd/Spa_Mode"
-    command_topic: "aqualinkd/Spa_Mode/set"
-    json_attributes_topic: "aqualinkd/Spa_Mode/delay"
+    unique_id: aqualink_spa
+    name: "Spa"
+    state_topic: "aqualinkd/Spa"
+    command_topic: "aqualinkd/Spa/set"
+    json_attributes_topic: "aqualinkd/Spa/delay"
     json_attributes_template: "{{ {'delay': value|int} | tojson }}"
     qos: 1
     payload_on: "1"
@@ -318,9 +318,9 @@ binary_sensor:
   payload_on: "1"
   payload_off: "0"
 - platform: mqtt
-  unique_id: spa_mode_delay
-  state_topic: "aqualinkd/Spa_Mode/delay"
-  name: "Spa Mode Delay"
+  unique_id: spa_delay
+  state_topic: "aqualinkd/Spa/delay"
+  name: "Spa Delay"
   qos: 0
   payload_on: "1"
   payload_off: "0"
