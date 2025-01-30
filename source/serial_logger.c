@@ -100,8 +100,7 @@ void broadcast_log(char *msg){
 void intHandler(int dummy) {
   _keepRunning = false;
   LOG(SLOG_LOG, LOG_NOTICE, "Stopping!\n");
-  if (_playback_file)  // If we are reading file, loop is irevelent
-    exit(0);
+  exit(0);
 }
 #else
 int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets, char *slogger_ids) 
@@ -513,11 +512,6 @@ int main(int argc, char *argv[]) {
   _aqconfig_.frame_delay = 10;
 
   printf("AqualinkD %s\n",VERSION);
-
-  if (getuid() != 0) {
-    fprintf(stderr, "ERROR %s Can only be run as root\n", argv[0]);
-    return EXIT_FAILURE;
-  }
 
   if (argc < 2 || access( argv[1], F_OK ) == -1 ) {
     fprintf(stderr, "ERROR, first param must be valid serial port, ie:-\n\t%s /dev/ttyUSB0\n\n", argv[0]);
