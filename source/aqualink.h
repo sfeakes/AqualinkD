@@ -61,6 +61,8 @@ bool checkAqualinkTime(); // Only need to externalise this for PDA
 */
 #define TEMP_UNKNOWN    -999
 #define TEMP_REFRESH    -998
+
+#define AQ_UNKNOWN TEMP_UNKNOWN
 //#define UNKNOWN TEMP_UNKNOWN
 #define DATE_STRING_LEN   30
 
@@ -116,12 +118,21 @@ struct programmingthread {
 };
 
 
+typedef enum panel_status {
+  CONNECTED,
+  CONECTING,
+  LOOKING_IDS,
+  STARTING,
+  SERIAL_ERROR, // Errors that stop reading serial port should be below this line
+  NO_IDS_ERROR,
+} panel_status;
 
 typedef enum action_type {
   NO_ACTION = -1,
-  POOL_HTR_SETOINT,
-  SPA_HTR_SETOINT,
+  POOL_HTR_SETPOINT,
+  SPA_HTR_SETPOINT,
   FREEZE_SETPOINT,
+  CHILLER_SETPOINT,
   SWG_SETPOINT,
   SWG_BOOST,
   PUMP_RPM,
@@ -249,6 +260,7 @@ typedef struct clightd
 
 struct aqualinkdata
 {
+  panel_status panelstatus;
   char version[AQ_MSGLEN*2];
   char revision[AQ_MSGLEN];
   char date[AQ_MSGLEN];
@@ -271,11 +283,13 @@ struct aqualinkdata
   int spa_htr_set_point;
   int swg_percent;
   int swg_ppm;
+  int chiller_set_point;
   unsigned char ar_swg_device_status; // Actual state 
   unsigned char heater_err_status;
   aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
+  aqledstate chiller_state;
   int num_pumps;
   pump_detail pumps[MAX_PUMPS];
   int num_lights;

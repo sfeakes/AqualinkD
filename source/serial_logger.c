@@ -41,7 +41,7 @@
 #define SLOG_MAX 80
 #define PACKET_MAX 800
 
-#define VERSION "serial_logger V2.7"
+#define VERSION "serial_logger V2.8"
 
 /*
 typedef enum used {
@@ -152,6 +152,7 @@ int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets
 #define PC_DOCK " <-- PC Interface (RS485 to RS232)"
 #define PDA " <-- PDA Remote"
 #define EPUMP " <-- Jandy VSP ePump"
+#define EPUMP2 " <-- Jandy VSP (rev W or newer)"
 #define CHEM " <-- Chemlink"
 #define JXI_HEATER " <-- LXi / LRZ Heater"
 
@@ -168,6 +169,8 @@ int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets
 #define P_RCTL " <-- Remote wired controller"
 #define P_RWCTL " <-- Remote wireless controller (Screen Logic)"
 #define P_CTL " <-- Pool controller (EasyTouch)"
+
+// 0xE0 -> this is pump ID on rev W panel (16 pumps available total) - so maybe last is 0xF0 or 0xEF
 
 const char *getDevice(unsigned char ID) {
   if (ID >= 0x00 && ID <= 0x03)
@@ -218,6 +221,9 @@ const char *getDevice(unsigned char ID) {
 
   if (ID >= 0x28 && ID <= 0x2B)
     return REM_PWR_CENT;
+
+  if (ID >= 0xE0 && ID <= 0xEF) // this could end at 0xF0
+    return EPUMP2;
 
   //if (ID == 0x08)
   //  return KEYPAD;

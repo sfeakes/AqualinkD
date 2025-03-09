@@ -18,6 +18,7 @@ Haywood Universal Color
 */
 bool isShowMode(const char *mode);
 
+
 /****** This list MUST be in order of clight_type enum *******/
 char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
 //char *_color_light_options[NUMBER_LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS] = 
@@ -158,6 +159,16 @@ void setColorLightsPanelVersion(uint8_t supported)
   set = true;
 }
 */
+void clear_aqualinkd_light_modes()
+{
+  //_color_light_options[0] = _aqualinkd_custom_colors;
+
+  for (int i=0; i < LIGHT_COLOR_OPTIONS; i++) {
+    _color_light_options[0][i] = NULL;
+    //_color_light_options[0][i] = i;
+    //_color_light_options[0][i] = _aqualinkd_custom_colors[i];
+  }
+}
 
 bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow)
 {
@@ -180,7 +191,7 @@ bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow)
 const char *get_aqualinkd_light_mode_name(int index, bool *isShow)
 {
   // if index 1 is "1" then none are set.
-  if ( strcmp(_color_light_options[0][1], "1") == 0) {
+  if ( _color_light_options[0][1] == NULL || strcmp(_color_light_options[0][1], "1") == 0) {
     return NULL;
   }
 
@@ -205,6 +216,9 @@ const char *get_currentlight_mode_name(clight_detail light, emulation_type proto
     return "";
   } 
 
+  if (_color_light_options[light.lightType][light.currentValue] == NULL) {
+    return "";
+  }
   // Rename any modes depending on emulation type
   if (protocol == ALLBUTTON) {
     if (strcmp(_color_light_options[light.lightType][light.currentValue],"Afternoon Skies") == 0) {
@@ -222,6 +236,10 @@ const char *light_mode_name(clight_type type, int index, emulation_type protocol
   if (index < 0 || index > LIGHT_COLOR_OPTIONS ){
     return "";
   } 
+
+  if (_color_light_options[type][index] == NULL) {
+    return "";
+  }
 
   // Rename any modes depending on emulation type
   if (protocol == ALLBUTTON) {
@@ -290,7 +308,7 @@ int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size)
 
   length += sprintf(buffer+length, "var _light_program = [];\n");
 
-  if ( strcmp(_color_light_options[0][1], "1") == 0) {
+  if ( _color_light_options[0][1] == NULL || strcmp(_color_light_options[0][1], "1") == 0) {
     length += sprintf(buffer+length, "_light_program[0] = light_program;\n");
     i=1;
   } else {

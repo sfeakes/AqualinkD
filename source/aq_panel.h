@@ -54,10 +54,13 @@
 void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
 const char* getPanelString();
+const char* getShortPanelString();
 
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
 void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button); 
+
+int getWaterTemp(struct aqualinkdata *aqdata);
 
 void changePanelToMode_Only();
 void addPanelOneTouchInterface();
@@ -71,6 +74,7 @@ int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable
 uint16_t getPanelSupport( char *rev_string, int rev_len);
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
+bool setVirtualButtonLabel(aqkey *button, const char *label);
 
 clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button);
 pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button);

@@ -302,12 +302,22 @@
     </style>
 
     <script type='text/javascript'>
-
         var _panel_size = 6;
         var _panel_set = 0;
         var _latestVersionAvailable = 0;
         var _rssd_logmask = 0;
         const RSSD_MASK_ID = 512;  // Must match RSSD_LOG in utils.c
+
+        _addedBlankLightProgram = false;
+        _addedBlankSensor = false;
+        _addedBlankVirtualButton = false;
+        
+        var _config = {};
+
+        // if loading confighelp.js failes, create a blank variable that it creates.
+        if (typeof _confighelp === 'undefined') {
+          var _confighelp = {};
+        }
 
         function init_collapsible() {
             var coll = document.getElementsByClassName("collapsible");
@@ -520,8 +530,6 @@
             } catch (Error) { }
         }
 
-        var _config = {};
-
         function editconfig(caller) {
           var msg = {
             uri: "config"
@@ -530,35 +538,49 @@
         }
 
         function saveconfig(caller) {
-          
-          var json = {
-            uri: "config/set"
+          var json_ordered = {
+            uri: "config/set",
+            values: {}
           };
-          
-          var values = {}
+
           for (var obj in _config) {
+
             if (_config[obj].value !== undefined) {
-              //json.values.push('"'+obj+'" : "'+_config[obj].value+'"' );
-              //json.values.push(obj : _config[obj].value  );
-              values[obj] = _config[obj].value;
+              //if (_config[obj].value) {
+                json_ordered.values[obj] = _config[obj].value;
+              //}
+            } else if (obj.toString().startsWith("button_") || obj.toString().startsWith("virtual_button_") || obj.toString().startsWith("sensor_") ) {
+              for (var obj1 in _config[obj]) {
+                if (obj1.toString() != "advanced") {
+                  //if (_config[obj][obj1].value) {
+                    json_ordered.values[obj1] = _config[obj][obj1].value;
+                  //}
+                }
+              }
             }
           }
-          json["values"] = values;
-
-          //console.log (JSON.stringify(json));
-
-          send_command(json);
+          //console.log(json_ordered);
+          send_command(json_ordered);
           closeconfig();
         }
 
-        function closeconfig() {
+        function clearconfigtable() {
           const configtable = document.getElementById("config_table");
-          while (configtable.rows.length > 1) {
-            configtable.deleteRow(1); // Delete the first data row (index 1)
+          while (configtable.rows.length > 2) {
+            configtable.deleteRow(2); // Delete the first data row (index 1)
           }
+        }
+
+        function closeconfig() {
+          clearconfigtable();
 
           document.getElementById("config_options").classList.add("hide");
           document.getElementById("config_options_pane").classList.add("hide");
+        }
+
+        function resetConfig(caller) {
+          clearconfigtable();
+          populateconfigtable();
         }
 
         function showConfig(data) {
@@ -568,14 +590,557 @@
 
           document.getElementById("config_options").classList.remove("hide");
           document.getElementById("config_options_pane").classList.remove("hide");
+
+          populateconfigtable(data);
+        }
+
+        function addConfigRow(hideLineSeperator, data, obj, row=-1) {
+            const configtable = document.getElementById("config_table");
+
+            const newRow = configtable.insertRow(row);
+            /*
+            if (row==null) {
+              const newRow = configtable.insertRow();
+            } else {
+              newRow = row;
+            }*/
+
+            if (!hideLineSeperator) {
+                //newRow.style.borderBottom = "1px solid black";
+                newRow.style.borderTop = "1px solid black";
+            }
+//console.log(data[obj]["valid values"]+" == "+ obj["valid values"]);
+//console.log(data[obj].value+" == "+ obj.value);
+
+            const cell1 = newRow.insertCell();
+            const cell2 = newRow.insertCell();
+            const cell3 = newRow.insertCell();
+
+            cell1.textContent = obj.toString();
+
+            cell1.style.paddingLeft = "20px";
+            cell3.textContent = " ";
+            if (data[obj]["valid values"] !== undefined) {
+                //console.log(data[obj]["valid values"]);
+                const input = document.createElement("select");
+                array = data[obj]["valid values"];
+                for (var i = 0; i < array.length; i++) {
+                    var option = document.createElement("option");
+                    option.value = array[i];
+                    option.text = array[i];
+                    if (array[i].toUpperCase() == data[obj].value.toUpperCase()) {
+                        option.selected = true;
+                    }
+                    input.setAttribute('key', obj.toString());
+                    input.addEventListener('change', cfgValueChanged);
+                    input.appendChild(option);
+                }
+                cell2.appendChild(input);
+            } else if (data[obj].type == "string") {
+                const input = document.createElement("input");
+                input.type = "text";
+                if (data[obj].value != "(null)") {
+                    input.value = data[obj].value;
+                }
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+            } else if (data[obj].type == "int") {
+                const input = document.createElement("input");
+                input.type = "number";
+                if (data[obj].value != -999) {
+                    input.value = data[obj].value;
+                }
+                input.size = 4;
+                input.step = 1;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+            } else if (data[obj].type == "float") {
+                const input = document.createElement("input");
+                input.type = "number";
+                input.value = data[obj].value;
+                input.size = 4;
+                input.step = 0.01;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+            } else if (data[obj].type == "hex") {
+                const input = document.createElement("input");
+                input.type = "text";
+                input.value = data[obj].value;
+                input.size = 4;
+                input.setAttribute('key', obj.toString());
+                input.addEventListener('change', cfgValueChanged);
+                cell2.appendChild(input);
+            } else {
+                cell2.textContent = data[obj].value;
+            }
+        }
+
+        
+
+        function addButtonOptionRow(key=0, isVirtual) {
+            //if ( isVirtual == true && key == 0 ) {
+            //  if (_addedBlankVirtualButton == true) {
+            //    return;
+            //  }
+            //  key = 1
+            //}
+
+            const buttonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "lightMode"];
+            const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "onetouchID"];
+
+            const configtable = document.getElementById("config_table");
+            const newRow = configtable.insertRow();
+
+            var cell1 = newRow.insertCell();
+            var cell2 = newRow.insertCell();
+            var cell3 = newRow.insertCell();
+
+            cell1.style.paddingLeft = "20px";
+
+            cell1.style.fontSize = "small";
+            cell2.style.fontSize = "small";
+            cell3.style.fontSize = "small";
+            
+            var blist = isVirtual?virtButtonTypelist:buttonTypelist;
+            var options = "";
+
+            for (const index in blist ) {
+              if (!_config[key][key+"_"+blist[index]]) {
+                options=options+'<option value="'+blist[index]+'">'+blist[index]+'</option>';
+              }
+            }
+ 
+            cell1.innerHTML = 'Add <select id="add_button_type"><option value="" selected="true"></option>'+options+'</select>';
+            cell1.setAttribute('button_key', key);
+            cell1.addEventListener('change', cfgAddButtonOption);
+
+            //if ( isVirtual == true ){
+            //  _addedBlankVirtualButton = true; 
+            //}
+        }
+
+        function addLightProgramRow(num=0, row=-1){
+//console.log("addLightProgramRow( "+num+" )");
+            if ( num == 0 ) {
+              if (_addedBlankLightProgram == true) {
+                return;
+              }
+              //num = 1
+            }
+
+            if (num >= _config.max_light_programs) {
+                console.log("MAX LIGHTS REACHED");
+                _addedBlankLightProgram = true;
+                return;
+            }
+
+            const configtable = document.getElementById("config_table");
+            
+            if (num == 0) {
+              var newRow = configtable.insertRow();
+              var cell1 = newRow.insertCell();
+              cell1.colSpan = 3;
+              cell1.style.fontSize = "small";
+              cell1.style.paddingLeft = "5px";
+              cell1.innerHTML = "Custom Light Programs";
+              cell1.style.borderTop = "1px solid black";
+            }
+
+            var newRow = configtable.insertRow(row);
+            var cell1 = newRow.insertCell();
+            var cell2 = newRow.insertCell();
+            var cell3 = newRow.insertCell();
+
+            cell1.style.paddingLeft = "20px";
+            key = 'light_program_'+String(num+1).padStart(2, '0')
+            cell1.innerHTML = 'Add '+key;
+            cell1.setAttribute('label', key);
+
+            const input = document.createElement("input");
+            input.type = "text";
+            //input.setAttribute('light_program_key', key);
+            input.setAttribute('key', key);
+            input.addEventListener('change', cfgAddLightProgram);
+            //input.addEventListener('change', cfgValueUnhide);
+            cell2.appendChild(input);
+            //cell1.setAttribute('button_key', key);
+            //cell1.addEventListener('change', cfgAddButtonOption);
+
+            _addedBlankLightProgram = true;
+        }
+
+       
+        function addVirtualButtonRow(num=0, row=-1){
+          if ( num == 0 ) {
+            if (_addedBlankVirtualButton == true) {
+              return;
+            }
+          }
+
+          num++;
+
+          if (num >= _config.max_vbuttons) {
+            console.log("MAX VIRTUAL BUTTONS REACHED");
+            _addedBlankVirtualButton = true;
+            return;
+          }
+
+          const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "onetouchID"];
+
           const configtable = document.getElementById("config_table");
-          //console.log (data);
-          _config = data;
-          var lastBtnNum = 1; // Use 1 so only hits if on button_02
-          var vBtnCnt = 0;
+
+          vbname="virtual_button_"+String(num).padStart(2, '0');
+          vblabel=vbname+"_label";
+
+          newRow = configtable.insertRow();
+          var cell1 = newRow.insertCell();
+          cell1.colSpan = 3;
+          cell1.style.fontSize = "small";
+          cell1.style.paddingLeft = "5px";
+          cell1.innerHTML = vbname + " ( <b>Aux_V"+num+"</b> )";
+          cell1.style.borderTop = "1px solid black";
+
+          newRow = configtable.insertRow();
+          //newRow.style.borderTop = "1px solid black";
+          var cell1 = newRow.insertCell();
+          var cell2 = newRow.insertCell();
+          var cell3 = newRow.insertCell();
+          cell1.style.paddingLeft = "20px";
+          cell1.textContent = vblabel;
+
+          const input = document.createElement("input");
+          input.type = "text";
+          input.setAttribute('key', vblabel);
+          //input.addEventListener('change', cfgValueChanged);
+          input.addEventListener('change', cfgValueUnhide);
+          cell2.appendChild(input);
+
+          ///////////
+
+          newRow = configtable.insertRow();
+          //newRow.style.hide = true;
+          newRow.style.display = 'none'; 
+          cell1 = newRow.insertCell();
+          cell2 = newRow.insertCell();
+          cell3 = newRow.insertCell();
+
+          cell1.style.paddingLeft = "20px";
+
+          cell1.style.fontSize = "small";
+          cell2.style.fontSize = "small";
+          cell3.style.fontSize = "small";
+
+          var options = "";
+
+          for (const index in virtButtonTypelist ) {
+            options=options+'<option value="'+virtButtonTypelist[index]+'">'+virtButtonTypelist[index]+'</option>';
+          }
+ 
+          cell1.innerHTML = 'Add <select id="add_button_type"><option value="" selected="true"></option>'+options+'</select>';
+          cell1.setAttribute('button_key', vbname);
+          cell1.addEventListener('change', cfgAddButtonOption);
+
+          _addedBlankVirtualButton = true;
+        }
+
+        function cfgValueUnhide(event) {
+          var key = event.srcElement.getAttribute('key');
+          var value = event.srcElement.value;
+
+          if (key.startsWith("virtual_button_") ) {
+            var js = {};
+            var jso = {};
+            js.value=value;
+            js.type="string";
+            js.advanced="no";
+            jso[key] = js;
+            _config[key.slice(0, 17)] = jso;
+            console.log(_config);
+          }
+
+          console.log("cfgValueUnhide key="+key+" value="+value);
+
+          event.target.removeEventListener('change', cfgValueUnhide);
+          event.target.addEventListener('change', cfgValueChanged);
+          // Show the next table row.
+          event.target.parentNode.parentNode.nextSibling.style.display = '';
+
+          if (key.startsWith("sensor_") ) {
+            event.srcElement.parentNode.parentNode.childNodes[0].innerHTML = key;
+            event.target.parentNode.parentNode.nextSibling.nextSibling.style.display = '';
+          }
           
-          for (var obj in data) {
-            var isBtn = false;
+          console.log(event);
+        }
+
+        function addSensorRow(num=0, row=-1){
+            if ( num == 0 ) {
+              if (_addedBlankSensor == true) {
+                return;
+              }
+              //num = 1
+            }
+
+            if (num >= _config.max_sensors) {
+                console.log("MAX SENSORS REACHED");
+                _addedBlankSensor = true;
+                return;
+            }
+            
+            const configtable = document.getElementById("config_table");
+           
+            if (num == 0) {
+              var newRow = configtable.insertRow();
+              var cell1 = newRow.insertCell();
+              cell1.colSpan = 3;
+              cell1.style.fontSize = "small";
+              cell1.style.paddingLeft = "5px";
+              cell1.innerHTML = "Sensors";
+              cell1.style.borderTop = "1px solid black";
+            }
+
+            var newRow = configtable.insertRow(row);
+
+            if (num != 0) {
+              newRow.style.borderTop = "1px solid black";
+            }
+
+            key = 'sensor_'+String(num+1).padStart(2, '0');
+
+            // Add sensor_xx_path row
+            var cell1 = newRow.insertCell();
+            var cell2 = newRow.insertCell();
+            //var cell3 = newRow.insertCell();
+
+            cell1.style.paddingLeft = "20px";
+            cell1.innerHTML = "<small>Add</small> "+key+"_path";
+
+            var input = document.createElement("input");
+            input.type = "text";
+            input.setAttribute('key', key+"_path");
+            input.setAttribute('root_key', key);
+            input.id = key+"_path";
+            input.addEventListener('change', cfgAddSensor);
+            input.addEventListener('change', cfgValueUnhide);
+            cell2.appendChild(input);
+
+            // Add sensor_xx_label row
+            if (row != -1){row++};
+            newRow = configtable.insertRow(row);
+            newRow.style.display = 'none'; 
+            cell1 = newRow.insertCell();
+            cell2 = newRow.insertCell();
+            //cell3 = newRow.insertCell();
+            cell1.style.paddingLeft = "20px";
+            cell1.innerHTML = key+"_label";
+
+            input = document.createElement("input");
+            input.type = "text";
+            input.setAttribute('key', key+"_label");
+            input.setAttribute('root_key', key);
+            input.id = key+"_label";
+            input.addEventListener('change', cfgAddSensor);
+            cell2.appendChild(input);
+
+            // Add sensor_xx_factor row
+            if (row != -1){row++};
+            newRow = configtable.insertRow(row);
+            newRow.style.display = 'none'; 
+            cell1 = newRow.insertCell();
+            cell2 = newRow.insertCell();
+            //cell3 = newRow.insertCell();
+            cell1.style.paddingLeft = "20px";
+            cell1.innerHTML = key+"_factor";
+
+            input = document.createElement("input");
+            input.type = "number";
+            input.size = 4;
+            input.step = 0.01;
+            input.setAttribute('key', key+"_factor");
+            input.setAttribute('root_key', key);
+            input.id = key+"_factor";
+            input.addEventListener('change', cfgAddSensor);
+            cell2.appendChild(input);
+
+            _addedBlankSensor = true;
+        }
+
+
+        function cfgAddButtonOption(event) {
+
+           var type = event.srcElement.value;
+           var key = event.srcElement.parentNode.getAttribute('button_key');
+
+           for (var obj in _config) {
+             if (obj.toString() == key) {   
+                var js = {};
+                js.advanced = "no";
+                switch(type) {
+                  case "pumpIndex":
+                  case "lightMode":
+                  case "onetouchID":
+                    js.type = "int";
+                  break;
+                  case "pumpID":
+                    js.type = "hex";
+                  break;
+                  case "pumpType":
+                    js.type = "string";
+                    let validvalues = ["", "JANDY ePUMP", "Pentair VS", "Pentair VF"];
+                    js['valid values'] = validvalues;
+                  break;
+                  case "pumpName":
+                    js.type = "string";
+                  break;
+                }
+                js.value = "";
+                _config[obj][key+"_"+type] = js;
+                break;
+             }
+           }
+
+           const configtable = document.getElementById("config_table");
+           for (let i = 0; i < configtable.rows.length; i++) {
+             if(configtable.rows[i].cells[0].getAttribute('button_key') !== null) {
+                if(configtable.rows[i].cells[0].getAttribute('button_key') == key) {
+                  addConfigRow(true, _config[obj], key+"_"+type, i);
+                  break;
+                }
+              }
+            }  
+        }
+
+        function cfgAddLightProgram(event){
+            var value = event.srcElement.value;
+            var key = event.srcElement.getAttribute('key');
+            //console.log(key + " = "+ value);
+
+            event.srcElement.parentNode.parentNode.childNodes[0].innerHTML = key;
+            //event.target.innerHTML = key;
+
+            //event.srcElement.parentNode.parentNode.childNodes[1].childNodes[0].removeEventListener('change', cfgAddLightProgram);
+            //event.srcElement.parentNode.parentNode.childNodes[1].childNodes[0].addEventListener('change', cfgValueChanged);
+            event.target.removeEventListener('change', cfgAddLightProgram);
+            event.target.addEventListener('change', cfgValueChanged);
+
+            var js = {};
+            js.advanced = "yes";
+            js.type = "string";
+            js.value = value;
+            _config[key] = js;
+            //console.log(_config);
+            const configtable = document.getElementById("config_table");
+            for (let i = 0; i < configtable.rows.length; i++) {
+              if(configtable.rows[i].cells[0].getAttribute('label') !== null) {
+                //console.log(configtable.rows[i].cells[0].innerHTML+" test= "+key);
+                if(configtable.rows[i].cells[0].getAttribute('label') == key) {
+                  addLightProgramRow(parseInt(key.match(/[0-9]+/)), i+1);
+                  break;
+                }
+              }
+           }
+        }
+
+        function cfgAddSensor(event){
+            var value = event.srcElement.value;
+            var key = event.srcElement.getAttribute('key');
+            var root_key = event.srcElement.getAttribute('root_key');
+            console.log(key + " = "+ value);
+
+            //event.srcElement.parentNode.parentNode.childNodes[1].childNodes[0].removeEventListener('change', cfgAddLightProgram);
+            //event.srcElement.parentNode.parentNode.childNodes[1].childNodes[0].addEventListener('change', cfgValueChanged);
+            event.target.removeEventListener('change', cfgAddSensor);
+            event.target.addEventListener('change', cfgValueChanged);
+            
+            var js = {};
+            js.advanced = "yes";
+            if (key.endsWith("_factor")) {
+              js.type = "float";
+            } else {
+              js.type = "string";
+            }
+            js.value = value;
+            
+            //_config[key] = js;
+
+            if (_config[root_key]) {
+                console.log("Json exists");
+                _config[root_key][key] = js;
+            } else {
+                console.log("Json not exists");
+                jsobj={};
+                jsobj.advanced="yes";
+                jsobj[key] = js;
+                _config[root_key] = jsobj
+            }
+
+            console.log(_config);
+            // If all 3 have an entry, add another sensor
+            if ( (document.getElementById(root_key+"_path").value) &&
+                 (document.getElementById(root_key+"_label").value) &&
+                 (document.getElementById(root_key+"_factor").value)) {
+              
+              const configtable = document.getElementById("config_table");
+              for (let i = 0; i < configtable.rows.length; i++) {
+                try{
+                  console.log(configtable.rows[i].cells[0].innerHTML);
+                  if(configtable.rows[i].cells[0].innerHTML == key) {
+                    addSensorRow( parseInt(key.match(/[0-9]+/)), i+1 )
+                    break;
+                  }
+                } catch (e){}
+              }
+            }
+            
+        }
+
+        
+        function populateconfigtable(data=null) {
+          _addedBlankLightProgram = false;
+          _addedBlankSensor = false;
+          _addedBlankVirtualButton = false;
+
+          const configtable = document.getElementById("config_table");
+              
+          showAdvanced = document.getElementById("show_advanced").checked;
+          //console.log (data);
+          if (data != null)
+            _config = data;
+
+          var lastKey = "";
+          //var lastBtnNum = 0;
+          //var lastSenNum = 0;
+          //var vBtnCnt = 0;
+          var maxSensor = 0;
+          var maxLightProgramName = 0;
+          
+          for (var obj in _config) {
+            var hideLineSeperator = false;
+
+            if (!showAdvanced && _config[obj].advanced == "yes") {
+              continue;
+            }
+            // Basic groupings by first letter change
+            if ( lastKey.charAt(0) == obj.toString().charAt(0) ) {
+              hideLineSeperator = true;
+            }
+            // More advanced groupings
+            if (obj.toString().includes("device_id") && lastKey.includes("device_id") ) {
+              hideLineSeperator = true;
+            } else if (obj.toString().includes("light_program_") ) {
+              hideLineSeperator = true;
+              if (obj.toString().includes("light_program_01") ) {
+                hideLineSeperator = false;
+              }
+              const num = parseInt(obj.toString().match(/[0-9]+/));
+              if (num > maxLightProgramName)
+                maxLightProgramName = num;
+
+            }
+
             if (_confighelp[obj.toString()] !== undefined) {
               //console.log("FOUND HELP");
               //console.log(_confighelp[obj.toString()]);
@@ -584,218 +1149,84 @@
               cell1.colSpan = 3;
               cell1.style.fontSize = "small";
               cell1.textContent=_confighelp[obj.toString()];
-            }
-
-            if (obj.toString().includes("button")) {
-              isBtn = true;
-              const num = parseInt(obj.toString().match(/[0-9]+/));
-              //console.log("lastnum="+lastBtnNum+" num="+num);
-              if (num && num != lastBtnNum) {       
-                const newRow = configtable.insertRow();
-                newRow.style.borderBottom = "1px solid black";
-                /*
-                const cell1 = newRow.insertCell();
-                const cell2 = newRow.insertCell();
-                const cell3 = newRow.insertCell();
-                //cell1.colSpan = 3;
-                cell1.style.fontSize = "small";
-                if (obj.toString().includes("virtual")) {
-                  vBtnCnt++;
-                }
-                if (vBtnCnt > 1) {
-                  cell1.textContent = "Add Virtual Button";
-                } else {
-                  cell1.style.paddingLeft = "20px";
-                  cell1.textContent = "Add Button_"+lastBtnNum+"_??????";
-                  cell2.innerHTML = '<select key="button_'+lastBtnNum+'_ADD"><option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="lightMode">lightMode</option></select>';
-                  cell2.addEventListener('change', cfgButtonAdd);
-                }*/
-                lastBtnNum = num;
+              if (! hideLineSeperator) {
+                //newRow.style.borderBottom = "1px solid black";
+                newRow.style.borderTop = "1px solid black";
+                hideLineSeperator = true;
               }
             }
 
-            if (data[obj].value !== undefined) {
-              //console.log(obj.toString() + " = " + data[obj].value);
-              const newRow = configtable.insertRow();
-              if (! isBtn) {
-                newRow.style.borderBottom = "1px solid black";
-              }
-              const cell1 = newRow.insertCell();
-              const cell2 = newRow.insertCell();
-              const cell3 = newRow.insertCell();
-              cell1.textContent = obj.toString();
-              cell1.style.paddingLeft = "20px";
-              cell3.textContent = " ";
-              if (data[obj]["valid values"] !== undefined) {
-                //console.log(data[obj]["valid values"]);
-                const input = document.createElement("select");
-                array = data[obj]["valid values"];
-                for (var i = 0; i < array.length; i++) {
-                  var option = document.createElement("option");
-                  option.value = array[i];
-                  option.text = array[i];
-                  if (array[i] == data[obj].value) {
-                    option.selected = true;
+            if (lastKey.startsWith("light_program_") && ! obj.toString().startsWith("light_program_") ) {
+              addLightProgramRow(parseInt(lastKey.match(/[0-9]+/)));
+            } else if (lastKey.startsWith("sensor_") && ! obj.toString().startsWith("sensor_") ) {
+              addSensorRow(parseInt(lastKey.match(/[0-9]+/)));
+            } else if (lastKey.startsWith("virtual_button_") && ! obj.toString().startsWith("virtual_button_") ) {
+              addVirtualButtonRow(parseInt(lastKey.match(/[0-9]+/)));
+            }
+
+            if (_config[obj].value !== undefined) {
+              addConfigRow(hideLineSeperator, _config, obj);
+            } else if (obj.toString().startsWith("button_") || obj.toString().startsWith("virtual_button_") ) {
+                var hide=false;
+                for (var obj1 in _config[obj]) {
+                  if (obj1.toString() == "default") {
+                    const newRow = configtable.insertRow();
+                    const cell1 = newRow.insertCell();
+                    cell1.colSpan = 3;
+                    cell1.style.fontSize = "small";
+                    cell1.style.paddingLeft = "5px";
+                    cell1.innerHTML = obj.toString() + " ( <b>" +_config[obj]["default"] + "</b> )";
+                    cell1.style.borderTop = "1px solid black";
+                    hide=true;
+                  } else if (obj1.toString() != "advanced") {
+                    addConfigRow(hide, _config[obj], obj1);
+                    hide=true;
                   }
-                  input.setAttribute('key', obj.toString());
-                  input.addEventListener('change', cfgValueChanged);
-                  input.appendChild(option);
                 }
-                cell2.appendChild(input);
-              } else if (data[obj].type == "string") {
-                const input = document.createElement("input");
-                input.type = "text"; 
-                input.value = data[obj].value;
-                input.setAttribute('key', obj.toString());
-                input.addEventListener('change', cfgValueChanged);
-                cell2.appendChild(input);
-              } else if (data[obj].type == "int") {
-                const input = document.createElement("input");
-                input.type = "number"; 
-                input.value = data[obj].value;
-                input.size = 4;
-                input.setAttribute('key', obj.toString());
-                input.addEventListener('change', cfgValueChanged);
-                cell2.appendChild(input);
-              } else if (data[obj].type == "hex") {
-                const input = document.createElement("input");
-                input.type = "text"; 
-                input.value = data[obj].value;
-                input.size = 4;
-                input.setAttribute('key', obj.toString());
-                input.addEventListener('change', cfgValueChanged);
-                cell2.appendChild(input);
-              } else if (data[obj].type == "float") {
-                console.log("NEED TO IMPLIMENT float about line 669");
-                cell2.textContent = data[obj].value;
-              } else {
-                cell2.textContent = data[obj].value;
-              }
+                addButtonOptionRow(obj.toString(), !obj.toString().startsWith("button_"));
+            } else if (obj.toString().startsWith("sensor_")) {
+                var hide=false;
+                for (var obj1 in _config[obj]) {
+                  if (obj1.toString() != "advanced") {
+                    addConfigRow(hide, _config[obj], obj1);
+                    hide=true;
+                  }
+                }
+            } else {
+              //console.log("UNDIFINED " + obj.toString() + " = " + _config[obj].value);
             }
-          }
-          //var jsonString= JSON.stringify(_config);
-          //console.log (jsonString);
-
-          var newRow = configtable.insertRow();
-          newRow.style.borderTop = "1px solid black";
-          var cell1 = newRow.insertCell();
-          cell1.colSpan = 3;
-          cell1.textContent = "Add Button or Virtual Button";
-
-          newRow = configtable.insertRow();
-          newRow.style.borderBottom = "1px solid black";
-          cell1 = newRow.insertCell();
-          var cell2 = newRow.insertCell();
-          var cell3 = newRow.insertCell();
-
-          cell1.innerHTML = '<select id="button_type_ADD"><option value="" selected="true"></option><option value="button">button</option><option value="virtual_button">virtual button</option></select> \
-                             <input disabled id="button_number_ADD" type="number" min="1" max="30" size="2"></input> \
-                             <select disabled id="button_option_ADD"><option value="" selected="true">';
-          cell1.addEventListener('change', cfgEnbleButtonOptions);
-          //cell2.innerHTML = '<input disabled id="button_value_ADD">';
-          cell2.innerHTML = '<div id="button_valuetype_ADD"></div>';
-          cell2.addEventListener('change', cfgEnbleButtonOptions);
-          cell3.innerHTML = '<input id="addButton" type="submit" value="Add" onClick="cfgButtonAdd()"></input>';
-          //cell3.addEventListener('change', cfgEnbleButtonOptions);
-          disablebutton("addButton");
-        }
-
-        function cfgEnbleButtonOptions(event) {
-          btnType = document.getElementById("button_type_ADD");
-          btnNum = document.getElementById("button_number_ADD");
-          btnOption = document.getElementById("button_option_ADD");
-          btnValueType = document.getElementById("button_valuetype_ADD");
-          
-          if (event.srcElement.id == "button_type_ADD"){
-            btnNum.disabled = false;
-            if (event.srcElement.value == "button") {
-              btnNum.max=20;
-              btnOption.innerHTML = '<option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="lightMode">lightMode</option>';
-            } else if (event.srcElement.value == "virtual_button") {
-              btnNum.max=10;
-              btnOption.innerHTML = '<option value="" selected="true"></option><option value="pumpIndex">pumpIndex</option><option value="pumpID">pumpID</option><option value="pumpType">pumpType</option><option value="pumpName">pumpName</option><option value="onetouchID">onetouchID</option>';
-            }
-          } else if (event.srcElement.id == "button_number_ADD"){
-            btnOption.disabled = false;
-          } else if (event.srcElement.id == "button_option_ADD"){
-            //btnValue.disabled = false;
-            //console.log(event.srcElement.value);
-            switch(event.srcElement.value) {
-              case "pumpIndex":
-                //btnValueType.innerHTML = '<select id="button_value_ADD"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select>';
-                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="4" size="1"></input>';
-              break;
-              case "pumpID":
-                btnValueType.innerHTML = '<input id="button_value_ADD" type="text" size="4" value="0x60"></imput>';
-              break;
-              case "pumpType":
-                btnValueType.innerHTML = '<select id="button_value_ADD"><option value="JANDY ePUMP">JANDY ePUMP</option><option value="Pentair VS">Pentair VS</option><option value="Pentair VF">Pentair VF</option></select>';
-              break;
-              case "pumpName":
-                btnValueType.innerHTML = '<input id="button_value_ADD" type="text"></imput>';
-              break;
-              case "lightMode":
-                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="11" size="2"></input>';
-              break;
-              case "onetouchID":
-                btnValueType.innerHTML = '<input id="button_value_ADD" type="number" min="1" max="6" size="2"></input>';
-              break;
-            }
+            
+            lastKey = obj.toString();
           }
 
-          // Get this here since the previous statment can change it.
-          btnValue = document.getElementById("button_value_ADD");
-
-          if (btnType.value != "" && btnNum.value != "" && btnOption.value != "" && btnValue && btnValue.value != "") {
-            enablebutton("addButton");
-          } else {
-            disablebutton("addButton");
+          if (showAdvanced) {
+            addLightProgramRow();
+            addSensorRow();
           }
+          addVirtualButtonRow();
+
         }
 
         function cfgValueChanged(event) {
-          //console.log("Config set "+event.srcElement.getAttribute('key')+" to "+event.srcElement.value)
-          _config[event.srcElement.getAttribute('key')].value = event.srcElement.value;
-        }
+          var key = event.srcElement.getAttribute('key');
+          var value = event.srcElement.value;
 
-        function cfgButtonAdd(){
-          //console.log(document.getElementById("button_type_ADD").value);
-          //console.log(document.getElementById("button_number_ADD").value);
-          //console.log(document.getElementById("button_option_ADD").value);
-          //console.log(document.getElementById("button_value_ADD").value);
+          console.log("Config set "+key+" to "+value)
 
-          var button = document.getElementById("button_type_ADD").value + "_" + ("0" + document.getElementById("button_number_ADD").value).slice (-2);
-          var buttonName = button+"_"+document.getElementById("button_option_ADD").value;
-          var buttonValue = document.getElementById("button_value_ADD").value;
-          //console.log("Looking for "+button);
-          const configtable = document.getElementById("config_table");
-          var found=false;
-          for (let i = 0; i < configtable.rows.length; i++) {
-            try{
-              if ( configtable.rows[i].cells[0].childNodes[0].nodeValue.includes(button)  ) {
-                //console.log("**** FOUND *****");
-                found=true;
-              } else if (found == true) {
-                //console.log("** ADD HERE **");
-                const newRow = configtable.insertRow(i);
-                newRow.classList.add("config_options_added");
-                var cell1 = newRow.insertCell();
-                var cell2 = newRow.insertCell();
-                var cell3 = newRow.insertCell();
-                newRow.style.borderBottom = "1px solid black";
-                cell1.style.paddingLeft = "20px";
-                cell1.innerHTML = buttonName;
-                cell2.innerHTML = buttonValue;
-                //cell3.innerHTML = '<input id="addButton" type="submit" value="Delete" onClick="cfgButtonDelete()"></input>';
-                var js = {};
-                js.value = buttonValue
-                _config[buttonName] = js;
-                //console.log(_config);
-                break;
-              }
-              //console.log(configtable.rows[i].cells[0].childNodes[0].nodeValue);
-            } catch (e){}
+          try {
+            _config[key].value = value;
+          } catch (exception) {
+            console.log("Error setting cfg");
+            //console.error(exception);
+            if (key.startsWith("button_") ) {
+              _config[key.slice(0, 9)][key].value = value
+            } else if (key.startsWith("virtual_button_") ) {
+              _config[key.slice(0, 17)][key].value = value
+            } else if (key.startsWith("sensor_") ) {
+              _config[key.slice(0, 9)][key].value = value
+            }
           }
+          console.log(_config);
         }
 
         function update_status(data) {
@@ -1259,12 +1690,21 @@
                   </th>
                 </tr>
                 <tr>
+                  <td align="center" colspan="3">    
+                    <label>
+                        <input class="toggle-checkbox" type="checkbox" id="show_advanced" onclick="resetConfig(this);">
+                        <div class="toggle-switch"></div>
+                        <span class="toggle-label">Show&nbsp;Advanced&nbsp;Options</span>
+                    </label>
+                  </td> 
+                <!--
                   <td align="right" width="50%">
                     Key
                   </td>
                   <td align="left" width="50%">
                     Value
                   </td>
+                -->
                 </tr>
                 </tbody>
               </table>

@@ -126,15 +126,21 @@ NEED TO FIX FOR THIS RELEASE.
 * with iaqualink2 no need to poll iaqtouch devices as frequently
 * update documentation on how vbutton / vpump / pump_max & min / enable_iauqalink2
 * check rs serial adapter is active if light color mode 11 is used.
+
+
+* Check SWG messages like "#1 TruClear", see log in this post https://github.com/sfeakes/AqualinkD/discussions/388
 -->
 
 
-# Updates in 2.5.1
+# Updates in 2.6.0 (dev)
+* Added configuration editor in aqmanager.
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
 * Added support for monitoring SBC system sensors, like CPU / GPU / Board (CPU temp being most useful).
 * Reduced load on panel over AqualinkTouch protocol.
 * Fixed higher than normal CPU load when leaving aqmanager open and sending no messages (leaving aqmanager open for over 14days).
+* Reworked PDA sleep mode.
+* Added preliminary Heat Pump / Chiller support (MQTT & HA support only, no Homekit or web ui yet)
 
 # Updates in 2.5.0
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.

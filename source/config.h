@@ -6,22 +6,25 @@
 #include "aq_serial.h"
 #include "aqualink.h"
 
-//#define CONFIG_DEV_TEST
-//#define CONFIG_EDITOR
+#define CONFIG_DEV_TEST
+#define CONFIG_EDITOR
 
 //#define DEFAULT_LOG_LEVEL    10 
 #define DEFAULT_LOG_LEVEL    LOG_NOTICE
-#define DEFAULT_WEBPORT      "6580"
-#define DEFAULT_WEBROOT      "./"
+//#define DEFAULT_WEBPORT      "6580"
+//#define DEFAULT_WEBROOT      "./"
+#define DEFAULT_WEBPORT      "80"
+#define DEFAULT_WEBROOT      "/var/www/aqualinkd/"
 #define DEFAULT_SERIALPORT   "/dev/ttyUSB0"
 #define DEFAULT_DEVICE_ID    "0x0a"
-#define DEFAULT_MQTT_DZ_IN   NULL
-#define DEFAULT_MQTT_DZ_OUT  NULL
-#define DEFAULT_HASS_DISCOVER NULL
-#define DEFAULT_MQTT_AQ_TP   NULL
+#define DEFAULT_MQTT_DZ_IN   NULL // "domoticz/in"
+#define DEFAULT_MQTT_DZ_OUT  NULL // "domoticz/out"
+#define DEFAULT_HASS_DISCOVER "homeassistant"
+#define DEFAULT_MQTT_AQ_TP   "aqualinkd"
 #define DEFAULT_MQTT_SERVER  NULL
 #define DEFAULT_MQTT_USER    NULL
 #define DEFAULT_MQTT_PASSWD  NULL
+
 //#define DEFAULT_SWG_ZERO_IGNORE_COUNT 0
 
 #define MQTT_ID_LEN 18 // 20 seems to kill mosquitto 1.6
@@ -34,6 +37,7 @@
 #define READ_RS485_JAN_LX   (1 << 4) //     Jandy LX heater
 #define READ_RS485_JAN_CHEM (1 << 5) //     Jandy Chemical Feeder
 #define READ_RS485_IAQUALNK (1 << 6) // Read iAqualink messages 
+#define READ_RS485_HEATPUMP (1 << 7) // Read HeatPump messages
 
 #define MAX_RSSD_LOG_FILTERS 4
 
@@ -87,15 +91,9 @@ struct aqconfig
   //bool read_all_devices;
   //bool read_pentair_packets;
   uint8_t read_RS485_devmask;
-  bool use_panel_aux_labels;
+  bool use_panel_aux_labels; // Took this option out of config
 
-  //uint8_t force_device_devmask; // should change the below to devmask
-  
-  bool force_swg;
-  bool force_ps_setpoints;
-  bool force_frzprotect_setpoints;
-  bool force_chem_feeder;
-  
+  uint8_t force_device_devmask;
 
   //int swg_zero_ignore; // This can be removed since this was due to VSP that's been fixed.
   bool display_warnings_web;
@@ -103,20 +101,11 @@ struct aqconfig
   bool log_raw_bytes; // Read as bytes
   unsigned char RSSD_LOG_filter[MAX_RSSD_LOG_FILTERS];
   //bool log_raw_RS_bytes;
-  /*
-#ifdef AQ_RS_EXTRA_OPTS
-  bool readahead_b4_write;
-  bool prioritize_ack;
-#endif
-*/
+
   bool mqtt_timed_update;
   bool sync_panel_time;
   bool enable_scheduler;
   int8_t schedule_event_mask; // Was int16_t, but no need
-  //int16_t schedule_event_mask;
-  //bool sched_chk_poweron;
-  //bool sched_chk_freezeprotectoff;
-  //bool sched_chk_boostoff;
   int  sched_chk_pumpon_hour;
   int  sched_chk_pumpoff_hour;
   bool ftdi_low_latency;
@@ -142,21 +131,23 @@ struct aqconfig _aqconfig_;
 #define READ_RSDEV_LX ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_LX) == READ_RS485_JAN_LX)
 #define READ_RSDEV_CHEM ((_aqconfig_.read_RS485_devmask & READ_RS485_JAN_CHEM) == READ_RS485_JAN_CHEM)
 #define READ_RSDEV_iAQLNK ((_aqconfig_.read_RS485_devmask & READ_RS485_IAQUALNK) == READ_RS485_IAQUALNK)
+#define READ_RSDEV_HPUMP ((_aqconfig_.read_RS485_devmask & READ_RS485_HEATPUMP) == READ_RS485_HEATPUMP)
 
 #define isPDA_IAQT (_aqconfig_.device_id == 0x33)
 //#define isPDA ((_aqconfig_.paneltype_mask & RSP_PDA) == RSP_PDA)
 
-/*
+
 #define FORCE_SWG_SP           (1 << 0)
 #define FORCE_POOLSPA_SP       (1 << 1)
 #define FORCE_FREEZEPROTECT_SP (1 << 2)
 #define FORCE_CHEM_FEEDER      (1 << 3)
+#define FORCE_CHILLER          (1 << 4)
 
 #define ENABLE_SWG           ((_aqconfig_.force_device_devmask & FORCE_SWG_SP) == FORCE_SWG_SP)
-#define ENABLE_HEATERs       ((_aqconfig_.force_device_devmask & FORCE_POOLSPA_SP) == FORCE_POOLSPA_SP)
+#define ENABLE_HEATERS       ((_aqconfig_.force_device_devmask & FORCE_POOLSPA_SP) == FORCE_POOLSPA_SP)
 #define ENABLE_FREEZEPROTECT ((_aqconfig_.force_device_devmask & FORCE_FREEZEPROTECT_SP) == FORCE_FREEZEPROTECT_SP)
 #define ENABLE_CHEM_FEEDER   ((_aqconfig_.force_device_devmask & FORCE_CHEM_FEEDER) == FORCE_CHEM_FEEDER)
-*/
+#define ENABLE_CHILLER       ((_aqconfig_.force_device_devmask & FORCE_CHILLER) == FORCE_CHILLER)
 
 /*
 #ifndef CONFIG_C
@@ -184,7 +175,7 @@ char *ncleanalloc(char *str, int length);
 const char *pumpType2String(pump_type ptype);
 
 #ifdef CONFIG_EDITOR
-int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize);
+int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, struct aqualinkdata *aqdata);
 void check_print_config (struct aqualinkdata *aqdata);
 #endif
 
@@ -203,11 +194,13 @@ typedef enum cfg_value_type{
 #ifdef CONFIG_DEV_TEST 
 typedef struct cfgParam {
   void *value_ptr;
+  void *default_value;
   //int max_value; // Max length of string (maybe mad int as well)
   cfg_value_type value_type;
   char *name;
   char *valid_values;
   uint8_t mask;
+  bool advanced;
 } cfgParam;
 
 #ifndef CONFIG_C
@@ -229,7 +222,7 @@ int _numCfgParams;
 #define CFG_N_log_level                         "log_level"
 #define CFG_V_log_level                         "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]"
 #define CFG_C_log_level                         9
-#define CFG_N_socket_port                       "socket_port"
+#define CFG_N_socket_port                       "socket_port" // Change to Web_socket
 #define CFG_C_socket_port                       11
 #define CFG_N_web_directory                     "web_directory"
 #define CFG_C_web_directory                     13
@@ -322,6 +315,7 @@ int _numCfgParams;
 #define CFG_C_force_frzprotect_setpoints        26
 #define CFG_N_force_chem_feeder                 "force_chem_feeder"
 #define CFG_C_force_chem_feeder                 17
+#define CFG_N_force_chiller                     "force_chiller"
 #define CFG_N_display_warnings_web              "display_warnings_web"
 #define CFG_C_display_warnings_web              20
 #define CFG_N_log_protocol_packets              "log_protocol_packets"
@@ -343,20 +337,24 @@ int _numCfgParams;
 #define CFG_C_read_RS485_Chem                   15
 #define CFG_N_read_RS485_iAqualink              "read_RS485_iAqualink"
 #define CFG_C_read_RS485_iAqualink              20
+#define CFG_N_read_RS485_HeatPump               "read_RS485_HeatPump"
 
 
 #define CFG_N_enable_scheduler                  "enable_scheduler"
 #define CFG_C_enable_scheduler                  16
-#define CFG_N_scheduler_check_poweron           "scheduler_check_poweron"
-#define CFG_C_scheduler_check_poweron           23
-#define CFG_N_scheduler_check_freezeprotectoff  "scheduler_check_freezeprotectoff"
-#define CFG_C_scheduler_check_freezeprotectoff  32
-#define CFG_N_scheduler_check_boostoff          "scheduler_check_boostoff"
-#define CFG_C_scheduler_check_boostoff          24
-#define CFG_N_scheduler_check_pumpon_hour       "scheduler_check_pumpon_hour"
-#define CFG_C_scheduler_check_pumpon_hour       27
-#define CFG_N_scheduler_check_pumpoff_hour      "scheduler_check_pumpoff_hour"
-#define CFG_C_scheduler_check_pumpoff_hour      28
+
+#define CFG_N_event_check_poweron               "event_poweron_check_pump"
+#define CFG_C_event_check_poweron               24
+#define CFG_N_event_check_freezeprotectoff      "event_freezeprotectoff_check_pump"
+#define CFG_C_event_check_freezeprotectoff      33
+#define CFG_N_event_check_boostoff              "event_boostoff_check_pump"
+#define CFG_C_event_check_boostoff              25
+#define CFG_N_event_check_pumpon_hour           "event_check_pumpon_hour"
+#define CFG_C_event_check_pumpon_hour           23
+#define CFG_N_event_check_pumpoff_hour         "event_check_pumpoff_hour"
+#define CFG_C_event_check_pumpoff_hour          24
+#define CFG_N_event_check_usecron               "event_check_use_scheduler_times"
+#define CFG_C_event_check_usecron               32
 
 #define CFG_N_ftdi_low_latency                  "ftdi_low_latency"
 #define CFG_C_ftdi_low_latency                  16

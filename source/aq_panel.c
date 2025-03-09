@@ -183,6 +183,7 @@ setPanel("RS-8 Combo");
 */
 
 char _panelString[60];
+char _panelStringShort[60];
 void setPanelString()
 {
   snprintf(_panelString, sizeof(_panelString), "%s%s-%s%d %s",
@@ -191,19 +192,26 @@ void setPanelString()
       isDUAL_EQPT_PANEL?"2/":"",
       PANEL_SIZE(),
       isDUAL_EQPT_PANEL?"Dual Equipment":(
-        isCOMBO_PANEL?"Combo Pool/Spa":(isSINGLE_DEV_PANEL?"Only Pool/Spa":"")
-      )
-      );
-      
-/*
-      isCOMBO_PANEL?"Combo Pool/Spa":"",
-      isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
-      isDUAL_EQPT_PANEL?" Dual Equipment":"");
-*/
+        isCOMBO_PANEL?"Combo (Pool & Spa)":(isSINGLE_DEV_PANEL?"Only (Pool or Spa)":"")
+      ));
+
+  snprintf(_panelStringShort, sizeof(_panelString), "%s%s-%s%d %s",
+      isRS_PANEL?"RS":"",
+      isPDA_PANEL?"PDA":"", // No need for both of these, but for error validation leave it in.
+      isDUAL_EQPT_PANEL?"2/":"",
+      PANEL_SIZE(),
+      isDUAL_EQPT_PANEL?"Dual":(
+        isCOMBO_PANEL?"Combo":(isSINGLE_DEV_PANEL?"Only":"")
+      ));
 }
 const char* getPanelString()
 {
   return _panelString;
+}
+
+const char* getShortPanelString()
+{
+  return _panelStringShort;
 }
 
 
@@ -360,6 +368,13 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   snprintf(name, 9, "%s%d", BTN_VAUX, vindex);
   button->name = name; 
 
+  if (label == NULL || strlen(label) <= 0) {
+    //button->label = name; 
+    setVirtualButtonLabel(button, name);
+  } else {
+    setVirtualButtonLabel(button, label);
+  }
+  /*
   if (strlen(label) <= 0) {
     button->label = name; 
   } else {
@@ -376,13 +391,33 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
     button->rssd_code = IAQ_ONETOUCH_4;
   } else {
     button->rssd_code = NUL;
-  }
+  }*/
 
   button->code = NUL;
   button->dz_idx = DZ_NULL_IDX;
   button->special_mask |= VIRTUAL_BUTTON; // Could change to special mask vbutton
 
   return button;  
+}
+
+bool setVirtualButtonLabel(aqkey *button, const char *label) {
+
+  button->label = (char *)label;
+  
+  // These 3 vbuttons have a button code on iaqualink protocol, so use that for rssd_code.
+  if (strncasecmp (button->label, "ALL OFF", 7) == 0) {
+    button->rssd_code = IAQ_ALL_OFF;
+  } else if (strncasecmp (button->label, "Spa Mode", 8) == 0) {
+    button->rssd_code = IAQ_SPA_MODE;
+  } else if (strncasecmp (button->label, "Clean Mode", 10) == 0) {
+    button->rssd_code = IAQ_CLEAN_MODE;
+  } else if (strncasecmp (button->label, "Day Party", 9) == 0) {
+    button->rssd_code = IAQ_ONETOUCH_4;
+  } else {
+    button->rssd_code = NUL;
+  }
+
+  return true;
 }
 
 // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
@@ -724,11 +759,14 @@ const char* getActionName(action_type type)
     case NO_ACTION:
       return "No Action";
     break;
-    case POOL_HTR_SETOINT:
+    case POOL_HTR_SETPOINT:
       return "Pool Heater Setpoint";
     break;
-    case SPA_HTR_SETOINT:
+    case SPA_HTR_SETPOINT:
       return "Spa Heater Setpoint";
+    break;
+    case CHILLER_SETPOINT:
+      return "Chiller Setpoint";
     break;
     case FREEZE_SETPOINT:
       return "Freeze Protect Setpoint";
@@ -773,6 +811,20 @@ const char* getActionName(action_type type)
 //void create_PDA_on_off_request(aqkey *button, bool isON);
 //bool create_panel_request(struct aqualinkdata *aqdata,  netRequest requester, int buttonIndex, int value, bool timer);
 //void create_program_request(struct aqualinkdata *aqdata, netRequest requester, action_type type, int value, int id); // id is only valid for PUMP RPM
+
+// Get Pool or Spa temp depending on what's on
+int getWaterTemp(struct aqualinkdata *aqdata)
+{
+  if (isSINGLE_DEV_PANEL)
+    return aqdata->pool_temp;
+
+  // NSF Need to check if spa is on.
+  if (aqdata->aqbuttons[1].led->state == OFF)
+    return aqdata->pool_temp;
+  else
+    return aqdata->spa_temp;
+}
+
 
 
 //bool setDeviceState(aqkey *button, bool isON)
@@ -907,10 +959,19 @@ bool programDeviceValue(struct aqualinkdata *aqdata, action_type type, int value
   if (aqdata->unactioned.type != NO_ACTION && type != aqdata->unactioned.type)
     LOG(PANL_LOG,LOG_ERR, "about to overwrite unactioned panel program\n");
 
-  if (type == POOL_HTR_SETOINT || type == SPA_HTR_SETOINT || type == FREEZE_SETPOINT || type == SWG_SETPOINT ) {
+  if (type == POOL_HTR_SETPOINT || type == SPA_HTR_SETPOINT || type == FREEZE_SETPOINT || type == SWG_SETPOINT ) {
     aqdata->unactioned.value = setpoint_check(type, value, aqdata);
     if (value != aqdata->unactioned.value)
       LOG(PANL_LOG,LOG_NOTICE, "requested setpoint value %d is invalid, change to %d\n", value, aqdata->unactioned.value);
+  } else if (type == CHILLER_SETPOINT) {
+    if (isIAQT_ENABLED) {
+      aqdata->unactioned.value = setpoint_check(type, value, aqdata);
+      if (value != aqdata->unactioned.value)
+        LOG(PANL_LOG,LOG_NOTICE, "requested setpoint value %d is invalid, change to %d\n", value, aqdata->unactioned.value);
+    } else {
+      LOG(PANL_LOG,LOG_ERR, "Chiller setpoint can only be set when `%s` is set to iAqualinkTouch procotol\n", CFG_N_extended_device_id);
+      return false;
+    }
   } else if (type == PUMP_RPM) {
     aqdata->unactioned.value = value;
   } else if (type == PUMP_VSPROGRAM) {
@@ -1105,8 +1166,9 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
         programDeviceLightMode(aqdata, value, deviceIndex);
       }
     break;
-    case POOL_HTR_SETOINT:
-    case SPA_HTR_SETOINT:
+    case POOL_HTR_SETPOINT:
+    case SPA_HTR_SETPOINT:
+    case CHILLER_SETPOINT:
     case FREEZE_SETPOINT:
     case SWG_SETPOINT:
     case SWG_BOOST:

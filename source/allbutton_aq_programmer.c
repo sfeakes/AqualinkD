@@ -652,7 +652,7 @@ void *set_allbutton_pool_heater_temps( void *ptr )
     val = MEATER_MIN;
   }
   */
-  val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(POOL_HTR_SETPOINT, val, aq_data);
 
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
   if (isSINGLE_DEV_PANEL){
@@ -721,7 +721,7 @@ void *set_allbutton_spa_heater_temps( void *ptr )
   } else if ( val < MEATER_MIN) {
     val = MEATER_MIN;
   }*/
-  val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(SPA_HTR_SETPOINT, val, aq_data);
 
   // NSF IF in TEMP1 / TEMP2 mode, we need C range of 1 to 40 is 2 to 40 for TEMP1, 1 to 39 TEMP2
 

@@ -111,6 +111,33 @@ const char *HASSIO_SWG_DISCOVER = "{"
     "\"optimistic\": false"
 "}";
 
+const char *HASSIO_CHILLER_DISCOVER = "{"
+    "\"device\": {" HASS_DEVICE "},"
+    "\"availability\": {" HASS_AVAILABILITY "},"
+    "\"type\": \"climate\","
+    "\"unique_id\": \"aqualinkd_%s\","
+    "\"name\": \"Chiller\","
+    "\"modes\": [\"off\", \"cool\"],"
+    "\"send_if_off\": true,"
+    "\"initial\": 34,"
+    "\"power_command_topic\": \"%s/%s/set\"," // add
+    "\"payload_on\": \"2\","
+    "\"payload_off\": \"0\","
+    "\"current_temperature_topic\": \"%s/%s\","
+    "\"mode_command_topic\": \"%s/%s/set\"," // add
+    "\"mode_state_topic\": \"%s/%s\","
+    "\"mode_state_template\": \"{%% set values = { '0':'off', '2':'cool'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
+    "\"temperature_command_topic\": \"%s/%s/setpoint/set\","
+    "\"temperature_state_topic\": \"%s/%s/setpoint\","
+    "\"action_template\": \"{%% set values = { '0':'off', '2':'cooling'} %%}{{ values[value] if value in values.keys() else 'off' }}\","
+    "\"action_topic\": \"%s/%s\","
+    /*"\"temperature_state_template\": \"{{ value_json }}\""*/
+    "\"min_temp\": %0.2f,"
+    "\"max_temp\": %0.2f,"
+    "\"temperature_unit\": \"%s\""
+    //"%s"
+"}";
+
 // Use Fan for VSP
 // Need to change the max / min.  These do NOT lomit the slider in hassio, only the MQTT limits.
 // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
@@ -375,8 +402,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   { 
     if (strcmp("NONE",aqdata->aqbuttons[i].label) != 0 ) {
       // Heaters
-      if ( (strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (_aqconfig_.force_ps_setpoints || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) ||
-           (strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (_aqconfig_.force_ps_setpoints || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) ) {
+      if ( (strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (ENABLE_HEATERS || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) ||
+           (strcmp(BTN_SPA_HTR,aqdata->aqbuttons[i].name)==0 && (ENABLE_HEATERS || aqdata->spa_htr_set_point != TEMP_UNKNOWN)) ) {
         sprintf(msg,HASSIO_CLIMATE_DISCOVER,
              connections,
              _aqconfig_.mqtt_aq_topic,
@@ -390,8 +417,10 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              _aqconfig_.mqtt_aq_topic,aqdata->aqbuttons[i].name,
              //(_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
-             (_aqconfig_.convert_mqtt_temp?degFtoC(36):36.00),
-             (_aqconfig_.convert_mqtt_temp?degFtoC(104):104.00),
+             //(_aqconfig_.convert_mqtt_temp?degFtoC(36):36.00),
+             //(_aqconfig_.convert_mqtt_temp?degFtoC(104):104.00),
+             (_aqconfig_.convert_mqtt_temp?(float)HEATER_MIN_C:(float)HEATER_MIN_F),
+             (_aqconfig_.convert_mqtt_temp?(float)HEATER_MAX_C:(float)HEATER_MAX_F),
              (_aqconfig_.convert_mqtt_temp?"C":"F"));
         sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, aqdata->aqbuttons[i].name);
         send_mqtt(nc, topic, msg);    
@@ -461,7 +490,7 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   }
   
   // Freezeprotect
-  if ( _aqconfig_.force_frzprotect_setpoints || (aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) ) {
+  if ( ENABLE_FREEZEPROTECT || (aqdata->frz_protect_set_point != TEMP_UNKNOWN && aqdata->air_temp != TEMP_UNKNOWN) ) {
     sprintf(msg, HASSIO_FREEZE_PROTECT_DISCOVER,
             connections,
             _aqconfig_.mqtt_aq_topic,
@@ -472,15 +501,40 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             _aqconfig_.mqtt_aq_topic,FREEZE_PROTECT,
             //(_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
-            (_aqconfig_.convert_mqtt_temp?degFtoC(34):34.00),
-            (_aqconfig_.convert_mqtt_temp?degFtoC(42):42.00),
+            //(_aqconfig_.convert_mqtt_temp?degFtoC(34):34.00),
+            //(_aqconfig_.convert_mqtt_temp?degFtoC(42):42.00),
+            (_aqconfig_.convert_mqtt_temp?(float)FREEZE_PT_MIN_C:(float)FREEZE_PT_MIN_F),
+            (_aqconfig_.convert_mqtt_temp?(float)FREEZE_PT_MAX_C:(float)FREEZE_PT_MAX_F),
             (_aqconfig_.convert_mqtt_temp?"C":"F"));
     sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, FREEZE_PROTECT);
     send_mqtt(nc, topic, msg);
   }
 
+  if (ENABLE_CHILLER || (aqdata->chiller_set_point != TEMP_UNKNOWN && aqdata->chiller_state != LED_S_UNKNOWN) ) {
+    // USe freeze protect for the moment.
+    sprintf(msg, HASSIO_CHILLER_DISCOVER,
+      connections,
+      _aqconfig_.mqtt_aq_topic,
+      CHILLER,
+      _aqconfig_.mqtt_aq_topic,CHILLER,
+      _aqconfig_.mqtt_aq_topic,POOL_TEMP_TOPIC,
+      _aqconfig_.mqtt_aq_topic,CHILLER,
+      _aqconfig_.mqtt_aq_topic,CHILLER_ENABELED,
+      _aqconfig_.mqtt_aq_topic,CHILLER,
+      _aqconfig_.mqtt_aq_topic,CHILLER,
+      _aqconfig_.mqtt_aq_topic,CHILLER,
+      //(_aqconfig_.convert_mqtt_temp?HASSIO_CONVERT_CLIMATE_TOF:HASSIO_NO_CONVERT_CLIMATE));
+      //(_aqconfig_.convert_mqtt_temp?degFtoC(34):34.00),
+      //(_aqconfig_.convert_mqtt_temp?degFtoC(104):104.00),
+      (_aqconfig_.convert_mqtt_temp?(float)CHILLER_MIN_C:(float)CHILLER_MIN_F),
+      (_aqconfig_.convert_mqtt_temp?(float)CHILLER_MAX_C:(float)CHILLER_MAX_F),
+      (_aqconfig_.convert_mqtt_temp?"C":"F"));
+    sprintf(topic, "%s/climate/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, CHILLER);
+    send_mqtt(nc, topic, msg);
+  }
+
   // SWG
-  if ( aqdata->swg_percent != TEMP_UNKNOWN ) {
+  if ( ENABLE_SWG || aqdata->swg_percent != TEMP_UNKNOWN ) {
 
     sprintf(msg, HASSIO_SWG_DISCOVER,
             connections,
@@ -636,14 +690,14 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
   }
 
   // Chem feeder (ph/orp)
-  if (_aqconfig_.force_chem_feeder || aqdata->ph != TEMP_UNKNOWN) { 
+  if (ENABLE_CHEM_FEEDER || aqdata->ph != TEMP_UNKNOWN) { 
     rsm_char_replace(idbuf, CHEM_PH_TOPIC, "/", "_");
     sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry pH",_aqconfig_.mqtt_aq_topic,CHEM_PH_TOPIC, "pH", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);
     send_mqtt(nc, topic, msg);
   }
 
-  if (_aqconfig_.force_chem_feeder || aqdata->orp != TEMP_UNKNOWN) { 
+  if (ENABLE_CHEM_FEEDER || aqdata->orp != TEMP_UNKNOWN) { 
     rsm_char_replace(idbuf, CHEM_ORP_TOPIC, "/", "_");
     sprintf(msg, HASSIO_SENSOR_DISCOVER,connections,_aqconfig_.mqtt_aq_topic,idbuf,"Water Chemistry ORP",_aqconfig_.mqtt_aq_topic,CHEM_ORP_TOPIC, "orp", "mdi:water-outline");
     sprintf(topic, "%s/sensor/aqualinkd/aqualinkd_%s/config", _aqconfig_.mqtt_hass_discover_topic, idbuf);

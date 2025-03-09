@@ -1168,7 +1168,7 @@ void *set_aqualink_PDA_pool_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_SET_POOL_HEATER_TEMPS);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(POOL_HTR_SETPOINT, val, aq_data);
 
   set_PDA_aqualink_heater_setpoint(aq_data, val, true);
 
@@ -1188,7 +1188,7 @@ void *set_aqualink_PDA_spa_heater_temps( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_SET_SPA_HEATER_TEMPS);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(SPA_HTR_SETPOINT, val, aq_data);
 
   set_PDA_aqualink_heater_setpoint(aq_data, val, false);
   

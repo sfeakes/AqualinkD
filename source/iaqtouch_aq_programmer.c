@@ -46,7 +46,12 @@
 #define KEY_IAQTCH_LOCKOUT_PASSWD KEY_IAQTCH_KEY08
 #define KEY_IAQTCH_SET_ACQUAPURE  KEY_IAQTCH_KEY09
 
-
+// Set Point types
+typedef enum SP_TYPE{
+  SP_POOL,
+  SP_SPA,
+  SP_CHILLER
+} SP_TYPE;
 
 bool _cansend = false;
 
@@ -960,6 +965,12 @@ void *get_aqualink_iaqtouch_setpoints( void *ptr )
     }
   }
 
+  button = iaqtFindButtonByLabel("Chiller");
+  if (button != NULL) {
+    aq_data->chiller_set_point = rsm_atoi((char *)&button->name + 8);
+    LOG(IAQT_LOG,LOG_DEBUG, "IAQ Touch got to Chiller setpoint %d\n",aq_data->chiller_set_point);
+  }
+
   if ( goto_iaqt_page(IAQ_PAGE_FREEZE_PROTECT, aq_data) == false )
     goto f_end;
 
@@ -1191,8 +1202,7 @@ void *set_aqualink_iaqtouch_swg_boost( void *ptr )
 }
 
 
-
-bool set_aqualink_iaqtouch_heater_setpoint( struct aqualinkdata *aq_data, bool pool, int val)
+bool set_aqualink_iaqtouch_heater_setpoint( struct aqualinkdata *aq_data, SP_TYPE type, int val)
 {
   struct iaqt_page_button *button;
   char *name;
@@ -1201,15 +1211,19 @@ bool set_aqualink_iaqtouch_heater_setpoint( struct aqualinkdata *aq_data, bool p
     return false;
   
   if (isCOMBO_PANEL) {
-    if (pool)
+    if (type == SP_POOL)
       name = "Pool Heat";
     else
       name = "Spa Heat";
   } else {
-    if (pool)
+    if (type == SP_POOL)
       name = "Temp1";
     else
       name = "Temp2";
+  }
+
+  if (type == SP_CHILLER) {
+    name = "Chiller";
   }
 
   button = iaqtFindButtonByLabel(name);
@@ -1231,12 +1245,18 @@ bool set_aqualink_iaqtouch_heater_setpoint( struct aqualinkdata *aq_data, bool p
   button = iaqtFindButtonByLabel(name);
 
   if (button != NULL) {
-    if (pool)
+    int value = 0;
+    if (type == SP_POOL) {
       aq_data->pool_htr_set_point = rsm_atoi((char *)&button->name + strlen(name));
-    else
+      value = aq_data->pool_htr_set_point;
+    } else if (type == SP_SPA) {
       aq_data->spa_htr_set_point = rsm_atoi((char *)&button->name + strlen(name));
-
-    LOG(IAQT_LOG,LOG_DEBUG, "IAQ Touch set %s heater setpoint to %d\n",name,pool?aq_data->pool_htr_set_point:aq_data->spa_htr_set_point);
+      value = aq_data->spa_htr_set_point;
+    } else if (type == SP_CHILLER) {
+      aq_data->chiller_set_point = rsm_atoi((char *)&button->name + strlen(name));
+      value = aq_data->chiller_set_point;
+    }
+    LOG(IAQT_LOG,LOG_DEBUG, "IAQ Touch set %s heater setpoint to %d\n",name,value);
   }
 
   return true;
@@ -1251,9 +1271,9 @@ void *set_aqualink_iaqtouch_spa_heater_temp( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_SPA_HEATER_TEMP);
 
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(SPA_HTR_SETPOINT, val, aq_data);
 
-  set_aqualink_iaqtouch_heater_setpoint(aq_data, false, val);
+  set_aqualink_iaqtouch_heater_setpoint(aq_data, SP_SPA, val);
 
   goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
   cleanAndTerminateThread(threadCtrl);
@@ -1270,9 +1290,28 @@ void *set_aqualink_iaqtouch_pool_heater_temp( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_POOL_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(POOL_HTR_SETPOINT, val, aq_data);
 
-  set_aqualink_iaqtouch_heater_setpoint(aq_data, true, val);
+  set_aqualink_iaqtouch_heater_setpoint(aq_data, SP_POOL, val);
+
+  goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
+  cleanAndTerminateThread(threadCtrl);
+
+  return ptr;
+}
+
+void *set_aqualink_iaqtouch_chiller_temp( void *ptr )
+{
+  struct programmingThreadCtrl *threadCtrl;
+  threadCtrl = (struct programmingThreadCtrl *) ptr;
+  struct aqualinkdata *aq_data = threadCtrl->aq_data;
+
+  waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_IAQTOUCH_POOL_HEATER_TEMP);
+  
+  int val = atoi((char*)threadCtrl->thread_args);
+  //val = setpoint_check(POOL_HTR_SETPOINT, val, aq_data);
+
+  set_aqualink_iaqtouch_heater_setpoint(aq_data, SP_CHILLER, val);
 
   goto_iaqt_page(IAQ_PAGE_HOME, aq_data);
   cleanAndTerminateThread(threadCtrl);

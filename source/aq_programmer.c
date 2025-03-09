@@ -90,6 +90,7 @@ const func_ptr _prog_functions[AQP_RSSADAPTER_MAX] = {
      [AQ_SET_IAQTOUCH_SWG_BOOST]       = set_aqualink_iaqtouch_swg_boost,
      [AQ_SET_IAQTOUCH_POOL_HEATER_TEMP]= set_aqualink_iaqtouch_pool_heater_temp, 
      [AQ_SET_IAQTOUCH_SPA_HEATER_TEMP] = set_aqualink_iaqtouch_spa_heater_temp, 
+     [AQ_SET_IAQTOUCH_CHILLER_TEMP]    = set_aqualink_iaqtouch_chiller_temp, 
      [AQ_SET_IAQTOUCH_SET_TIME]        = set_aqualink_iaqtouch_time, 
      [AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM] = set_aqualink_iaqtouch_pump_vs_program, 
      [AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE] = set_aqualink_iaqtouch_light_colormode,
@@ -156,7 +157,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
   char *type_msg;
 
   switch(type) {
-    case POOL_HTR_SETOINT:
+    case POOL_HTR_SETPOINT:
       type_msg = (isSINGLE_DEV_PANEL?"Temp1":"Pool");
       if ( aqdata->temp_units == CELSIUS ) {
         max = HEATER_MAX_C;
@@ -173,7 +174,7 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
         min = aqdata->spa_htr_set_point + 1;
       }
     break;
-    case SPA_HTR_SETOINT:
+    case SPA_HTR_SETPOINT:
       type_msg = (isSINGLE_DEV_PANEL?"Temp2":"Spa");
       if ( aqdata->temp_units == CELSIUS ) {
         max = (isSINGLE_DEV_PANEL?HEATER_MAX_C-1:HEATER_MAX_C);
@@ -198,6 +199,16 @@ int setpoint_check(int type, int value, struct aqualinkdata *aqdata)
       } else {
         max = FREEZE_PT_MAX_F;
         min = FREEZE_PT_MIN_F;
+      }
+    break;
+    case CHILLER_SETPOINT:
+      type_msg = "Freeze protect";
+      if ( aqdata->temp_units == CELSIUS ) {
+        max = CHILLER_MAX_C;
+        min = CHILLER_MIN_C;
+      } else {
+        max = CHILLER_MAX_F;
+        min = CHILLER_MIN_F;
       }
     break;
     case SWG_SETPOINT:
@@ -880,6 +891,9 @@ const char *ptypeName(program_type type)
     case AQ_SET_IAQTOUCH_SPA_HEATER_TEMP:
       return "Set AqualinkTouch Spa Heater";
     break;
+    case AQ_SET_IAQTOUCH_CHILLER_TEMP:
+      return "Set AqualinkTouch Chiller Temp";
+    break;
     // These to same as above, but on the iAqualink protocol, not AqualinkTouch protocol
     case AQ_SET_IAQLINK_POOL_HEATER_TEMP:
       return "Set iAqualink Pool Heater";
@@ -965,6 +979,7 @@ const char *programtypeDisplayName(program_type type)
     case AQ_SET_IAQTOUCH_POOL_HEATER_TEMP:
     case AQ_SET_RSSADAPTER_POOL_HEATER_TEMP:
     case AQ_SET_RSSADAPTER_SPA_HEATER_TEMP:
+    case AQ_SET_IAQTOUCH_CHILLER_TEMP:
       return "Programming: setting heater";
     break;
     case AQ_SET_FRZ_PROTECTION_TEMP:

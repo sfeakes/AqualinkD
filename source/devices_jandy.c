@@ -64,6 +64,10 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
     {
       rtn = processPacketFromJandyChemFeeder(packet_buffer, packet_length, aqdata, previous_packet_to);
     }
+    else if (interestedInNextAck == DRS_HEATPUMP)
+    {
+      rtn = processPacketFromHeatPump(packet_buffer, packet_length, aqdata, previous_packet_to);
+    }
     interestedInNextAck = DRS_NONE;
     previous_packet_to = NUL;
   }
@@ -116,6 +120,12 @@ bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct 
           && packet_buffer[PKT_DEST] != _aqconfig_.extended_device_id) // We would have already read extended_device_id frame
   {
     process_iAqualinkStatusPacket(packet_buffer, packet_length, aqdata);
+  }
+  else if (READ_RSDEV_HPUMP && packet_buffer[PKT_DEST] >= JANDY_DEV_HPUMP_MIN && packet_buffer[PKT_DEST] <= JANDY_DEV_HPUMP_MAX)
+  {
+    interestedInNextAck = DRS_HEATPUMP;
+    rtn = processPacketToHeatPump(packet_buffer, packet_length, aqdata);
+    previous_packet_to = packet_buffer[PKT_DEST];
   }
   else
   {
@@ -953,8 +963,35 @@ bool processPacketFromJandyChemFeeder(unsigned char *packet_buffer, int packet_l
   return false;
 }
 
+bool processPacketToHeatPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
+{
+  char msg[1024];
+
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "To   HPump: %s\n", msg);
+
+  if (packet_buffer[3] == 0x0c ) {
+    if (packet_buffer[4] == 0x00) {
+      // Heat Pump is off
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is off\n",packet_buffer[2] );
+    } else {
+      // Heat Pump is on or enabled
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is on or enabled\n",packet_buffer[2]);
+    }
+  }
 
 
+  return false;
+}
+bool processPacketFromHeatPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
+{
+  char msg[1024];
+
+  beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
+  LOG(DJAN_LOG, LOG_INFO, "From HPump: %s\n", msg);
+
+  return false;
+}
 /*
 
 // JXi Heater
@@ -1006,4 +1043,23 @@ Fault Check Igntion Control
 Fault Short H20 sensor (or Fault open water sensor) -> 0x02
 Pump fault
 AUX Monitor -> 0x08
+*/
+
+
+/*
+
+Heat Pump Chiller.  Messages are in this thread.
+https://github.com/sfeakes/AqualinkD/discussions/391#discussioncomment-12431509
+
+LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x09|0x00|0x00|0x00|0x97|0x10|0x03|
+LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x48|0x00|0x00|0x67|0x10|0x03|
+
+LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x00|0x00|0x00|0x00|0x8e|0x10|0x03|   byte 4 0x00 is OFF.
+LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|        0x40 (maybe off, but odd message for off)
+
+LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x29|0x00|0x00|0x00|0xb7|0x10|0x03|.   byte 4 0x29 This is some on / enable
+LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x68|0x00|0x00|0x87|0x10|0x03|         0x68 probably is chiller ON
+
+
+
 */

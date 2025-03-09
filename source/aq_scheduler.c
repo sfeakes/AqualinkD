@@ -29,6 +29,7 @@
 #include "config.h"
 #include "aq_panel.h"
 //#include "utils.h"
+#include "aq_filesystem.h"
 
 
 
@@ -38,28 +39,7 @@ Example /etc/cron.d/aqualinkd
 01 10 1 * * curl localhost:80/api/Filter_Pump/set -d value=2 -X PUT
 */
 
-bool remount_root_ro(bool readonly) {
 
-#ifdef AQ_CONTAINER
-  // In container this is pointless
-  return false;
-#endif
-
-  if (readonly) {
-    LOG(SCHD_LOG,LOG_INFO, "reMounting root RO\n");
-    mount (NULL, "/", NULL, MS_REMOUNT | MS_RDONLY, NULL);
-    return true;
-  } else {
-    struct statvfs fsinfo;
-    statvfs("/", &fsinfo);
-    if ((fsinfo.f_flag & ST_RDONLY) == 0) // We are readwrite, ignore
-      return false;
-
-    LOG(SCHD_LOG,LOG_INFO, "reMounting root RW\n");
-    mount (NULL, "/", NULL, MS_REMOUNT, NULL);
-    return true;
-  }
-}
 
 bool passJson_scObj(const char* line, int length, aqs_cron *values)
 {
@@ -131,6 +111,9 @@ bool passJson_scObj(const char* line, int length, aqs_cron *values)
   return (captured >= 7)?true:false;
 }
 
+
+
+
 int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize)
 {
   FILE *fp;
@@ -138,6 +121,7 @@ int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize)
   bool inarray = false;
   aqs_cron cline;
   bool fileexists = false;
+  bool fs = false;
 
   if ( !_aqconfig_.enable_scheduler) {
     LOG(SCHD_LOG,LOG_WARNING, "Schedules are disabled\n");
@@ -146,13 +130,19 @@ int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize)
 
   LOG(SCHD_LOG,LOG_NOTICE, "Saving Schedule:\n");
   
+  /*
   bool fs = remount_root_ro(false);
   if (access(CRON_FILE, F_OK) == 0)
     fileexists = true;
   fp = fopen(CRON_FILE, "w");
+  */
+  
+  fp = aq_open_file( CRON_FILE, &fs, &fileexists);
+
   if (fp == NULL) {
     LOG(SCHD_LOG,LOG_ERR, "Open file failed '%s'\n", CRON_FILE);
-    remount_root_ro(true);
+    //remount_root_ro(true);
+    aq_close_file(fp, fs);
     return sprintf(outBuf, "{\"message\":\"Error Saving Schedules\"}");
   }
 
@@ -175,14 +165,16 @@ int save_schedules_js(const char* inBuf, int inSize, char* outBuf, int outSize)
   }
     
   fprintf(fp, "#***** AUTO GENERATED DO NOT EDIT *****\n");
-  fclose(fp);
+
+  //fclose(fp);
 
   // if we created file, change the permissions
   if (!fileexists)
     if ( chmod(CRON_FILE, S_IRUSR | S_IWUSR ) < 0 )
       LOG(SCHD_LOG,LOG_ERR, "Could not change permissions on cron file %s, scheduling may not work\n",CRON_FILE);
 
-  remount_root_ro(fs);
+  //remount_root_ro(fs);
+  aq_close_file(fp, fs);
 
   return sprintf(outBuf, "{\"message\":\"Saved Schedules\"}");
 }
@@ -285,7 +277,7 @@ int build_schedules_js(char* buffer, int size)
         //LOG(SCHD_LOG,LOG_DEBUG, "Read from cron Day %d | Time %d:%d | Zone %d | Runtime %d\n",day,hour,minute,zone,runtime);
 
         // Test / get for pump start and end time
-        if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+        if (isAQS_USE_CRON_PUMP_TIME_ENABLED) {
           // Could also check that dayw is *
           if ( cline.enabled && strstr(cline.url, AQS_PUMP_URL ))
           {
@@ -335,11 +327,21 @@ bool event_happened_set_device_state(reset_event_type type, struct aqualinkdata 
   // Check time is between hours.
   bool scheduledOn = false;
 
-  if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
+  if (isAQS_USE_CRON_PUMP_TIME_ENABLED) {
     get_cron_pump_times();
     LOG(SCHD_LOG,LOG_DEBUG, "Pump on times from scheduler are between hours %.2d & %.2d\n",_aqconfig_.sched_chk_pumpon_hour, _aqconfig_.sched_chk_pumpoff_hour);
   }
+/*
+  if (_aqconfig_.sched_chk_pumpon_hour == AQ_UNKNOWN || _aqconfig_.sched_chk_pumpoff_hour == AQ_UNKNOWN ) {
+    if ( CRON TURNED OFF ) {
+      LOG(SCHD_LOG,LOG_ERR, "No pump on / off times configures and cron scheduler not enabled, can't action event!");
+      return false;
+    }
+    get_cron_pump_times();
+    LOG(SCHD_LOG,LOG_DEBUG, "Pump on times from scheduler are between hours %.2d & %.2d\n",_aqconfig_.sched_chk_pumpon_hour, _aqconfig_.sched_chk_pumpoff_hour);
 
+  }
+*/
   time_t now = time(NULL);
   struct tm *tm_struct = localtime(&now);
 

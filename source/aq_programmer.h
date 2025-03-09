@@ -16,11 +16,15 @@
 #define HEATER_MIN_F 36
 #define FREEZE_PT_MAX_F 42
 #define FREEZE_PT_MIN_F 34
+#define CHILLER_MAX_F 104
+#define CHILLER_MIN_F 34
 
 #define HEATER_MAX_C 40
 #define HEATER_MIN_C 0
 #define FREEZE_PT_MAX_C 5
 #define FREEZE_PT_MIN_C 1
+#define CHILLER_MAX_C 40
+#define CHILLER_MIN_C 0
 
 #define SWG_PERCENT_MAX 101
 #define SWG_PERCENT_MIN 0
@@ -99,6 +103,7 @@ typedef enum {
   AQ_SET_IAQTOUCH_ONETOUCH_ON_OFF,
   AQ_SET_IAQTOUCH_POOL_HEATER_TEMP,
   AQ_SET_IAQTOUCH_SPA_HEATER_TEMP,
+  AQ_SET_IAQTOUCH_CHILLER_TEMP,
   AQ_SET_IAQLINK_POOL_HEATER_TEMP,  // Same as above but using iAqualink not AqualinkTouch
   AQ_SET_IAQLINK_SPA_HEATER_TEMP,   // Same as above but using iAqualink not AqualinkTouch
   AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE,
@@ -110,6 +115,12 @@ typedef enum {
   AQ_ADD_RSSADAPTER_SPA_HEATER_TEMP,
   // ******** Delimiter make sure to change MAX/MIN below
 } program_type;
+
+
+
+#define AQ_SET_CHILLER_TEMP AQ_SET_IAQTOUCH_CHILLER_TEMP
+
+
 
 #define AQP_GENERIC_MIN      AQ_GET_POOL_SPA_HEATER_TEMPS
 #define AQP_GENERIC_MAX      AQ_SET_PUMP_VS_PROGRAM

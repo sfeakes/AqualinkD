@@ -3,6 +3,8 @@
 #ifndef IAQ_TOUCH_PROGRAMMER_H_
 #define IAQ_TOUCH_PROGRAMMER_H_
 
+
+
 unsigned char pop_iaqt_cmd(unsigned char receive_type);
 
 void set_iaq_cansend(bool cansend);
@@ -17,6 +19,7 @@ void *set_aqualink_iaqtouch_swg_percent( void *ptr );
 void *set_aqualink_iaqtouch_swg_boost( void *ptr );
 void *set_aqualink_iaqtouch_spa_heater_temp( void *ptr );
 void *set_aqualink_iaqtouch_pool_heater_temp( void *ptr );
+void *set_aqualink_iaqtouch_chiller_temp( void *ptr );
 void *set_aqualink_iaqtouch_time( void *ptr );
 void *set_aqualink_iaqtouch_pump_vs_program( void *ptr );
 void *set_aqualink_iaqtouch_light_colormode( void *ptr );

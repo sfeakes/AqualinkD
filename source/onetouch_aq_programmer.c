@@ -726,7 +726,7 @@ void *set_aqualink_onetouch_pool_heater_temp( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_POOL_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(POOL_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(POOL_HTR_SETPOINT, val, aq_data);
 
   LOG(ONET_LOG,LOG_DEBUG, "OneTouch set pool heater temp to %d\n", val);
   set_aqualink_onetouch_heater_setpoint(aq_data, true, val);
@@ -746,7 +746,7 @@ void *set_aqualink_onetouch_spa_heater_temp( void *ptr )
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_SPA_HEATER_TEMP);
   
   int val = atoi((char*)threadCtrl->thread_args);
-  val = setpoint_check(SPA_HTR_SETOINT, val, aq_data);
+  val = setpoint_check(SPA_HTR_SETPOINT, val, aq_data);
 
   LOG(ONET_LOG,LOG_DEBUG, "OneTouch set spa heater temp to %d\n", val);
   set_aqualink_onetouch_heater_setpoint(aq_data, false, val);

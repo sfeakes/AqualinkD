@@ -348,6 +348,39 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
       }
     }
   }
+
+  // Quick and dirty check for heat pump/chiller
+  // if we see Heat Pump then chiller is not enabled.
+  // if we see chiller then it is enabled.
+  // Not sure why button name changes from "Heat Pump" to "Chiller", need to figure this out. (might be pump)
+  // THIS NEEDS TO BE DELETED AND MAKE A HEAT_PUMP / CHILLER BUTTON
+  int ignore = 5;
+  if (_currentPageLoading == IAQ_PAGE_HOME) 
+    ignore = 0;
+
+  if ( rsm_strmatch_ignore((const char *)pageButton->name, "Heat Pump", ignore) == 0 ) {
+    aq_data->chiller_state = OFF;
+    aq_data->updated = true;
+    //printf("********* Disable Chiller \n");
+  } else if (rsm_strmatch_ignore((const char *)pageButton->name, "Chiller", ignore) == 0) {
+    switch(pageButton->state) {
+      case 0x00:
+        aq_data->chiller_state = OFF;
+      break;
+      case 0x01:
+        aq_data->chiller_state = ON;
+      break;
+      case 0x02:
+        aq_data->chiller_state = FLASH;
+      break;
+      case 0x03:
+        aq_data->chiller_state = ENABLE;
+      break;
+    }
+    aq_data->updated = true;
+    LOG(IAQT_LOG,LOG_DEBUG, "*** Found Status for %s state 0x%02hhx\n", "Chiller", pageButton->state);
+  }
+
 }
 
 void processPageButton(unsigned char *message, int length, struct aqualinkdata *aq_data)
@@ -471,7 +504,31 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
   } */
 }
 
+/*  No need as we can see this in buttons
+typedef enum iaqt_devices{
+  DEVICE_RESET       = (1 << 0),
+  DEVICE_CHILLER     = (1 << 1)
+}iaqt_devices;
 
+void iaqt_device_update(struct aqualinkdata *aq_data, iaqt_devices mask) {
+
+  static uint8_t device_bitmask;
+
+  if (mask == DEVICE_RESET) {
+    if ( (device_bitmask & DEVICE_CHILLER) == DEVICE_CHILLER ) {
+      aq_data->chiller_state = ON;
+      LOG(IAQT_LOG,LOG_INFO, "Saw Chiller in device status\n");
+    } else {
+      aq_data->chiller_state = OFF;
+    }
+
+    device_bitmask = 0;
+    return;
+  }
+   
+  device_bitmask |= mask;
+}
+*/
 
 // Log if we saw a pump in a device page cycle.
 void iaqt_pump_update(struct aqualinkdata *aq_data, int updated) {
@@ -699,6 +756,12 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_INFO, "Set Cemlink ORP = %d PH = %f from message '%s'\n",orp,ph,_deviceStatus[i]);
       }
     }
+/*
+    if (rsm_strcmp(_deviceStatus[i],"Chiller") == 0) {
+      iaqt_device_update(aq_data, DEVICE_CHILLER);
+      aq_data->chiller_state = ON;
+    }
+*/
 //#ifdef READ_SWG_FROM_EXTENDED_ID
     else if (isPDA_PANEL) {
      if (rsm_strcmp(_deviceStatus[i],"AQUAPURE") == 0) {
@@ -754,6 +817,7 @@ void processPage(struct aqualinkdata *aq_data)
         iaqt_queue_cmd(KEY_IAQTCH_KEY02);
       } else {
         iaqt_pump_update(aq_data, -1); // Reset pumps.
+        //iaqt_device_update(aq_data,DEVICE_RESET); // Reset any devices we monitor.
         if ( (isPDA_PANEL || PANEL_SIZE() >= 16) && !in_iaqt_programming_mode(aq_data) ) {
           iaqt_queue_cmd(KEY_IAQTCH_HOME);
         } 
@@ -1160,7 +1224,7 @@ if not programming && poll packet {
         iaqt_queue_cmd(nextPageRequestKey);
       
       } else if ( (_pollCnt % DEVICE_STATUS_POLL_COUNT == 0) && 
-                  _currentPage == IAQ_PAGE_DEVICES || _currentPage == IAQ_PAGE_DEVICES_REV_Yg) {
+                  (_currentPage == IAQ_PAGE_DEVICES || _currentPage == IAQ_PAGE_DEVICES_REV_Yg) ) {
         iaqt_queue_cmd(KEY_IAQTCH_STATUS); // This will force us to go to status, then it'll jump back to devices, then force status again
       }
     } else if (in_programming_mode(aq_data) == true) {

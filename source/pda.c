@@ -41,13 +41,14 @@
 // static struct aqualinkdata _aqualink_data;
 static struct aqualinkdata *_aqualink_data;
 static unsigned char _last_packet_type;
-static unsigned long _pda_loop_cnt = 0;
+static unsigned long _pda_loop_cnt = -0;
 static bool _initWithRS = false;
 
 // Each RS message is around 0.25 seconds apart
-
-#define PDA_SLEEP_FOR 120 // 30 seconds
-#define PDA_WAKE_FOR 6 // ~1 seconds
+//#define PDA_SLEEP_FOR 120 //
+#define PDA_SLEEP_FOR 40 //
+#define PDA_WAKE_FOR 10 // 
+#define PDA_IGNORE_NO_STATUS_PAGE 40 // 36 seems to be the status loop
 
 
 
@@ -59,14 +60,16 @@ void init_pda(struct aqualinkdata *aqdata)
 
 
 bool pda_shouldSleep() {
-  //LOG(PDA_LOG,LOG_DEBUG, "PDA loop count %d, will sleep at %d\n",_pda_loop_cnt,PDA_LOOP_COUNT);
-  if (_pda_loop_cnt++ < PDA_WAKE_FOR) {
-    return false;
-  } else if (_pda_loop_cnt > PDA_WAKE_FOR + PDA_SLEEP_FOR) {
-    _pda_loop_cnt = 0;
-    return false;
-  }
+  static bool sawHome = false;
+  static bool sawStatus = false;
+  static bool inSleep = false;
 
+  if (pda_m_type() == PM_HOME)
+    sawHome = true;
+
+  if (pda_m_type() == PM_EQUIPTMENT_STATUS)
+    sawStatus = true;
+  
   // NSF NEED TO CHECK ACTIVE THREADS.
   if (_aqualink_data->active_thread.thread_id != 0) {
     LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as thread %d,%p is active\n",
@@ -79,10 +82,47 @@ bool pda_shouldSleep() {
 
   // Last see if there are any open websockets. (don't sleep if the web UI is open)
   if ( _aqualink_data->open_websockets > 0 ) {
+    _pda_loop_cnt = 0;
     LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as websocket is active\n");
     return false;
   }
-  
+
+  // Only sleep if we are on home page
+  if (pda_m_type() != PM_HOME /*&& pda_m_type() != PM_BUILDING_HOME*/) {
+    _pda_loop_cnt = 0;
+    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep not on home page\n");
+    return false;
+  }
+
+  _pda_loop_cnt++;
+
+  if (inSleep == false && 
+     (sawHome == false || ( sawStatus == false && _pda_loop_cnt <= PDA_IGNORE_NO_STATUS_PAGE))){
+    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep haven't seen both Home and Status pages\n");
+    return false;
+  } else if (inSleep == false &&
+            (sawHome == false || ( sawStatus == false && _pda_loop_cnt > PDA_IGNORE_NO_STATUS_PAGE))){
+    // We hit the timeout waiting for status page (ie no devices are on), so reset counter
+    LOG(PDA_LOG,LOG_DEBUG, "PDA Allowing sleep - timeout waiting for Status page (all devices must be off)\n");
+    _pda_loop_cnt = PDA_WAKE_FOR;
+  }
+
+  //_pda_loop_cnt++;
+
+  LOG(PDA_LOG,LOG_DEBUG, "PDA loop count %d, wake between 0->%d, sleep %d->%d\n",_pda_loop_cnt, PDA_WAKE_FOR, PDA_WAKE_FOR, (PDA_WAKE_FOR + PDA_SLEEP_FOR));
+  if (_pda_loop_cnt < PDA_WAKE_FOR) {
+    //inSleep == false;
+    return false;
+  } else if (_pda_loop_cnt > PDA_WAKE_FOR + PDA_SLEEP_FOR) {
+    _pda_loop_cnt = 0;
+    inSleep = false;
+    return false;
+  }
+
+  sawHome = false;
+  sawStatus = false;
+  inSleep = true;
+
   return true;
 }
 

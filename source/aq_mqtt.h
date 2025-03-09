@@ -41,6 +41,9 @@
 #define FREEZE_PROTECT "Freeze_Protect"
 #define FREEZE_PROTECT_ENABELED FREEZE_PROTECT ENABELED_SUBT
 
+#define CHILLER "Chiller"
+#define CHILLER_ENABELED CHILLER ENABELED_SUBT
+
 #define BATTERY_STATE "Battery"
 
 //#define POOL_THERMO_TEMP_TOPIC BTN_POOL_HTR "/Temperature"
@@ -76,6 +79,7 @@
 #define MQTT_FLASH "2"
 #define MQTT_ON "1"
 #define MQTT_OFF "0"
+#define MQTT_COOL MQTT_FLASH
 
 #define MQTT_LWM_TOPIC "Alive"
 

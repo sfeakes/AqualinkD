@@ -588,7 +588,7 @@ void send_mqtt_led_state_msg(struct mg_connection *nc, char *dev_name, aqledstat
 void send_mqtt_swg_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
 {
   //send_mqtt_led_state_msg(nc, dev_name, state, SWG_ON, SWG_OFF);
-  send_mqtt_led_state_msg(nc, dev_name, state, "2", "0");
+  send_mqtt_led_state_msg(nc, dev_name, state, MQTT_COOL, MQTT_OFF);
 }
 
 void send_mqtt_heater_state_msg(struct mg_connection *nc, char *dev_name, aqledstate state)
@@ -785,6 +785,17 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     _last_mqtt_aqualinkdata.frz_protect_state = _aqualink_data->frz_protect_state;
     send_mqtt_string_msg(nc, FREEZE_PROTECT, _aqualink_data->frz_protect_state==ON?MQTT_ON:MQTT_OFF);
     //send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
+  }
+
+  if (_aqualink_data->chiller_set_point != TEMP_UNKNOWN && _aqualink_data->chiller_set_point != _last_mqtt_aqualinkdata.chiller_set_point) {
+    _last_mqtt_aqualinkdata.chiller_set_point = _aqualink_data->chiller_set_point;
+    send_mqtt_setpoint_msg(nc, CHILLER, _aqualink_data->chiller_set_point);
+    //send_mqtt_string_msg(nc, CHILLER_ENABELED, MQTT_ON);
+  }
+  if (_aqualink_data->chiller_state != _last_mqtt_aqualinkdata.chiller_state) {
+    _last_mqtt_aqualinkdata.chiller_state = _aqualink_data->chiller_state;
+    //send_mqtt_string_msg(nc, CHILLER, _aqualink_data->chiller_state==ON?MQTT_ON:MQTT_OFF);
+    send_mqtt_led_state_msg(nc, CHILLER, _aqualink_data->chiller_state, MQTT_COOL, MQTT_OFF);
   }
 
   if (_aqualink_data->battery != _last_mqtt_aqualinkdata.battery) {
@@ -1239,14 +1250,17 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (ri3 != NULL && (strncasecmp(ri2, "setpoint", 8) == 0) && (strncasecmp(ri3, "set", 3) == 0)) {
     int val =  convertTemp? round(degCtoF(value)) : round(value);
     if (strncmp(ri1, BTN_POOL_HTR, strlen(BTN_POOL_HTR)) == 0) {
-     //create_program_request(from, POOL_HTR_SETOINT, val, 0);
-      panel_device_request(_aqualink_data, POOL_HTR_SETOINT, 0, val, from);
+     //create_program_request(from, POOL_HTR_SETPOINT, val, 0);
+      panel_device_request(_aqualink_data, POOL_HTR_SETPOINT, 0, val, from);
     } else if (strncmp(ri1, BTN_SPA_HTR, strlen(BTN_SPA_HTR)) == 0) {
-      //create_program_request(from, SPA_HTR_SETOINT, val, 0);
-      panel_device_request(_aqualink_data, SPA_HTR_SETOINT, 0, val, from);
+      //create_program_request(from, SPA_HTR_SETPOINT, val, 0);
+      panel_device_request(_aqualink_data, SPA_HTR_SETPOINT, 0, val, from);
     } else if (strncmp(ri1, FREEZE_PROTECT, strlen(FREEZE_PROTECT)) == 0) {
       //create_program_request(from, FREEZE_SETPOINT, val, 0);
       panel_device_request(_aqualink_data, FREEZE_SETPOINT, 0, val, from);
+    } else if (strncmp(ri1, CHILLER, strlen(CHILLER)) == 0) {
+      //create_program_request(from, FREEZE_SETPOINT, val, 0);
+      panel_device_request(_aqualink_data, CHILLER_SETPOINT, 0, val, from);
     } else if (strncmp(ri1, "SWG", 3) == 0) {  // If we get SWG percent as setpoint message it's from homebridge so use the convert
       //int val = round(degCtoF(value));
       //int val = convertTemp? round(degCtoF(value)) : round(value);
@@ -1892,7 +1906,7 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
     {
       DEBUG_TIMER_START(&tid);
       char message[JSON_BUFFER_SIZE];
-      save_config_js((char *)wm->data, wm->size, message, JSON_BUFFER_SIZE);
+      save_config_js((char *)wm->data, wm->size, message, JSON_BUFFER_SIZE, _aqualink_data);
       DEBUG_TIMER_STOP(tid, NET_LOG, "action_websocket_request() save_config_js took");
       ws_send(nc, message);
     }
@@ -2108,6 +2122,8 @@ void reset_last_mqtt_status()
   _last_mqtt_aqualinkdata.service_mode_state = -1;
   _last_mqtt_aqualinkdata.pool_htr_set_point = TEMP_REFRESH;
   _last_mqtt_aqualinkdata.spa_htr_set_point = TEMP_REFRESH;
+  _last_mqtt_aqualinkdata.chiller_set_point = TEMP_REFRESH;
+  _last_mqtt_aqualinkdata.chiller_state = LED_S_UNKNOWN;
   _last_mqtt_aqualinkdata.ph = -1;
   _last_mqtt_aqualinkdata.orp = -1;
   _last_mqtt_aqualinkdata.boost = -1;
@@ -2136,10 +2152,12 @@ void reset_last_mqtt_status()
 }
 
 void start_mqtt(struct mg_mgr *mgr) {
-  LOG(NET_LOG,LOG_NOTICE, "Starting MQTT client to %s\n", _aqconfig_.mqtt_server);
+  
   if ( _aqconfig_.mqtt_server == NULL || 
       ( _aqconfig_.mqtt_aq_topic == NULL && _aqconfig_.mqtt_dz_pub_topic == NULL && _aqconfig_.mqtt_dz_sub_topic == NULL) )
     return;
+
+  LOG(NET_LOG,LOG_NOTICE, "Starting MQTT client to %s\n", _aqconfig_.mqtt_server);
 
   if (mg_connect(mgr, _aqconfig_.mqtt_server, ev_handler) == NULL) {
       LOG(NET_LOG,LOG_ERR, "Failed to create MQTT listener to %s\n", _aqconfig_.mqtt_server);

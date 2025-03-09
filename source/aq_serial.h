@@ -63,6 +63,8 @@ const char *getJandyDeviceName(emulation_type etype);
 #define JANDY_DEV_AQLNK_MIN    0x30   // 
 #define JANDY_DEV_AQLNK_MAX    0x33   // 0
 
+#define JANDY_DEV_HPUMP_MIN    0x70
+#define JANDY_DEV_HPUMP_MAX    0x73
 /*
 //===== Device ID's =====//
 //=========================================================================//
@@ -522,7 +524,8 @@ typedef enum {
   DRS_EPUMP,
   DRS_JXI,
   DRS_LX,
-  DRS_CHEM
+  DRS_CHEM,
+  DRS_HEATPUMP
 } rsDeviceType;
 
 typedef enum {

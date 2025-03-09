@@ -32,6 +32,7 @@ const char *light_mode_name(clight_type type, int index, emulation_type protocol
 int build_color_lights_js(struct aqualinkdata *aqdata, char* buffer, int size);
 int build_color_light_jsonarray(int index, char* buffer, int size);
 
+void clear_aqualinkd_light_modes();
 void set_currentlight_value(clight_detail *light, int index);
 
 bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow);

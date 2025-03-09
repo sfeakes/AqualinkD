@@ -134,6 +134,7 @@ bool isVirtualButtonEnabled() {
   return _aqualink_data.virtual_button_start>0?true:false;
 }
 
+
 // Should move to panel.
 bool checkAqualinkTime()
 {
@@ -250,12 +251,12 @@ void action_delayed_request()
 
   // If we don't know the units yet, we can't action setpoint, so wait until we do.
   if (_aqualink_data.temp_units == UNKNOWN && 
-     (_aqualink_data.unactioned.type == POOL_HTR_SETOINT || _aqualink_data.unactioned.type == SPA_HTR_SETOINT || _aqualink_data.unactioned.type == FREEZE_SETPOINT))
+     (_aqualink_data.unactioned.type == POOL_HTR_SETPOINT || _aqualink_data.unactioned.type == SPA_HTR_SETPOINT || _aqualink_data.unactioned.type == FREEZE_SETPOINT))
     return;
 
-  if (_aqualink_data.unactioned.type == POOL_HTR_SETOINT)
+  if (_aqualink_data.unactioned.type == POOL_HTR_SETPOINT)
   {
-    _aqualink_data.unactioned.value = setpoint_check(POOL_HTR_SETOINT, _aqualink_data.unactioned.value, &_aqualink_data);
+    _aqualink_data.unactioned.value = setpoint_check(POOL_HTR_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if (_aqualink_data.pool_htr_set_point != _aqualink_data.unactioned.value)
     {
       aq_programmer(AQ_SET_POOL_HEATER_TEMP, sval, &_aqualink_data);
@@ -266,9 +267,9 @@ void action_delayed_request()
       LOG(AQUA_LOG,LOG_NOTICE, "Pool heater setpoint is already %d, not changing\n", _aqualink_data.unactioned.value);
     }
   }
-  else if (_aqualink_data.unactioned.type == SPA_HTR_SETOINT)
+  else if (_aqualink_data.unactioned.type == SPA_HTR_SETPOINT)
   {
-    _aqualink_data.unactioned.value = setpoint_check(SPA_HTR_SETOINT, _aqualink_data.unactioned.value, &_aqualink_data);
+    _aqualink_data.unactioned.value = setpoint_check(SPA_HTR_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
     if (_aqualink_data.spa_htr_set_point != _aqualink_data.unactioned.value)
     {
       aq_programmer(AQ_SET_SPA_HEATER_TEMP, sval, &_aqualink_data);
@@ -358,6 +359,19 @@ void action_delayed_request()
   } 
   else if (_aqualink_data.unactioned.type == LIGHT_MODE) {
     panel_device_request(&_aqualink_data, LIGHT_MODE, _aqualink_data.unactioned.id, _aqualink_data.unactioned.value, UNACTION_TIMER);
+  }
+  else if (_aqualink_data.unactioned.type == CHILLER_SETPOINT)
+  {
+    _aqualink_data.unactioned.value = setpoint_check(CHILLER_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
+    if (_aqualink_data.chiller_set_point != _aqualink_data.unactioned.value)
+    {
+      aq_programmer(AQ_SET_CHILLER_TEMP, sval, &_aqualink_data);
+      LOG(AQUA_LOG,LOG_NOTICE, "Setting Chiller setpoint to %d\n", _aqualink_data.unactioned.value);
+    }
+    else
+    {
+      LOG(AQUA_LOG,LOG_NOTICE, "Chiller setpoint is already %d, not changing\n", _aqualink_data.unactioned.value);
+    }
   }
   else 
   {
@@ -479,7 +493,7 @@ int main(int argc, char *argv[])
   return startup(argv[0], cfgFile);
 }
 
-int startup(char *self, char *cfgFile) 
+int OLD_startup_OLD(char *self, char *cfgFile) 
 {
   int i, j;
 
@@ -575,6 +589,7 @@ int startup(char *self, char *cfgFile)
       isSINGLE_DEV_PANEL?"Pool/Spa Only":"",
       isDUAL_EQPT_PANEL?"Dual Equipment":"");
 */
+
   LOG(AQUA_LOG,LOG_NOTICE, "Panel set to %s\n", getPanelString());
   LOG(AQUA_LOG,LOG_NOTICE, "Config log_level         = %d\n", _aqconfig_.log_level);
   LOG(AQUA_LOG,LOG_NOTICE, "Config device_id         = 0x%02hhx\n", _aqconfig_.device_id);
@@ -591,7 +606,7 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Config socket_port       = %s\n", _aqconfig_.socket_port);
   LOG(AQUA_LOG,LOG_NOTICE, "Config web_directory     = %s\n", _aqconfig_.web_directory);
   //LOG(AQUA_LOG,LOG_NOTICE, "Config read_all_devices  = %s\n", bool2text(_aqconfig_.read_all_devices));
-  LOG(AQUA_LOG,LOG_NOTICE, "Config use_aux_labels    = %s\n", bool2text(_aqconfig_.use_panel_aux_labels));
+  //LOG(AQUA_LOG,LOG_NOTICE, "Config use_aux_labels    = %s\n", bool2text(_aqconfig_.use_panel_aux_labels));
   LOG(AQUA_LOG,LOG_NOTICE, "Config override frz prot = %s\n", bool2text(_aqconfig_.override_freeze_protect));
 #ifndef MG_DISABLE_MQTT
   LOG(AQUA_LOG,LOG_NOTICE, "Config mqtt server       = %s\n", _aqconfig_.mqtt_server);
@@ -626,9 +641,9 @@ int startup(char *self, char *cfgFile)
     LOG(AQUA_LOG,LOG_NOTICE, "Config PDA Sleep Mode    = %s\n", bool2text(_aqconfig_.pda_sleep_mode));
   }
 #endif
-  LOG(AQUA_LOG,LOG_NOTICE, "Config force SWG         = %s\n", bool2text(_aqconfig_.force_swg));
-  LOG(AQUA_LOG,LOG_NOTICE, "Config force PS setpoint = %s\n", bool2text(_aqconfig_.force_ps_setpoints));
-  LOG(AQUA_LOG,LOG_NOTICE, "Config force Freeze Prot = %s\n", bool2text(_aqconfig_.force_frzprotect_setpoints));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config force SWG         = %s\n", bool2text(ENABLE_SWG));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config force PS setpoint = %s\n", bool2text(ENABLE_HEATERS));
+  LOG(AQUA_LOG,LOG_NOTICE, "Config force Freeze Prot = %s\n", bool2text(ENABLE_FREEZEPROTECT));
   /* removed until domoticz has a better virtual thermostat
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx pool thermostat = %d\n", _aqconfig_.dzidx_pool_thermostat);
   LOG(AQUA_LOG,LOG_NOTICE, "Config idx spa thermostat  = %d\n", _aqconfig_.dzidx_spa_thermostat);
@@ -655,7 +670,7 @@ int startup(char *self, char *cfgFile)
   LOG(AQUA_LOG,LOG_NOTICE, "Read JXi heater direct   = %s\n", bool2text(READ_RSDEV_JXI));
   LOG(AQUA_LOG,LOG_NOTICE, "Read LX heater direct    = %s\n", bool2text(READ_RSDEV_LX));
   LOG(AQUA_LOG,LOG_NOTICE, "Read Chem Feeder direct  = %s\n", bool2text(READ_RSDEV_CHEM));
-
+/*
   if (isAQS_START_PUMP_EVENT_ENABLED) {
     if (isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED) {
       get_cron_pump_times();
@@ -664,7 +679,7 @@ int startup(char *self, char *cfgFile)
     LOG(AQUA_LOG,LOG_NOTICE, "Start Pump between times = %d:00 and %d:00\n",_aqconfig_.sched_chk_pumpon_hour,_aqconfig_.sched_chk_pumpoff_hour);
   } else {
     LOG(AQUA_LOG,LOG_NOTICE, "Start Pump on events     = %s\n", bool2text(false));
-  }
+  }*/
 /*
   if (READ_RSDEV_SWG && _aqconfig_.swg_zero_ignore != DEFAULT_SWG_ZERO_IGNORE_COUNT)
     LOG(AQUA_LOG,LOG_NOTICE, "Ignore SWG 0 msg count   = %d\n", _aqconfig_.swg_zero_ignore);
@@ -743,10 +758,104 @@ int startup(char *self, char *cfgFile)
                              _aqualink_data.aqbuttons[i].rssd_code);
   }
 */
-#ifdef CONFIG_EDITOR
-  check_print_config(&_aqualink_data);
-  writeCfg(&_aqualink_data);
+
+  if (_aqconfig_.deamonize == true)
+  {
+    char pidfile[256];
+    // sprintf(pidfile, "%s/%s.pid",PIDLOCATION, basename(argv[0]));
+    //sprintf(pidfile, "%s/%s.pid", "/run", basename(argv[0]));
+    //sprintf(pidfile, "%s/%s.pid", "/run", basename(self));
+    sprintf(pidfile, "%s/%s.pid", "/run", _aqualink_data.self);
+    daemonise(pidfile, main_loop);
+  }
+  else
+  {
+    main_loop();
+  }
+
+  exit(EXIT_SUCCESS);
+}
+
+int startup(char *self, char *cfgFile) 
+{
+  _self = self;
+  _cfgFile = cfgFile;
+
+  sprintf(_aqualink_data.self, basename(self));
+  clearDebugLogMask();
+  read_config(&_aqualink_data, cfgFile);
+
+  if (_cmdln_loglevel != -1)
+    _aqconfig_.log_level = _cmdln_loglevel;
+
+  if (_cmdln_debugRS485)
+    _aqconfig_.log_protocol_packets = true;
+
+  if (_cmdln_lograwRS485)
+    _aqconfig_.log_raw_bytes = true;
+      
+
+#ifdef AQ_MANAGER
+  setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, (_aqconfig_.display_warnings_web?_aqualink_data.last_display_message:NULL));
+#else
+  if (_aqconfig_.display_warnings_web == true)
+    setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, _aqualink_data.last_display_message);
+  else
+    setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
 #endif
+
+  LOG(AQUA_LOG,LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
+
+  check_print_config(&_aqualink_data);
+  
+
+  // Sanity check on Device ID's against panel type
+  if (isRS_PANEL) {
+    if ( (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) || _aqconfig_.device_id == 0x00 /*||  _aqconfig_.device_id == 0xFF*/) {
+      // We are good
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match RS panel, Going to search for ID!\n", _aqconfig_.device_id);
+      _aqconfig_.device_id = 0x00;
+      //return EXIT_FAILURE;
+    }
+  } else if (isPDA_PANEL) {
+    if ( (_aqconfig_.device_id >= 0x60 && _aqconfig_.device_id <= 0x63) || _aqconfig_.device_id == 0x33 ) {
+      if ( _aqconfig_.device_id == 0x33 ) {
+        LOG(AQUA_LOG,LOG_NOTICE, "Enabeling iAqualink protocol.\n");
+        _aqconfig_.enable_iaqualink = true;
+      }
+      // We are good
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match PDA panel, please check config!\n", _aqconfig_.device_id);
+      return EXIT_FAILURE;
+    }
+  } else {
+    LOG(AQUA_LOG,LOG_ERR, "Error unknown panel type, please check config!\n");
+    return EXIT_FAILURE;
+  }
+
+  if (_aqconfig_.rssa_device_id != 0x00) {
+    if (_aqconfig_.rssa_device_id >= 0x48 && _aqconfig_.rssa_device_id <= 0x4B  /*&& _aqconfig_.rssa_device_id != 0xFF*/) {
+      // We are good
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "RSSA Device ID 0x%02hhx does not match RS panel, please check config!\n", _aqconfig_.rssa_device_id);
+      return EXIT_FAILURE;
+    }
+  }
+
+#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+  if (_aqconfig_.extended_device_id != 0x00) {
+    if ( (_aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33) || 
+         (_aqconfig_.extended_device_id >= 0x40 && _aqconfig_.extended_device_id <= 0x43) /*||
+          _aqconfig_.extended_device_id != 0xFF*/ ) {
+      // We are good
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "Extended Device ID 0x%02hhx does not match OneTouch or AqualinkTouch ID, please check config!\n", _aqconfig_.extended_device_id);
+      return EXIT_FAILURE;
+    }
+  }
+#endif
+
 
   if (_aqconfig_.deamonize == true)
   {
@@ -898,6 +1007,7 @@ void main_loop()
   bool print_once = false;
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
 
+  _aqualink_data.panelstatus = STARTING;
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
   _aqualink_data.is_display_message_programming = false;
   //_aqualink_data.simulate_panel = false;
@@ -908,6 +1018,8 @@ void main_loop()
   _aqualink_data.frz_protect_set_point = TEMP_UNKNOWN;
   _aqualink_data.pool_htr_set_point = TEMP_UNKNOWN;
   _aqualink_data.spa_htr_set_point = TEMP_UNKNOWN;
+  _aqualink_data.chiller_set_point = TEMP_UNKNOWN;
+  _aqualink_data.chiller_state = LED_S_UNKNOWN;
   _aqualink_data.unactioned.type = NO_ACTION;
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
@@ -961,14 +1073,14 @@ void main_loop()
     _aqualink_data.sensors[i].value = TEMP_UNKNOWN;
   }
 
-  if (_aqconfig_.force_swg == true) {
+  if (ENABLE_SWG) {
     //_aqualink_data.ar_swg_device_status = SWG_STATUS_OFF;
     _aqualink_data.swg_led_state = OFF;
     _aqualink_data.swg_percent = 0;
     _aqualink_data.swg_ppm = 0;
   }
 
-  if (_aqconfig_.force_chem_feeder == true) {
+  if (ENABLE_CHEM_FEEDER) {
     _aqualink_data.ph = 0;
     _aqualink_data.orp = 0;
   }
@@ -992,9 +1104,12 @@ void main_loop()
 
   if (rs_fd == -1) {
     LOG(AQUA_LOG,LOG_ERR, "Error Aqualink setting serial port: %s\n", _aqconfig_.serial_port);
+    _aqualink_data.panelstatus = SERIAL_ERROR;
 #ifndef AQ_CONTAINER    
     exit(EXIT_FAILURE);
 #endif 
+  } else {
+    _aqualink_data.panelstatus = LOOKING_IDS;
   }
   LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
 
@@ -1052,7 +1167,7 @@ void main_loop()
 #endif 
 
   // Enable or disable rs serial adapter interface.
-  if (_aqconfig_.rssa_device_id != 0x00)
+  if (_aqconfig_.rssa_device_id != 0x00 /*&& _aqconfig_.rssa_device_id != 0xFF*/)
     addPanelRSserialAdapterInterface();
   else
     got_probe_rssa = true;
