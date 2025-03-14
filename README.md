@@ -129,11 +129,14 @@ NEED TO FIX FOR THIS RELEASE.
 
 
 * Check SWG messages like "#1 TruClear", see log in this post https://github.com/sfeakes/AqualinkD/discussions/388
+
+* Finish off heat pump / chiller.  Probably use a thermostat for both with heat going to heater SP can cool to chiller SP
 -->
 
 
 # Updates in 2.6.0 (dev)
 * Added configuration editor in aqmanager.
+* Can now self-configure on startup.
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
 * Added support for monitoring SBC system sensors, like CPU / GPU / Board (CPU temp being most useful).
@@ -141,6 +144,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Fixed higher than normal CPU load when leaving aqmanager open and sending no messages (leaving aqmanager open for over 14days).
 * Reworked PDA sleep mode.
 * Added preliminary Heat Pump / Chiller support (MQTT & HA support only, no Homekit or web ui yet)
+
 
 # Updates in 2.5.0
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.

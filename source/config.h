@@ -6,9 +6,6 @@
 #include "aq_serial.h"
 #include "aqualink.h"
 
-#define CONFIG_DEV_TEST
-#define CONFIG_EDITOR
-
 //#define DEFAULT_LOG_LEVEL    10 
 #define DEFAULT_LOG_LEVEL    LOG_NOTICE
 //#define DEFAULT_WEBPORT      "6580"
@@ -174,12 +171,10 @@ char *ncleanalloc(char *str, int length);
 
 const char *pumpType2String(pump_type ptype);
 
-#ifdef CONFIG_EDITOR
 int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, struct aqualinkdata *aqdata);
 void check_print_config (struct aqualinkdata *aqdata);
-#endif
 
-#if defined(CONFIG_DEV_TEST) || defined(CONFIG_EDITOR)
+
 typedef enum cfg_value_type{
   CFG_STRING,
   CFG_INT,
@@ -189,18 +184,25 @@ typedef enum cfg_value_type{
   CFG_BITMASK,
   CFG_SPECIAL
 } cfg_value_type;
-#endif
 
-#ifdef CONFIG_DEV_TEST 
+
+#define CFG_PERSISTANT        (1 << 0) // Don't free memory, things referance the pointer
+#define CFG_NO_EDIT           (1 << 1) // Don't allow editing
+#define CFG_GRP_ADVANCED      (1 << 2) // Show in group advanced
+#define CFG_HIDE              (1 << 3) // Like passwords.
+//#define CFG_      (1 << 3)
+
+#define isMASKSET(mask, bit) ((mask & bit) == bit)
+
 typedef struct cfgParam {
   void *value_ptr;
   void *default_value;
-  //int max_value; // Max length of string (maybe mad int as well)
   cfg_value_type value_type;
+  uint8_t config_mask;
   char *name;
   char *valid_values;
   uint8_t mask;
-  bool advanced;
+  //bool advanced;
 } cfgParam;
 
 #ifndef CONFIG_C
@@ -210,7 +212,7 @@ extern int _numCfgParams;
 cfgParam _cfgParams[100];
 int _numCfgParams;
 #endif // CONFIG_C
-#endif // CONFIG_DEV_TEST
+
 
 // Below are missed
 //RSSD_LOG_filter

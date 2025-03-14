@@ -518,12 +518,20 @@ void *set_aqualink_iaqtouch_device_on_off( void *ptr )
   // See if it's on the current page
   button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
   
+  if (button == NULL && isVBUTTON_ALTLABEL(aq_data->aqbuttons[device].special_mask) ) { // Try alt button name
+    button = iaqtFindButtonByLabel(((vbutton_detail *)aq_data->aqbuttons[device].special_mask_ptr)->altlabel);
+  }
+
   if (button == NULL) {
     // No luck, go to the device page
     if ( goto_iaqt_page(IAQ_PAGE_DEVICES, aq_data) == false )
       goto f_end;
 
     button = iaqtFindButtonByLabel(aq_data->aqbuttons[device].label);
+
+    if (button == NULL && isVBUTTON_ALTLABEL(aq_data->aqbuttons[device].special_mask) ) { // Try alt button name
+      button = iaqtFindButtonByLabel(((vbutton_detail *)aq_data->aqbuttons[device].special_mask_ptr)->altlabel);
+    }
  
   // If not found see if page has next
     if (button == NULL && iaqtFindButtonByIndex(16)->type == 0x03 ) {

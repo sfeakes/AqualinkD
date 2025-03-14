@@ -289,6 +289,24 @@ void processTableMessage(unsigned char *message, int length)
     LOG(IAQT_LOG,LOG_ERR, "Run out of IAQT table buffer, need %d have %d\n",(int)message[5],IAQ_MSG_TABLE_LINES);
 }
 
+int matchLabel2Button(const char* pageButtonName, aqkey *aqbutton, int ignorechars)
+{
+  int rtn = rsm_strmatch_ignore(pageButtonName, aqbutton->label, ignorechars);
+
+  if (rtn == 0 && isVBUTTON_ALTLABEL(aqbutton->special_mask) ) {
+    ((vbutton_detail *)aqbutton->special_mask_ptr)->in_alt_mode = false;
+    LOG(IAQT_LOG,LOG_DEBUG, "Virtual Button `%s` is NOT in alternate state of `%s`\n", aqbutton->label, ((vbutton_detail *)aqbutton->special_mask_ptr)->altlabel);
+  } else if (rtn != 0 && isVBUTTON_ALTLABEL(aqbutton->special_mask) ) {
+    rtn = rsm_strmatch_ignore(pageButtonName, ((vbutton_detail *)aqbutton->special_mask_ptr)->altlabel,ignorechars );
+    if (rtn == 0 ) {
+      ((vbutton_detail *)aqbutton->special_mask_ptr)->in_alt_mode = true;
+      LOG(IAQT_LOG,LOG_DEBUG, "Virtual Button `%s` is in alternate state of `%s`\n", aqbutton->label, ((vbutton_detail *)aqbutton->special_mask_ptr)->altlabel);
+    }
+  }
+
+  return rtn;
+}
+
 //  aqualinkd button found and updated, AQstart & AQend are index of aqualinkd button array
 void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page_button *pageButton, int AQstartIndex, int AQendIndex)
 {
@@ -300,16 +318,27 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
     int rtn = -1;
     // If we are loading HOME page then simply button name is the label ie "Aux3"
     // If loading DEVICES? page then button name + status is "Aux3 OFF "
-    if (_currentPageLoading == IAQ_PAGE_HOME)
+    /*
+    if (_currentPageLoading == IAQ_PAGE_HOME) {
       rtn = rsm_strmatch((const char *)pageButton->name, aq_data->aqbuttons[i].label);
-    else
+      if (rtn != 0 && isVBUTTON_ALTLABEL(aq_data->aqbuttons) ) {
+        rtn = rsm_strmatch((const char *)pageButton->name, ((vbutton_detail *)aq_data->aqbuttons[i].special_mask_ptr)->altlabel );
+        if (rtn = 0 ) {
+          ((vbutton_detail *)aq_data->aqbuttons[i].special_mask_ptr)->in_alt_mode = true;
+        }
+      }
+    } else {
       rtn = rsm_strmatch_ignore((const char *)pageButton->name, aq_data->aqbuttons[i].label, 5); // 5 = 3 chars and 2 spaces ' OFF '
+    }*/
+    if (_currentPageLoading == IAQ_PAGE_HOME) {
+      rtn = matchLabel2Button((const char *)pageButton->name, &aq_data->aqbuttons[i], 0);
+    } else {
+      rtn = matchLabel2Button((const char *)pageButton->name, &aq_data->aqbuttons[i], 5); // 5 = 3 chars and 2 spaces ' OFF '
+    }
 
-    if (rtn == 0)
-    {
       if (rtn == 0)
       {
-        LOG(IAQT_LOG,LOG_DEBUG, "*** Found Status for %s state 0x%02hhx\n", aq_data->aqbuttons[i].label, pageButton->state);
+        LOG(IAQT_LOG,LOG_DEBUG, "Found Status for %s state 0x%02hhx\n", aq_data->aqbuttons[i].label, pageButton->state);
         switch(pageButton->state) {
           case 0x00:
             if (aq_data->aqbuttons[i].led->state != OFF) {
@@ -345,7 +374,7 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
             //LOG(IAQT_LOG,LOG_NOTICE, "Unknown state 0x%02hhx for button %s\n",pageButton->state,pageButton->name);
           break;
         }
-      }
+      
     }
   }
 
@@ -354,12 +383,14 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
   // if we see chiller then it is enabled.
   // Not sure why button name changes from "Heat Pump" to "Chiller", need to figure this out. (might be pump)
   // THIS NEEDS TO BE DELETED AND MAKE A HEAT_PUMP / CHILLER BUTTON
+  /*
   int ignore = 5;
   if (_currentPageLoading == IAQ_PAGE_HOME) 
     ignore = 0;
 
   if ( rsm_strmatch_ignore((const char *)pageButton->name, "Heat Pump", ignore) == 0 ) {
     aq_data->chiller_state = OFF;
+    aq_data->chiller_mode = MD_HEATPUMP;
     aq_data->updated = true;
     //printf("********* Disable Chiller \n");
   } else if (rsm_strmatch_ignore((const char *)pageButton->name, "Chiller", ignore) == 0) {
@@ -377,9 +408,10 @@ void updateAQButtonFromPageButton(struct aqualinkdata *aq_data, struct iaqt_page
         aq_data->chiller_state = ENABLE;
       break;
     }
+    aq_data->chiller_mode = MD_CHILLER;
     aq_data->updated = true;
     LOG(IAQT_LOG,LOG_DEBUG, "*** Found Status for %s state 0x%02hhx\n", "Chiller", pageButton->state);
-  }
+  }*/
 
 }
 
@@ -756,12 +788,11 @@ void passDeviceStatusPage(struct aqualinkdata *aq_data)
         LOG(IAQT_LOG,LOG_INFO, "Set Cemlink ORP = %d PH = %f from message '%s'\n",orp,ph,_deviceStatus[i]);
       }
     }
-/*
-    if (rsm_strcmp(_deviceStatus[i],"Chiller") == 0) {
-      iaqt_device_update(aq_data, DEVICE_CHILLER);
-      aq_data->chiller_state = ON;
-    }
-*/
+    
+    if (ENABLE_CHILLER && (rsm_strcmp(_deviceStatus[i],"Chiller") == 0 || rsm_strcmp(_deviceStatus[i],"Heat Pump") == 0 )) {
+      processHeatPumpDisplayMessage(_deviceStatus[i], aq_data);
+    }   
+    
 //#ifdef READ_SWG_FROM_EXTENDED_ID
     else if (isPDA_PANEL) {
      if (rsm_strcmp(_deviceStatus[i],"AQUAPURE") == 0) {

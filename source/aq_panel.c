@@ -346,27 +346,28 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   if (aqdata->total_buttons + 1 >= TOTAL_BUTTONS) {
     return NULL;
   }
+
+  int index = vindex;
+
+  // vindex 0 means find first index.
+  if (vindex == 0) {
+    printf(" TOTAL=%d VSTART=%d\n",aqdata->total_buttons,aqdata->virtual_button_start);
+    index = aqdata->total_buttons - aqdata->virtual_button_start + 1;
+  }
+
   if (aqdata->virtual_button_start <= 0) {
     aqdata->virtual_button_start = aqdata->total_buttons;
   }
   aqkey *button = &aqdata->aqbuttons[aqdata->total_buttons++];
 
-  //aqdata->aqbuttons[index].led = ;
-  //aqdata->aqbuttons[index].led->state = LED_S_UNKNOWN;
-  //aqdata->aqbuttons[index].label = // copy label;
-  //aqdata->aqbuttons[index].name = // aux_v?;  ? is vindex 
-  //aqdata->aqbuttons[index].code = NUL;
-  //aqdata->aqbuttons[index].dz_idx = DZ_NULL_IDX;
-  //aqdata->aqbuttons[index].special_mask = 0;
-
-  //aqled *led = malloc(sizeof(aqled));
-  //button->led = led;
-
   button->led = malloc(sizeof(aqled));
  
   char *name = malloc(sizeof(char*) * 10);
-  snprintf(name, 9, "%s%d", BTN_VAUX, vindex);
-  button->name = name; 
+  snprintf(name, 9, "%s%d", BTN_VAUX, index);
+  button->name = name;
+
+  button->special_mask_ptr = malloc(sizeof(vbutton_detail));
+  ((vbutton_detail *)button->special_mask_ptr)->altlabel = NUL;
 
   if (label == NULL || strlen(label) <= 0) {
     //button->label = name; 
@@ -374,28 +375,11 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
   } else {
     setVirtualButtonLabel(button, label);
   }
-  /*
-  if (strlen(label) <= 0) {
-    button->label = name; 
-  } else {
-    button->label = label;
-  }
-  // These 3 vbuttons have a button code on iaqualink protocol, so use that for rssd_code.
-  if (strncasecmp (button->label, "ALL OFF", 7) == 0) {
-    button->rssd_code = IAQ_ALL_OFF;
-  } else if (strncasecmp (button->label, "Spa Mode", 8) == 0) {
-    button->rssd_code = IAQ_SPA_MODE;
-  } else if (strncasecmp (button->label, "Clean Mode", 10) == 0) {
-    button->rssd_code = IAQ_CLEAN_MODE;
-  } else if (strncasecmp (button->label, "Day Party", 9) == 0) {
-    button->rssd_code = IAQ_ONETOUCH_4;
-  } else {
-    button->rssd_code = NUL;
-  }*/
 
   button->code = NUL;
   button->dz_idx = DZ_NULL_IDX;
   button->special_mask |= VIRTUAL_BUTTON; // Could change to special mask vbutton
+  button->led->state = OFF;
 
   return button;  
 }
@@ -416,6 +400,17 @@ bool setVirtualButtonLabel(aqkey *button, const char *label) {
   } else {
     button->rssd_code = NUL;
   }
+
+  return true;
+}
+
+bool setVirtualButtonAltLabel(aqkey *button, const char *label) {
+  if (label == NULL )
+    return false;
+
+  ((vbutton_detail *)button->special_mask_ptr)->altlabel = (char *)label;
+  ((vbutton_detail *)button->special_mask_ptr)->in_alt_mode = false;
+  button->special_mask |= VIRTUAL_BUTTON_ALT_LABEL;
 
   return true;
 }

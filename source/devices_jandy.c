@@ -35,6 +35,8 @@
 
 static int _swg_noreply_cnt = 0;
 
+void updateHeatPumpLed(aqledstate state, struct aqualinkdata *aqdata);
+
 bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
   static rsDeviceType interestedInNextAck = DRS_NONE;
@@ -969,14 +971,34 @@ bool processPacketToHeatPump(unsigned char *packet_buffer, int packet_length, st
 
   beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "To   HPump: %s\n", msg);
-
+/* Byted 3 and 4
+  0x0c|0x01 = Heat Pump Enabled
+  0x0c|0x29 = Chiller on
+  0x0c|0x00 = Off
+  0x0c|0x09 =  inknown at present
+  0x0c|0x0a =  unknown at present
+*/
   if (packet_buffer[3] == 0x0c ) {
     if (packet_buffer[4] == 0x00) {
       // Heat Pump is off
-      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is off\n",packet_buffer[2] );
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is Off - status 0x%02hhx\n",packet_buffer[2],packet_buffer[4] );
+      updateHeatPumpLed(OFF, aqdata);
+    } else if (packet_buffer[4] == 0x01) {
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is Enabled - status 0x%02hhx\n",packet_buffer[2],packet_buffer[4] );
+      // Think this is Heat Pump Only, Not Chiller.  Not sure.
+      // Looks like heat pump name simply changes to chiller depending on in the water temp is above or below the chiller set point
+      // So I think "Enabled" is the same for both.
+      // So going to set it to enabled.
+      updateHeatPumpLed(ENABLE, aqdata);
+    } else if (packet_buffer[4] == 0x29) {
+      // not sure if this is also Heat on.
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx Chiller is On - status 0x%02hhx\n",packet_buffer[2],packet_buffer[4] );
+      updateHeatPumpLed(ON, aqdata);
     } else {
-      // Heat Pump is on or enabled
-      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is on or enabled\n",packet_buffer[2]);
+      // Heat Pump is on or enabled (not sure what state), but set to something other than off
+      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx is (unknown status) 0x%02hhx\n",packet_buffer[2], packet_buffer[4]);
+      if (aqdata->chiller_button != NULL && aqdata->chiller_button->led->state == OFF)
+        updateHeatPumpLed(ENABLE, aqdata); // Guess at enabled. ()
     }
   }
 
@@ -986,11 +1008,55 @@ bool processPacketToHeatPump(unsigned char *packet_buffer, int packet_length, st
 bool processPacketFromHeatPump(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata, const unsigned char previous_packet_to)
 {
   char msg[1024];
+/*
+  HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|
+  HEX: 0x10|0x02|0x00|0x0d|0x48|0x00|0x00|0x67|0x10|0x03|
+  HEX: 0x10|0x02|0x00|0x0d|0x68|0x00|0x00|0x87|0x10|0x03|
 
+  // Reply is some status 0x40,0x48,0x68
+*/
   beautifyPacket(msg, 1024, packet_buffer, packet_length, true);
   LOG(DJAN_LOG, LOG_INFO, "From HPump: %s\n", msg);
 
   return false;
+}
+
+
+void processHeatPumpDisplayMessage(char *msg, struct aqualinkdata *aqdata) {
+  // Could get messages like below.
+  // 'Heat Pump ENA'
+  // '        Heat Pump ENA  '
+  // 'Heat Pump Enabled'
+  // Or chiller.
+
+  // are we heat pump or chiller
+  if (stristr(msg,"Chiller") != NULL) {
+    // NSF Should check alt_mode is Chiller and not Heat Pump
+    ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode = true;
+  }
+  if (stristr(msg," ENA") != NULL) {
+    updateHeatPumpLed(ENABLE, aqdata);
+  } else if (stristr(msg," OFF") != NULL) {
+    updateHeatPumpLed(OFF, aqdata);
+  } else if (stristr(msg," ON") != NULL) {
+    updateHeatPumpLed(ON, aqdata);
+  }
+
+  LOG(AQUA_LOG,LOG_DEBUG, "Set %s to %s from message '%s'",
+    ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode?((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->altlabel:aqdata->chiller_button->label,
+     aqdata->chiller_button->led->state==ENABLE?"Enabled":(aqdata->chiller_button->led->state==ON?"On":"Off"),
+     msg);
+}
+
+void updateHeatPumpLed(aqledstate state, struct aqualinkdata *aqdata) {
+
+  if (aqdata->chiller_button == NULL)
+    return;
+  
+  if (aqdata->chiller_button->led->state != state) {
+    aqdata->chiller_button->led->state = ON;
+    aqdata->updated = true;
+  }
 }
 /*
 
@@ -1061,5 +1127,25 @@ LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x29|0x00|0x00|0x00|0xb7|0x10|0x03|. 
 LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x68|0x00|0x00|0x87|0x10|0x03|         0x68 probably is chiller ON
 
 
+0x0c|0x01 = Enabled
+0x0c|0x29 = Chiller on
+0x0c|0x00 = Off
+
+Better Info
+Heat Pump Enabled
+JandyDvce: To   HPump: Read  Jandy   packet To 0x70 of type  LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x01|0x00|0x00|0x00|0x8f|0x10|0x03|
+JandyDvce: From HPump: Read  Jandy   packet To 0x00 of type       LXi status | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|
+
+Heat Pump (Chiller ON)
+JandyDvce: To   HPump: Read  Jandy   packet To 0x70 of type  LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x29|0x00|0x00|0x00|0xb7|0x10|0x03|
+JandyDvce: From HPump: Read  Jandy   packet To 0x00 of type       LXi status | HEX: 0x10|0x02|0x00|0x0d|0x68|0x00|0x00|0x87|0x10|0x03|
+
+Heat Pump Enabled
+JandyDvce: To   HPump: Read  Jandy   packet To 0x70 of type  LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x01|0x00|0x00|0x00|0x8f|0x10|0x03|
+JandyDvce: From HPump: Read  Jandy   packet To 0x00 of type       LXi status | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|
+
+Heat Pump Off
+JandyDvce: To   HPump: Read  Jandy   packet To 0x70 of type  LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x00|0x00|0x00|0x00|0x8e|0x10|0x03|
+JandyDvce: From HPump: Read  Jandy   packet To 0x00 of type       LXi status | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|
 
 */

@@ -40,4 +40,6 @@ void getJandyHeaterErrorMQTT(struct aqualinkdata *aqdata, char *message);
 
 int getPumpStatus(int pumpIndex, struct aqualinkdata *aqdata);
 
+void processHeatPumpDisplayMessage(char *msg, struct aqualinkdata *aqdata);
+
 #endif // AQUAPURE_H_

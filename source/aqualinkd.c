@@ -811,7 +811,7 @@ int startup(char *self, char *cfgFile)
 
   // Sanity check on Device ID's against panel type
   if (isRS_PANEL) {
-    if ( (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) || _aqconfig_.device_id == 0x00 /*||  _aqconfig_.device_id == 0xFF*/) {
+    if ( (_aqconfig_.device_id >= 0x08 && _aqconfig_.device_id <= 0x0B) || _aqconfig_.device_id == 0x00 ||  _aqconfig_.device_id == 0xFF) {
       // We are good
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Device ID 0x%02hhx does not match RS panel, Going to search for ID!\n", _aqconfig_.device_id);
@@ -970,6 +970,103 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
 
 }
 
+bool auto_configure(unsigned char* packet) {
+  // Loop over PROBE packets and store any we can use,
+  // once we see the 2nd probe of any ID we fave stored, then the loop is complete, 
+  // set ID's and exit true, exit falce to get called again.
+/*
+  unsigned char _goodID[] = {0x0a, 0x0b, 0x08, 0x09};
+  unsigned char _goodPDAID[] = {0x60, 0x61, 0x62, 0x63}; // PDA Panel only supports one PDA.
+  unsigned char _goodONETID[] = {0x40, 0x41, 0x42, 0x43};
+  unsigned char _goodIAQTID[] = {0x30, 0x31, 0x32, 0x33};
+  unsigned char _goodRSSAID[] = {0x48, 0x49};  // Know there are only 2 good RS SA id's, guess 0x49 is the second.
+*/
+
+  static unsigned char firstprobe = 0x00;
+  static unsigned char lastID = 0x00;
+  static bool seen_iAqualink2 = false;
+  static int foundIDs = 0;
+
+  if ( packet[PKT_CMD] == CMD_PROBE ) {
+    LOG(AQUA_LOG,LOG_INFO, "Got Probe on ID 0x%02hhx\n",packet[PKT_DEST]);
+    //printf(" *** Got Probe on ID 0x%02hhx\n",packet[PKT_DEST]);
+  }
+
+  if (lastID != 0x00 && packet[PKT_DEST] == DEV_MASTER ) { // Can't use got a reply to the late probe.
+    lastID = 0x00; 
+  } else if (lastID != 0x00 && packet[PKT_DEST] != DEV_MASTER) {
+    // We can use last ID.
+    // Save the first good ID.
+    if (firstprobe == 0x00 && lastID != 0x60) {
+      // NOTE IF can't use 0x60 (or PDA ID's) for probe, as they are way too often.
+      //printf("*** First Probe 0x%02hhx\n",lastID);
+      firstprobe = lastID;
+      _aqconfig_.device_id = 0x00;
+      _aqconfig_.rssa_device_id = 0x00;
+      _aqconfig_.extended_device_id = 0x00;
+    }
+
+
+    if ( (lastID >= 0x08 && lastID <= 0x0B) && 
+         (_aqconfig_.device_id == 0x00 || _aqconfig_.device_id == 0xFF) ) {
+      _aqconfig_.device_id = lastID;
+      LOG(AQUA_LOG,LOG_NOTICE, "Found valid unused device ID 0x%02hhx\n",lastID);
+      foundIDs++;
+    } else if ( (lastID >= 0x48 && lastID <= 0x49) && 
+                (_aqconfig_.rssa_device_id == 0x00 || _aqconfig_.rssa_device_id == 0xFF) ) {
+      _aqconfig_.rssa_device_id = lastID;
+      LOG(AQUA_LOG,LOG_NOTICE, "Found valid unused RSSA ID 0x%02hhx\n",lastID);
+      foundIDs++;
+    } else if ( (lastID >= 0x40 && lastID <= 0x43) && 
+                (_aqconfig_.extended_device_id == 0x00 || _aqconfig_.extended_device_id == 0xFF) ) {
+      _aqconfig_.extended_device_id = lastID;
+      _aqconfig_.extended_device_id_programming = true;
+      // Don't increase  foundIDs as we prefer not to use this one.
+      LOG(AQUA_LOG,LOG_NOTICE, "Found valid unused extended ID 0x%02hhx\n",lastID);
+    } else if ( (lastID >= 0x30 && lastID <= 0x33) && 
+                  (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33)) { //Overide is it's been set to Touch or not set.
+      _aqconfig_.extended_device_id = lastID;
+      _aqconfig_.extended_device_id_programming = true;
+      if (!seen_iAqualink2) {
+        _aqconfig_.enable_iaqualink = true;
+        _aqconfig_.read_RS485_devmask &= ~ READ_RS485_IAQUALNK; // Remove this mask, as no need since we enabled iaqualink 
+      }
+      LOG(AQUA_LOG,LOG_NOTICE, "Found valid unused extended ID 0x%02hhx\n",lastID);
+      foundIDs++;
+    }
+    // Now reset ID
+    lastID = 0x00;
+  }
+
+  if ( foundIDs >= 3 || (packet[PKT_DEST] == firstprobe && packet[PKT_CMD] == CMD_PROBE) ) {
+    // We should have seen one complete probe cycle my now.
+    LOG(AQUA_LOG,LOG_NOTICE, "Finished Autoconfigure using device_id=0x%02hhx rssa_device_id=0x%02hhx extended_device_id=0x%02hhx (%s iAqualink2/3)\n",
+                              _aqconfig_.device_id,_aqconfig_.rssa_device_id,_aqconfig_.extended_device_id,  _aqconfig_.enable_iaqualink?"Enable":"Disable");
+    return true;  // we can exit finally.
+  }
+
+  if ( (packet[PKT_CMD] == CMD_PROBE) && (
+       (packet[PKT_DEST] >= 0x08 && packet[PKT_DEST] <= 0x0B) ||
+       //(packet[PKT_DEST] >= 0x60 && packet[PKT_DEST] <= 0x63) ||
+       (packet[PKT_DEST] >= 0x40 && packet[PKT_DEST] <= 0x43) ||
+       (packet[PKT_DEST] >= 0x30 && packet[PKT_DEST] <= 0x33) ||
+       (packet[PKT_DEST] >= 0x48 && packet[PKT_DEST] <= 0x49) ))
+  {
+    lastID = packet[PKT_DEST]; // Store the valid ID.
+  } else if (lastID != 0x00 && packet[PKT_CMD] != CMD_PROBE &&
+            (packet[PKT_DEST] >= 0xA0 && packet[PKT_DEST] <= 0xA3) ) // we get a packet to iAqualink2/3 make sure to turn off
+  { // Saw a iAqualink2/3 device, so can't use ID, but set to read device info.
+    // LOG Nessage as such
+    _aqconfig_.extended_device_id2 = 0x00;
+    _aqconfig_.enable_iaqualink = false;
+    _aqconfig_.read_RS485_devmask |= READ_RS485_IAQUALNK;
+    seen_iAqualink2 = true;
+    LOG(AQUA_LOG,LOG_NOTICE, "Saw inuse iAqualink2/3 ID 0x%02hhx, turning off AqualinkD on that ID\n",lastID);
+  }
+  
+  return false;
+}
+
 unsigned char find_unused_address(unsigned char* packet) {
   static int ID[4] = {0,0,0,0};  // 0=0x08, 1=0x09, 2=0x0A, 3=0x0B
   static unsigned char lastID = 0x00;
@@ -1006,6 +1103,7 @@ void main_loop()
   bool got_probe_rssa = false;
   bool print_once = false;
   int blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_BLOCKING; // Will get reset if non blocking
+  bool auto_config_complete = true;
 
   _aqualink_data.panelstatus = STARTING;
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
@@ -1019,7 +1117,7 @@ void main_loop()
   _aqualink_data.pool_htr_set_point = TEMP_UNKNOWN;
   _aqualink_data.spa_htr_set_point = TEMP_UNKNOWN;
   _aqualink_data.chiller_set_point = TEMP_UNKNOWN;
-  _aqualink_data.chiller_state = LED_S_UNKNOWN;
+  //_aqualink_data.chiller_state = LED_S_UNKNOWN;
   _aqualink_data.unactioned.type = NO_ACTION;
   _aqualink_data.swg_percent = TEMP_UNKNOWN;
   _aqualink_data.swg_ppm = TEMP_UNKNOWN;
@@ -1173,14 +1271,20 @@ void main_loop()
     got_probe_rssa = true;
   
   if (_aqconfig_.device_id == 0x00) {
-    LOG(AQUA_LOG,LOG_WARNING, "Searching for valid ID, please configure `device_id` for faster startup\n");
+    LOG(AQUA_LOG,LOG_WARNING, "Searching for valid ID, please configure `device_id` for faster startup");
   }
 
-  LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
+  if (_aqconfig_.device_id == 0xFF) {
+    LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel information\n\n");
+    LOG(AQUA_LOG,LOG_WARNING, "Unsing Auto configure, this will take some time, (make sure to undate aqualinkd configuration to speed up startup!)\n");
+    auto_config_complete = false;
+  } else {
+    LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
+  }
   i=0;
 
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
-  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false ) && _keepRunning == true && _cmdln_nostartupcheck == false)
+  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false || auto_config_complete == false) && _keepRunning == true && _cmdln_nostartupcheck == false)
   {
     if (blank_read == blank_read_reconnect / 2) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
@@ -1207,6 +1311,16 @@ void main_loop()
 */ 
     packet_length = get_packet(rs_fd, packet_buffer);
 
+    if (packet_length > 0 && auto_config_complete == false) {
+      blank_read = 0;
+      auto_config_complete = auto_configure(packet_buffer);
+      if (auto_config_complete) {
+        got_probe = true;
+        got_probe_rssa = true;
+        got_probe_extended = true;
+      }
+      continue;
+    }
     if (packet_length > 0 && _aqconfig_.device_id == 0x00) {
       blank_read = 0;
       _aqconfig_.device_id = find_unused_address(packet_buffer);

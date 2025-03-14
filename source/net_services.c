@@ -71,6 +71,7 @@ static int _mqtt_exit_flag = false;
 #ifndef MG_DISABLE_MQTT
 void start_mqtt(struct mg_mgr *mgr);
 static struct aqualinkdata _last_mqtt_aqualinkdata;
+static aqled _last_mqtt_chiller_led;
 void mqtt_broadcast_aqualinkstate(struct mg_connection *nc);
 #endif
 
@@ -787,15 +788,26 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
     //send_mqtt_string_msg(nc, FREEZE_PROTECT_ENABELED, MQTT_ON);
   }
 
-  if (_aqualink_data->chiller_set_point != TEMP_UNKNOWN && _aqualink_data->chiller_set_point != _last_mqtt_aqualinkdata.chiller_set_point) {
-    _last_mqtt_aqualinkdata.chiller_set_point = _aqualink_data->chiller_set_point;
-    send_mqtt_setpoint_msg(nc, CHILLER, _aqualink_data->chiller_set_point);
-    //send_mqtt_string_msg(nc, CHILLER_ENABELED, MQTT_ON);
-  }
-  if (_aqualink_data->chiller_state != _last_mqtt_aqualinkdata.chiller_state) {
-    _last_mqtt_aqualinkdata.chiller_state = _aqualink_data->chiller_state;
-    //send_mqtt_string_msg(nc, CHILLER, _aqualink_data->chiller_state==ON?MQTT_ON:MQTT_OFF);
-    send_mqtt_led_state_msg(nc, CHILLER, _aqualink_data->chiller_state, MQTT_COOL, MQTT_OFF);
+  if (ENABLE_CHILLER) {
+    if (_aqualink_data->chiller_set_point != TEMP_UNKNOWN && _aqualink_data->chiller_set_point != _last_mqtt_aqualinkdata.chiller_set_point) {
+      _last_mqtt_aqualinkdata.chiller_set_point = _aqualink_data->chiller_set_point;
+      send_mqtt_setpoint_msg(nc, CHILLER, _aqualink_data->chiller_set_point);
+    }
+
+    // Chiller is only on when in_alt_mode = true and led != off 
+    if ( _aqualink_data->chiller_button != NULL && ((vbutton_detail *) _aqualink_data->chiller_button->special_mask_ptr)->in_alt_mode == false ) {
+      // Chiller is off (in heat pump mode)
+      if (OFF != _last_mqtt_chiller_led.state) {
+        _last_mqtt_chiller_led.state = OFF;
+        send_mqtt_led_state_msg(nc, CHILLER, OFF, MQTT_COOL, MQTT_OFF);
+      }
+    } else if (_aqualink_data->chiller_button != NULL && ((vbutton_detail *) _aqualink_data->chiller_button->special_mask_ptr)->in_alt_mode == true ) {
+      // post actual LED state, in chiller mode
+      if (_aqualink_data->chiller_button->led->state != _last_mqtt_chiller_led.state) {
+        _last_mqtt_chiller_led.state = _aqualink_data->chiller_button->led->state;
+        send_mqtt_led_state_msg(nc, CHILLER, _aqualink_data->chiller_button->led->state, MQTT_COOL, MQTT_OFF);
+      }
+    }
   }
 
   if (_aqualink_data->battery != _last_mqtt_aqualinkdata.battery) {
@@ -1375,7 +1387,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     } else { // Pump by button name
       for (i=0; i < _aqualink_data->total_buttons ; i++) {
         //if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ){
-        if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name)) {
+        if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name) || 
+             ( isVBUTTON_ALTLABEL(_aqualink_data->aqbuttons[i].special_mask) && uri_strcmp(ri1, ((vbutton_detail *)_aqualink_data->aqbuttons[i].special_mask_ptr)->altlabel)) ) {
           int pi;
           for (pi=0; pi < _aqualink_data->num_pumps; pi++) {
             if (_aqualink_data->pumps[pi].button == &_aqualink_data->aqbuttons[i]) {
@@ -1722,7 +1735,6 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           mg_send(nc, message, size); 
         }
         break;
-#ifdef CONFIG_EDITOR
         case uConfig:
         {
           char message[JSON_BUFFER_SIZE];
@@ -1733,7 +1745,6 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
           mg_send(nc, message, size); 
         }
         break;
-#endif
 #ifndef AQ_MANAGER
         case uDebugStatus:
         {
@@ -1892,7 +1903,6 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, message); 
     }
     break;
-#ifdef CONFIG_EDITOR
     case uConfig:
     {
       DEBUG_TIMER_START(&tid);
@@ -1911,7 +1921,6 @@ void action_websocket_request(struct mg_connection *nc, struct websocket_message
       ws_send(nc, message);
     }
     break;
-#endif
     case uBad:
     default:
       if (msg == NULL)
@@ -2110,6 +2119,9 @@ void reset_last_mqtt_status()
 
   for (i=0; i < _aqualink_data->total_buttons; i++) {
     _last_mqtt_aqualinkdata.aqualinkleds[i].state = LED_S_UNKNOWN;
+    //if (isVBUTTON_CHILLER(_aqualink_data->aqbuttons[i].special_mask)){
+    //  _chiller_ledindex = i;
+    //}
   }
   _last_mqtt_aqualinkdata.ar_swg_device_status = SWG_STATUS_UNKNOWN;
   _last_mqtt_aqualinkdata.swg_led_state = LED_S_UNKNOWN;
@@ -2123,7 +2135,7 @@ void reset_last_mqtt_status()
   _last_mqtt_aqualinkdata.pool_htr_set_point = TEMP_REFRESH;
   _last_mqtt_aqualinkdata.spa_htr_set_point = TEMP_REFRESH;
   _last_mqtt_aqualinkdata.chiller_set_point = TEMP_REFRESH;
-  _last_mqtt_aqualinkdata.chiller_state = LED_S_UNKNOWN;
+  //_last_mqtt_aqualinkdata.chiller_state = LED_S_UNKNOWN;
   _last_mqtt_aqualinkdata.ph = -1;
   _last_mqtt_aqualinkdata.orp = -1;
   _last_mqtt_aqualinkdata.boost = -1;
@@ -2148,6 +2160,8 @@ void reset_last_mqtt_status()
   for (i=0; i < _aqualink_data->num_sensors; i++) {
     _last_mqtt_aqualinkdata.sensors[i].value = TEMP_UNKNOWN;
   }
+
+  _last_mqtt_chiller_led.state = LED_S_UNKNOWN;
 
 }
 

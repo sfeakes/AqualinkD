@@ -32,7 +32,7 @@
 #define RSP_IAQT   (1 << 13) // 128
 #define RSP_RSSA   (1 << 14) // 128
 #define RSP_EXT_PROG (1 << 15) // 128
-
+// ....Remeber no more for int16_t.......
 
 // Bitmask for pannel support against board rev
 // used in getPanelSupport()
@@ -75,6 +75,7 @@ uint16_t getPanelSupport( char *rev_string, int rev_len);
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
 bool setVirtualButtonLabel(aqkey *button, const char *label);
+bool setVirtualButtonAltLabel(aqkey *button, const char *label);
 
 clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button);
 pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button);
@@ -94,8 +95,10 @@ pump_detail *getPumpDetail(struct aqualinkdata *aqdata, int button);
 #define isIAQL_ACTIVE ((_aqconfig_.extended_device_id2 != NUL))
 
 #define isVS_PUMP(mask) ((mask & VS_PUMP) == VS_PUMP)
-#define isVBUTTON(mask) ((mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)
 #define isPLIGHT(mask) ((mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+#define isVBUTTON(mask) ((mask & VIRTUAL_BUTTON) == VIRTUAL_BUTTON)
+#define isVBUTTON_ALTLABEL(mask) ((mask & VIRTUAL_BUTTON_ALT_LABEL) == VIRTUAL_BUTTON_ALT_LABEL)
+#define isVBUTTON_CHILLER(mask) ((mask & VIRTUAL_BUTTON_CHILLER) == VIRTUAL_BUTTON_CHILLER)
 
 int PANEL_SIZE(); 
 //
@@ -115,6 +118,7 @@ int PANEL_SIZE();
 // If we need to increase virtual buttons, then increase below.
 
 // NEED TO FIX, IF WE CHANGE TO ANOTHING OTHER THAN 0 CORE DUMP (we also had "panel_type = RS-16 Combo" in config)
+// FIX IS PROBABLY MAKE SURE LEDS IS SAME OR MORE.
 #define VIRTUAL_BUTTONS 0
 
 #ifndef AQ_RS16

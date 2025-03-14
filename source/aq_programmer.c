@@ -263,6 +263,10 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
     } else if (source_type == IAQTOUCH && isEXTP_ENABLED) {
       //_aq_programmer(AQ_GET_IAQTOUCH_FREEZEPROTECT, NULL, aq_data, false); // Add back and remove below once tested and working
       //_aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data, false); // This get's freeze & heaters, we should just get freeze if isRSSA_ENABLED
+      if (ENABLE_CHILLER) {
+        // Need to get setpoints for chiller.
+        _aq_programmer(AQ_GET_IAQTOUCH_SETPOINTS, NULL, aq_data, false);
+      }
     } else if (source_type == ALLBUTTON) {
       _aq_programmer(AQ_GET_FREEZE_PROTECT_TEMP, NULL, aq_data, false); // This is still quicker that IAQ or ONE Touch protocols at the moment.
       if (_aqconfig_.use_panel_aux_labels) {

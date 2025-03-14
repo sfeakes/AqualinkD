@@ -248,7 +248,8 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
   int length = 0;
   buffer[0] = '\0';
 
-  if ((button->special_mask & VS_PUMP) == VS_PUMP)
+  //if ((button->special_mask & VS_PUMP) == VS_PUMP)
+  if (isVS_PUMP(button->special_mask))
   {
 //printf("Button %s is VSP\n", button->name);
     for (i=0; i < aqdata->num_pumps; i++) {
@@ -265,7 +266,8 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
       }
     }
   } 
-  else if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+  //else if ((button->special_mask & PROGRAM_LIGHT) == PROGRAM_LIGHT)
+  else if (isPLIGHT(button->special_mask))
   {
 //printf("Button %s is ProgramableLight\n", button->name);
     for (i=0; i < aqdata->num_lights; i++) {
@@ -286,9 +288,14 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
       }
     }
   }
+  if (isVBUTTON_ALTLABEL(button->special_mask))
+  {
+    length += sprintf(buffer, ",\"alt_label\":\"%s\", \"in_alt_mode\": \"%s\" ",((vbutton_detail *)button->special_mask_ptr)->altlabel, ((vbutton_detail *)button->special_mask_ptr)->in_alt_mode?JSON_ON:JSON_OFF );
+    //return buffer;
+  }
 
 //printf("Button %s is Switch\n", button->name);
-  length += sprintf(buffer, ",\"type_ext\": \"switch_timer\", \"timer_active\":\"%s\"", (((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE)?JSON_ON:JSON_OFF) );
+  length += sprintf(buffer+length, ",\"type_ext\": \"switch_timer\", \"timer_active\":\"%s\"", (((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE)?JSON_ON:JSON_OFF) );
   if ((button->special_mask & TIMER_ACTIVE) == TIMER_ACTIVE) {
     length += sprintf(buffer+length,",\"timer_duration\":\"%d\"", get_timer_left(button));
   }
@@ -392,9 +399,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
     length += sprintf(buffer+length, "{\"type\": \"setpoint_freeze\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
                                      FREEZE_PROTECT,
                                     "Freeze Protection",
-                                    //JSON_OFF,
                                     aqdata->frz_protect_state==ON?JSON_ON:JSON_OFF,
-                                    //JSON_ENABLED,
                                     aqdata->frz_protect_state==ON?LED2text(ON):LED2text(ENABLE),
                                     ((homekit)?2:0),
                                     ((homekit_f)?degFtoC(aqdata->frz_protect_set_point):aqdata->frz_protect_set_point),
@@ -403,19 +408,19 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                     aqdata->frz_protect_state==ON?1:0);
   }
 
-  if ( ENABLE_CHILLER || (aqdata->chiller_set_point != TEMP_UNKNOWN && getWaterTemp(aqdata) != TEMP_UNKNOWN) ) {
+  if ( (ENABLE_CHILLER || (aqdata->chiller_set_point != TEMP_UNKNOWN && getWaterTemp(aqdata) != TEMP_UNKNOWN)) && (aqdata->chiller_button != NULL) ) {
     length += sprintf(buffer+length, "{\"type\": \"setpoint_chiller\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"status\": \"%s\", \"spvalue\": \"%.*f\", \"value\": \"%.*f\", \"int_status\": \"%d\" },",
       CHILLER,
      "Chiller",
-     //JSON_OFF,
-     aqdata->chiller_state==ON?JSON_ON:JSON_OFF,
-     //JSON_ENABLED,
-     aqdata->chiller_state==ON?LED2text(ON):LED2text(ENABLE),
+     //aqdata->chiller_state==ON?JSON_ON:JSON_OFF,
+     ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode?JSON_ON:JSON_OFF,
+     //aqdata->chiller_state==ON?LED2text(ON):LED2text(ENABLE),
+     ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode?(aqdata->chiller_button->led->state==ON?LED2text(ON):LED2text(ENABLE)):JSON_OFF,
      ((homekit)?2:0),
      ((homekit_f)?degFtoC(aqdata->chiller_set_point):aqdata->chiller_set_point),
      ((homekit)?2:0),
      ((homekit_f)?degFtoC(getWaterTemp(aqdata)):getWaterTemp(aqdata)),
-     aqdata->chiller_state==ON?1:0);
+     aqdata->chiller_button->led->state==ON?1:0);
   }
 
   if (aqdata->swg_led_state != LED_S_UNKNOWN) {
@@ -555,11 +560,8 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
 
   length += sprintf(buffer+length, "{\"type\": \"aqmanager\"");
   length += sprintf(buffer+length, ",\"deamonized\": \"%s\"", (_aqconfig_.deamonize?JSON_ON:JSON_OFF) );
-#ifdef CONFIG_EDITOR
   length += sprintf(buffer+length, ",\"config_editor\": \"yes\"");
-#else
-  length += sprintf(buffer+length, ",\"config_editor\": \"no\"");
-#endif
+
   
   /*
   length += sprintf(buffer+length, ",\"panel_type\":\"%s\"",getPanelString());
@@ -1106,9 +1108,9 @@ int json_cfg_element_OLD(char* buffer, int size, const char *name, const void *v
 }
 */
 
-#ifdef CONFIG_EDITOR
+//#ifdef CONFIG_EDITOR
 
-int json_cfg_element(char* buffer, int size, const char *name, const void *value, cfg_value_type type, uint8_t mask, char *valid_val, bool advanced) {
+int json_cfg_element(char* buffer, int size, const char *name, const void *value, cfg_value_type type, uint8_t mask, char *valid_val, uint8_t config_mask) {
   int result = 0;
 
   char valid_values[256];
@@ -1118,7 +1120,7 @@ int json_cfg_element(char* buffer, int size, const char *name, const void *value
     sprintf(valid_values,",\"valid values\":%s",valid_val);
   }
 
-  sprintf(adv,",\"advanced\": \"%s\"", advanced?"yes":"no");
+  sprintf(adv,",\"advanced\": \"%s\"", isMASKSET(config_mask, CFG_GRP_ADVANCED)?"yes":"no");
   
 
   switch(type){
@@ -1227,7 +1229,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
   }
 
 
-  #ifdef CONFIG_DEV_TEST
+  //#ifdef CONFIG_DEV_TEST
   for (int i=0; i <= _numCfgParams; i++) {
     // We can't change web_directory or port while running, so don;t even chow those options.
     // mongoose holds a pointer to the string web_directoy, so can;t change that easily while running
@@ -1236,7 +1238,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
          strncasecmp(_cfgParams[i].name, CFG_N_web_directory, strlen(CFG_N_web_directory)) == 0 ) {
       continue;
     }
-    if ((result = json_cfg_element(buffer+length, size-length, _cfgParams[i].name, _cfgParams[i].value_ptr, _cfgParams[i].value_type, _cfgParams[i].mask, _cfgParams[i].valid_values, _cfgParams[i].advanced)) <= 0) {
+    if ((result = json_cfg_element(buffer+length, size-length, _cfgParams[i].name, _cfgParams[i].value_ptr, _cfgParams[i].value_type, _cfgParams[i].mask, _cfgParams[i].valid_values, _cfgParams[i].config_mask)) <= 0) {
       LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
       return length;
     } else {
@@ -1244,10 +1246,6 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     }
   }
 
-  // TODO add custom light modes/colors
-  // TODO add RSSD LOG FILTERS
-  // Add custom censors
-  
   for (i = 1; i <= aq_data->num_sensors; i++)
   {
     length += sprintf(buffer+length, ",\"sensor_%.2d\":{ \"advanced\":\"yes\",",i );
@@ -1258,19 +1256,19 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     //fprintf(fp,"sensor_%.2d_label=%s\n",i+1,aqdata->sensors->label);
     //fprintf(fp,"sensor_%.2d_factor=%f\n",i+1,aqdata->sensors->factor);
     sprintf(buf,"sensor_%.2d_path", i);
-    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].path, CFG_STRING, 0, NULL, true)) <= 0)
+    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].path, CFG_STRING, 0, NULL, CFG_GRP_ADVANCED)) <= 0)
       return length;
     else
       length += result;
   
     sprintf(buf,"sensor_%.2d_label", i);
-    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].label, CFG_STRING, 0, NULL, true)) <= 0)
+    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].label, CFG_STRING, 0, NULL, CFG_GRP_ADVANCED)) <= 0)
       return length;
     else
       length += result;
 
     sprintf(buf,"sensor_%.2d_factor", i);
-    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].factor, CFG_FLOAT, 0, NULL, true)) <= 0)
+    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->sensors[i-1].factor, CFG_FLOAT, 0, NULL, CFG_GRP_ADVANCED)) <= 0)
       return length;
     else
       length += result;
@@ -1292,7 +1290,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
       sprintf(buf,"light_program_%.2d", i);
       sprintf(buf1,"%s%s",lname,isShow?" - show":"");
       //printf("%s %s\n",buf,buf1);
-      if ((result = json_cfg_element(buffer+length, size-length, buf, &bufptr, CFG_STRING, 0, NULL, true)) <= 0)
+      if ((result = json_cfg_element(buffer+length, size-length, buf, &bufptr, CFG_STRING, 0, NULL, CFG_GRP_ADVANCED)) <= 0)
         return length;
       else
         length += result;
@@ -1302,109 +1300,8 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     }
   }
   
-
-
-
-  #else
-  
-
-
-
-/*
-  if ((result = json_cfg_element(buffer+length, size-length, "config_file", _aqconfig_.config_file, CFG_STRING, NULL)) <= 0)
-    return length;
-  else
-    length += result;
-*/
-/*
-  stringptr = getPanelString();
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_panel_type, &stringptr, CFG_STRING, 0, NULL)) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_device_id, &_aqconfig_.device_id, CFG_HEX,  0, "[\"0x0a\", \"0x0b\", \"0x09\", \"0x08\", \"0x60\", \"0xFF\"]")) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_rssa_device_id, &_aqconfig_.rssa_device_id, CFG_HEX,  0, "[\"0x00\", \"0x48\", \"0xFF\"]")) <= 0)
-    return length;
-  else
-    length += result;
-
-#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_extended_device_id, &_aqconfig_.extended_device_id, CFG_HEX,  0, "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\", \"0xFF\"]")) <= 0)
-    return length;
-  else
-    length += result;
-  
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_extended_device_id, &_aqconfig_.extended_device_id_programming, CFG_BOOL,  0, "[\"YES\", \"NO\"]")) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_enable_iaqualink, &_aqconfig_.enable_iaqualink, CFG_BOOL,  0, "[\"YES\", \"NO\"]")) <= 0)
-    return length;
-  else
-    length += result;
-#endif
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_serial_port, &_aqconfig_.serial_port, CFG_STRING,  0, NULL)) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_socket_port, &_aqconfig_.socket_port, CFG_STRING,  0, NULL )) <= 0)
-    return length;
-  else
-    length += result;
-
-  stringptr = loglevel2cgn_name(_aqconfig_.log_level);
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_log_level, &stringptr, CFG_STRING,  0, "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]")) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, CFG_N_web_directory, &_aqconfig_.web_directory, CFG_STRING,  0, NULL)) <= 0)
-    return length;
-  else
-    length += result;
-
-
-
-
-
-
-
-
-  if ((result = json_cfg_element(buffer+length, size-length, "sched_chk_pumpon_hour", &_aqconfig_.sched_chk_pumpon_hour, CFG_INT,  0, NULL )) <= 0)
-    return length;
-  else
-    length += result;
-
-
-  // OTHERS
-
-  
-
-  // OTHERS
-
-  if ((result = json_cfg_element(buffer+length, size-length, "force_swg", &_aqconfig_.force_swg, CFG_BOOL, 0, "[\"YES\", \"NO\"]")) <= 0)
-    return length;
-  else
-    length += result;
-
-  if ((result = json_cfg_element(buffer+length, size-length, "use_panel_aux_labels", &_aqconfig_.use_panel_aux_labels, CFG_BOOL, 0, NULL)) <= 0)
-    return length;
-  else
-    length += result;
-
-*/
-#endif // CONGIG_DEV_TEST
   // All buttons
 
-  
   for (i = 0; i < aq_data->total_buttons; i++)
   {
     char prefix[30];
@@ -1420,7 +1317,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     delectCharAt = length;
     
     sprintf(buf,"%s_label", prefix);
-    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->aqbuttons[i].label, CFG_STRING, 0, NULL, false)) <= 0) {
+    if ((result = json_cfg_element(buffer+length, size-length, buf, &aq_data->aqbuttons[i].label, CFG_STRING, 0, NULL, 0)) <= 0) {
       LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
       return length;
     } else
@@ -1430,7 +1327,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     {
       if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpIndex > 0) {
         sprintf(buf,"%s_pumpIndex", prefix);
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpIndex, CFG_INT, 0, NULL, false)) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpIndex, CFG_INT, 0, NULL, 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
@@ -1439,7 +1336,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
       
       if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpID != NUL) {
         sprintf(buf,"%s_pumpID", prefix);
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpID, CFG_HEX, 0, NULL, false)) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpID, CFG_HEX, 0, NULL, 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
@@ -1449,7 +1346,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
       if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpName[0] != '\0') {
         sprintf(buf,"%s_pumpName", prefix);
         stringptr = ((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpName;
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, NULL, false)) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, NULL, 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
@@ -1459,7 +1356,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
       if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType != PT_UNKNOWN) {
         sprintf(buf,"%s_pumpType", prefix);
         stringptr = pumpType2String(((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType);
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, "[\"JANDY ePUMP\",\"Pentair VS\",\"Pentair VF\"]", false) ) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &stringptr, CFG_STRING, 0, "[\"JANDY ePUMP\",\"Pentair VS\",\"Pentair VF\"]", 0) ) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
@@ -1468,7 +1365,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     } else if (isPLIGHT(aq_data->aqbuttons[i].special_mask)) {
       if (((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType > 0) {
         sprintf(buf,"%s_lightMode", prefix);
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType, CFG_INT, 0, NULL, false)) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType, CFG_INT, 0, NULL, 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
@@ -1477,11 +1374,18 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
     } else if ( (isVBUTTON(aq_data->aqbuttons[i].special_mask) && aq_data->aqbuttons[i].rssd_code >= IAQ_ONETOUCH_1 && aq_data->aqbuttons[i].rssd_code <= IAQ_ONETOUCH_6 ) ) {
         sprintf(buf,"%s_onetouchID", prefix);
         int oID = (aq_data->aqbuttons[i].rssd_code - 15);
-        if ((result = json_cfg_element(buffer+length, size-length, buf, &oID, CFG_INT, 0, "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]", false)) <= 0) {
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &oID, CFG_INT, 0, "[\"1\",\"2\",\"3\",\"4\",\"5\",\"6\"]", 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
           return length;
         } else
           length += result;
+    } else if ( isVBUTTON_ALTLABEL(aq_data->aqbuttons[i].special_mask)) {
+      sprintf(buf,"%s_altlabel", prefix);
+      if ((result = json_cfg_element(buffer+length, size-length, buf, &((vbutton_detail *)aq_data->aqbuttons[i].special_mask_ptr)->altlabel, CFG_STRING, 0, NULL, 0)) <= 0) {
+        LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
+        return length;
+      } else
+        length += result;
     }
 
     length += sprintf(buffer+length, "}" );
@@ -1512,4 +1416,4 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
 }
 
 
-#endif
+//#endif

@@ -439,6 +439,11 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     //freeze_msg_count = 0;
     strcpy(aq_data->last_display_message, msg); // Also display the message on web UI
   }
+  
+  else if (ENABLE_CHILLER && (stristr(msg,"Chiller") != NULL || stristr(msg,"Heat Pump") != NULL)) {
+    processHeatPumpDisplayMessage(msg, aq_data); // This doesn;t exist yet
+  }
+  
   /* // Not sure when to do with these for the moment, so no need to compile in the test.
   else if (stristr(msg, LNG_MSG_CHEM_FEED_ON) != NULL) {
   }

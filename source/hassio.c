@@ -510,7 +510,8 @@ void publish_mqtt_hassio_discover(struct aqualinkdata *aqdata, struct mg_connect
     send_mqtt(nc, topic, msg);
   }
 
-  if (ENABLE_CHILLER || (aqdata->chiller_set_point != TEMP_UNKNOWN && aqdata->chiller_state != LED_S_UNKNOWN) ) {
+  //if (ENABLE_CHILLER || (aqdata->chiller_set_point != TEMP_UNKNOWN && aqdata->chiller_state != LED_S_UNKNOWN) ) {
+  if ( (ENABLE_CHILLER || aqdata->chiller_set_point != TEMP_UNKNOWN ) && (aqdata->chiller_button != NULL) ) {
     // USe freeze protect for the moment.
     sprintf(msg, HASSIO_CHILLER_DISCOVER,
       connections,

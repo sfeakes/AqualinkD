@@ -107,6 +107,9 @@ typedef struct aqualinkkey
 #define TIMER_ACTIVE   (1 << 2) 
 //#define DIMMER_LIGHT   (1 << 3) // NOT USED (Use PROGRAM_LIGHT or type LC_DIMMER) 
 #define VIRTUAL_BUTTON (1 << 4)
+// Below are types of VIRT_BUTTON, SO VIRT_BUTTON must also be set
+#define VIRTUAL_BUTTON_ALT_LABEL (1 << 5)
+#define VIRTUAL_BUTTON_CHILLER   (1 << 6)
 //typedef struct ProgramThread ProgramThread;  // Definition is later
 
 struct programmingthread {
@@ -195,6 +198,16 @@ typedef enum panel_vsp_status
 
 #define PUMP_NAME_LENGTH 30
 
+// Overall Status of Aqualinkd
+/*
+#define CONNECTED           ( 1<< 0 ) // All is good (every other mask should be cleared)
+#define NOT_CONNECTED       ( 1 << 2 ) // Serial Error maybe renaem
+#define AUTOCONFIGURE_ID    ( 1 << 3 )
+#define AUTOCONFIGURE_PANEL ( 1 << 4 )
+#define CONNECTING          ( 1 << 5 )
+#define ERROR_.                       // maybe covered in NOT_CONNECTED
+*/
+
 typedef struct pumpd
 {
   int rpm;
@@ -236,6 +249,20 @@ typedef enum clight_type {
   NUMBER_LIGHT_COLOR_TYPES // This is used to size and count so add more prior to this
 } clight_type;
 
+/*
+typedef enum {
+  MD_CHILLER,
+  MD_HEATPUMP
+} heatmump_mode;
+*/
+typedef struct vbuttond
+{
+  char *altlabel;
+  bool in_alt_mode;  // Example if altlabel="chiller", if last seen was chiller message this is true. 
+  //heatmump_mode chiller_mode;
+  // Add any other special params for virtual button
+} vbutton_detail;
+
 typedef enum {
   NET_MQTT=0, 
   NET_API, 
@@ -244,6 +271,8 @@ typedef enum {
   NET_TIMER,       // Timer or Scheduler (eg poweron/freezeprotect check)
   UNACTION_TIMER
 } request_source;
+
+
 
 typedef struct clightd
 {
@@ -284,12 +313,14 @@ struct aqualinkdata
   int swg_percent;
   int swg_ppm;
   int chiller_set_point;
+  aqkey *chiller_button;
+  //heatmump_mode chiller_mode;
   unsigned char ar_swg_device_status; // Actual state 
   unsigned char heater_err_status;
   aqledstate swg_led_state; // Display state for UI's
   aqledstate service_mode_state;
   aqledstate frz_protect_state;
-  aqledstate chiller_state;
+  //aqledstate chiller_state;
   int num_pumps;
   pump_detail pumps[MAX_PUMPS];
   int num_lights;
