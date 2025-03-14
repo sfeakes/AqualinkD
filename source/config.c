@@ -1194,7 +1194,7 @@ if (strlen(cleanwhitespace(value)) <= 0) {
       } else {
         LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
       }
-    } else if (strncasecmp(param + 17, "_altlabel", 9) == 0) {
+    } else if (strncasecmp(param + 17, "_altLabel", 9) == 0) {
       char *label = cleanalloc(value);
       aqkey *button = getVirtualButton(aqdata, num);
       if (button != NULL) {
@@ -2033,7 +2033,7 @@ bool writeCfg (struct aqualinkdata *aqdata)
     }
     
     if (isVBUTTON_ALTLABEL(aqdata->aqbuttons[i].special_mask)) {
-      fprintf(fp,"%s_altlabel=%s\n", prefix, ((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->altlabel);
+      fprintf(fp,"%s_altLabel=%s\n", prefix, ((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->altlabel);
     }
  
   }
