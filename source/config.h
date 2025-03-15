@@ -48,13 +48,11 @@ struct aqconfig
   unsigned char device_id;
   unsigned char rssa_device_id;
   int16_t paneltype_mask;
-#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   unsigned char extended_device_id;
   unsigned char extended_device_id2;
   bool extended_device_id_programming;
   bool enable_iaqualink;
   //bool enable_RS_device_value_print;
-#endif
   bool deamonize;
 #ifndef AQ_MANAGER // Need to uncomment and clean up referances in future.
   char *log_file;

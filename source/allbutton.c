@@ -117,7 +117,7 @@ void setUnits(char *msg, struct aqualinkdata *aq_data)
 #define MSG_LOOP_POOL_TEMP   (1 << 11)
 #define MSG_LOOP_SPA_TEMP    (1 << 12)
 
-#ifdef AQ_RS16
+
 int16_t  RS16_endswithLEDstate(char *msg, struct aqualinkdata *aq_data)
 {
   char *sp;
@@ -173,7 +173,7 @@ int16_t  RS16_endswithLEDstate(char *msg, struct aqualinkdata *aq_data)
 
   return false;
 }
-#endif
+
 
 void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset);
 
@@ -198,9 +198,9 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   static aqledstate default_frz_protect_state = OFF;
   static bool boostInLastLoop = false;
   // NSF replace message with msg
-#ifdef AQ_RS16
+
   int16_t rs16;
-#endif
+
 
   //msg = stripwhitespace(message);
   //strcpy(aq_data->last_message, msg);
@@ -301,7 +301,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     if ((msg_loop & MSG_BATTERY_LOW) != MSG_BATTERY_LOW)
       aq_data->battery = OK;
 
-#ifdef AQ_RS16
+
     //if ( _aqconfig_.rs_panel_size >= 16) {
     //if ( (int)PANEL_SIZE >= 16) { // NSF No idea why this fails on RS-4, but it does.  Come back and find out why
     if ( PANEL_SIZE() >= 16 ) {
@@ -315,7 +315,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
       if ((msg_loop & MSG_RS16BUTTON) != MSG_RS16BUTTON)
         aq_data->aqbuttons[16].led->state = OFF;
     }
-#endif
+
     msg_loop = 0;
     return;
   }
@@ -540,7 +540,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   // Process any button states (fake LED) for RS12 and above keypads
   // Text will be button label on or off  ie Aux_B2 off or WaterFall off
   
-#ifdef AQ_RS16
+
   //else if ( _aqconfig_.rs_panel_size >= 16 && (rs16 = RS16_endswithLEDstate(msg)) != 0 )
   else if (PANEL_SIZE() >= 16 && (rs16 = RS16_endswithLEDstate(msg, aq_data)) != 0 )
   {
@@ -551,7 +551,7 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     // use the Onetouch or iAqua equiptment page for off.
     strcpy(aq_data->last_display_message, msg);
   }
-#endif
+
   else if (((msg[4] == ':') || (msg[6] == ':')) && (strncasecmp(msg, "AUX", 3) == 0) )
   { // Should probable check we are in programming mode.
     // 'Aux3: No Label'

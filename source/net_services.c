@@ -1224,14 +1224,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       queueGetProgramData(ALLBUTTON, _aqualink_data);
     if(isRSSA_ENABLED)
       queueGetProgramData(RSSADAPTER, _aqualink_data);
-#ifdef AQ_ONETOUCH
     if(isONET_ENABLED)
       queueGetProgramData(ONETOUCH, _aqualink_data);
-#endif
-#ifdef AQ_IAQTOUCH
     if(isIAQT_ENABLED)
       queueGetProgramData(IAQTOUCH, _aqualink_data);
-#endif
 #ifdef AQ_PDA
     if(isPDA_PANEL)
       queueGetProgramData(AQUAPDA, _aqualink_data);
@@ -1472,7 +1468,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       // If Label = "Spa", "Spa_Heater" will turn on "Spa", so need to check '/' on label as next character
       //if (strncmp(ri1, _aqualink_data->aqbuttons[i].name, strlen(_aqualink_data->aqbuttons[i].name)) == 0 ||
       //   (strncmp(ri1, _aqualink_data->aqbuttons[i].label, strlen(_aqualink_data->aqbuttons[i].label)) == 0 && ri1[strlen(_aqualink_data->aqbuttons[i].label)] == '/'))
-      if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name) || uri_strcmp(ri1, _aqualink_data->aqbuttons[i].label) )
+      //if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name) || uri_strcmp(ri1, _aqualink_data->aqbuttons[i].label) )
+
+      if ( uri_strcmp(ri1, _aqualink_data->aqbuttons[i].name) || uri_strcmp(ri1, _aqualink_data->aqbuttons[i].label) || 
+         ( isVBUTTON_ALTLABEL(_aqualink_data->aqbuttons[i].special_mask) && uri_strcmp(ri1, ((vbutton_detail *)_aqualink_data->aqbuttons[i].special_mask_ptr)->altlabel)) )
       {
         found = true;
         //create_panel_request(from, i, value, istimer);

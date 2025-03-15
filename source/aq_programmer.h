@@ -175,7 +175,7 @@ void queueGetProgramData(emulation_type source_type, struct aqualinkdata *aq_dat
 void waitForSingleThreadOrTerminate(struct programmingThreadCtrl *threadCtrl, program_type type);
 void cleanAndTerminateThread(struct programmingThreadCtrl *threadCtrl);
 
-//void force_queue_delete() // Yes I want compiler warning if this is used.
+void force_queue_delete(); // NSF This needs to be deleted  (come back and fix)
 
 
 //bool push_aq_cmd(unsigned char cmd);

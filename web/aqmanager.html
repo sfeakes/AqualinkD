@@ -1291,6 +1291,10 @@
                 enablebutton("editconfig");
             } else {
                 disablebutton("editconfig");
+                // This is disabled during startup, so get again if disabled
+                setTimeout(function () {
+                  start_manager();
+                }, 10000);
             }
 
             /*

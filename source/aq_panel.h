@@ -121,12 +121,12 @@ int PANEL_SIZE();
 // FIX IS PROBABLY MAKE SURE LEDS IS SAME OR MORE.
 #define VIRTUAL_BUTTONS 0
 
-#ifndef AQ_RS16
-#define TOTAL_BUTTONS 12+VIRTUAL_BUTTONS
-#else
+
+//#define TOTAL_BUTTONS 12+VIRTUAL_BUTTONS
+
 #define TOTAL_BUTTONS 20+VIRTUAL_BUTTONS // Biggest jandy panel
 // This needs to be called AFTER and as well as initButtons
 void initButtons_RS16(struct aqualinkdata *aqdata);
-#endif
+
 
 #endif

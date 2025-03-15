@@ -212,7 +212,6 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].valid_values = CFG_V_rssa_device_id;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_unknownHex;
 
-#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
   _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.extended_device_id_programming;
   _cfgParams[_numCfgParams].value_type = CFG_BOOL; 
@@ -233,7 +232,6 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_enable_iaqualink;
   _cfgParams[_numCfgParams].valid_values = CFG_V_BOOL;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
-#endif
 
   _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.web_directory;
@@ -650,10 +648,10 @@ void init_parameters (struct aqconfig * parms)
   */
 
   /*
-#if defined AQ_ONETOUCH || defined AQ_IAQTOUCH
+
   parms->extended_device_id = NUL;
   parms->extended_device_id_programming = false;
-#endif
+
 */
 /*
   //sscanf(DEFAULT_DEVICE_ID, "0x%x", &parms->device_id);

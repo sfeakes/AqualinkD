@@ -27,12 +27,12 @@ unsigned char getPoolSP2[] = {0x00,0x01,RS_SA_POOLSP2,0x05};
 unsigned char getSpaSP[] = {0x00,0x01,RS_SA_SPASP,0x05};
 //unsigned char getModel[] = {0x00,0x01,RS_SA_MODEL,0x05};
 
-#ifdef AQ_RS16
+
 unsigned char getAux12[] = {0x00,0x01,0x00,RS_SA_AUX12};
 unsigned char getAux13[] = {0x00,0x01,0x00,RS_SA_AUX13};
 unsigned char getAux14[] = {0x00,0x01,0x00,RS_SA_AUX14};
 unsigned char getAux15[] = {0x00,0x01,0x00,RS_SA_AUX15};
-#endif
+
 
 // processLEDstate exists in allbutton.c
 //void processLEDstate(struct aqualinkdata *aq_data, unsigned char *packet, logmask_t from);
@@ -295,14 +295,14 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         push_rssa_cmd(getSpaSP);
       else
         push_rssa_cmd(getPoolSP2);
-#ifdef AQ_RS16 // No status LED's for these, so get them on a poll cycle
+ // No status LED's for these, so get them on a poll cycle
       if ( PANEL_SIZE() >= 16 ) {
         push_rssa_cmd(getAux12);
         push_rssa_cmd(getAux13);
         push_rssa_cmd(getAux14);
         push_rssa_cmd(getAux15);
       }
-#endif
+
     }
     cnt = 0;
   }
@@ -408,7 +408,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         }
       }
 
-#ifdef AQ_RS16
+
       if (packet[7] == RS_SA_AUX12) {
         LOG(RSSA_LOG,LOG_INFO,"AUX12 %d\n", packet[6]);
         rtn = setLEDstate(aq_data->aqbuttons[13].led,  packet[6], aq_data);
@@ -423,7 +423,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
         LOG(RSSA_LOG,LOG_INFO,"AUX15 %d\n", packet[6]);
         rtn = setLEDstate(aq_data->aqbuttons[16].led,  packet[6], aq_data);
       }
-#endif
+
       
     }
   }

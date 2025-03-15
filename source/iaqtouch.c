@@ -462,11 +462,9 @@ void processPageButton(unsigned char *message, int length, struct aqualinkdata *
   if (isPDA_PANEL) {
     updateAQButtonFromPageButton(aq_data,button,0,aq_data->total_buttons);
   } else {
-#ifdef AQ_RS16
     if ( PANEL_SIZE() >= 16) {
       updateAQButtonFromPageButton(aq_data,button,aq_data->rs16_vbutton_start,aq_data->rs16_vbutton_end + 1);
     }
-#endif
     if ( isVirtualButtonEnabled() ) {
       updateAQButtonFromPageButton(aq_data,button,aq_data->virtual_button_start,aq_data->total_buttons);
     }

@@ -1100,10 +1100,11 @@ void send_cmd(unsigned char cmd)
 
   LOG(ALLB_LOG, LOG_INFO, "Queue send '0x%02hhx' to controller (programming)\n", _allb_pgm_command);
 }
+
 void force_queue_delete()
 {
-  if (_allb_pgm_command != NUL)
-    LOG(ALLB_LOG, LOG_INFO, "Really bad coding, don't use this in release\n");
+  //if (_allb_pgm_command != NUL)
+  //  LOG(ALLB_LOG, LOG_INFO, "Really bad coding, don't use this in release\n");
 
   _allb_pgm_command = NUL;
 }

@@ -122,13 +122,33 @@ const char* _getStatus(struct aqualinkdata *aqdata, const char *blankmsg)
          rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))==true?"yes":"no",
          aqdata->last_display_message);
  */
+
+  // If only one bit set (conected) then ignore all these if's
+  if (aqdata->status_mask != CONNECTED) {
+    if ((aqdata->status_mask & ERROR_SERIAL) == ERROR_SERIAL)
+      return "ERROR SERIAL CONNECTION";
+    else if ((aqdata->status_mask & ERROR_NO_DEVICE_ID) == ERROR_NO_DEVICE_ID)
+      return "ERROR NO DEVICE ID";
+    else if ((aqdata->status_mask & CHECKING_CONFIG) == CHECKING_CONFIG)
+      return "Checking Config";
+    else if ((aqdata->status_mask & AUTOCONFIGURE_ID) == AUTOCONFIGURE_ID)
+      return "Searching for free device ID's, Please wait!";
+    else if ((aqdata->status_mask & AUTOCONFIGURE_PANEL) == AUTOCONFIGURE_PANEL)
+      return "Getting Panel Information";
+    else if ((aqdata->status_mask & CONNECTING) == CONNECTING)
+      return "Connecting (waiting for control panel)";
+    else if ((aqdata->status_mask & NOT_CONNECTED) == NOT_CONNECTED)
+      return "NOT CONNECTED";
+  }
+
  if (aqdata->active_thread.thread_id != 0) {
    if (!aqdata->is_display_message_programming || rsm_isempy(aqdata->last_display_message,strlen(aqdata->last_display_message))){
      return programtypeDisplayName(aqdata->active_thread.ptype);
    }
  }
  
-  //if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
+  
+ //if (aqdata->last_message != NULL && stristr(aqdata->last_message, "SERVICE") != NULL ) {
   if (aqdata->service_mode_state == ON) {
     return JSON_SERVICE;
   } else if (aqdata->service_mode_state == FLASH) {
@@ -553,6 +573,7 @@ int logleveljsonobject(int level, char* buffer)
   int length = sprintf(buffer, "{\"name\":\"%s\",\"id\":\"%d\",\"set\":\"%s\"},", loglevel2name(level), level,(getSystemLogLevel()==level?JSON_ON:JSON_OFF));
   return length;
 }
+
 int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 {
   memset(&buffer[0], 0, size);
@@ -560,7 +581,15 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
 
   length += sprintf(buffer+length, "{\"type\": \"aqmanager\"");
   length += sprintf(buffer+length, ",\"deamonized\": \"%s\"", (_aqconfig_.deamonize?JSON_ON:JSON_OFF) );
-  length += sprintf(buffer+length, ",\"config_editor\": \"yes\"");
+
+  if ( isMASK_SET(aqdata->status_mask,AUTOCONFIGURE_ID ) ||
+       isMASK_SET(aqdata->status_mask,AUTOCONFIGURE_PANEL ) /*||
+       isMASK_SET(aqdata->status_mask,CONNECTING )*/  ) 
+  {
+    length += sprintf(buffer+length, ",\"config_editor\": \"no\"");
+  } else {
+    length += sprintf(buffer+length, ",\"config_editor\": \"yes\"");
+  }
 
   
   /*

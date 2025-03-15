@@ -47,9 +47,9 @@ void set_macro_status();
 void pump_update(struct aqualinkdata *aq_data, int updated);
 bool log_heater_setpoints(struct aqualinkdata *aq_data);
 
-#ifdef AQ_RS16
+
 void rs16led_update(struct aqualinkdata *aq_data, int updated);
-#endif
+
 
 void print_onetouch_menu()
 {
@@ -532,7 +532,7 @@ bool get_aquapureinfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
   return rtn;
 }
 
-#ifdef AQ_RS16
+
 bool get_RS16buttoninfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
 {
   for (int i = aq_data->rs16_vbutton_start; i <= aq_data->rs16_vbutton_end; i++)
@@ -548,7 +548,7 @@ bool get_RS16buttoninfo_from_menu(struct aqualinkdata *aq_data, int menuLineIdx)
   }
   return false;
 }
-#endif
+
 
 /*
   For older Panel versions 0.1 and 0.2
@@ -592,12 +592,12 @@ bool log_qeuiptment_status_VP2(struct aqualinkdata *aq_data)
       rtn = get_aquapureinfo_from_menu(aq_data, i);
     } else if (rsm_strcmp(_menu[i],"Chemlink") == 0) {
       rtn = get_chemlinkinfo_from_menu(aq_data, i);
-#ifdef AQ_RS16
+
     } else if (PANEL_SIZE() >= 16 ) {
       // Loop over RS 16 buttons.
       get_RS16buttoninfo_from_menu(aq_data, i);
     }
-#endif
+
   }
 
   return rtn;
@@ -630,7 +630,7 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
   } else if (rsm_strcmp(_menu[2],"Chemlink") == 0) {
     rtn = get_chemlinkinfo_from_menu(aq_data, 2);
   }
-#ifdef AQ_RS16
+
   else if (PANEL_SIZE() >= 16 ) { // This fails on RS4, comeback and find out why. // Run over devices that have no status LED's on RS12&16 panels.
   //else if ( 16 <= (int)PANEL_SIZE  ) {
     int i;
@@ -638,7 +638,7 @@ bool log_qeuiptment_status(struct aqualinkdata *aq_data)
       get_RS16buttoninfo_from_menu(aq_data, i);
     }
   }
-#endif
+
 
 
 
@@ -695,7 +695,7 @@ void pump_update(struct aqualinkdata *aq_data, int updated) {
   }
 }
 
-#ifdef AQ_RS16
+
 void rs16led_update(struct aqualinkdata *aq_data, int updated) {
   //LOG(ONET_LOG,LOG_INFO, "******* VLED check %d ******\n",updated);
   const int bitmask[4] = {1,2,4,8};
@@ -718,7 +718,7 @@ void rs16led_update(struct aqualinkdata *aq_data, int updated) {
     //LOG(ONET_LOG,LOG_INFO, "******* Updated VLED status %d ******\n",updated);
   }
 }
-#endif
+
 
 
 bool new_menu(struct aqualinkdata *aq_data)
@@ -766,10 +766,10 @@ bool new_menu(struct aqualinkdata *aq_data)
   if (last_menu_type == OTM_EQUIPTMENT_STATUS && menu_type != OTM_EQUIPTMENT_STATUS && !in_ot_programming_mode(aq_data) ) {
     // End of equiptment status chain of menus, reset any pump that wasn't listed in menus as long as we are not in programming mode
     pump_update(aq_data, -1);
-#ifdef AQ_RS16
+
     if (PANEL_SIZE() >= 16)
       rs16led_update(aq_data, -1);
-#endif
+
   }
 
   last_menu_type = menu_type;

@@ -483,7 +483,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       return;
     }
   }
-#ifdef AQ_ONETOUCH
+
   // reset any types if to onetouch if available and if one touch is quicker
   // At moment. onetouch is quicker for boost, and slower for heaters
   else if (isONET_ENABLED && isEXTP_ENABLED) {
@@ -513,8 +513,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       break;
     }
   }
-#endif
-#ifdef AQ_IAQTOUCH
+
   else if ((isIAQT_ENABLED && isEXTP_ENABLED) || isPDA_IAQT) {
     // IAQ Touch programming modes that should overite standard ones.
     switch (r_type){
@@ -553,7 +552,7 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       break;
     }
   }
-#endif
+
 
 
 
@@ -820,7 +819,7 @@ const char *ptypeName(program_type type)
     case AQ_SET_RSSADAPTER_SPA_HEATER_TEMP:
       return "Set SerialAdapter Spa heater setpoint";
     break;
-#ifdef AQ_ONETOUCH
+
     case AQ_SET_ONETOUCH_PUMP_RPM:
       return "Set OneTouch Pump RPM";
     break;
@@ -851,8 +850,7 @@ const char *ptypeName(program_type type)
     case AQ_SET_ONETOUCH_SPA_HEATER_TEMP:
       return "Set OneTouch Spa Heater Temp";
     break;
-#endif
-#ifdef AQ_IAQTOUCH
+
     case AQ_SET_IAQTOUCH_PUMP_VS_PROGRAM:
       return "Set AqualinkTouch Touch Pump VS Program";
     break;
@@ -905,7 +903,7 @@ const char *ptypeName(program_type type)
     case AQ_SET_IAQLINK_SPA_HEATER_TEMP:
       return "Set iAqualink Pool Heater";
     break;
-#endif
+
 #ifdef AQ_PDA
     case AQ_PDA_INIT:
       return "Init PDA";

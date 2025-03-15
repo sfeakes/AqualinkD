@@ -10,6 +10,9 @@
 #include "sensors.h"
 //#include "aq_panel.h"  // Moved to later in file to overcome circular dependancy. (crappy I know)
 
+#define isMASK_SET(bitmask, mask) ((bitmask & mask) == mask)
+#define setMASK(bitmask, mask)    (bitmask |= mask)
+#define removeMASK(bitmask, mask) (bitmask &= ~mask)
 
 #define SIGRESTART SIGUSR1 
 
@@ -120,15 +123,17 @@ struct programmingthread {
   //void *thread_args;
 };
 
-
+/*
 typedef enum panel_status {
   CONNECTED,
+  CHECKING_CONFIG,
   CONECTING,
   LOOKING_IDS,
   STARTING,
   SERIAL_ERROR, // Errors that stop reading serial port should be below this line
   NO_IDS_ERROR,
 } panel_status;
+*/
 
 typedef enum action_type {
   NO_ACTION = -1,
@@ -199,14 +204,16 @@ typedef enum panel_vsp_status
 #define PUMP_NAME_LENGTH 30
 
 // Overall Status of Aqualinkd
-/*
-#define CONNECTED           ( 1<< 0 ) // All is good (every other mask should be cleared)
-#define NOT_CONNECTED       ( 1 << 2 ) // Serial Error maybe renaem
+
+#define CONNECTED           ( 1 << 0 ) // All is good (every other mask should be cleared)
+#define NOT_CONNECTED       ( 1 << 2 ) // Serial Error maybe rename
 #define AUTOCONFIGURE_ID    ( 1 << 3 )
 #define AUTOCONFIGURE_PANEL ( 1 << 4 )
-#define CONNECTING          ( 1 << 5 )
-#define ERROR_.                       // maybe covered in NOT_CONNECTED
-*/
+#define CHECKING_CONFIG     ( 1 << 5 )
+//#define LOOKING_IDS         ( 1 << 6 )
+#define CONNECTING          ( 1 << 7 )
+#define ERROR_NO_DEVICE_ID  ( 1 << 8 )                    // maybe covered in NOT_CONNECTED
+#define ERROR_SERIAL        ( 1 << 9 )
 
 typedef struct pumpd
 {
@@ -289,7 +296,8 @@ typedef struct clightd
 
 struct aqualinkdata
 {
-  panel_status panelstatus;
+  //panel_status panelstatus;
+  uint16_t status_mask;
   char version[AQ_MSGLEN*2];
   char revision[AQ_MSGLEN];
   char date[AQ_MSGLEN];
@@ -365,10 +373,10 @@ struct aqualinkdata
    char slogger_ids[20];
   #endif
 
-  #ifdef AQ_RS16
+
   int rs16_vbutton_start;
   int rs16_vbutton_end;
-  #endif
+
   #ifdef AQ_PDA
   int pool_heater_index;
   int spa_heater_index;
@@ -383,6 +391,8 @@ struct aqualinkdata
   // Overcome color light bug, by reconnecting allbutton panel.
   //bool reconnectAllButton;
 };
+
+
 
 
 #endif 

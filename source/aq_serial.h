@@ -227,7 +227,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define KEY_OVERRIDE  0x1e
 #define KEY_ENTER     0x1d
 
-#ifdef AQ_RS16
+
 //RS 12 & 16 are different from Aux4 to Aux7
 #define KEY_RS16_AUX4      0x14
 #define KEY_RS16_AUX5      0x03
@@ -243,7 +243,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define KEY_AUXB7     0x0d
 #define KEY_AUXB8     0x0c
 // End diff in RS12
-#endif
+
 
 #define BTN_PUMP      "Filter_Pump"
 #define BTN_SPA       "Spa"
@@ -264,7 +264,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 
 #define BTN_VAUX      "Aux_V"  // A number will be appended
 
-#ifdef AQ_RS16
+
 #define BTN_AUXB1      "Aux_B1"
 #define BTN_AUXB2      "Aux_B2"
 #define BTN_AUXB3      "Aux_B3"
@@ -273,7 +273,7 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define BTN_AUXB6      "Aux_B6"
 #define BTN_AUXB7      "Aux_B7"
 #define BTN_AUXB8      "Aux_B8"
-#endif
+
 
 #define BTN_PDA_PUMP      "FILTER PUMP"
 #define BTN_PDA_SPA       "SPA"
@@ -291,11 +291,10 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 
 #define BUTTON_LABEL_LENGTH 20
 
-#ifndef AQ_RS16
-#define TOTAL_LEDS          20
-#else
+
+//#define TOTAL_LEDS          20
 #define TOTAL_LEDS          24  // Only 20 exist in control panel, but need space for the extra buttons on RS16 panel
-#endif
+
 
 // Index starting at 1
 #define POOL_HTR_LED_INDEX   15

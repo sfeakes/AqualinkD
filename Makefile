@@ -9,10 +9,10 @@
 #
 
 # Valid flags for AQ_FLAGS
-AQ_RS16 = true
+#AQ_RS16 = true
 AQ_PDA  = true
-AQ_ONETOUCH = true
-AQ_IAQTOUCH = true
+#AQ_ONETOUCH = true
+#AQ_IAQTOUCH = true
 AQ_MANAGER = true
 
 #AQ_RS_EXTRA_OPTS = false
@@ -82,8 +82,9 @@ endif
 
 # Main source files
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c allbutton.c allbutton_aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
+       onetouch.c onetouch_aq_programmer.c iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-       serial_logger.c mongoose.c hassio.c simulator.c sensors.c aq_filesystem.c timespec_subtract.c
+       serial_logger.c mongoose.c hassio.c simulator.c sensors.c aq_filesystem.c timespec_subtract.c 
 
 
 AQ_FLAGS =
@@ -93,19 +94,19 @@ ifeq ($(AQ_PDA), true)
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_PDA
 endif
 
-ifeq ($(AQ_ONETOUCH), true)
-  SRCS := $(SRCS) onetouch.c onetouch_aq_programmer.c
-  AQ_FLAGS := $(AQ_FLAGS) -D AQ_ONETOUCH
-endif
+#ifeq ($(AQ_ONETOUCH), true)
+#  SRCS := $(SRCS) onetouch.c onetouch_aq_programmer.c
+#  AQ_FLAGS := $(AQ_FLAGS) -D AQ_ONETOUCH
+#endif
 
-ifeq ($(AQ_IAQTOUCH), true)
-  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c
-  AQ_FLAGS := $(AQ_FLAGS) -D AQ_IAQTOUCH
-endif
+#ifeq ($(AQ_IAQTOUCH), true)
+#  SRCS := $(SRCS) iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c
+#  AQ_FLAGS := $(AQ_FLAGS) -D AQ_IAQTOUCH
+#endif
 
-ifeq ($(AQ_RS16), true)
-  AQ_FLAGS := $(AQ_FLAGS) -D AQ_RS16
-endif
+#ifeq ($(AQ_RS16), true)
+#  AQ_FLAGS := $(AQ_FLAGS) -D AQ_RS16
+#endif
 
 ifeq ($(AQ_MEMCMP), true)
   AQ_FLAGS := $(AQ_FLAGS) -D AQ_MEMCMP
