@@ -175,6 +175,8 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_socket_port;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  //_cfgParams[_numCfgParams].config_mask |= CFG_READONLY; // Take out once below is working
+  _cfgParams[_numCfgParams].config_mask |= CFG_FORCE_RESTART;
   _cfgParams[_numCfgParams].default_value = (void *)_dcfg_web_port;
 
   _numCfgParams++;
@@ -183,6 +185,8 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_serial_port;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  //_cfgParams[_numCfgParams].config_mask |= CFG_READONLY; // Take out once below is working
+  _cfgParams[_numCfgParams].config_mask |= CFG_FORCE_RESTART;
   _cfgParams[_numCfgParams].default_value = (void *)_dcfg_serial_port;
 
   _numCfgParams++;
@@ -191,6 +195,15 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_log_level;
   _cfgParams[_numCfgParams].valid_values = CFG_V_log_level;
   _cfgParams[_numCfgParams].default_value = (void *) &_dcfg_loglevel;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.web_directory;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_web_directory;
+  //_cfgParams[_numCfgParams].advanced = true;
+  _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_READONLY;
+  _cfgParams[_numCfgParams].default_value = NULL;
 
   _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.paneltype_mask;
@@ -217,6 +230,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].value_type = CFG_BOOL; 
   _cfgParams[_numCfgParams].name = CFG_N_extended_device_id_programming;
   _cfgParams[_numCfgParams].valid_values = CFG_V_BOOL;
+  _cfgParams[_numCfgParams].config_mask |= CFG_HIDE;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_true;
 
   _numCfgParams++;
@@ -232,14 +246,6 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_enable_iaqualink;
   _cfgParams[_numCfgParams].valid_values = CFG_V_BOOL;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
-
-  _numCfgParams++;
-  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.web_directory;
-  _cfgParams[_numCfgParams].value_type = CFG_STRING;
-  _cfgParams[_numCfgParams].name = CFG_N_web_directory;
-  //_cfgParams[_numCfgParams].advanced = true;
-  _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
-  _cfgParams[_numCfgParams].default_value = NULL;
   
 #ifndef AQ_MANAGER
   _numCfgParams++;
@@ -267,6 +273,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_passwd;
   _cfgParams[_numCfgParams].value_type = CFG_STRING;
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_passwd;
+  _cfgParams[_numCfgParams].config_mask |= CFG_PASSWD_MASK;
   _cfgParams[_numCfgParams].default_value = (void *)NULL;
 
    _numCfgParams++;
@@ -466,7 +473,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
   _cfgParams[_numCfgParams].name = CFG_N_force_swg;
   _cfgParams[_numCfgParams].mask = FORCE_SWG_SP;
-  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_true;
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
   _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_device_devmask;
   _cfgParams[_numCfgParams].value_type = CFG_BITMASK;
@@ -940,14 +947,21 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         return true;
       }
 
+      if (isMASK_SET(_cfgParams[i].config_mask, CFG_PASSWD_MASK)) {
+        if (strncmp(value, PASSWD_MASK_TEXT, strlen(PASSWD_MASK_TEXT)) == 0) {
+          // Don't set password when it's the mask text
+          return false;
+        }
+      }
+
       switch (_cfgParams[i].value_type) {
         case CFG_STRING:
-            if (_cfgParams[i].value_ptr != NULL && *(char **)_cfgParams[i].value_ptr != _cfgParams[i].default_value) {
-              LOG(AQUA_LOG,LOG_DEBUG,"FREE Memory for config %s %s\n",_cfgParams[i].name, *(char **)_cfgParams[i].value_ptr);
-              free(*(char **)_cfgParams[i].value_ptr);
-              *(char **)_cfgParams[i].value_ptr = NULL;
-           }
-           *(char **)_cfgParams[i].value_ptr = cleanalloc(value);
+          if (_cfgParams[i].value_ptr != NULL && *(char **)_cfgParams[i].value_ptr != _cfgParams[i].default_value) {
+            LOG(AQUA_LOG,LOG_DEBUG,"FREE Memory for config %s %s\n",_cfgParams[i].name, *(char **)_cfgParams[i].value_ptr);
+            free(*(char **)_cfgParams[i].value_ptr);
+            *(char **)_cfgParams[i].value_ptr = NULL;
+          }
+          *(char **)_cfgParams[i].value_ptr = cleanalloc(value);
         break;
         case CFG_INT:
           *(int *)_cfgParams[i].value_ptr = strtoul(cleanwhitespace(value), NULL, 10);
@@ -1546,39 +1560,61 @@ void check_print_config (struct aqualinkdata *aqdata)
 
   // Check chiller
   if (ENABLE_CHILLER) {
-    for (i = 0; i < aqdata->total_buttons; i++)
-    {
-      if (isVBUTTON_ALTLABEL(aqdata->aqbuttons[i].special_mask) && (rsm_strmatch(((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->altlabel, "Chiller") == 0) ){
-        aqdata->chiller_button = &aqdata->aqbuttons[i];
-      } else if (isVBUTTON(aqdata->aqbuttons[i].special_mask) && rsm_strmatch(aqdata->aqbuttons[i].label, "Heat Pump") == 0 ) {
-        LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` is enabled, but Virtual Button Heat Pump does not have alt_name Chiller! Creating.",CFG_N_force_chiller);
-        setVirtualButtonAltLabel(&aqdata->aqbuttons[i], "Chiller");
-        aqdata->chiller_button = &aqdata->aqbuttons[i];
-        aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
+    if (_aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33) {
+      for (i = 0; i < aqdata->total_buttons; i++)
+      {
+        if (isVBUTTON_ALTLABEL(aqdata->aqbuttons[i].special_mask) && (rsm_strmatch(((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->altlabel, "Chiller") == 0) ){
+          aqdata->chiller_button = &aqdata->aqbuttons[i];
+          //aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
+          setMASK(aqdata->chiller_button->special_mask, VIRTUAL_BUTTON_CHILLER);
+        } else if (isVBUTTON(aqdata->aqbuttons[i].special_mask) && rsm_strmatch(aqdata->aqbuttons[i].label, "Heat Pump") == 0 ) {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` is enabled, but Virtual Button Heat Pump does not have alt_name Chiller! Creating.",CFG_N_force_chiller);
+          setVirtualButtonAltLabel(&aqdata->aqbuttons[i], cleanalloc("Chiller")); // Need to malloc this so it can be freed
+          aqdata->chiller_button = &aqdata->aqbuttons[i];
+          //aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
+          setMASK(aqdata->chiller_button->special_mask, VIRTUAL_BUTTON_CHILLER);
+        }
       }
+      if (aqdata->chiller_button == NULL) {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` is enabled, but no Virtual Button set for Heat Pump / Chiller! Creating vbutton.",CFG_N_force_chiller);
+        aqkey *button = getVirtualButton(aqdata, 0);
+        setVirtualButtonLabel(button, cleanalloc("Heat Pump"));// Need to malloc this so it can be freed
+        setVirtualButtonAltLabel(button, cleanalloc("Chiller"));// Need to malloc this so it can be freed
+        aqdata->chiller_button = button;
+        //aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
+        setMASK(aqdata->chiller_button->special_mask, VIRTUAL_BUTTON_CHILLER);
+      }
+    } else {
+      LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` can only be enabled, if using an iAqualink Touch ID for `%s`, Turning off\n",CFG_N_force_chiller, CFG_N_extended_device_id );
+      removeMASK(_aqconfig_.force_device_devmask,FORCE_CHILLER);
+      aqdata->chiller_button = NULL;
     }
-    if (aqdata->chiller_button == NULL) {
-      LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` is enabled, but no Virtual Button set for Heat Pump / Chiller! Creating vbutton.",CFG_N_force_chiller);
-      aqkey *button = getVirtualButton(aqdata, 0);
-      setVirtualButtonLabel(button, "Heat Pump");
-      setVirtualButtonAltLabel(button, "Chiller");
-      aqdata->chiller_button = button;
-      aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
-    }
+  } else {
+    aqdata->chiller_button = NULL;
   }
 
-
+  // Turn off extended programming if we don't have device
+  if ( _aqconfig_.extended_device_id == 0x00 )
+  {
+    _aqconfig_.extended_device_id_programming = false;
+  }
   /* 
     _cfgParams[_numCfgParams].mask = READ_RS485_IAQUALNK;
-    if ( bitmask READ_RS485_IAQUALNK && _aqconfig_.enable_iaqualink ) error and use (_aqconfig_.enable_iaqualink, disable bitmask
-      if (_aqconfig_.enable_iaqualink)
-        LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_RS485_iAqualink' is not valid when 'enable_iaqualink=yes', ignoring read_RS485_iAqualink!\n");
-      else
-        _aqconfig_.read_RS485_devmask |= READ_RS485_IAQUALNK;
-    } else {
-      _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
-    }
+  if ( bitmask READ_RS485_IAQUALNK && _aqconfig_.enable_iaqualink ) error and use (_aqconfig_.enable_iaqualink, disable bitmask
   */
+
+  if (_aqconfig_.enable_iaqualink==true && (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33) )
+  {
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'enable_iaqualink', is only valed with AqualinkTouch ID's, ignoring!\n");
+    _aqconfig_.enable_iaqualink = true;
+  }
+  // Can't read iaqualink if we are also using iaqualink protocol.
+  if (isMASK_SET(_aqconfig_.enable_iaqualink, READ_RS485_IAQUALNK) && _aqconfig_.enable_iaqualink == true )
+  {
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_RS485_iAqualink' is not valid when 'enable_iaqualink=yes', ignoring read_RS485_iAqualink!\n");
+    _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
+  }
+  
 
   /*
     PDA sleep and PDA ID.
@@ -1610,8 +1646,12 @@ void check_print_config (struct aqualinkdata *aqdata)
       case CFG_STRING:
         if (*(char **)_cfgParams[i].value_ptr == NULL)
           LOG(AQUA_LOG,LOG_NOTICE, "%-35s =\n", name);
-        else
-          LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n",name, *(char **)_cfgParams[i].value_ptr);
+        else {
+          if (isMASK_SET(_cfgParams[i].config_mask ,CFG_PASSWD_MASK) )
+            LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n",name, PASSWD_MASK_TEXT);
+          else
+            LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n",name, *(char **)_cfgParams[i].value_ptr);
+        }
       break;
       case CFG_INT:
         if (*(int *)_cfgParams[i].value_ptr == TEMP_UNKNOWN)
@@ -1662,7 +1702,7 @@ void check_print_config (struct aqualinkdata *aqdata)
   for (i = 0; i < aqdata->total_buttons; i++)
   {
     //char ext[] = " VSP ID None | AL ID 0 ";
-    char ext[40];
+    char ext[60];
     ext[0] = '\0';
     for (j = 0; j < aqdata->num_pumps; j++) {
       if (aqdata->pumps[j].button == &aqdata->aqbuttons[i]) {
@@ -1782,6 +1822,7 @@ int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, str
     } else if (isPLIGHT(aqdata->aqbuttons[i].special_mask)) {
       ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->button = NULL;
     }
+    //printf("Freeing %d of %d - %s\n",i,aqdata->total_buttons,aqdata->aqbuttons[i].label);
     free ( aqdata->aqbuttons[i].label);
     aqdata->aqbuttons[i].special_mask = 0;
     aqdata->aqbuttons[i].special_mask_ptr = NULL;
@@ -1827,6 +1868,8 @@ int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, str
   //cursor = inBuf+start+1;
   for (m = 0; m < maxMatches; m ++)
   {
+    ignorePair = false;
+
     if (0 != (rc = regexec(&regexCompiled, cursor, maxGroups, groupArray, 0))) {
       //printf("Failed to match '%s' with '%s',returning %d.\n", cursor, pattern, rc);
       break;
@@ -1846,6 +1889,7 @@ int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, str
 
     if (!ignorePair) {
       setConfigValue(_aqdata ,key,value);
+      //printf("Config pair %s %s\n",key,value);
     }
 
     // Check if panel size has changed
@@ -1922,6 +1966,9 @@ bool writeCfg (struct aqualinkdata *aqdata)
   //char fp[100];
 
   for ( i=0; i <= _numCfgParams; i++) {
+    if (isMASK_SET(_cfgParams[i].config_mask, CFG_HIDE) ) {
+      continue;
+    }
     //printf("Writing %s\n",_cfgParams[i].name);
     // Group values by fist letter, if the same group together.
     if (lastName != NULL && lastName[0] != _cfgParams[i].name[0]) {

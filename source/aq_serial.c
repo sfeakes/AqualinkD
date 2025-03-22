@@ -31,6 +31,7 @@
 #include "config.h"
 #include "packetLogger.h"
 #include "timespec_subtract.h"
+#include "aqualink.h"
 
 /*
 Notes for serial usb speed 
@@ -304,6 +305,13 @@ const char* get_jandy_packet_type(unsigned char* packet , int length)
       return "iAqalnk Poll";
     break;
 
+    case CMD_IAQ_CMD_READY:
+      return "iAqalnk rec ready";
+    break;
+    case CMD_IAQ_CTRL_READY:
+      return "iAq receive ready";
+    break;
+
     default:
       sprintf(buf, "Unknown '0x%02hhx'", packet[PKT_CMD]);
       return buf;
@@ -544,11 +552,21 @@ int lock_port(int fd, const char* tty)
 
 int unlock_port(int fd)
 {
+  if (ioctl(fd, TIOCNXCL) < 0) {
+    LOG(RSSD_LOG,LOG_ERR, "Failed to remove into exclusive mode (%d): %s\n", errno, strerror( errno ));
+  }
+
   if (flock(fd, LOCK_UN) < 0) {
-    LOG(RSSD_LOG,LOG_ERR, "Can't unlock serial port (%d): %s\n",errno, strerror( errno ));
+    //if (!isAqualinkDStopping()) {
+      LOG(RSSD_LOG,LOG_ERR, "Can't unlock serial port (%d): %s\n",errno, strerror( errno ));
+    //}
     return -1;
   }
   return 0;
+}
+
+int is_valid_port(int fd) {
+  return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
 }
 
 
@@ -565,7 +583,9 @@ int _init_serial_port(const char* tty, bool blocking, bool readahead)
 
   _blocking_mode = blocking;
 
-  int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
+  //int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY);
+  int fd = open(tty, O_RDWR | O_NOCTTY | O_NONBLOCK | O_NDELAY | O_CLOEXEC);
+
   //int fd = open(tty, O_RDWR | O_NOCTTY | O_SYNC); // This is way to slow at reading
   if (fd < 0)  {
     LOG(RSSD_LOG,LOG_ERR, "Unable to open port: %s, error %d\n", tty, errno);
@@ -655,6 +675,11 @@ void close_blocking_serial_port()
 /* close tty port */
 void close_serial_port(int fd)
 {
+  if ( fcntl(fd, F_GETFD, 0) == -1 || errno == EBADF ) {
+    // Looks like bad fd or already closed. return with no error since we can get called twice
+    return;
+  }
+
   unlock_port(fd);
   tcsetattr(fd, TCSANOW, &_oldtio);
   close(fd);
@@ -1137,13 +1162,17 @@ int get_packet(int fd, unsigned char* packet)
     } else if(bytesRead < 0) {
       // Got a read error. Wait one millisecond for the next byte to
       // arrive.
-      LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
-      if(errno == 9) {
+      if (! isAqualinkDStopping() ) {
+        LOG(RSSD_LOG,LOG_WARNING, "Read error: %d - %s\n", errno, strerror(errno));
+        if(errno == 9) {
         // Bad file descriptor. Port has been disconnected for some reason.
         // Return a -1.
-        return AQSERR_READ;
+          return AQSERR_READ;
+        }
+        delay(100);
+      } else {
+        return 0;
       }
-      delay(100);
     }
 
     // Break out of the loop if we exceed maximum packet

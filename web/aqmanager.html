@@ -399,10 +399,10 @@
 
             if (log_element_count >= LOGS2DISPLAY) {
                 try {
-                    console.log("Removing " + logcontainer.lastElementChild.innerHTML);
+                    //console.log("Removing " + logcontainer.lastElementChild.innerHTML);
                     logcontainer.lastElementChild.remove();
                 } catch (e) {
-                    console.log("ERROR Removing log '" + logcontainer.lastElementChild.innerHTML + "'");
+                    //console.log("ERROR Removing log '" + logcontainer.lastElementChild.innerHTML + "'");
                     log_element_count++;
                 }
             } else {
@@ -546,15 +546,15 @@
           for (var obj in _config) {
 
             if (_config[obj].value !== undefined) {
-              //if (_config[obj].value) {
+              if (_config[obj].value) {
                 json_ordered.values[obj] = _config[obj].value;
-              //}
+              }
             } else if (obj.toString().startsWith("button_") || obj.toString().startsWith("virtual_button_") || obj.toString().startsWith("sensor_") ) {
               for (var obj1 in _config[obj]) {
                 if (obj1.toString() != "advanced") {
-                  //if (_config[obj][obj1].value) {
+                  if (_config[obj][obj1].value) {
                     json_ordered.values[obj1] = _config[obj][obj1].value;
-                  //}
+                  }
                 }
               }
             }
@@ -635,6 +635,10 @@
                     input.addEventListener('change', cfgValueChanged);
                     input.appendChild(option);
                 }
+                input.addEventListener('change', cfgValueChanged);
+                if (data[obj].force_restart == "yes") {
+                    input.addEventListener('click', cfgAlertForceRestart);
+                }
                 cell2.appendChild(input);
             } else if (data[obj].type == "string") {
                 const input = document.createElement("input");
@@ -644,6 +648,9 @@
                 }
                 input.setAttribute('key', obj.toString());
                 input.addEventListener('change', cfgValueChanged);
+                if (data[obj].force_restart == "yes") {
+                    input.addEventListener('click', cfgAlertForceRestart);
+                }
                 cell2.appendChild(input);
             } else if (data[obj].type == "int") {
                 const input = document.createElement("input");
@@ -655,6 +662,9 @@
                 input.step = 1;
                 input.setAttribute('key', obj.toString());
                 input.addEventListener('change', cfgValueChanged);
+                if (data[obj].force_restart == "yes") {
+                    input.addEventListener('click', cfgAlertForceRestart);
+                }
                 cell2.appendChild(input);
             } else if (data[obj].type == "float") {
                 const input = document.createElement("input");
@@ -664,6 +674,9 @@
                 input.step = 0.01;
                 input.setAttribute('key', obj.toString());
                 input.addEventListener('change', cfgValueChanged);
+                if (data[obj].force_restart == "yes") {
+                    input.addEventListener('click', cfgAlertForceRestart);
+                }
                 cell2.appendChild(input);
             } else if (data[obj].type == "hex") {
                 const input = document.createElement("input");
@@ -672,6 +685,9 @@
                 input.size = 4;
                 input.setAttribute('key', obj.toString());
                 input.addEventListener('change', cfgValueChanged);
+                if (data[obj].force_restart == "yes") {
+                    input.addEventListener('click', cfgAlertForceRestart);
+                }
                 cell2.appendChild(input);
             } else {
                 cell2.textContent = data[obj].value;
@@ -989,8 +1005,8 @@
                   break;
                   case "pumpType":
                     js.type = "string";
-                    let validvalues = ["", "JANDY ePUMP", "Pentair VS", "Pentair VF"];
-                    js['valid values'] = validvalues;
+                    //let validvalues = ["BLANK", "JANDY ePUMP", "Pentair VS", "Pentair VF"];
+                    //js['valid values'] = validvalues;
                   break;
                   case "pumpName":
                   case "altLabel":
@@ -1208,6 +1224,14 @@
 
         }
 
+        function cfgAlertForceRestart(event) {
+            console.log("Caught event");
+            var key = event.srcElement.getAttribute('key');
+            var value = event.srcElement.value;
+
+            alert("If you change "+key+" You will need to restart AqualinkD after saving config!");
+        }
+
         function cfgValueChanged(event) {
           var key = event.srcElement.getAttribute('key');
           var value = event.srcElement.value;
@@ -1217,14 +1241,15 @@
           try {
             _config[key].value = value;
           } catch (exception) {
-            console.log("Error setting cfg");
-            //console.error(exception);
+            //console.log("Error setting cfg '"+key+"' to '"+value+"'");
             if (key.startsWith("button_") ) {
               _config[key.slice(0, 9)][key].value = value
             } else if (key.startsWith("virtual_button_") ) {
               _config[key.slice(0, 17)][key].value = value
             } else if (key.startsWith("sensor_") ) {
               _config[key.slice(0, 9)][key].value = value
+            } else {
+              console.log("Error setting cfg '"+key+"' to '"+value+"'");
             }
           }
           console.log(_config);
@@ -1548,17 +1573,22 @@
             send_command(cmd);
         }
 
-        function getLatestVersion() {
+        function getLatestVersion(url="https://api.github.com/repos/AqualinkD/AqualinkD/releases/latest", tryagain=true) {
             var xmlhttp = new XMLHttpRequest();
             xmlhttp.onreadystatechange = function () {
                 if (this.readyState == 4 && this.status == 200) {
                     var JS = JSON.parse(this.responseText);
                     _latestVersionAvailable = JS.tag_name.replace(/[^\d.-]/g, '');
-                    document.getElementById("latestaqualinkdversion").innerHTML = _latestVersionAvailable;
-                    
+                    document.getElementById("latestaqualinkdversion").innerHTML = _latestVersionAvailable;   
+                } else if (this.readyState == 4 && this.status == 404) {
+                    //console.log("URL ERROR "+this.readyState+" "+this.status);
+                    if (tryagain) {
+                        // Try sfeakes repo
+                      getLatestVersion("https://api.github.com/repos/sfeakes/AqualinkD/releases/latest", false);
+                    }
                 }
             };
-            xmlhttp.open("GET", "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest", true);
+            xmlhttp.open("GET", url);
             xmlhttp.send();
         }
     </script>

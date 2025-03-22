@@ -517,6 +517,12 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
   else if ((isIAQT_ENABLED && isEXTP_ENABLED) || isPDA_IAQT) {
     // IAQ Touch programming modes that should overite standard ones.
     switch (r_type){
+      case AQ_SET_CHILLER_TEMP:
+        //if (isIAQL_ACTIVE)
+        //  type = AQ_SET_IAQLINK_CHILLER_TEMP; // This might work on rev Yg, but not on T2
+        //else
+          type = AQ_SET_IAQTOUCH_CHILLER_TEMP;
+      break;
       case AQ_GET_POOL_SPA_HEATER_TEMPS:
       //case AQ_GET_FREEZE_PROTECT_TEMP:
         type = AQ_GET_IAQTOUCH_SETPOINTS;
@@ -528,10 +534,16 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
         type = AQ_SET_IAQTOUCH_SWG_BOOST;
       break;
       case AQ_SET_POOL_HEATER_TEMP:
-        type = AQ_SET_IAQTOUCH_POOL_HEATER_TEMP;
+        if (isIAQL_ACTIVE)
+          type = AQ_SET_IAQLINK_POOL_HEATER_TEMP;
+        else
+          type = AQ_SET_IAQTOUCH_POOL_HEATER_TEMP;
       break;
       case AQ_SET_SPA_HEATER_TEMP:
-        type = AQ_SET_IAQTOUCH_SPA_HEATER_TEMP;
+        if (isIAQL_ACTIVE)
+          type = AQ_SET_IAQLINK_SPA_HEATER_TEMP;
+        else
+          type = AQ_SET_IAQTOUCH_SPA_HEATER_TEMP;
       break;
       case AQ_SET_TIME:
         type = AQ_SET_IAQTOUCH_SET_TIME;
@@ -654,11 +666,15 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       return; // No need to create this as thread.
       break;
     case AQ_SET_IAQLINK_POOL_HEATER_TEMP:
-      set_iaqualink_heater_setpoint(atoi(args), true);
+      set_iaqualink_heater_setpoint(atoi(args), SP_POOL);
       return; // No need to create this as thread.
       break;
     case AQ_SET_IAQLINK_SPA_HEATER_TEMP:
-      set_iaqualink_heater_setpoint(atoi(args), false);
+      set_iaqualink_heater_setpoint(atoi(args), SP_SPA);
+      return; // No need to create this as thread.
+      break;
+    case AQ_SET_IAQLINK_CHILLER_TEMP:
+      set_iaqualink_heater_setpoint(atoi(args), SP_CHILLER);
       return; // No need to create this as thread.
       break;
     default:
@@ -902,6 +918,9 @@ const char *ptypeName(program_type type)
     break;
     case AQ_SET_IAQLINK_SPA_HEATER_TEMP:
       return "Set iAqualink Pool Heater";
+    break;
+    case AQ_SET_IAQLINK_CHILLER_TEMP:
+      return "Set iAqualink Chiller Heater";
     break;
 
 #ifdef AQ_PDA

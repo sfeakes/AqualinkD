@@ -398,7 +398,8 @@ char *cleanwhitespace(char *str)
   while(end > str && isspace(*end)) end--;
 
   // Write new null terminator
-  *(end+1) = 0;
+  if (end != (str + strlen(str) - 1) )
+    *(end+1) = 0;
 
   return str;
 }

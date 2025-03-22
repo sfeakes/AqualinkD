@@ -53,6 +53,7 @@
         "Aux_V13",
         "Aux_V14",
         "Aux_V15",
+        "Chiller",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0

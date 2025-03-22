@@ -422,6 +422,8 @@ SPILLOVER IS DISABLED WHILE SPA IS ON
 #define CMD_IAQ_MAIN_STATUS   0x70
 #define CMD_IAQ_1TOUCH_STATUS 0x71
 #define CMD_IAQ_AUX_STATUS    0x72 // Get this on AqualinkTouch protocol when iAqualink protocol sends 0x18 (get aux status I assume)
+
+#define CMD_IAQ_CMD_READY     0x73 // iAqualink ready to receive command
 /*
 #define CMD_IAQ_MSG_3         0x2d  // Equiptment status message??
 #define CMD_IAQ_0x31          0x31 // Some pump speed info
@@ -575,6 +577,7 @@ void send_extended_ack(int fd, unsigned char ack_type, unsigned char command);
 //void send_cmd(int file_descriptor, unsigned char cmd, unsigned char args);
 int get_packet(int file_descriptor, unsigned char* packet);
 //int get_packet_lograw(int fd, unsigned char* packet);
+int is_valid_port(int fd);
 
 //int get_packet_new(int fd, unsigned char* packet);
 //int get_packet_new_lograw(int fd, unsigned char* packet);

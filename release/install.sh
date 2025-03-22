@@ -129,11 +129,12 @@ else
   fi
 fi
 
-# V2.3.9 has kind-a breaking change for config.js, so check existing and rename if needed
+# V2.3.9 & V2.6.0 has kind-a breaking change for config.js, so check existing and rename if needed
 #        we added Aux_V? to the button list
 if [ -f "$WEBLocation/config.js" ]; then
   # Test is if has AUX_V1 in file AND "Spa" is in file (Spa_mode changed to Spa)
-  if  ! grep -q 'Aux_V1' $WEBLocation/$file || ! grep -q '"Spa"' $WEBLocation/$file; then
+  # Version 2.6.0 added Chiller as well
+  if  ! grep -q 'Aux_V1' $WEBLocation/$file || ! grep -q '"Spa"' $WEBLocation/$file || ! grep -q '"Chiller"' $WEBLocation/$file; then
     dateext=`date +%Y%m%d_%H_%M_%S`
     echo "AqualinkD web config is old, making copy to $WEBLocation/config.js.$dateext"
     echo "Please make changes to new version $WEBLocation/config.js"

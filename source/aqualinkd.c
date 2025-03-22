@@ -56,6 +56,7 @@
 #include "simulator.h"
 #include "debug_timer.h"
 #include "aq_scheduler.h"
+#include "json_messages.h"
 
 #ifdef AQ_MANAGER
 #include "serial_logger.h"
@@ -93,6 +94,11 @@ bool _cmdln_nostartupcheck = false;
 
 void main_loop();
 int startup(char *self, char *cfgFile);
+
+
+bool isAqualinkDStopping() {
+  return !_keepRunning;
+}
 
 void intHandler(int sig_num)
 {
@@ -483,11 +489,7 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
       _cmdln_lograwRS485 = true;
-    }
-    else if (strcmp(argv[i], "-nc") == 0)
-    {
-      _cmdln_nostartupcheck = true;
-    }    
+    }  
   }
 
   // Set this here, so it doesn;t get reset if the manager restarts the AqualinkD process.
@@ -505,6 +507,8 @@ int startup(char *self, char *cfgFile)
 
   AddAQDstatusMask(CHECKING_CONFIG);
   AddAQDstatusMask(NOT_CONNECTED);
+  _aqualink_data.updated = true;
+  //_aqualink_data.chiller_button == NULL; // HATE having this here, but needs to be null before config.
 
   sprintf(_aqualink_data.self, basename(self));
   clearDebugLogMask();
@@ -693,6 +697,8 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
 
 }
 
+#define MAX_AUTO_PACKETS 1200
+
 bool auto_configure(unsigned char* packet) {
   // Loop over PROBE packets and store any we can use,
   // once we see the 2nd probe of any ID we fave stored, then the loop is complete, 
@@ -709,6 +715,12 @@ bool auto_configure(unsigned char* packet) {
   static unsigned char lastID = 0x00;
   static bool seen_iAqualink2 = false;
   static int foundIDs = 0;
+  static int packetsReceived=0;
+
+  if (++packetsReceived >= MAX_AUTO_PACKETS ) {
+    LOG(AQUA_LOG,LOG_ERR, "Received %d packets, and didn't get a full probe cycle, stoping Auto Configure!\n",packetsReceived);
+    return true;
+  }
 
   if ( packet[PKT_CMD] == CMD_PROBE ) {
     LOG(AQUA_LOG,LOG_INFO, "Got Probe on ID 0x%02hhx\n",packet[PKT_DEST]);
@@ -727,7 +739,9 @@ bool auto_configure(unsigned char* packet) {
       _aqconfig_.device_id = 0x00;
       _aqconfig_.rssa_device_id = 0x00;
       _aqconfig_.extended_device_id = 0x00;
+      _aqconfig_.extended_device_id_programming = false;
       AddAQDstatusMask(AUTOCONFIGURE_ID);
+      _aqualink_data.updated = true;
       //AddAQDstatusMask(AUTOCONFIGURE_PANEL); // Not implimented yet.
     }
 
@@ -768,6 +782,7 @@ bool auto_configure(unsigned char* packet) {
     LOG(AQUA_LOG,LOG_NOTICE, "Finished Autoconfigure using device_id=0x%02hhx rssa_device_id=0x%02hhx extended_device_id=0x%02hhx (%s iAqualink2/3)\n",
                               _aqconfig_.device_id,_aqconfig_.rssa_device_id,_aqconfig_.extended_device_id,  _aqconfig_.enable_iaqualink?"Enable":"Disable");
     RemoveAQDstatusMask(AUTOCONFIGURE_ID);
+    _aqualink_data.updated = true;
     return true;  // we can exit finally.
   }
 
@@ -833,6 +848,7 @@ void main_loop()
 
   //_aqualink_data.panelstatus = STARTING;
   AddAQDstatusMask(CHECKING_CONFIG);
+  _aqualink_data.updated = true;
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
   _aqualink_data.is_display_message_programming = false;
   //_aqualink_data.simulate_panel = false;
@@ -863,6 +879,7 @@ void main_loop()
   _aqualink_data.simulator_active = SIM_NONE;
   _aqualink_data.boost_duration = 0;
   _aqualink_data.boost = false;
+  
 
   pthread_mutex_init(&_aqualink_data.active_thread.thread_mutex, NULL);
   pthread_cond_init(&_aqualink_data.active_thread.thread_cond, NULL);
@@ -927,17 +944,25 @@ void main_loop()
 
   rs_fd = init_serial_port(_aqconfig_.serial_port);
 
+  /*
   if (rs_fd == -1) {
     LOG(AQUA_LOG,LOG_ERR, "Error Aqualink setting serial port: %s\n", _aqconfig_.serial_port);
     //_aqualink_data.panelstatus = SERIAL_ERROR;
     AddAQDstatusMask(ERROR_SERIAL);
+    _aqualink_data.updated = true;
 #ifndef AQ_CONTAINER    
     exit(EXIT_FAILURE);
 #endif 
   } else {
     //AddAQDstatusMask(CHECKING_CONFIG);
   }
-  LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
+*/
+  if (is_valid_port(rs_fd)) {
+    LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
+  } else {
+    LOG(AQUA_LOG,LOG_ERR, "Error Aqualink bad serial port: %s\n", _aqconfig_.serial_port);
+    AddAQDstatusMask(ERROR_SERIAL);
+  }
 
   if (!serial_blockingmode())
     blank_read_reconnect = MAX_ZERO_READ_BEFORE_RECONNECT_NONBLOCKING;
@@ -957,6 +982,7 @@ void main_loop()
   // Set probes to true for any device we are not searching for.
    
   RemoveAQDstatusMask(CHECKING_CONFIG);
+  _aqualink_data.updated = true;
   
   if (_aqconfig_.rssa_device_id == 0x00)
     got_probe_rssa = true;
@@ -969,27 +995,29 @@ void main_loop()
   }
 
   if (_aqconfig_.device_id == 0xFF) {
-    LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel information\n\n");
+    LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel information");
     LOG(AQUA_LOG,LOG_WARNING, "Unsing Auto configure, this will take some time, (make sure to undate aqualinkd configuration to speed up startup!)\n");
     auto_config_complete = false;
     //_aqualink_data.panelstatus = LOOKING_IDS;
     AddAQDstatusMask(AUTOCONFIGURE_ID);
+    _aqualink_data.updated = true;
   } else {
     LOG(AQUA_LOG,LOG_NOTICE, "Waiting for Control Panel probe\n");
     //_aqualink_data.panelstatus = CONECTING;
     AddAQDstatusMask(CONNECTING);
+    _aqualink_data.updated = true;
   }
   i=0;
 
   // Loop until we get the probe messages, that means we didn;t start too soon after last shutdown.
-  while ( (got_probe == false || got_probe_rssa == false || got_probe_extended == false || auto_config_complete == false) && _keepRunning == true && _cmdln_nostartupcheck == false)
+  while ( is_valid_port(rs_fd) && (got_probe == false || got_probe_rssa == false || got_probe_extended == false || auto_config_complete == false) && _keepRunning == true && _cmdln_nostartupcheck == false)
   {
     if (blank_read == blank_read_reconnect / 2) {
       LOG(AQUA_LOG,LOG_ERR, "Nothing read on '%s', are you sure that's right?\n",_aqconfig_.serial_port);
-#ifdef AQ_CONTAINER
+//#ifdef AQ_CONTAINER
         // Reset blank reads here, we want to ignore TTY errors in container to keep it running
         blank_read = 1;
-#endif
+//#endif
       if (_aqconfig_.device_id == 0x00) {
         blank_read = 1; // if device id=0x00 it's code for don't exit
       }
@@ -1013,6 +1041,7 @@ void main_loop()
       blank_read = 0;
       auto_config_complete = auto_configure(packet_buffer);
       AddAQDstatusMask(AUTOCONFIGURE_ID);
+      _aqualink_data.updated = true;
       if (auto_config_complete) {
         //if (_aqconfig_.device_id != 0x00)
           got_probe = true;
@@ -1026,6 +1055,7 @@ void main_loop()
     if (packet_length > 0 && _aqconfig_.device_id == 0x00) {
       blank_read = 0;
       AddAQDstatusMask(AUTOCONFIGURE_ID);
+      _aqualink_data.updated = true;
       _aqconfig_.device_id = find_unused_address(packet_buffer);
       continue;
     }
@@ -1104,15 +1134,16 @@ void main_loop()
   RemoveAQDstatusMask(AUTOCONFIGURE_ID);
   RemoveAQDstatusMask(NOT_CONNECTED);
   AddAQDstatusMask(CONNECTING);
-
+  _aqualink_data.updated = true;
 
   //At this point we should have correct ID and seen probes on those ID's.
   // Setup the panel
-  if (_aqconfig_.device_id == 0x00) {
+  if (_aqconfig_.device_id <= 0x08 && _aqconfig_.device_id >= 0x0B && _aqconfig_.device_id != 0x60 && _aqconfig_.device_id != 0x33) {
     LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon has no valid device_id, can't connect to control panel");
     //_aqualink_data.panelstatus = NO_IDS_ERROR;
     RemoveAQDstatusMask(CONNECTING); // Not sure if we should remove this
     AddAQDstatusMask(ERROR_NO_DEVICE_ID);
+    _aqualink_data.updated = true;
   }
 
   if (_aqconfig_.rssa_device_id >= 0x48 && _aqconfig_.rssa_device_id <= 0x49) {
@@ -1128,6 +1159,7 @@ void main_loop()
   // We can only get panel size info from extended ID
   if (_aqconfig_.extended_device_id != 0x00) {
     RemoveAQDstatusMask(AUTOCONFIGURE_PANEL);
+    _aqualink_data.updated = true;
   }
 
   if (_aqconfig_.extended_device_id_programming == true && (isONET_ENABLED || isIAQT_ENABLED) )
@@ -1164,14 +1196,17 @@ void main_loop()
     while ((rs_fd < 0 || blank_read >= blank_read_reconnect) && _keepRunning == true)
     {
       //printf("rs_fd  =% d\n",rs_fd);
-      if (rs_fd < 0)
+      if (!is_valid_port(rs_fd))
       {
         sleep(1);
+        LOG(AQUA_LOG,LOG_ERR, "Bad serial port '%s', are you sure that's right?\n",_aqconfig_.serial_port);   
         sprintf(_aqualink_data.last_display_message, CONNECTION_ERROR);
-        LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon waiting to connect to master device...\n");
+        //LOG(AQUA_LOG,LOG_ERR, "Serial port error, Aqualink daemon waiting to connect to master device...\n");    
         _aqualink_data.updated = true;
         AddAQDstatusMask(ERROR_SERIAL);
-        broadcast_aqualinkstate_error(CONNECTION_ERROR);
+        //broadcast_aqualinkstate_error(CONNECTION_ERROR);
+        broadcast_aqualinkstate_error(getAqualinkDStatusMessage(&_aqualink_data));
+        sleep(10);
 #ifdef AQ_NO_THREAD_NETSERVICE
         poll_net_services(1000);
         poll_net_services(3000);
@@ -1184,11 +1219,12 @@ void main_loop()
         LOG(AQUA_LOG,LOG_ERR, "Aqualink daemon looks like serial error, resetting.\n");
         _aqualink_data.updated = true;
         AddAQDstatusMask(ERROR_SERIAL);
-        broadcast_aqualinkstate_error(CONNECTION_ERROR);
+        //broadcast_aqualinkstate_error(CONNECTION_ERROR);
+        broadcast_aqualinkstate_error(getAqualinkDStatusMessage(&_aqualink_data));
         close_serial_port(rs_fd);
-        rs_fd = init_serial_port(_aqconfig_.serial_port);
+        //rs_fd = init_serial_port(_aqconfig_.serial_port);
       }
-
+      rs_fd = init_serial_port(_aqconfig_.serial_port);
       blank_read = 0;
     }
 
@@ -1243,6 +1279,7 @@ void main_loop()
       RemoveAQDstatusMask(ERROR_SERIAL);
       RemoveAQDstatusMask(CONNECTING);
       AddAQDstatusMask(CONNECTED);
+      _aqualink_data.updated = true;
       DEBUG_TIMER_START(&_rs_packet_timer);
 
       blank_read = 0;

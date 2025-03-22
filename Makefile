@@ -139,13 +139,15 @@ DBG_CFLAGS = $(DBGFLAGS) $(AQ_FLAGS) $(MGFLAGS)
 # Other sources.
 DBG_SRC = $(SRCS) debug_timer.c
 SL_SRC = serial_logger.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c timespec_subtract.c
-#MG_SRC = mongoose.c
+
+DD_SRC = dummy_device.c aq_serial.c utils.c packetLogger.c rs_msg_utils.c timespec_subtract.c
 
 # Build durectories
 SRC_DIR := ./source
 OBJ_DIR := ./build
 DBG_OBJ_DIR := $(OBJ_DIR)/debug
 SL_OBJ_DIR := $(OBJ_DIR)/slog
+DD_OBJ_DIR := $(OBJ_DIR)/dummydevice
 
 INCLUDES := -I$(SRC_DIR)
 
@@ -161,11 +163,13 @@ SL_OBJ_DIR_AMD64 := $(OBJ_DIR_AMD64)/slog
 SRCS := $(patsubst %.c,$(SRC_DIR)/%.c,$(SRCS))
 DBG_SRC := $(patsubst %.c,$(SRC_DIR)/%.c,$(DBG_SRC))
 SL_SRC := $(patsubst %.c,$(SRC_DIR)/%.c,$(SL_SRC))
+DD_SRC := $(patsubst %.c,$(SRC_DIR)/%.c,$(DD_SRC))
 
 # append path to obj files per architecture
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRCS))
 DBG_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(DBG_OBJ_DIR)/%.o,$(DBG_SRC))
 SL_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR)/%.o,$(SL_SRC))
+DD_OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(DD_OBJ_DIR)/%.o,$(DD_SRC))
 
 OBJ_FILES_ARMHF := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ARMHF)/%.o,$(SRCS))
 OBJ_FILES_ARM64 := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR_ARM64)/%.o,$(SRCS))
@@ -194,6 +198,7 @@ SL_OBJ_FILES_AMD64 := $(patsubst $(SRC_DIR)/%.c,$(SL_OBJ_DIR_AMD64)/%.o,$(SL_SRC
 MAIN = ./release/aqualinkd
 SLOG = ./release/serial_logger
 DEBG = ./release/aqualinkd-debug
+DDEVICE = ./release/dummydevice
 
 MAIN_ARM64 = ./release/aqualinkd-arm64
 MAIN_ARMHF = ./release/aqualinkd-armhf
@@ -256,6 +261,9 @@ slog:	$(SLOG)
 aqdebug: $(DEBG)
 	$(info $(DEBG) has been compiled)
 
+dummydevice:	$(DDEVICE)
+	$(info $(DDEVICE) has been compiled)
+
 # Container, add container flag and compile
 container: CFLAGS := $(CFLAGS) -D AQ_CONTAINER
 container: $(MAIN) $(SLOG)
@@ -305,6 +313,9 @@ $(DBG_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(DBG_OBJ_DIR)
 	$(CC) $(DBG_CFLAGS) $(INCLUDES) -c -o $@ $<
 
 $(SL_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(SL_OBJ_DIR)
+	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
+
+$(DD_OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(DD_OBJ_DIR)
 	$(CC) $(CFLAGS) $(INCLUDES) -c -o $@ $<
 
 $(OBJ_DIR_ARMHF)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR_ARMHF)
@@ -357,11 +368,18 @@ $(SLOG_AMD64): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER
 $(SLOG_AMD64): $(SL_OBJ_FILES_AMD64)
 	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
 
+$(DDEVICE): CFLAGS := $(CFLAGS) -D SERIAL_LOGGER -D DUMMY_DEVICE
+$(DDEVICE): $(DD_OBJ_FILES)
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $^ $(LIBS)
+
 # Rules to make object directories.
 $(OBJ_DIR):
 	$(MKDIR) $(call FixPath,$@)
 
 $(SL_OBJ_DIR):
+	$(MKDIR) $(call FixPath,$@)
+
+$(DD_OBJ_DIR):
 	$(MKDIR) $(call FixPath,$@)
 
 $(DBG_OBJ_DIR):
@@ -388,10 +406,10 @@ $(SL_OBJ_DIR_AMD64):
 # Clean rules
 
 clean: clean-buildfiles
-	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(DEBG)
-	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_ARM64) $(MAIN_ARMHF) $(MAIN_AMD64) $(SLOG) $(SLOG_ARM64) $(SLOG_ARMHF) $(SLOG_AMD64) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY) $(DEBG)
+	$(RM) *.o *~ $(MAIN) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(DEBG) $(DDEVICE)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(MAIN) $(MAIN_ARM64) $(MAIN_ARMHF) $(MAIN_AMD64) $(SLOG) $(DDEVICE) $(SLOG_ARM64) $(SLOG_ARMHF) $(SLOG_AMD64) $(MAIN_U) $(PLAY) $(PL_EXOBJ) $(LOGR) $(PLAY) $(DEBG)
 
 clean-buildfiles:
-	$(RM) $(wildcard *.o) $(wildcard *~) $(OBJ_FILES) $(DBG_OBJ_FILES) $(SL_OBJ_FILES) $(OBJ_FILES_ARMHF) $(OBJ_FILES_ARM64) $(OBJ_FILES_AMD64) $(SL_OBJ_FILES_ARMHF) $(SL_OBJ_FILES_ARM64) $(SL_OBJ_FILES_AMD64)
+	$(RM) $(wildcard *.o) $(wildcard *~) $(OBJ_FILES) $(DBG_OBJ_FILES) $(SL_OBJ_FILES) $(DD_OBJ_FILES) $(OBJ_FILES_ARMHF) $(OBJ_FILES_ARM64) $(OBJ_FILES_AMD64) $(SL_OBJ_FILES_ARMHF) $(SL_OBJ_FILES_ARM64) $(SL_OBJ_FILES_AMD64)
 
 

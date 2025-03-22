@@ -28,7 +28,7 @@ bool start_net_services(struct aqualinkdata *aqdata);
 void stop_net_services();
 time_t poll_net_services(int timeout_ms);
 void broadcast_aqualinkstate();
-void broadcast_aqualinkstate_error(char *msg);
+void broadcast_aqualinkstate_error(const char *msg);
 void broadcast_simulator_message();
 
 

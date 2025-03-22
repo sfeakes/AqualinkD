@@ -33,15 +33,15 @@
 #include "rs_msg_utils.h"
 
 #ifdef SERIAL_LOGGER
-  // Make us look lie config.c when we load config.h
+  // Make us look like config.c when we load config.h so we get globals.
   #define CONFIG_C
 #endif
 #include "config.h"
 
 #define SLOG_MAX 80
-#define PACKET_MAX 800
+#define PACKET_MAX 1200
 
-#define VERSION "serial_logger V2.8"
+#define VERSION "serial_logger V2.9"
 
 /*
 typedef enum used {
@@ -102,6 +102,9 @@ void intHandler(int dummy) {
   LOG(SLOG_LOG, LOG_NOTICE, "Stopping!\n");
   if (_playback_file)  // If we are reading file, loop is irevelent
     exit(0);
+}
+bool isAqualinkDStopping() {
+  return !_keepRunning;
 }
 #else
 int serial_logger (int rs_fd, char *port_name, int logLevel, int slogger_packets, char *slogger_ids) 
@@ -531,7 +534,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "Optional parameters are :-\n");
     fprintf(stderr, "\t-n (Do not probe panel for type/rev info)\n");
     fprintf(stderr, "\t-d (debug / print messages)\n");
-    fprintf(stderr, "\t-p <number> (# packets to log, default=%d)\n",PACKET_MAX);
+    fprintf(stderr, "\t-p <number> (# packets to log, default=%d, use -1 for probe cycle <quickest> )\n",PACKET_MAX);
     fprintf(stderr, "\t-i <ID> (just log specific ID, can use multiple -i. will also force -d switc)\n");
     fprintf(stderr, "\t-pi <ID> (just log specific Pantair ID, can use multiple -pi. will also force -d switch)\n");
     fprintf(stderr, "\t-r (raw)\n");
@@ -550,7 +553,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-d") == 0) {
       logLevel = LOG_DEBUG;
     } else if (strcmp(argv[i], "-p") == 0 && i+1 < argc) {
-      logPackets = atoi(argv[i+1]);
+      char *endptr;
+      //logPackets = atoi(argv[i+1]);
+      logPackets = strtol(argv[i+1], &endptr, 10);
     } else if (strcmp(argv[i], "-i") == 0 && i+1 < argc) {
       unsigned int n;
       sscanf(argv[i+1], "0x%2x", &n);
@@ -651,6 +656,7 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   unsigned char packet_buffer[AQ_MAXPKTLEN];
   unsigned char last_packet_buffer[AQ_MAXPKTLEN];
   unsigned char lastID = 0x00;
+  unsigned char firstProbe = 0x00;
   int i = 0;
   bool found;
   serial_id_log slog[SLOG_MAX];
@@ -675,6 +681,14 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
   bool found_chem =false;
   bool found_pent_vsp =false;
   bool found_iAqualnk =false;
+
+  bool probeCycle = false;
+  int probeCycleCnt = 0;
+
+  if (logPackets <= 0) {
+    logPackets = PACKET_MAX;
+    probeCycle = true;
+  }
 
   clock_gettime(CLOCK_REALTIME, &start_time);
   if (timePackets) {
@@ -725,6 +739,25 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
         delay(1);
     } else if (packet_length > 0) {
         blankReads = 0;
+
+        if (probeCycle) {          
+          if (packet_buffer[PKT_CMD] == CMD_PROBE && 
+            packet_buffer[PKT_DEST] != 0x60 && 
+            packet_buffer[PKT_DEST] != DEV_MASTER &&
+            firstProbe == 0x00)
+          {
+            firstProbe = packet_buffer[PKT_DEST];
+            printf("\nFirst Probe = 0x%02hhx\n",firstProbe);
+          } else if ( firstProbe != 0x00 && packet_buffer[PKT_DEST] == firstProbe && packet_buffer[PKT_CMD] == CMD_PROBE ) {
+            printf("\nGot probe again after %d packets\n",received_packets);
+            if (++probeCycleCnt > 2) {
+              _keepRunning = false;
+            }
+          } else if ( firstProbe != 0x00 && packet_buffer[PKT_DEST] == firstProbe && packet_buffer[PKT_CMD] != CMD_PROBE ) {
+          // Something connected to the first probe we saw, can't exit quickley
+            printf("\n Someone connected to probe 0x%02hhx\n",packet_buffer[PKT_DEST]);
+          }
+        }
         //LOG(SLOG_LOG, LOG_DEBUG_SERIAL, "Received Packet for ID 0x%02hhx of type %s\n", packet_buffer[PKT_DEST], get_packet_type(packet_buffer, packet_length));
 #ifdef SERIAL_LOGGER
         if (logLevel > LOG_NOTICE)
@@ -945,8 +978,10 @@ int _serial_logger(int rs_fd, char *port_name, int logPackets, int logLevel, boo
     LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_LX = yes\n");
   if (found_chem)
     LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_Chem = yes\n");
-  if (found_iAqualnk && _panelPDA)
+  if (found_iAqualnk)
     LOG(SLOG_LOG, LOG_NOTICE, "read_RS485_iAqualink = yes\n");
+  else if (!found_iAqualnk && (extID >= JANDY_DEV_AQLNK_MIN && extID <= JANDY_DEV_AQLNK_MAX))
+    LOG(SLOG_LOG, LOG_NOTICE, "enable_iaqualink = yes\n");
 
   LOG(SLOG_LOG, LOG_NOTICE, "-------------------------\n");
 

@@ -46,13 +46,6 @@
 #define KEY_IAQTCH_LOCKOUT_PASSWD KEY_IAQTCH_KEY08
 #define KEY_IAQTCH_SET_ACQUAPURE  KEY_IAQTCH_KEY09
 
-// Set Point types
-typedef enum SP_TYPE{
-  SP_POOL,
-  SP_SPA,
-  SP_CHILLER
-} SP_TYPE;
-
 bool _cansend = false;
 
 unsigned char _iaqt_pgm_command = NUL;

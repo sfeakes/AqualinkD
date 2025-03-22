@@ -133,10 +133,11 @@ static void ws_send(struct mg_connection *nc, char *msg)
   //LOG(NET_LOG,LOG_DEBUG, "WS: Sent %d characters '%s'\n",size, msg);
 }
 
-void _broadcast_aqualinkstate_error(struct mg_connection *nc, char *msg) 
+void _broadcast_aqualinkstate_error(struct mg_connection *nc, const char *msg) 
 {
   struct mg_connection *c;
   char data[JSON_STATUS_SIZE];
+  
   build_aqualink_error_status_JSON(data, JSON_STATUS_SIZE, msg);
 
   for (c = mg_next(nc->mgr, NULL); c != NULL; c = mg_next(nc->mgr, c)) {
@@ -2288,7 +2289,7 @@ f_end:
 void broadcast_aqualinkstate() {
   _aqualink_data->updated = true;
 }
-void broadcast_aqualinkstate_error(char *msg) {
+void broadcast_aqualinkstate_error(const char *msg) {
   _broadcast_aqualinkstate_error(_mgr.active_connections, msg);
 }
 void broadcast_simulator_message() {

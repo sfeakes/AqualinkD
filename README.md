@@ -131,6 +131,10 @@ NEED TO FIX FOR THIS RELEASE.
 * Check SWG messages like "#1 TruClear", see log in this post https://github.com/sfeakes/AqualinkD/discussions/388
 
 * Finish off heat pump / chiller.  Probably use a thermostat for both with heat going to heater SP can cool to chiller SP
+
+* Hide passwords (bitmask)
+* Startup config validity checks
+* remove "extended_programming", or hide it.
 -->
 
 
@@ -143,7 +147,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Reduced load on panel over AqualinkTouch protocol.
 * Fixed higher than normal CPU load when leaving aqmanager open and sending no messages (leaving aqmanager open for over 14days).
 * Reworked PDA sleep mode.
-* Added preliminary Heat Pump / Chiller support (MQTT & HA support only, no Homekit or web ui yet)
+* Added support for Heat Pump / Chiller support.
 
 
 # Updates in 2.5.0

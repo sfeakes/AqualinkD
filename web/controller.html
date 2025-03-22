@@ -1005,7 +1005,7 @@
           value = '--';
         } else {
           if ((type = document.getElementById(id).getAttribute('type')) != null) { 
-            if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze')
+            if (type == 'temperature' || type == 'setpoint_thermo' || type == 'setpoint_freeze' || type == 'setpoint_chiller')
               ext = '&deg;';
             else if (type == 'setpoint_swg')
               ext = '%';
@@ -1098,6 +1098,10 @@
       return null;
     }
 
+    function capitalizeFirstLetter(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
     function formatSatus(status) {
       var index;
       var aux;
@@ -1171,15 +1175,23 @@
             else
               text = 'Generating';
           }
-          else if (type == 'setpoint_thermo')
+          else if (type == 'setpoint_thermo') {
             //if (status == 'enabled')
               text = 'Heat to ' + tile.getAttribute('setpoint');
             //else
             //  text = 'Heating to ' + tile.getAttribute('setpoint'); // too large for phone
-          else if (type == 'setpoint_freeze')
+          }
+          else if (type == 'setpoint_chiller') {
+            try{
+            text = capitalizeFirstLetter(tile.getAttribute("mode"))+' to ' + tile.getAttribute('setpoint');
+            } catch (except){}
+            //text = 'Cool to ' + tile.getAttribute('setpoint');
+          }
+          else if (type == 'setpoint_freeze') {
             text = 'Turn on ' + tile.getAttribute('setpoint') + "&deg;";
           //else
           //  text = "On";
+          }
         }
         //document.getElementById(id + '_status').innerHTML = "On";
       } else {
@@ -1217,6 +1229,17 @@
           tile_icon.classList.remove("disabled");
           tile_icon.classList.remove("cool");
           tile_icon.classList.add("heat");
+        } else if (status == 'on' && type == 'setpoint_chiller') {
+          tile_icon.classList.remove("enabled");
+          tile_icon.classList.remove("disabled");
+          console.log("mode="+tile_icon.parentElement.parentElement.getAttribute("mode"));
+          if ( tile_icon.parentElement.parentElement.getAttribute("mode") == "heat" ) {
+            tile_icon.classList.remove("cool");
+            tile_icon.classList.add("heat");
+          } else {
+            tile_icon.classList.remove("heat");
+            tile_icon.classList.add("cool");
+          }
         } else if (status == 'on') {
           tile_icon.classList.remove("enabled");
           tile_icon.classList.remove("disabled");
@@ -1289,7 +1312,7 @@
       } else if (object.type == 'value' || object.type == 'temperature') {
         add_tile(object.id, object.name, object.state, 'value', object.type);
         setTileValue(object.id, object.value);
-      } else if (object.type == 'setpoint_thermo' || object.type == 'setpoint_swg' || object.type == 'setpoint_freeze') {
+      } else if (object.type == 'setpoint_thermo' || object.type == 'setpoint_swg' || object.type == 'setpoint_freeze' || object.type == 'setpoint_chiller') {
         add_tile(object.id, object.name, object.state, 'thermostat', object.type);
         document.getElementById(object.id).setAttribute('setpoint', object.spvalue);
         setTileValue(object.id, object.value);
@@ -1297,13 +1320,24 @@
       } else {
         //console.log("Unknown Device");   
       }
+
+      // Set Alternate name
+      
+      if (object.alt_label !== undefined) {
+        //console.log("Set "+object.id+" label "+object.name+" alt_label "+object.alt_label);
+        document.getElementById(object.id).setAttribute('alt_label', object.alt_label);
+        document.getElementById(object.id).setAttribute('label', object.name);
+        //document.getElementById(object.id).setAttribute('id', object.id + '_status_line2');
+      }
+      
     }
 
     function showTileOptions(show, id, contex) {
       var active_option;
       if (show == true) {
         var wrapH = document.getElementById('wrapper').clientHeight + 'px';
-        if (id != null && document.getElementById(id).getAttribute('type') == 'setpoint_thermo') {
+        if (id != null && (document.getElementById(id).getAttribute('type') == 'setpoint_thermo' ||
+                           document.getElementById(id).getAttribute('type') == 'setpoint_chiller')) {
           active_option = document.getElementById('thermostat_options');
           document.getElementById('swg_options').style.display = 'none';
           document.getElementById('pswitch_options').style.display = 'none';
@@ -1512,7 +1546,7 @@
             slider.max = 5;
             slider.step = 1;
           }
-        } else if (type == 'setpoint_thermo') {
+        } else if (type == 'setpoint_thermo' || type == 'setpoint_chiller') {
           if (_temperature_units != 'c') { // Change to DegF
             //slider.min = 36;
             //slider.max = 104;
@@ -1874,6 +1908,7 @@
                 switch (obj.type) {
                   case "setpoint_thermo":
                   case "setpoint_freeze":
+                  case "setpoint_chiller":
                     return "temperature";
                     break;
                   case "setpoint_swg":
@@ -2056,6 +2091,7 @@
               }
               break
             case "setpoint_thermo":
+            case "setpoint_chiller":
               html = html + '<option value="' + V_SETPOINT + '" ' + cs_isSelected("setpoint", val1, val2) + '>Temp</option>'
               break
             case "setpoint_swg":
@@ -2127,6 +2163,7 @@
               if (device == obj.id) {
                 switch (obj.type) {
                   case "setpoint_thermo":
+                  case "setpoint_chiller":
                   case "setpoint_freeze":
                     return "/setpoint";
                     break;
@@ -2227,6 +2264,20 @@
       setThermostatTile("Pool_Heater", data.pool_temp, data.pool_htr_set_pnt);
       setThermostatTile("Spa_Heater", data.spa_temp, data.spa_htr_set_pnt);
       setThermostatTile("Freeze_Protect", data.air_temp, data.frz_protect_set_pnt);
+
+      if ( data.chiller_set_pnt !== undefined ) {
+        // NSF Should use spa temp if in spa mode
+        if (data.leds.Spa !== undefined && data.leds.Spa == "on")
+          setThermostatTile("Chiller", data.spa_temp, data.chiller_set_pnt);
+        else
+          setThermostatTile("Chiller", data.pool_temp, data.chiller_set_pnt);
+      }
+      if ( data.chiller_mode !== undefined ) {
+        try{
+          let elmt = document.getElementById("Chiller");
+          elmt.setAttribute("mode", data.chiller_mode);
+        } catch (exception){}
+      }
       
       setTileValue("Temperature/Air", data.air_temp);
       setTileValue("Temperature/Pool", data.pool_temp);
@@ -2269,6 +2320,19 @@
         //console.log("TIMER "+obj.toString()+" duration "+data.timer_durations[obj]);
       }
 
+      for (var obj in data.alternate_modes) {
+        //console.log(obj.toString() +" "+ data.alternate_modes[obj.toString()] );
+        try {
+          let element = document.getElementById(obj.toString());
+          let label = document.getElementById(obj.toString()+'_name');
+          if ( data.alternate_modes[obj.toString()] == "on") {
+            label.textContent = element.getAttribute('label')+" "+element.getAttribute('alt_label');
+          } else {
+            label.textContent = element.getAttribute('label');
+          }
+        } catch (exception){}
+      }
+
       for (var obj in data.light_program_names) {
         if (data.light_program_names[obj] != "") {
           var light_mode_name = data.light_program_names[obj];
@@ -2295,7 +2359,7 @@
             }
           } catch (e) { /*console.log(e);*/ }
 
-          if (light_mode_name != "-999%" && light_mode_name != "Off")
+          if (light_mode_name != "-999%" && light_mode_name != "Off" && light_mode_name != "off")
             setTileOnText(obj.toString(),light_mode_name);
           
           try {

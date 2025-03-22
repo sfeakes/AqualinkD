@@ -595,7 +595,7 @@ void iaqt_pump_update(struct aqualinkdata *aq_data, int updated) {
 
 
 /* Some newer revisions support pump by name and not number.
-   Seen this is rev Yg   
+   Seen this is rev Yg   Looks like this ID came in T.2g (not T.2 though)
 
 Info:    iAQ Touch: Page: Status (diff ID) | 0x2a\
 Info:    iAQ Touch: Status page 00| Filter Pump\

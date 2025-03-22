@@ -45,6 +45,8 @@
 
 void intHandler(int dummy);
 
+bool isAqualinkDStopping();
+
 #ifdef AQ_PDA
 bool checkAqualinkTime(); // Only need to externalise this for PDA
 #endif
@@ -181,6 +183,13 @@ typedef enum simulator_type {
   SIM_IAQT
 } simulator_type;
 */
+
+// Set Point types
+typedef enum SP_TYPE{
+  SP_POOL,
+  SP_SPA,
+  SP_CHILLER
+} SP_TYPE;
 
 //#define PUMP_PRIMING -1
 //#define PUMP_OFFLINE -2

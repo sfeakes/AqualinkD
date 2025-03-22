@@ -185,10 +185,16 @@ typedef enum cfg_value_type{
 
 
 #define CFG_PERSISTANT        (1 << 0) // Don't free memory, things referance the pointer
-#define CFG_NO_EDIT           (1 << 1) // Don't allow editing
-#define CFG_GRP_ADVANCED      (1 << 2) // Show in group advanced
-#define CFG_HIDE              (1 << 3) // Like passwords.
+#define CFG_GRP_ADVANCED      (1 << 1) // Show in group advanced
+#define CFG_READONLY          (1 << 2) // Don't show in UI, but do write to CFG file. (Maybe display in UI but no edit)
+#define CFG_HIDE              (1 << 3) // Don't show in any UI listing, don't write to CFG file.
+//#define CFG_READONLY          (1 << 4) // Don't show in UI, but do write to CFG file.
+#define CFG_PASSWD_MASK       (1 << 4) // Mask password with *****
+#define CFG_FORCE_RESTART     (1 << 5) // Force aqualinkd to restart
 //#define CFG_      (1 << 3)
+
+// Text to show when CFG_PASSWD_MASK is set
+#define PASSWD_MASK_TEXT "********"
 
 #define isMASKSET(mask, bit) ((mask & bit) == bit)
 
@@ -230,7 +236,7 @@ int _numCfgParams;
 #define CFG_V_device_id                         "[\"0x0a\", \"0x0b\", \"0x09\", \"0x08\", \"0x60\", \"0xFF\"]"
 #define CFG_C_device_id                         9
 #define CFG_N_rssa_device_id                    "rssa_device_id"
-#define CFG_V_rssa_device_id                    "[\"0x00\", \"0x48\", \"0xFF\"]"
+#define CFG_V_rssa_device_id                    "[\"0x00\", \"0x48\"]"
 #define CFG_C_rssa_device_id                    14
 
 #define CFG_N_RSSD_LOG_filter                   "RSSD_LOG_filter"
@@ -239,7 +245,7 @@ int _numCfgParams;
 #define CFG_N_panel_type                        "panel_type"
 #define CFG_C_panel_type                        10
 #define CFG_N_extended_device_id                "extended_device_id"
-#define CFG_V_extended_device_id                "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\", \"0xFF\"]"
+#define CFG_V_extended_device_id                "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\"]"
 #define CFG_C_extended_device_id                18
 
 #define CFG_N_sync_panel_time                   "sync_panel_time"

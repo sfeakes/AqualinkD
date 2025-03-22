@@ -278,17 +278,33 @@ void set_iaqualink_aux_state(aqkey *button, bool isON) {
   _fullcmd[4] = 0x00;
 }
 
-void set_iaqualink_heater_setpoint(int value, bool isPool) {
-  
 
-  if (isPool) {
+// AQ_SET_IAQTOUCH_CHILLER_TEMP
+// AQ_SET_IAQLINK_CHILLER_TEMP //
+
+//void set_iaqualink_heater_setpoint(int value, bool isPool) {
+void set_iaqualink_heater_setpoint(int value, SP_TYPE type) {
+
+  if (type == SP_POOL) {
     _fullcmd[4] = 0x05;
-  } else {
+    _fullcmd[6] = value;
+  } else if (type == SP_SPA) {
     _fullcmd[4] = 0x06;
+    _fullcmd[6] = value;
+  } else if (type == SP_CHILLER) {
+    // Note This doesn;t work on T2, but does on Yg.  Turned off in aq_programmer
+    _fullcmd[4] = 0x1f;
+    _fullcmd[6] = 0x4b;
+    _fullcmd[8] = 0x63;
+    _fullcmd[10] = value;
+  } else {
+    LOG(IAQL_LOG, LOG_ERR, "Didn't understand setpoint type %d\n",type);
+    return;
   }
+  // byte[4] = 0x1f, byte[6]=0x4b, byte[8]=0x53, byte[10]=value // for Chiller
 
   // Should check value is valid here.
-  _fullcmd[6] = value;
+  //_fullcmd[6] = value;
 
   push_iaqualink_cmd(_cmd_readyCommand, 2);
   push_iaqualink_cmd(_fullcmd, 19);
@@ -296,6 +312,8 @@ void set_iaqualink_heater_setpoint(int value, bool isPool) {
   // reset 
   _fullcmd[4] = 0x00;
   _fullcmd[6] = 0x00;
+  _fullcmd[8] = 0x00;
+  _fullcmd[10] = 0x00;
 }
 
 void iAqSetButtonState(struct aqualinkdata *aq_data, int index, const unsigned char byte)
@@ -326,9 +344,9 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
     int startIndex = 4 + 1;
     int numberBytes = packet[4];
     int offsetIndex = startIndex + numberBytes;
-    bool foundSpaSP = false;
-    bool foundWaterTemp = false;
-    bool foundAirTemp = false;
+    //bool foundSpaSP = false;
+    //bool foundWaterTemp = false;
+    //bool foundAirTemp = false;
 
     for (int i = 0; i <= numberBytes; i++)
     {
@@ -338,6 +356,7 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
 
       // Some panels have blanks for the last 3 buys, the first of which is "water temp" (not sure on others 0x20, 0x21)
       // So if we saw 0x1d break loop if not force next as water temp.
+      /*
       if (foundWaterTemp && i == numberBytes)
       {
         break;
@@ -345,8 +364,70 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
       else if (i == numberBytes)
       {
         byteType = 0x1d;
-      }
+      }*/
 
+      // Seems to be in order rather than type
+      label = "                 ";
+
+      if (byte != 0xff)
+      {
+        switch (i)
+        {
+        case 0:
+          // 0x00
+          label = "Filter Pump      ";
+          if (byteType != 0x00)
+            label = "Filter Pump     *";
+          break;
+        case 1:
+          // 0x01
+          label = "Pool Heater      ";
+          if (byteType != 0x01)
+            label = "Pool Heater     *";
+          break;
+        case 2:
+          // 0x02
+          label = "Spa              ";
+          if (byteType != 0x02)
+            label = "Spa             *";
+          break;
+        case 3:
+          // 0x03
+          label = "Spa Heater       ";
+          if (byteType != 0x03)
+            label = "Spa Heater      *";
+          break;
+        case 5:
+          // 0x06 good
+          label = "Pool Heater SP   ";
+          if (byteType != 0x06)
+            label = "Pool Heater SP  *";
+          break;
+        case 7:
+          // 0x08 good
+          // 0x09 (when spa is on???)
+          // 0x0e (good not sure)
+          label = "Spa Heater SP    ";
+          if (byteType != 0x08)
+            label = "Spa Heater SP   *";
+          break;
+        case 9:
+          // 0x0f good
+          label = "Air Temp         ";
+          if (byteType != 0x0f)
+            label = "Air Temp        *";
+          break;
+        case 11:
+          // 0x1d good
+          // 0x1c (good) ?? maybe spa
+          // 0x1f bad
+          label = "Water Temp       ";
+          if (byteType != 0x1d)
+            label = "Water Temp      *";
+          break;
+        }
+      }
+/*
       if (byteType == 0) {
         label = "Filter Pump      ";
         if (isPDA_PANEL) { iAqSetButtonState(aq_data, 0, byte); }
@@ -363,7 +444,7 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
       } else if (byteType == 8 || byteType == 9) {// 8 usually, also get 9 & 14 (different spa/heater modes not sorted out yet. 14 sometimes blank as well)
         label = "Spa Htr setpoint ";
         foundSpaSP=true;
-      } else if ( (/*byteType == 14 ||*/ byteType == 12) && foundSpaSP==false && byte != 0) {
+      } else if ( (byteType == 12) && foundSpaSP==false && byte != 0) { // Sometimes 14
         label = "Spa Htr setpoint ";
       } else if ( (byteType == 14 || byteType == 15 || byteType == 26) && byte != 0 && byte != 255 && foundAirTemp == false ) {// 0x0f
         label = "Air Temp         ";  // we also see this as 14 (RS16) ONLY
@@ -375,7 +456,7 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
       }
       else
         label = "                 ";
-
+*/
       LOG(IAQL_LOG, LOG_INFO, "%-17s = %3d | index=%d type=(%0.2d 0x%02hhx) value=0x%02hhx offset=%d\n", label, byte, i, byteType, byteType, byte, (offsetIndex + i));
     }
     LOG(IAQL_LOG, LOG_INFO, "Status from other protocols Pump %s, Spa %s, SWG %d, PumpRPM %d, PoolSP=%d, SpaSP=%d, WaterTemp=%d, AirTemp=%d\n",

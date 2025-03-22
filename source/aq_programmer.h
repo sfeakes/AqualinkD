@@ -62,6 +62,7 @@ typedef enum {
   AQ_SET_BOOST,
   AQ_SET_PUMP_RPM,
   AQ_SET_PUMP_VS_PROGRAM,
+  AQ_SET_CHILLER_TEMP,
   // ******** PDA Delimiter make sure to change MAX/MIN below
   AQ_PDA_INIT,
   AQ_PDA_WAKE_INIT,
@@ -106,6 +107,7 @@ typedef enum {
   AQ_SET_IAQTOUCH_CHILLER_TEMP,
   AQ_SET_IAQLINK_POOL_HEATER_TEMP,  // Same as above but using iAqualink not AqualinkTouch
   AQ_SET_IAQLINK_SPA_HEATER_TEMP,   // Same as above but using iAqualink not AqualinkTouch
+  AQ_SET_IAQLINK_CHILLER_TEMP,
   AQ_SET_IAQTOUCH_LIGHTCOLOR_MODE,
   // ******** RS Serial Adapter Delimiter make sure to change MAX/MIN below
   AQ_GET_RSSADAPTER_SETPOINTS,
@@ -118,7 +120,7 @@ typedef enum {
 
 
 
-#define AQ_SET_CHILLER_TEMP AQ_SET_IAQTOUCH_CHILLER_TEMP
+//#define AQ_SET_CHILLER_TEMP AQ_SET_IAQTOUCH_CHILLER_TEMP
 
 
 
