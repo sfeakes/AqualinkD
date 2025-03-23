@@ -137,10 +137,9 @@ NEED TO FIX FOR THIS RELEASE.
 * remove "extended_programming", or hide it.
 -->
 
-
-# Updates in 2.6.0 (dev)
-* Added configuration editor in aqmanager.
-* Can now self-configure on startup.
+# Updates in 2.6.0
+* Added configuration editor in aqmanager.  [Wiki - AQManager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
+* Can now self-configure on startup. set `device_id=0xFF`
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
 * Added support for monitoring SBC system sensors, like CPU / GPU / Board (CPU temp being most useful).
