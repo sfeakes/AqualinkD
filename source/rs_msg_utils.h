@@ -4,6 +4,7 @@
 //#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
 bool rsm_get_revision(char *dest, const char *src, int src_len);
+int rsm_get_revision_new(char *dest, int dest_len, const char *src, int src_len);
 int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len);
 
 char *rsm_charafterstr(const char *haystack, const char *needle, int length);

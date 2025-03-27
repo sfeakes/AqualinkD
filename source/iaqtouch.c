@@ -948,6 +948,11 @@ void processPage(struct aqualinkdata *aq_data)
     Info:    iAQ Touch: Table Messages 04| CPU p/n: B0029221
     Info:    iAQ Touch: Table Messages 05| TL Rev:   
     */
+      
+      setPanelInformationFromPanelMsg(aq_data, (char *)_tableInformation[2], PANEL_STRING, IAQTOUCH);
+      setPanelInformationFromPanelMsg(aq_data, (char *)_tableInformation[3], PANEL_REV, IAQTOUCH);
+      setPanelInformationFromPanelMsg(aq_data, (char *)_tableInformation[4], PANEL_CPU, IAQTOUCH);
+
       if (isPDA_PANEL && ((char *)_tableInformation[03]) > 0) {
         if ( rsm_get_revision(aq_data->revision,(char *)_tableInformation[3], sizeof(aq_data->revision) ) == TRUE) {
           int len = rsm_get_boardcpu(aq_data->version, sizeof(aq_data->version), (char *)_tableInformation[4], IAQT_TABLE_MSGLEN );
@@ -1168,7 +1173,10 @@ bool process_iaqtouch_packet(unsigned char *packet, int length, struct aqualinkd
         }
         LOG(IAQT_LOG,LOG_NOTICE, "Enabling iAqualink Protocol on 0x%02hhx\n",_aqconfig_.extended_device_id2);
       }
-      //LOG(IAQT_LOG,LOG_ERR, "STARTUP REMOVED GET PANEL DATA FOR TESTING\n");
+      // Don't like this here.  Come back and rethink getting panel string.
+      //iaqt_queue_cmd(KEY_IAQTCH_HELP);
+      //iaqt_queue_cmd(KEY_IAQTCH_HOME);
+      
       queueGetProgramData(IAQTOUCH, aq_data);
       gotInit = true;
     }

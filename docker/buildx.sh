@@ -59,6 +59,7 @@ fi
 
 # Login first Run as root not with sudo on my build machine.
 # cat ~/.docker.token | docker login --username sfeakes --password-stdin
+# any errors clean build env `docker buildx prune``
 
 echo "Building Docker container for $IMAGE using branch $VERSION"
 docker buildx build --platform=linux/amd64,linux/arm64 \

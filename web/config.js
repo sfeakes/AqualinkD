@@ -54,6 +54,7 @@
         "Aux_V14",
         "Aux_V15",
         "Chiller",
+        "Sensor/CPU",
       ];
   
       // This get's picked up by dynamic_config.js and used as mode 0

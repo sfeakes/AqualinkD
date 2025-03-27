@@ -81,9 +81,8 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * http://aqualink.ip/aquapda_sim.html  <- (PDA simulator)
 #<a name="release"></a>
 # ToDo (future release)
-* Update AqualinkD Management console to manage configuration
 * Create iAqualink Touch Simulator
-* Probably decoded enough protocols for AuqlinkD to self configure.
+* AuqlinkD to self configure. (Done for ID's, need to do for Panel type/size)
 
 
 <!--
@@ -106,36 +105,22 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 
 <!-- 
 NEED TO FIX FOR THIS RELEASE.
-***** FIX NET_SERVICES.C   action_uri()   spa and spa_mode get confused. check EVERY strncmp
-* DONE MQTT filter_pump/percent/set, maybe add max/min to pump config. / print protocol on startup
-* DONE Pump by name and not ID. clean up code
-* DONE look at using 0x00 for no exit on serial errors / startup
-* DONE look at virtual button support
-*   vbuton will need the PDA on iAQT protocol working.
-* DONE change dimmer to % from steps. (will make HASIO & Homekit easier)
-* add config for homekit_f (panel in F homekin in C), F to F or C to C is fine.
-* deprecate (hide and default to yes) extended_device_id_programming
-* Move following to main and not config.c - show error is vbutton and no extended_device_id, vbutton w/ pump can be onetouch.
 * check panel version reported against config.
-# Updates in 2.4.1
-
-# DONE install.sh change spa_mode to spa in config.js
-# DONE change hassio.c to use rpm speed/percent
-# pickup speed faster on iaqualinktouch after change
-
+* pickup speed faster on iaqualinktouch after change
 * with iaqualink2 no need to poll iaqtouch devices as frequently
 * update documentation on how vbutton / vpump / pump_max & min / enable_iauqalink2
 * check rs serial adapter is active if light color mode 11 is used.
 
-
 * Check SWG messages like "#1 TruClear", see log in this post https://github.com/sfeakes/AqualinkD/discussions/388
 
-* Finish off heat pump / chiller.  Probably use a thermostat for both with heat going to heater SP can cool to chiller SP
-
-* Hide passwords (bitmask)
-* Startup config validity checks
-* remove "extended_programming", or hide it.
+* Heat Pump / Chiller for OneTouch
 -->
+
+# Updates in 2.6.1
+* Added External Sensors to Web UI & HomeKit.
+* Added Heat Pump / Chiller Thermostat to Web UI & HomeKit.
+* Fixed some bugs in Configuration Editor.
+* Link device/virtual/onetouch button with SWG BOOST. (Allows you to set VSP RPM when in Boost mode)
 
 # Updates in 2.6.0
 * Added configuration editor in aqmanager.  [Wiki - AQManager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
@@ -458,7 +443,10 @@ https://github.com/sfeakes/AqualinkD/wiki
 #
 
 # Aqualink Versions tested
-This was designed for Jandy Aqualink RS, so should work with AqualinkRS and iAqualink Combo control panels. It will work with Aqualink PDA/AquaPalm and NON Combo iAqualink; but with limitations.
+This was designed for Jandy Aqualink RS, so does work with AqualinkRS and iAqualink Combo control panels. It will work with Aqualink PDA/AquaPalm; but with limitations.
+
+AqualinkD is known to work with Panel Versions from Rev H to the Latest Rev Yg
+<!--
 Below are verified versions, but should work with any AqualinkRS :-
 
 
@@ -476,7 +464,7 @@ Below are verified versions, but should work with any AqualinkRS :-
 
 If you have tested a version not listed here, please let me know by opening an issue.
 #
-
+-->
 # License
 ## Non Commercial Project
 All non commercial projects can be run using our open source code under GPLv2 licensing. As long as your project remains in this category there is no charge.

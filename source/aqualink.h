@@ -307,8 +307,15 @@ struct aqualinkdata
 {
   //panel_status panelstatus;
   uint16_t status_mask;
-  char version[AQ_MSGLEN*2];
-  char revision[AQ_MSGLEN];
+  char version[AQ_MSGLEN*2]; // Will be replaced by below in future
+  char revision[AQ_MSGLEN]; // Will be replaced by below in future
+  
+  // The below 4 are set (sometimes) but not used yet
+  char panel_rev[AQ_MSGLEN];    // From panel
+  char panel_cpu[AQ_MSGLEN];    // From panel
+  char panel_string[AQ_MSGLEN]; // This is from actual PANEL not aqualinkd's config
+  uint16_t panel_support_options;
+
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];
   char last_message[AQ_MSGLONGLEN+1]; // Last ascii message from panel - allbutton (or PDA) protocol
@@ -345,6 +352,7 @@ struct aqualinkdata
   bool boost;
   char boost_msg[10];
   int boost_duration; // need to remove boost message and use this
+  int boost_linked_device;
   float ph;
   int orp;
 

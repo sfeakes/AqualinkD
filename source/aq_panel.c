@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "config.h"
 #include "domoticz.h"
@@ -29,7 +30,8 @@
 
 void initPanelButtons(struct aqualinkdata *aqdata, bool rspda, int size, bool combo, bool dual);
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
-
+void printPanelSupport(struct aqualinkdata *aqdata);
+uint16_t setPanelSupport(struct aqualinkdata *aqdata);
 
 char *name2label(char *str)
 {
@@ -49,75 +51,329 @@ char *name2label(char *str)
   return newst;
 }
 
-// This has NOT been tested.
-uint16_t getPanelSupport( char *rev_string, int rev_len)
-{
-  uint16_t supported = 0;
-  
-  char REV[5];
+// Move to utils / rsm_string_utils.
 
-  if (! rsm_get_revision(REV, rev_string, rev_len) ) {
-    LOG(PANL_LOG,LOG_ERR, "Couldn't get panel revision from '%s'\n",rev_string);
-    return 0; // No point in continue
-  } else if (REV[0] > 90 || REV[0] < 65) { // > Z or < A
-    LOG(PANL_LOG,LOG_WARNING, "Panel revision is not understood '%s', please report this issue");
+
+/*
+* Search string for consecutive numbers, ie 6520 (early revisions).  Return the char of first number and set out_length to length or numbers
+*/
+const char *count_consecutive_digits(const char *str, int length, int *out_len) {
+    //int count = 0;
+    char *sp = NULL;
+    *out_len = 0;
+
+    for (int i = 0; i < length; i++) {
+        if (isdigit((unsigned char)str[i])) {
+            if (sp == NULL) sp=(char *)str + i;
+            *out_len += 1;
+        } else if (*out_len > 0) {
+            return sp;  // End of first digit run
+        }
+    }
+
+    return sp; 
+}
+
+/*
+* Search string for Letter then consecutive numbers, ie B0029221.  Return the letter and set out_length
+*/
+const char* find_letter_and_digits(const char *str, int length, int *out_len) {
+
+    for (int i = 0; i < length; i++) {
+        if (isalpha((unsigned char)str[i]) && isdigit((unsigned char)str[i+1]) ) {
+            count_consecutive_digits((char*)&str[i+1], length-(i+1), out_len);
+          if (*out_len >= 4) {
+            *out_len += 1; // Count for the first letter.
+            return &str[i];
+          }
+        }
+    }
+    const char *sp = count_consecutive_digits(str, length, out_len);
+    if (*out_len >= 4 && sp != NULL) {
+      return sp;
+    } else {
+      *out_len = 0;
+    }
+
+    return NULL;  // Pattern not found
+}
+
+/*
+* Search for REV or REV. in string and return next char (missing space) 
+*/
+const char* find_rev_chars(const char *str, int length, int *out_len) {
+    for (int i = 0; i < length; i++) {
+      if ( str[i] == 'R' && str[i+1] == 'E' && str[i+2] == 'V' ) {
+        i=i+3;
+        while (str[i] == '.' || str[i] == ' ') i++;
+        *out_len=i;
+        // Could probably simply check for space here.
+        while (isalpha(str[*out_len]) || isdigit(str[*out_len]) || str[*out_len] == '.') *out_len+=1;
+        *out_len = *out_len - i;
+        return str + i;
+      }
+    }
+
+    return NULL;  // Pattern not found
+}
+
+
+/*
+pull board CPU, revision & panel string from strings like
+   ' CPU p/n: B0029221'
+   'B0029221 REV T.0.1'
+   'E0260801 REV. O.2'
+   '    REV. O.2    '
+   'B0029221 REV T.0.1'
+   '   REV T.0.1'
+  'Control Panel version B0316823 REV Yg'
+   '    REV. O.2    '
+ '   6520 REV I   '
+ '6520 REV I'
+ 'B0029221 REV T.0'
+ 'B0029221 REV T.0.1'
+ 'B0029222 REV T.2'
+ 'B0316823 REV Yg '
+ 'B0316823 REV Yg'
+ 'E0260801 REV. O.2'
+ 'AquaLink: REV T.0.1'
+ 'CPU p/n: B0029221'
+ '. RS-6 Combo'
+ '. PD-8 Only'
+*/
+
+
+uint8_t setPanelInformationFromPanelMsg(struct aqualinkdata *aqdata, const char *input, uint8_t type, emulation_type source) {
+    const char *rev_pos = NULL;
+    uint8_t rtn = 0;
+
+    //const char *rev_pos = strstr(input, "REV");  // Find the position of "REV"
+    const char *sp;
+    int length = 0;
+    
+    if (isMASK_SET(type, PANEL_REV)) {
+      if (aqdata->panel_rev[0] == '\0') {
+       if ( (rev_pos = strstr(input, "REV")) != NULL) {  // Find the position of "REV"
+         length = 0;
+         sp = find_rev_chars(rev_pos, strlen(input) - (rev_pos - input), &length);
+
+         if (length>0 && sp != NULL) {
+            strncpy(aqdata->panel_rev, sp, length);
+            aqdata->panel_rev[length] = '\0';
+            setMASK(rtn, PANEL_REV);
+            LOG(PANL_LOG, LOG_NOTICE, "Panel REV %s from %s\n",aqdata->panel_rev,getJandyDeviceName(source));
+            setPanelSupport(aqdata);
+            //printPanelSupport(aqdata);
+         } else {
+            //printf("Failed to find REV, length\n");
+         }
+       } else {
+        //printf("Failed to find REV, null\n");
+       }
+      } else {
+        // Already set
+      }
+    }
+
+    if (isMASK_SET(type, PANEL_CPU)) {
+      if (aqdata->panel_cpu[0] == '\0') {
+        if (rev_pos == NULL)
+          sp = find_letter_and_digits(input, strlen(input), &length);
+        else
+          sp = find_letter_and_digits(input, (rev_pos - input), &length);
+       
+        if (length>0 && sp != NULL) {
+            strncpy(aqdata->panel_cpu, sp, length);
+            aqdata->panel_cpu[length] = '\0';
+            setMASK(rtn,PANEL_CPU);
+            LOG(PANL_LOG, LOG_NOTICE, "Panel CPU %s from %s\n",aqdata->panel_cpu,getJandyDeviceName(source));
+        } else {
+            //printf("Failed to find CPU\n");
+        }
+      } else {
+        // already set
+      }
+    }
+
+    if (isMASK_SET(type, PANEL_STRING)) {
+      if (aqdata->panel_string[0] == '\0') {
+      // Find first RS or PD letters
+        sp = NULL;
+        length = strlen(input);
+        for (int i=0; i < length; i++) {
+          if ( (input[i] == 'R' && input[i+1] == 'S') ||
+               (input[i] == 'P' && input[i+1] == 'D')) 
+          {
+            sp = &input[i];
+            break;
+          }
+        }
+        if (sp != NULL) {
+        // Strip trailing whitespace
+          for(length=strlen(sp)-1; isspace(sp[length]); length--);
+          length++;
+          strncpy(aqdata->panel_string, sp, length);
+          aqdata->panel_string[length] = '\0';
+          setMASK(rtn,PANEL_STRING);
+          LOG(PANL_LOG, LOG_NOTICE, "Panel %s from %s\n",aqdata->panel_string,getJandyDeviceName(source));
+        } else {
+        // ERROR not in string.
+        }
+      } else {
+        //already set
+      }
+    }
+
+    return rtn;
+}
+
+
+uint16_t setPanelSupport(struct aqualinkdata *aqdata)
+{
+
+  if (! isalpha(aqdata->panel_rev[0])) {
+    LOG(PANL_LOG,LOG_WARNING, "Panel revision is not understood '%s', please report this issue", aqdata->panel_rev);
   }
 
-
-  // Get the actual rev letter
-  //if ( rsm_get_revision(REV, rev_string, rev_len) ) {
-    // Rev >=I == one touch protocol
-    // Rev >=O == VSP
-    // Rev >=Q == iaqualink touch protocol.
-    // REv >= P == chemlink
-    // Rev >= I serial adapter.
-    // Rev >= F == Dommer.  But need serial protocol so set to I
-    // Rev >= L == JandyColors Smart Light Control
+    // Rev >= F Dimmer.  But need serial protocol so set to I
+    // Rev >= H (Think this was first RS485)
+    // Rev >= HH Serial Adapter. (first support)
+    // Rev >= I Serial Adapter.
+    // Rev >= I One Touch protocol
+    // Rev >= L JandyColors Smart Light Control
+    // Rev >= L PC Dock / (Support stopped around REV Y)
+    // Rev >= M AquaPalm (PDA) - even in MMM this was not usefull
     // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
     // Rev >= N Hayward ColorLogic LED Light
-    // Rev >= O.1== Jandy WaterColors LED ( 9 colors )
-    // Rev >= T.0.1 == limited color light
-    // Rec >= T.2 == more color lights
+    // Rev >= N VersaTemp heatpump & chiller
+    // Rev >= O Variable Speed Pump
+    // Rev >- O One Touch (VSP) has different wat to display info vs REV T (Between REV O & T not sure when exact changed )
+    // Rev >= O.1 == Jandy WaterColors LED ( 9 colors )
+    // Rev >= O.2 ==
+    // Rev >= P ChemLink (Chem feeder / replaced with TrueDose )
     // Rev >= Q Aqualink Touch protocol
     // Rev >= R iAqualink (wifi adapter) protocol
-    // Rev >= L PC Dock
+    // Rev >= S
+    // Rev >= T.0.1 == limited color light
+    // Rev >= T.2 == more color lights
+    // Rev >= U
+    // Rev >= V
     // Rev >= W pump label (not number)
+    // Rev >= W iAqualink 3.0 (I think.  ie can set VSP rpm / SWG / Chill setpoint over the protocol )
+    // Rev >= X
+    // Rev >= Xg
+    // Rev >= Y TruSense Water Chemistry Analyzer
     // Rev >= Yg Virtual Device called Label Auxiliraries
 
-    if (REV[0] > 89 || ( REV[0] == 89 && REV[1] >= 103))
-      supported |= RSP_SUP_VBTN;
 
-    if (REV[0] >= 81) // Q in ascii
-      supported |= RSP_SUP_AQLT;
+    if (aqdata->panel_rev[0] >= 79) // O in ascii
+      aqdata->panel_support_options |= RSP_SUP_VSP;
 
-    if (REV[0] >= 82) // R
-      supported |= RSP_SUP_IAQL;
-    
-    if (REV[0] >= 80) // P in ascii
-      supported |= RSP_SUP_CHEM;
+    if (aqdata->panel_rev[0] >= 73){ // I in ascii
+      aqdata->panel_support_options |= RSP_SUP_ONET;
+      aqdata->panel_support_options |= RSP_SUP_RSSA;
+      aqdata->panel_support_options |= RSP_SUP_SWG;
+    }
 
-    if (REV[0] >= 79) // O in ascii
-      supported |= RSP_SUP_VSP;
+    if (aqdata->panel_rev[0] >= 73) // I in ascii, dimmer came out in F, but we use the serial adapter to set, so use that as support
+      aqdata->panel_support_options |= RSP_SUP_DLIT;
 
-    if (REV[0] >= 73){ // I in ascii
-      supported |= RSP_SUP_ONET;
-      supported |= RSP_SUP_RSSA;
-      supported |= RSP_SUP_SWG;
+    if (aqdata->panel_rev[0] >= 76) {// L in ascii
+      aqdata->panel_support_options |= RSP_SUP_CLIT;
+      aqdata->panel_support_options |= RSP_SUP_PCDOC;
+    }
+
+    if (aqdata->panel_rev[0] >= 78) // N in ascii
+      aqdata->panel_support_options |= RSP_SUP_HPCHIL;
+
+    if (aqdata->panel_rev[0] >= 79) // O in ascii
+      aqdata->panel_support_options |= RSP_SUP_VSP;
+
+    if (aqdata->panel_rev[0] == 79) // O.  VERY SEPCIFIC onetouch uses diferent menu for VSP.
+      aqdata->panel_support_options |= RSP_SUP_ONET_EARLY;
+
+    if (aqdata->panel_rev[0] >= 80) // P in ascii
+      aqdata->panel_support_options |= RSP_SUP_CHEM;
+
+    if (aqdata->panel_rev[0] >= 81) // Q in ascii
+      aqdata->panel_support_options |= RSP_SUP_AQLT;
+
+    if (aqdata->panel_rev[0] >= 82) // R in ascii
+      aqdata->panel_support_options |= RSP_SUP_IAQL;
+
+    if (aqdata->panel_rev[0] >= 87) {// W in ascii
+      aqdata->panel_support_options |= RSP_SUP_PLAB;
+      aqdata->panel_support_options |= RSP_SUP_IAQL3;
     }
     
-    if (REV[0] >= 76) // L in ascii
-      supported |= RSP_SUP_CLIT;
-
-    if (REV[0] >= 73) // I in ascii, dimmer came out in F, but we use the serial adapter to set, so use that as support
-      supported |= RSP_SUP_DLIT;
+    if (aqdata->panel_rev[0] > 89 || ( aqdata->panel_rev[0] == 89 && aqdata->panel_rev[1] >= 103)) { // Y=89, g=103
+      aqdata->panel_support_options |= RSP_SUP_VBTN;
+      aqdata->panel_support_options |= RSP_SUP_TSCHEM;
+      aqdata->panel_support_options &= ~RSP_SUP_PCDOC;
+    }
 
     //if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
     //  supported |= RSP_SUP_CLIT4;
     
   //}
 
-  return supported;
+  return aqdata->panel_support_options;
 }
+
+
+void printPanelSupport(struct aqualinkdata *aqdata) {
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_ONET )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: One Touch\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_AQLT )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Aqualink Touch\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_ONET_EARLY )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: One Touch (Early)\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_IAQL )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: iAqualink 1.0/2.0\n");
+  }
+   if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_IAQL3 )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: iAqualink 3.0\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_RSSA )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: RS Serial Adapter\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_VSP )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Variable Speed Pumps\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_CHEM )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Chemical feeder\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_TSCHEM )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: True Sense Chemical Reader\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_SWG )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Salt Water Generator\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_CLIT )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Color Lights\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_DLIT )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Dimmable Lights\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_VBTN )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Virtual Button\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_PLAB )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Variable Speed Pump (By Label & extended ID)\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_HPCHIL )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: Heat Pump / Chiller\n");
+  }
+  if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_PCDOC )) {
+    LOG(PANL_LOG,LOG_NOTICE, "Panel supports: PC Dock\n");
+  }
+}
+
+
+
 
 void changePanelToMode_Only() {
   _aqconfig_.paneltype_mask |= RSP_SINGLE;

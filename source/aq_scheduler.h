@@ -38,12 +38,14 @@ void get_cron_pump_times();
 typedef enum reset_event_type{
   AQS_POWER_ON               = (1 << 1),
   AQS_FRZ_PROTECT_OFF        = (1 << 2),
-  AQS_BOOST_OFF              = (1 << 3)
+  AQS_BOOST_OFF              = (1 << 3),
+  AQS_BOOST_ON               = (1 << 4)
 } reset_event_type;
 
 #define isAQS_START_PUMP_EVENT_ENABLED ( ((_aqconfig_.schedule_event_mask & AQS_POWER_ON) == AQS_POWER_ON) || \
                                          ((_aqconfig_.schedule_event_mask & AQS_FRZ_PROTECT_OFF) == AQS_FRZ_PROTECT_OFF) || \
-                                         ((_aqconfig_.schedule_event_mask & AQS_BOOST_OFF) == AQS_BOOST_OFF) )
+                                         ((_aqconfig_.schedule_event_mask & AQS_BOOST_OFF) == AQS_BOOST_OFF) || \
+                                         ((_aqconfig_.schedule_event_mask & AQS_BOOST_ON) == AQS_BOOST_ON))
 
 //#define isAQS_USE_PUMP_TIME_FROM_CRON_ENABLED !((_aqconfig_.schedule_event_mask & AQS_DONT_USE_CRON_PUMP_TIME) == AQS_DONT_USE_CRON_PUMP_TIME)
 #define isAQS_USE_CRON_PUMP_TIME_ENABLED ((_aqconfig_.schedule_event_mask & AQS_USE_CRON_PUMP_TIME) == AQS_USE_CRON_PUMP_TIME)

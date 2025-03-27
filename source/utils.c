@@ -311,7 +311,7 @@ const char* loglevel2cgn_name(int level)
   }
 }
 
-const char* logmask2name(logmask_t from)
+const char *logmask2name(logmask_t from)
 {
   switch (from) {
     case NET_LOG:

@@ -103,6 +103,7 @@ struct aqconfig
   int8_t schedule_event_mask; // Was int16_t, but no need
   int  sched_chk_pumpon_hour;
   int  sched_chk_pumpoff_hour;
+  char *sched_chk_booston_device;
   bool ftdi_low_latency;
   int frame_delay;
   bool device_pre_state;
@@ -361,6 +362,8 @@ int _numCfgParams;
 #define CFG_C_event_check_pumpoff_hour          24
 #define CFG_N_event_check_usecron               "event_check_use_scheduler_times"
 #define CFG_C_event_check_usecron               32
+
+#define CFG_N_event_check_booston_device        "event_booston_check_device"
 
 #define CFG_N_ftdi_low_latency                  "ftdi_low_latency"
 #define CFG_C_ftdi_low_latency                  16

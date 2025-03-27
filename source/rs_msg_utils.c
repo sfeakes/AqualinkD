@@ -58,6 +58,40 @@ Pull revision from string  examples
 AllButton: Control Panel version B0316823 REV Yg
 
 */
+// This should be removed soon
+int rsm_get_revision_new(char *dest, int dest_len, const char *src, int src_len)
+{
+  char *sp = NULL;
+  char *ep = NULL;
+  
+  sp = rsm_strnstr(src, "REV", src_len);
+  if (sp == NULL) {
+    return 0;
+  }
+  sp = sp+3;
+  while ( *sp == ' ' || *sp == '.') {
+    sp = sp+1;
+  }
+  // sp is now the start of string revision #
+  ep = sp;
+  while ( *ep != ' ' && *ep != '\0') {
+    ep = ep+1;
+  }
+  
+  int len=ep-sp;
+  // Check we got something usefull
+  if (len > 5) {
+    return 0;
+  }
+
+  len = AQ_MIN(len, dest_len);
+
+  memcpy(dest, sp, len);
+  dest[len] = '\0';
+
+  return len;
+}
+// This should be removed soon
 bool rsm_get_revision(char *dest, const char *src, int src_len)
 {
   char *sp = NULL;
@@ -94,6 +128,7 @@ pull board CPU from strings line
    'B0029221 REV T.0.1'
    'E0260801 REV. O.2'
 */
+// This should be removed soon
 int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len)
 {
   //char *regexString="/\\w\\d{4,10}/gi";
@@ -110,7 +145,7 @@ int rsm_get_boardcpu(char *dest, int dest_len, const char *src, int src_len)
 
   if ((regexec(&regexCompiled,src,1,&match,0)) != 0) {
     regfree(&regexCompiled);
-    printf("********** ERROR didn;t line match \n");
+    //printf("********** ERROR didn;t line match \n");
     return 0;
   }
 

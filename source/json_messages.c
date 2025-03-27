@@ -532,7 +532,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    "on",
                                    ((homekit)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->pool_temp):aqdata->pool_temp));
-  length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" }",
+  length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
                                    SPA_TEMP_TOPIC,
                                    /*SPA_TEMPERATURE,*/
                                    "Spa Water Temperature",
@@ -540,11 +540,26 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
                                    ((homekit)?2:0),
                                    ((homekit_f)?degFtoC(aqdata->spa_temp):aqdata->spa_temp));
 
+  for (i=0; i < aqdata->num_sensors; i++) 
+  {
+    if (aqdata->sensors[i].value != TEMP_UNKNOWN) {
+       //length += sprintf(buffer+length, "\"%s\": \"%.2f\",", aqdata->sensors[i].label, aqdata->sensors[i].value );
+      length += sprintf(buffer+length, "{\"type\": \"temperature\", \"id\": \"%s/%s\", \"name\": \"%s\", \"state\": \"%s\", \"value\": \"%.*f\" },",
+        SENSOR_TOPIC,aqdata->sensors[i].label,
+        aqdata->sensors[i].label,
+        "on",
+        ((homekit)?2:0),
+        ((homekit_f)?aqdata->sensors[i].value:aqdata->sensors[i].value));
+    }
+  }
 /*
   length += sprintf(buffer+length,  "], \"aux_device_detail\": [");
   for (i=0; i < MAX_PUMPS; i++) {
   }
 */
+  if (buffer[length-1] == ',')
+    length--;
+
   length += sprintf(buffer+length, "]}");
 
   LOG(NET_LOG,LOG_DEBUG, "JSON: %s used %d of %d\n", homekit?"homebridge":"web", length, size);

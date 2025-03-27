@@ -1232,7 +1232,7 @@
         } else if (status == 'on' && type == 'setpoint_chiller') {
           tile_icon.classList.remove("enabled");
           tile_icon.classList.remove("disabled");
-          console.log("mode="+tile_icon.parentElement.parentElement.getAttribute("mode"));
+          //console.log("mode="+tile_icon.parentElement.parentElement.getAttribute("mode"));
           if ( tile_icon.parentElement.parentElement.getAttribute("mode") == "heat" ) {
             tile_icon.classList.remove("cool");
             tile_icon.classList.add("heat");
@@ -1259,10 +1259,12 @@
     }
 
     function createTile(object) {
+      //console.log("Create tile "+object.id);
       if (object.name == 'NONE') {
         return;
       }
       if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
+        //console.log("Create tile <exclude list> "+object.label);
         return;
       }
       //if (object.type == 'switch' || object.type == 'switch_program') {
@@ -2318,6 +2320,11 @@
         setTileOnText(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
         //setTileOnTextLine2(obj.toString(),"Timer "+toHoursAndMinutes(data.timer_durations[obj]));
         //console.log("TIMER "+obj.toString()+" duration "+data.timer_durations[obj]);
+      }
+
+      for (var obj in data.sensors) {
+        //console.log("Set Value `Sensor/"+obj.toString()+"' to "+data.sensors[obj]);
+        setTileValue("Sensor/"+obj.toString(), data.sensors[obj]);
       }
 
       for (var obj in data.alternate_modes) {

@@ -167,7 +167,7 @@ void _broadcast_simulator_message(struct mg_connection *nc) {
 
 #ifdef AQ_MANAGER
 
-#define WS_LOG_LENGTH 200
+#define WS_LOG_LENGTH 400
 // Send log message to any aqManager websocket.
 void ws_send_logmsg(struct mg_connection *nc, char *msg) {
   struct mg_connection *c;

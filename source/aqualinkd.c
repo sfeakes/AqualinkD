@@ -260,7 +260,7 @@ void action_delayed_request()
 
   // If we don't know the units yet, we can't action setpoint, so wait until we do.
   if (_aqualink_data.temp_units == UNKNOWN && 
-     (_aqualink_data.unactioned.type == POOL_HTR_SETPOINT || _aqualink_data.unactioned.type == SPA_HTR_SETPOINT || _aqualink_data.unactioned.type == FREEZE_SETPOINT))
+     (_aqualink_data.unactioned.type == POOL_HTR_SETPOINT || _aqualink_data.unactioned.type == SPA_HTR_SETPOINT || _aqualink_data.unactioned.type == FREEZE_SETPOINT || _aqualink_data.unactioned.type == CHILLER_SETPOINT))
     return;
 
   if (_aqualink_data.unactioned.type == POOL_HTR_SETPOINT)
@@ -300,6 +300,19 @@ void action_delayed_request()
     else
     {
       LOG(AQUA_LOG,LOG_NOTICE, "Freeze setpoint is already %d, not changing\n", _aqualink_data.unactioned.value);
+    }
+  }
+  else if (_aqualink_data.unactioned.type == CHILLER_SETPOINT)
+  {
+    _aqualink_data.unactioned.value = setpoint_check(CHILLER_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
+    if (_aqualink_data.chiller_set_point != _aqualink_data.unactioned.value)
+    {
+      aq_programmer(AQ_SET_CHILLER_TEMP, sval, &_aqualink_data);
+      LOG(AQUA_LOG,LOG_NOTICE, "Setting Chiller setpoint to %d\n", _aqualink_data.unactioned.value);
+    }
+    else
+    {
+      LOG(AQUA_LOG,LOG_NOTICE, "Chiller setpoint is already %d, not changing\n", _aqualink_data.unactioned.value);
     }
   }
   else if (_aqualink_data.unactioned.type == SWG_SETPOINT)
@@ -368,19 +381,6 @@ void action_delayed_request()
   } 
   else if (_aqualink_data.unactioned.type == LIGHT_MODE) {
     panel_device_request(&_aqualink_data, LIGHT_MODE, _aqualink_data.unactioned.id, _aqualink_data.unactioned.value, UNACTION_TIMER);
-  }
-  else if (_aqualink_data.unactioned.type == CHILLER_SETPOINT)
-  {
-    _aqualink_data.unactioned.value = setpoint_check(CHILLER_SETPOINT, _aqualink_data.unactioned.value, &_aqualink_data);
-    if (_aqualink_data.chiller_set_point != _aqualink_data.unactioned.value)
-    {
-      aq_programmer(AQ_SET_CHILLER_TEMP, sval, &_aqualink_data);
-      LOG(AQUA_LOG,LOG_NOTICE, "Setting Chiller setpoint to %d\n", _aqualink_data.unactioned.value);
-    }
-    else
-    {
-      LOG(AQUA_LOG,LOG_NOTICE, "Chiller setpoint is already %d, not changing\n", _aqualink_data.unactioned.value);
-    }
   }
   else 
   {
@@ -489,7 +489,11 @@ int main(int argc, char *argv[])
     else if (strcmp(argv[i], "-rsrd") == 0)
     {
       _cmdln_lograwRS485 = true;
-    }  
+    }
+    else if (strcmp(argv[i], "-nc") == 0)
+    {
+      _cmdln_nostartupcheck = true;
+    }
   }
 
   // Set this here, so it doesn;t get reset if the manager restarts the AqualinkD process.
@@ -533,7 +537,7 @@ int startup(char *self, char *cfgFile)
     setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
 #endif
 
-  LOG(AQUA_LOG,LOG_NOTICE, "%s v%s\n", AQUALINKD_NAME, AQUALINKD_VERSION);
+  LOG(AQUA_LOG,LOG_NOTICE, "Starting %s v%s !\n", AQUALINKD_NAME, AQUALINKD_VERSION);
 
   check_print_config(&_aqualink_data);
   
@@ -848,6 +852,9 @@ void main_loop()
 
   //_aqualink_data.panelstatus = STARTING;
   AddAQDstatusMask(CHECKING_CONFIG);
+  //_aqualink_data.panel_rev = NULL;
+  //_aqualink_data.panel_cpu = NULL;
+  //_aqualink_data.panel_string = NULL;
   _aqualink_data.updated = true;
   sprintf(_aqualink_data.last_display_message, "%s", "Connecting to Control Panel");
   _aqualink_data.is_display_message_programming = false;

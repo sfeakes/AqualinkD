@@ -548,6 +548,12 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_zero;
   
   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.sched_chk_booston_device;
+  _cfgParams[_numCfgParams].value_type = CFG_STRING;
+  _cfgParams[_numCfgParams].name = CFG_N_event_check_booston_device;
+  _cfgParams[_numCfgParams].default_value = NULL;
+
+  _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.ftdi_low_latency;
   _cfgParams[_numCfgParams].value_type = CFG_BOOL;
   _cfgParams[_numCfgParams].name = CFG_N_ftdi_low_latency;
@@ -1614,6 +1620,22 @@ void check_print_config (struct aqualinkdata *aqdata)
     LOG(AQUA_LOG,LOG_WARNING, "Config error, 'read_RS485_iAqualink' is not valid when 'enable_iaqualink=yes', ignoring read_RS485_iAqualink!\n");
     _aqconfig_.read_RS485_devmask &= ~READ_RS485_IAQUALNK;
   }
+
+  // Find the boost linked device if one is set
+  if (_aqconfig_.sched_chk_booston_device != NULL) {
+    //printf("checking boost linked device\n");
+    for (i = 0; i < aqdata->total_buttons; i++)
+    {
+      if (rsm_strncmp(_aqconfig_.sched_chk_booston_device, aqdata->aqbuttons[i].label, strlen(aqdata->aqbuttons[i].label)) == 0) {
+        aqdata->boost_linked_device = i;
+        setMASK(_aqconfig_.schedule_event_mask, AQS_BOOST_ON);
+        break;
+      }
+    }
+    LOG(AQUA_LOG,LOG_WARNING, "Config error, couldn't find button `%s` from config option `%s`\n",_aqconfig_.sched_chk_booston_device,CFG_N_event_check_booston_device);
+  } else {
+    aqdata->boost_linked_device = AQ_UNKNOWN;
+  }
   
 
   /*
@@ -1903,6 +1925,17 @@ int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, str
     cursor += groupArray[0].rm_eo;
   }
 
+  // The above will reset all the panel profocol masks since it re-sets the panel, so set them back here.
+
+  if (_aqconfig_.rssa_device_id >= 0x48 && _aqconfig_.rssa_device_id <= 0x49) {
+    addPanelRSserialAdapterInterface();
+  }
+  if (_aqconfig_.extended_device_id >= 0x40 && _aqconfig_.extended_device_id <= 0x43) {
+    addPanelOneTouchInterface();
+  } else if (_aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33) {
+    addPanelIAQTouchInterface();
+  }
+
   regfree(&regexCompiled);
 
   check_print_config(aqdata);
@@ -1920,10 +1953,10 @@ const char *pumpType2String(pump_type ptype) {
       return "JANDY ePUMP";
     break;
     case VSPUMP:
-      return "Pentair VF";
+      return "Pentair VS";
     break;
     case VFPUMP:
-      return "Pentair VS";
+      return "Pentair VF";
     break;
     case PT_UNKNOWN:
     default:

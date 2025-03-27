@@ -515,9 +515,11 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
     // A master firmware revision message.
     strcpy(aq_data->version, msg);
     rsm_get_revision(aq_data->revision, aq_data->version, strlen(aq_data->version));
+    setPanelInformationFromPanelMsg(aq_data, msg, PANEL_CPU | PANEL_REV, ALLBUTTON);
+    //setBoardCPURevision(aq_data, aq_data->version, strlen(aq_data->version), ALLB_LOG);
     //_gotREV = true;
-    LOG(ALLB_LOG,LOG_NOTICE, "Control Panel version %s\n", aq_data->version);
-    LOG(ALLB_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
+    LOG(ALLB_LOG,LOG_DEBUG, "Control Panel version %s\n", aq_data->version);
+    LOG(ALLB_LOG,LOG_DEBUG, "Control Panel revision %s\n", aq_data->revision);
     if (_initWithRS == false)
     {
       //LOG(ALLBUTTON,LOG_NOTICE, "Standard protocol initialization complete\n");
@@ -580,6 +582,11 @@ void _processMessage(char *message, struct aqualinkdata *aq_data, bool reset)
   else if ( (strncasecmp(msg, "BOOST POOL", 10) == 0) && (strcasestr(msg, "REMAINING") != NULL) ) {
     // Ignore messages if in programming mode.  We get one of these turning off for some strange reason.
     if (in_programming_mode(aq_data) == false) {
+
+      if (aq_data->boost == false || boostInLastLoop == false) {
+        event_happened_set_device_state(AQS_BOOST_ON, aq_data);
+      }
+
       snprintf(aq_data->boost_msg, 6, "%s", &msg[11]);
       aq_data->boost_duration = rsm_HHMM2min(aq_data->boost_msg);
       aq_data->boost = true;

@@ -273,10 +273,28 @@ bool log_heater_setpoints(struct aqualinkdata *aq_data)
   return rtn;
 }
 
+/*
+One Touch: OneTouch Menu Line 0 = 
+One Touch: OneTouch Menu Line 1 = 
+One Touch: OneTouch Menu Line 2 = 
+One Touch: OneTouch Menu Line 3 = 
+One Touch: OneTouch Menu Line 4 =  MODEL E0260801 
+One Touch: OneTouch Menu Line 5 =    RS-8 Combo   
+One Touch: OneTouch Menu Line 6 = 
+One Touch: OneTouch Menu Line 7 =     REV. O.2    
+One Touch: OneTouch Menu Line 8 = 
+One Touch: OneTouch Menu Line 9 = 
+One Touch: OneTouch Menu Line 10 = 
+One Touch: OneTouch Menu Line 11 =
+*/
 bool log_panelversion(struct aqualinkdata *aq_data)
 {
   char *end;
   static bool revTest=false;
+
+  setPanelInformationFromPanelMsg(aq_data, _menu[4], PANEL_CPU, ONETOUCH);
+  setPanelInformationFromPanelMsg(aq_data, _menu[5], PANEL_STRING, ONETOUCH);
+  setPanelInformationFromPanelMsg(aq_data, _menu[7], PANEL_REV, ONETOUCH);
 
   // It's already been set
   if (strlen(aq_data->version) > 0) {
@@ -307,7 +325,7 @@ bool log_panelversion(struct aqualinkdata *aq_data)
   LOG(ONET_LOG,LOG_NOTICE, "Control Panel version %s\n", aq_data->version);
   LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
 
-  if ( strcmp(aq_data->revision, "0.1") == 0 || strcmp(aq_data->revision, "0.2") == 0 ) {
+  if ( strcmp(aq_data->revision, "O.1") == 0 || strcmp(aq_data->revision, "O.2") == 0 ) {
     LOG(ONET_LOG,LOG_NOTICE, "Setting early version for OneTouch\n");
     _panel_version_P2 = true;
   }
