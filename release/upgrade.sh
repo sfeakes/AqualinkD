@@ -160,10 +160,13 @@ function run_install_script {
 
   # If in terminal then log
   if [ -t 0 ]; then 
-   "$TEMP_INSTALL/release/install.sh" &> $OUTPUT
+   source "$TEMP_INSTALL/release/install.sh" &> $OUTPUT
   else
-   "$TEMP_INSTALL/release/install.sh" &> $OUTPUT
+   source "$TEMP_INSTALL/release/install.sh" &> $OUTPUT
   fi
+
+  log "Finished installing AqualinkD $1"
+
 }
 
 function remove_install {
