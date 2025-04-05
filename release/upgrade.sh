@@ -31,7 +31,7 @@ logerr()
 { 
   echo $* >&2
   logger -p local0.ERROR -t aqualinkd_upgrade "$*"
-  # Below is same as above but will only wotk on journald (leaving it here if we use that rater then file)
+  
   #echo $* | systemd-cat -t aqualinkd_upgrade -p emerg
   echo "ERROR: $*" >> $OUTPUT
 }
@@ -207,15 +207,7 @@ else
   exit $FALSE;
 fi
 
-echo "DEBUG, Exiting"
-exit
-
 case $1 in
-  latest)
-    if ! download_latest_release; then logerr "downloading latest"; exit $FALSE; fi
-    run_install_script $REL_VERSION
-    cleanup
-  ;;
   development)
     if ! latest_development_version; then logerr "getting development version";exit $FALSE; fi
     if ! download_latest_development; then logerr "downloading latest development";exit $FALSE; fi
@@ -226,8 +218,10 @@ case $1 in
   clean|delete|remove)
     if ! remove_install; then logerr "Removing install";exit $FALSE; fi
   ;;
-  *)
-    echo "ERROR Unknown"
+  latest|*)
+    if ! download_latest_release; then logerr "downloading latest"; exit $FALSE; fi
+    run_install_script $REL_VERSION
+    cleanup
   ;;
 esac
 
