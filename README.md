@@ -131,6 +131,10 @@ NEED TO FIX FOR THIS RELEASE.
 * New install and remote_install scripts.
 * Changed MQTT posting frequency when Timers are enabled for better
 * Updates for new repo location. [AqualinkD organization](https://github.com/aqualinkd/AqualinkD)
+* Please use the following to upgrade 
+  * `curl -fsSL https://install.aqualinkd.com | sudo bash -s -- latest` 
+  * -or- 
+  * `curl -fsSL https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh | sudo bash -s -- latest`
 
 # Updates in 2.6.1
 * Added External Sensors to Web UI & HomeKit.

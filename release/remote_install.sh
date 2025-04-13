@@ -8,6 +8,7 @@
 # To get good / bad exit code from both curl and bash, use below. It will exit current term so be careful.
 # curl -fsSL "https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh" | ( sudo bash && exit 0 ) || exit $?
 
+REQUIRED_SPACE_MB=18 # Need 17MB, use 18
 
 TRUE=0
 FALSE=1
@@ -151,6 +152,19 @@ function check_can_upgrade {
    # Check we can get the latest version
   if command -v dpkg &>/dev/null; then
     if ! check_system_arch; then output+="System Architecture not supported!"; fi
+  fi
+
+  # Check free diskspace
+  mkdir -p "$TEMP_INSTALL"
+  free_space_mb=$(df -mP "$TEMP_INSTALL" 2>/dev/null | awk 'NR==2{print $4}' )
+
+  # Check if the df command was successful and if free_space_mb is a number
+  if [ -z "$free_space_mb" ] || ! [[ "$free_space_mb" =~ ^[0-9]+$ ]]; then
+    output+="Could not retrieve free space for directory: $TEMP_INSTALL"
+  else
+    if [ "$free_space_mb" -lt "$REQUIRED_SPACE_MB" ]; then
+      output+="Not enough disk space on directory: $TEMP_INSTALL! (Required $REQUIRED_SPACE_MB MB)"
+    fi
   fi
 
   if [[ "$output" == "" ]] && [[ "$REL_VERSION" != "" ]]; then 
