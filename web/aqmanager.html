@@ -1345,6 +1345,10 @@
               if logfilename=NULL we can turn on/off logging to file.
               logging2file will tell us if it's currently on or off
             */
+            try{
+              document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+            } catch (e){}
+
             if (data['deamonized'] == 'off') {
                 //console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
                 disablebutton("restart");
@@ -1352,7 +1356,7 @@
             } else {
               enablebutton("restart");
               if (data['aqualinkd_version']) {
-                document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+                //document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
                 if (data['aqualinkd_version'] == _latestVersionAvailable ) {
                     document.getElementById("latesversionavailable").classList.add("hidden");
                 } else {
