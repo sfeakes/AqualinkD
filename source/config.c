@@ -1632,7 +1632,8 @@ void check_print_config (struct aqualinkdata *aqdata)
         break;
       }
     }
-    LOG(AQUA_LOG,LOG_WARNING, "Config error, couldn't find button `%s` from config option `%s`\n",_aqconfig_.sched_chk_booston_device,CFG_N_event_check_booston_device);
+    if (i >= aqdata->total_buttons)
+      LOG(AQUA_LOG,LOG_WARNING, "Config error, couldn't find button `%s` from config option `%s`\n",_aqconfig_.sched_chk_booston_device,CFG_N_event_check_booston_device);
   } else {
     aqdata->boost_linked_device = AQ_UNKNOWN;
   }
