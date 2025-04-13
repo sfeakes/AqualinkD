@@ -2,11 +2,11 @@
 
 #
 # run from curl or local will give different results.
-#  curl -fsSL https://raw.githubusercontent.com/sfeakes/AqualinkD/master/release/remote_install.sh | sudo bash -s -- latest
+#  curl -fsSL https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh | sudo bash -s -- latest
 #  ./upgrade.sh latest
 #
 # To get good / bad exit code from both curl and bash, use below. It will exit current term so be careful.
-# curl -fsSL "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/release/remote_install.sh" | ( sudo bash && exit 0 ) || exit $?
+# curl -fsSL "https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh" | ( sudo bash && exit 0 ) || exit $?
 
 
 TRUE=0
