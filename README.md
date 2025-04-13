@@ -13,7 +13,7 @@ If you like this project, you can buy me a cup of coffee :)
 
 
 ## AqualinkD new home
-AqualinkD has grown over the years and now has multiple repositories for software / hardware. We are brining them all together under one organization. [AqualinkD home page (under construction)](https://www.aqualinkd.com) -or- [AqualinkD organization](https://github.com/aqualinkd/AqualinkD).<br>
+AqualinkD has grown over the years and now has multiple repositories for software / hardware. We are brining them all together under one organization. [AqualinkD home page (under construction)](https://www.aqualinkd.com) -or- [AqualinkD organization](https://github.com/aqualinkd).<br>
 AqualinkD will always be open source and so will every associated repository. Nothing will change from that perspective. You will always be able to run this on cheap off the shelf hardware.
 
 
