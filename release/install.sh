@@ -24,14 +24,41 @@ MDNSLocation="/etc/avahi/services/"
 
 SOURCEBIN=$BIN
 
+LOG_SYSTEMD=1   # 1=false in bash, 0=true
+REMOUNT_RO=1
+
+log()
+{
+  echo "$*"
+
+  if [[ $LOG_SYSTEMD -eq 0 ]]; then
+    logger -p local0.notice -t aqualinkd "Upgrade:   $*"
+    # Below is same as above but will only wotrk on journald (leaving it here if we use that rater then file)
+    #echo $* | systemd-cat -t aqualinkd_upgrade -p info 
+    #echo "$*" >> "$OUTPUT"
+  fi
+}
+
+if ! tty > /dev/null 2>&1 || [ "$1" = "syslog" ]; then
+  # No stdin, probably called from upgrade script
+  LOG_SYSTEMD=0 # Set logger to systemd
+fi
+
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root" 
+   log "This script must be run as root" 
    exit 1
 fi
 
 if [[ $(mount | grep " / " | grep "(ro,") ]]; then
-  echo "Root filesystem is readonly, can't install" 
-  exit 1
+  if mount / -o remount,rw &>/dev/null; then
+      # can mount RW.
+      #mount / -o remount,rw &>/dev/null
+    log "Root filesystem is readonly, remounted RW"
+    REMOUNT_RO=0;
+  else
+    log "Root filesystem is readonly, can't install" 
+    exit 1
+  fi
 fi
 
 # Figure out what system we are on and set correct binary.
@@ -41,7 +68,7 @@ if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "igno
   # dpkg --print-architecture
 
   # Exit if we can't find systemctl
-  command -v dpkg >/dev/null 2>&1 || { echo -e "Can't detect system architecture, Please check path to 'dpkg' or install manually.\n"\
+  command -v dpkg >/dev/null 2>&1 || { log -e "Can't detect system architecture, Please check path to 'dpkg' or install manually.\n"\
                                                "Or run '$0 ignorearch'" >&2; exit 1; }
 
   ARCH=$(dpkg --print-architecture)
@@ -49,19 +76,19 @@ if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "igno
 
   case $ARCH in 
     arm64)
-      echo "Arch is $ARCH, Using 64bit AqualinkD"
+      log "Arch is $ARCH, Using 64bit AqualinkD"
       BINEXT="-arm64"
     ;;
     armhf)
-      echo "Arch is $ARCH, Using 32bit AqualinkD"
+      log "Arch is $ARCH, Using 32bit AqualinkD"
       BINEXT="-armhf"
     ;;
     *)
       if [ -f $BUILD/$SOURCEBIN-$ARCH ]; then
-        echo "Arch $ARCH is not officially supported, but we found a suitable binary"
+        log "Arch $ARCH is not officially supported, but we found a suitable binary"
         BINEXT="-$ARCH"
       else
-        echo "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
+        log "Arch $ARCH is unknown, Default to using 32bit HF AqualinkD, you may need to manually try ./release/aqualnkd_arm64"
         BINEXT=""
       fi
     ;;
@@ -72,18 +99,18 @@ if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "igno
     SOURCEBIN=$BIN$BINEXT
   elif [ -f $BUILD/$SOURCEBIN ]; then
     # Not good
-    echo "Can't find correct aqualnkd binary for $ARCH, '$BUILD/$SOURCEBIN$BINEXT' using '$BUILD/$SOURCEBIN' ";
+    log "Can't find correct aqualnkd binary for $ARCH, '$BUILD/$SOURCEBIN$BINEXT' using '$BUILD/$SOURCEBIN' ";
   fi
 fi
 
 # Exit if we can't find binary
 if [ ! -f $BUILD/$SOURCEBIN ]; then
-  echo "Can't find aqualnkd binary `$BUILD/$SOURCEBIN` ";
+  log "Can't find aqualnkd binary `$BUILD/$SOURCEBIN` ";
   exit 1
 fi
 
 # Exit if we can't find systemctl
-command -v systemctl >/dev/null 2>&1 || { echo "This script needs systemd's systemctl manager, Please check path or install manually" >&2; exit 1; }
+command -v systemctl >/dev/null 2>&1 || { log "This script needs systemd's systemctl manager, Please check path or install manually" >&2; exit 1; }
 
 # stop service, hide any error, as the service may not be installed yet
 systemctl stop $SERVICE > /dev/null 2>&1
@@ -91,7 +118,7 @@ SERVICE_EXISTS=$(echo $?)
 
 # Clean everything if requested.
 if [ "$1" == "clean" ]; then
-  echo "Deleting install"
+  log "Deleting install"
   systemctl disable $SERVICE > /dev/null 2>&1
   if [ -f $BINLocation/$BIN ]; then
     rm -f $BINLocation/$BIN
@@ -105,6 +132,9 @@ if [ "$1" == "clean" ]; then
   if [ -f $DEFLocation/$DEF ]; then
     rm -f $DEFLocation/$DEF
   fi
+  if [ -f /etc/cron.d/aqualinkd ]; then
+    rm -f /etc/cron.d/aqualinkd
+  fi
   if [ -d $WEBLocation ]; then
     rm -rf $WEBLocation
   fi
@@ -115,17 +145,17 @@ fi
 
 # Check cron.d options
 if [ ! -d "/etc/cron.d" ]; then
-  echo "The version of Cron may not support chron.d, if so AqualinkD Scheduler will not work"
-  echo "Please check before starting"
+  log "The version of Cron may not support chron.d, if so AqualinkD Scheduler will not work"
+  log "Please check before starting"
 else
   if [ -f "/etc/default/cron" ]; then
     CD=$(cat /etc/default/cron | grep -v ^# | grep "\-l")
     if [ -z "$CD" ]; then
-      echo "Please enabled cron.d support, if not AqualinkD Scheduler will not work"
-      echo "Edit /etc/default/cron and look for the -l option, usually in EXTRA_OPTS"
+      log "Please enabled cron.d support, if not AqualinkD Scheduler will not work"
+      log "Edit /etc/default/cron and look for the -l option, usually in EXTRA_OPTS"
     fi
   else
-    echo "Please make sure the version if Cron supports chron.d, if not the AqualinkD Scheduler will not work"
+    log "Please make sure the version if Cron supports chron.d, if not the AqualinkD Scheduler will not work"
   fi
 fi
 
@@ -134,10 +164,12 @@ fi
 if [ -f "$WEBLocation/config.js" ]; then
   # Test is if has AUX_V1 in file AND "Spa" is in file (Spa_mode changed to Spa)
   # Version 2.6.0 added Chiller as well
-  if  ! grep -q 'Aux_V1' $WEBLocation/$file || ! grep -q '"Spa"' $WEBLocation/$file || ! grep -q '"Chiller"' $WEBLocation/$file; then
+  if  ! grep -q '"Aux_V1"' "$WEBLocation/config.js" || 
+      ! grep -q '"Spa"' "$WEBLocation/config.js" || 
+      ! grep -q '"Chiller"' "$WEBLocation/config.js"; then
     dateext=`date +%Y%m%d_%H_%M_%S`
-    echo "AqualinkD web config is old, making copy to $WEBLocation/config.js.$dateext"
-    echo "Please make changes to new version $WEBLocation/config.js"
+    log "AqualinkD web config is old, making copy to $WEBLocation/config.js.$dateext"
+    log "Please make changes to new version $WEBLocation/config.js"
     mv $WEBLocation/config.js $WEBLocation/config.js.$dateext
   fi
 fi
@@ -150,24 +182,25 @@ cp $BUILD/$SOURCEBIN $BINLocation/$BIN
 cp $BUILD/$SRV $SRVLocation/$SRV
 
 if [ -f $CFGLocation/$CFG ]; then
-  echo "AqualinkD config exists, did not copy new config, you may need to edit existing! $CFGLocation/$CFG"
+  log "AqualinkD config exists, did not copy new config, you may need to edit existing! $CFGLocation/$CFG"
 else
   cp $BUILD/$CFG $CFGLocation/$CFG
 fi
 
 if [ -f $DEFLocation/$DEF ]; then
-  echo "AqualinkD defaults exists, did not copy new defaults to $DEFLocation/$DEF"
+  log "AqualinkD defaults exists, did not copy new defaults to $DEFLocation/$DEF"
 else
+
   cp $BUILD/$DEF.defaults $DEFLocation/$DEF
 fi
 
 if [ -f $MDNSLocation/$MDNS ]; then
-  echo "Avahi/mDNS defaults exists, did not copy new defaults to $MDNSLocation/$MDNS"
+  log "Avahi/mDNS defaults exists, did not copy new defaults to $MDNSLocation/$MDNS"
 else
   if [ -d "$MDNSLocation" ]; then
     cp $BUILD/$MDNS.avahi $MDNSLocation/$MDNS
   else
-    echo "Avahi/mDNS may not be installed, not copying $MDNSLocation/$MDNS"
+    log "Avahi/mDNS may not be installed, not copying $MDNSLocation/$MDNS"
   fi
 fi
 
@@ -176,20 +209,38 @@ if [ ! -d "$WEBLocation" ]; then
 fi
 
 if [ -f "$WEBLocation/config.js" ]; then
-  echo "AqualinkD web config exists, did not copy new config, you may need to edit existing $WEBLocation/config.js "
-  rsync -avq --exclude='config.js' $BUILD/../web/* $WEBLocation
+  log "AqualinkD web config exists, did not copy new config, you may need to edit existing $WEBLocation/config.js "
+  if command -v "rsync" &>/dev/null; then
+    rsync -avq --exclude='config.js' $BUILD/../web/* $WEBLocation
+  else
+    # This isn;t the right way to do it, but seems to work.
+    shopt -s extglob
+    `cp -r "$BUILD/../web/"!(*config.js) "$WEBLocation"`
+    shopt -u extglob
+    # Below should work, but doesn't.
+    #shopt -s extglob
+    #cp -r "$BUILD/../web/"!(*config.js) "$WEBLocation"
+    #shopt -u extglob
+  fi
 else
   cp -r $BUILD/../web/* $WEBLocation
 fi
 
+# remount root ro
+if [[ $REMOUNT_RO -eq 0 ]]; then
+  mount / -o remount,ro &>/dev/null
+fi
 
 systemctl enable $SERVICE
 systemctl daemon-reload
 
 if [ $SERVICE_EXISTS -eq 0 ]; then
-  echo "Starting daemon $SERVICE"
+  log "Starting daemon $SERVICE"
   systemctl start $SERVICE
 else
-  echo "Please edit $CFGLocation/$CFG, then start AqualinkD service"
+  log "Please edit $CFGLocation/$CFG, then start AqualinkD service with `sudo systemctl start aqualinkd`"
 fi
+
+
+
 

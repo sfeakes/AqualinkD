@@ -10,6 +10,25 @@
 #   curl --silent "https://raw.githubusercontent.com/sfeakes/AqualinkD/master/version.h" | grep AQUALINKD_VERSION | cut -d '"' -f 2
 #
 
+echo "This script has been updated!"
+echo "Please use 'curl -fsSL https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh | sudo bash -s -- latest' to install AqualinkD"
+
+while true; do
+  read -p "Continue install with this script? (y/n): " response
+  case $response in
+    [yY] )
+      echo "Continuing..."
+      break
+      ;;
+    [nN] )
+      echo "Exiting..."
+      exit 0
+      ;;
+    * )
+      echo "Invalid input. Please enter y or n."
+      ;;
+  esac
+done
 
 NAME="AqualinkD"
 SOURCE_LOCATION="/extras/aqua.sh"

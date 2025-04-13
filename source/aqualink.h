@@ -14,7 +14,8 @@
 #define setMASK(bitmask, mask)    (bitmask |= mask)
 #define removeMASK(bitmask, mask) (bitmask &= ~mask)
 
-#define SIGRESTART SIGUSR1 
+#define SIGRESTART SIGUSR1
+#define SIGRUPGRADE SIGUSR2
 
 #ifdef AQ_NO_THREAD_NETSERVICE
   #define DEFAULT_POLL_SPEED -1

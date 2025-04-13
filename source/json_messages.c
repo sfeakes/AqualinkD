@@ -610,6 +610,8 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
     length += sprintf(buffer+length, ",\"config_editor\": \"yes\"");
   }
 
+  length += sprintf(buffer+length, ",\"aqualinkd_version\":\"%s\"",AQUALINKD_VERSION);
+
   
   /*
   length += sprintf(buffer+length, ",\"panel_type\":\"%s\"",getPanelString());
@@ -655,6 +657,7 @@ int build_aqualink_aqmanager_JSON(struct aqualinkdata *aqdata, char* buffer, int
   
   return length;
 }
+
 int build_aqualink_status_JSON(struct aqualinkdata *aqdata, char* buffer, int size)
 {
   //strncpy(buffer, test_message, strlen(test_message)+1);

@@ -647,6 +647,32 @@
       showTileOptions(false);
       startWebsockets();
       resetBackgroundSize();
+
+      // Test for mobile-app mode
+      
+      if (window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches) {
+        //console.log("Running in standalone mode");
+        //alert("Standalone");
+        // in webapp mode, remove the aqmanager link
+        try{
+          document.getElementById('td_cog').classList.add("hide");
+        } catch (e){}
+      } else {
+        //console.log("Not running in standalone mode");
+        //alert("NOT Standalone");
+      }
+      
+      
+      // Test for iframe
+      if (window.self !== window.top) {
+        //console.log("The code is running inside an iframe.");
+        // Change the link under the cog/hamburger icon
+        ele = document.getElementById('cog_link');
+        ele.setAttribute("href", "/");
+        ele.setAttribute("target", "_parent");
+      } else {
+        //console.log("The code is not running inside an iframe.");
+      }
     }
 
     function populateLightProgram(type=0, current_mode="") {
@@ -2726,6 +2752,14 @@
       <div id="header" class="head" onclick="showBackground();">
         <table border='0' width='100%' cellpadding='0' cellspacing='0'>
           <tr>
+            <td width="25px" align='left' id='td_cog' style="vertical-align:middle">
+              <a id="cog_link" href="/aqmanager.html">
+                <svg viewBox='0 0 10 8' width='18' height='18'>
+                  <path d='M1 1h8M1 4h 8M1 7h8' stroke='#FFF' stroke-width='1.2' stroke-linecap='round'/>
+                </svg>
+              </a>
+            </td>
+          </td>
             <td width="70px" align='left' id='td_name'><span class='title' id='name'
                 onclick="showVersion(this);event.stopPropagation();">AqualinkD</span>
             </td>

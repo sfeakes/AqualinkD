@@ -2,7 +2,7 @@ services:
   aqualinkd:
     image: sfeakes/aqualinkd:latest
     #build:
-    #  context: https://github.com/sfeakes/AqualinkD.git#master:docker
+    #  context: https://github.com/aqualinkd/AqualinkD.git#master:docker
     #  args:
     #    AQUALINKD_VERSION: v2.3.6 # Make sure to change to correct version
     #  tags:

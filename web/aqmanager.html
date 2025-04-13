@@ -337,6 +337,9 @@
         
         var _config = {};
 
+        const _urlParams = new URLSearchParams(window.location.search);
+
+
         // if loading confighelp.js failes, create a blank variable that it creates.
         if (typeof _confighelp === 'undefined') {
           var _confighelp = {};
@@ -1284,6 +1287,7 @@
               read panel_message, panel_type, version, aqualinkd_version
  
             */
+           /*
             if (data['aqualinkd_version']) {
                 document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
                 if (data['aqualinkd_version'] == _latestVersionAvailable ) {
@@ -1291,7 +1295,16 @@
                 } else {
                     document.getElementById("latesversionavailable").classList.add("newversion");
                 }
-            }
+
+                //const upgrade = _urlParams.get('upgrade');
+                //console.log("upgrade = "+upgrade);
+
+                if ( isNewerVersion(_latestVersionAvailable, data['aqualinkd_version'] ) || _urlParams.get('upgrade') != null) {
+                    enablebutton("upgrade");
+                } else {
+                    disablebutton("upgrade");
+                }
+            }*/
             if (data['version']) {
                 document.getElementById("panelversion").innerHTML = data['version'];
             }
@@ -1335,7 +1348,25 @@
             if (data['deamonized'] == 'off') {
                 //console.log("deamonized=" + data['deamonized'] + " Need to rename Restart to Reload");
                 disablebutton("restart");
+                disablebutton("upgrade");
+            } else {
+              enablebutton("restart");
+              if (data['aqualinkd_version']) {
+                document.getElementById("aqualinkdversion").innerHTML = data['aqualinkd_version'];
+                if (data['aqualinkd_version'] == _latestVersionAvailable ) {
+                    document.getElementById("latesversionavailable").classList.add("hidden");
+                } else {
+                    document.getElementById("latesversionavailable").classList.add("newversion");
+                }
+                if ( isNewerVersion(_latestVersionAvailable, data['aqualinkd_version'] ) || _urlParams.get('upgrade') != null) {
+                    enablebutton("upgrade");
+                } else {
+                    disablebutton("upgrade");
+                }
+              }
             }
+
+
             if (data['config_editor'] == 'yes') {
                 enablebutton("editconfig");
             } else {
@@ -1345,6 +1376,8 @@
                   start_manager();
                 }, 10000);
             }
+
+            
 
             /*
                         if (data['logfilename'] == "(null)")
@@ -1517,7 +1550,25 @@
             socket_di.send(JSON.stringify(msg));
         }
 
+        function isNewerVersion(version1, version2) {
+            try{
+              let [major1, minor1, patch1] = version1.split('.').map(Number => parseInt(Number, 10));
+              let [major2, minor2, patch2] = version2.split('.').map(Number => parseInt(Number, 10));
+            
+              if (patch1 === undefined) { patch1 = 0; }
+              if (patch2 === undefined) { patch2 = 0; }
 
+              if (major1 > major2) return true;
+              if (major1 < major2) return false;
+
+              if (minor1 > minor2) return true;
+              if (minor1 < minor2) return false;
+
+              return patch1 > patch2;
+            } catch (e) {
+              return false;
+            }
+        }
         /*
                 function reset() {
                     socket_di.send("reset\n");
@@ -1526,8 +1577,11 @@
         function init() {
             // Resize log container
             var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-            console.log("Height="+h+" Setting to "+(h-290) );
+            //console.log("Height="+h+" Setting to "+(h-290) );
             document.documentElement.style.setProperty('--logcontainer-height', (h-290)+'px');
+
+            disablebutton("restart");
+            disablebutton("upgrade");
 
             startWebsockets();
             getLatestVersion();
@@ -1566,6 +1620,10 @@
             var cmd = {};
             //cmd.uri = "rawcommand"
             switch (source.id) {
+                case "upgrade":
+                    cmd.uri = "upgrade"
+                    // NEED TO REGET aqmanager after restart.
+                    break;
                 case "restart":
                     cmd.uri = "restart"
                     // NEED TO REGET aqmanager after restart.
@@ -1640,7 +1698,8 @@
                         <td colspan="2" align="center"><label id="statusmsg" class="statusmsg">status</label></td>
                     </tr>
                     <tr>
-                        <td colspan="2" align="center"><input id="restart" type="button" onclick="send(this);" value="Restart AqualinkD"></td>
+                        <td colspan="1" align="center"><input id="restart" type="button" onclick="send(this);" value="Restart AqualinkD"></td>
+                        <td colspan="1" align="center"><input id="upgrade" type="button" onclick="send(this);" value="Upgrade AqualinkD"></td>
                     </tr>
                     <!--
                     <tr>

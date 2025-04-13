@@ -57,6 +57,7 @@
 #include "debug_timer.h"
 #include "aq_scheduler.h"
 #include "json_messages.h"
+#include "aq_systemutils.h"
 
 #ifdef AQ_MANAGER
 #include "serial_logger.h"
@@ -102,11 +103,19 @@ bool isAqualinkDStopping() {
 
 void intHandler(int sig_num)
 {
+  if (sig_num == SIGRUPGRADE) {
+    if (! run_aqualinkd_upgrade(false)) {
+      LOG(AQUA_LOG,LOG_ERR, "AqualinkD upgrade failed!\n");
+    }
+    return; // Let the upgrade process terminate us.
+  }
+
   LOG(AQUA_LOG,LOG_WARNING, "Stopping!\n");
 
   _keepRunning = false;
 
   if (sig_num == SIGRESTART) {
+    LOG(AQUA_LOG,LOG_WARNING, "Restarting AqualinkD!\n");
     // If we are deamonized, we need to use the system
     if (_aqconfig_.deamonize) {
       if(fork() == 0) {
@@ -502,6 +511,32 @@ int main(int argc, char *argv[])
   return startup(argv[0], cfgFile);
 }
 
+void check_upgrade_log()
+{
+  FILE *fp;
+  size_t len = 0;
+  ssize_t read_size;
+  char *line = NULL;
+
+  fp = fopen("/tmp/aqualinkd_upgrade.log", "r");
+  if (fp == NULL)
+  {
+    // No upgrade file
+    return;
+  }
+
+  LOG(AQUA_LOG,LOG_NOTICE, "--- AqualinkD Upgrade log ----\n");
+  while ((read_size = getline(&line, &len, fp)) != -1) {
+    LOG(AQUA_LOG,LOG_NOTICE, "%s", line);
+  }
+  LOG(AQUA_LOG,LOG_NOTICE, "--- End AqualinkD Upgrade log ----\n");
+
+  free(line);
+  fclose(fp);
+
+  remove("/tmp/aqualinkd_upgrade.log");
+  // Need to delete the file here.
+}
 
 
 int startup(char *self, char *cfgFile) 
@@ -538,6 +573,8 @@ int startup(char *self, char *cfgFile)
 #endif
 
   LOG(AQUA_LOG,LOG_NOTICE, "Starting %s v%s !\n", AQUALINKD_NAME, AQUALINKD_VERSION);
+
+  check_upgrade_log();
 
   check_print_config(&_aqualink_data);
   
@@ -938,6 +975,7 @@ void main_loop()
   signal(SIGTERM, intHandler);
   signal(SIGQUIT, intHandler);
   signal(SIGRESTART, intHandler);
+  signal(SIGRUPGRADE, intHandler);
 
   if (!start_net_services(&_aqualink_data))
   {

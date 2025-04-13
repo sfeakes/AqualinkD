@@ -691,6 +691,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   int i;
   const char *status;
   int pumpStatus;
+  static struct timespec last_update_timestamp = {0, 0};
+
 
   // We get called about every second, so check time every MQTT_TIMED_UDATE / 2
   if (_aqconfig_.mqtt_timed_update) {
@@ -926,8 +928,18 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
       //send_mqtt_timer_duration_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
       // send_mqtt_timer_state_msg will call send_mqtt_timer_duration_msg so no need to do it here.
       // Have to use send_mqtt_timer_state_msg due to a timer being set on a device that's already on, (ir no state change so above code does't get hit)
-      send_mqtt_timer_state_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
+      
+      struct timespec current_time;
+      clock_gettime(CLOCK_MONOTONIC, &current_time);
 
+      // Calculate the time difference in nanoseconds
+      long long time_difference_ns = (current_time.tv_sec - last_update_timestamp.tv_sec) * 1000000000LL + (current_time.tv_nsec - last_update_timestamp.tv_nsec);
+
+      // Check if 10 seconds (10 * 10^9 nanoseconds) have passed
+      if (time_difference_ns >= 10000000000LL || last_update_timestamp.tv_sec == 0) {
+        send_mqtt_timer_state_msg(nc, _aqualink_data->aqbuttons[i].name, &_aqualink_data->aqbuttons[i]);
+        last_update_timestamp = current_time;
+      }
     }
   }
 
@@ -1173,6 +1185,10 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
   } else if (strncmp(ri1, "restart", 7) == 0 && from == NET_WS) { // Only valid from websocket.
     LOG(NET_LOG,LOG_NOTICE, "Received restart request!\n");
     raise(SIGRESTART);
+    return uActioned; 
+  } else if (strncmp(ri1, "upgrade", 7) == 0 && from == NET_WS) { // Only valid from websocket.
+    LOG(NET_LOG,LOG_NOTICE, "Received upgrade request!\n");
+    raise(SIGRUPGRADE);
     return uActioned; 
   } else if (strncmp(ri1, "seriallogger", 12) == 0 && from == NET_WS) { // Only valid from websocket.
     LOG(NET_LOG,LOG_NOTICE, "Received request to run serial_logger!\n");
@@ -1647,14 +1663,13 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
 
   // If we have a get request, pass it
   if (strncmp(http_msg->uri.p, "/api", 4 ) != 0) {
-    if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
-      //LOG(NET_LOG,LOG_ERR, "WEB: Old API stanza requested, ignoring client request\n");
-      log_http_request(LOG_ERR, "Old API stanza requested, ignoring request :", http_msg);
-    } else {
+    //if (strstr(http_msg->method.p, "GET") && http_msg->query_string.len > 0) {
+    //  log_http_request(LOG_ERR, "Old API stanza requested, ignoring request :", http_msg);
+    //} else {
       DEBUG_TIMER_START(&tid);
       mg_serve_http(nc, http_msg, _http_server_opts);
       DEBUG_TIMER_STOP(tid, NET_LOG, "action_web_request() serve file took");
-    }
+    //}
   //} else if (strstr(http_msg->method.p, "PUT")) {
   } else {
     char buf[JSON_BUFFER_SIZE];

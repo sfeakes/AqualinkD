@@ -13,7 +13,7 @@
 # * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 # * See the GNU General Public License for more details.
 # *
-# *  https://github.com/sfeakes/aqualinkd
+# *  https://github.com/aqualinkd/aqualinkd
 # */
 
 MAX_TEMP=78

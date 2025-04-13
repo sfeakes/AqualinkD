@@ -11,23 +11,29 @@ If you like this project, you can buy me a cup of coffee :)
 <br>
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=SEGN9UNS38TXJ)
 
+
+## AqualinkD new home
+AqualinkD has grown over the years and now has multiple repositories for software / hardware. We are brining them all together under one organization. [AqualinkD home page (under construction)](https://www.aqualinkd.com) -or- [AqualinkD organization](https://github.com/aqualinkd/AqualinkD).<br>
+AqualinkD will always be open source and so will every associated repository. Nothing will change from that perspective. You will always be able to run this on cheap off the shelf hardware.
+
+
 ## AqualinkD discussions
 
 * Please use github Discussions for questions (Link at top of page).
-https://github.com/sfeakes/AqualinkD/discussions
+https://github.com/aqualinkd/AqualinkD/discussions
 * For Bugs, please use issues link on top of page. ( please add AqualinkD version to posts )
-https://github.com/sfeakes/AqualinkD/issues
+https://github.com/aqualinkd/AqualinkD/issues
 
 ## Please see Wiki for installation instructions
-https://github.com/sfeakes/AqualinkD/wiki
+https://github.com/aqualinkd/AqualinkD/wiki
 
 <!--
 For information on Control panel versions and upgrading the chips.<br>
-https://github.com/sfeakes/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
+https://github.com/aqualinkd/AqualinkD/wiki/Upgrading-Jandy-Aqualink-PDA-to-RS-panel
 -->
 <!--
 Here's where I started to document what I know about the Jandy RS485 protocol.<br>
-https://github.com/sfeakes/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
+https://github.com/aqualinkd/AqualinkD/wiki/Jandy-Aqualink-RS485-protocol
 -->
 
 ## AqualinkD built in WEB Interface(s).
@@ -80,9 +86,11 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 * http://aqualink.ip/onetouch_sim.html  <- (One Touch Simulator)
 * http://aqualink.ip/aquapda_sim.html  <- (PDA simulator)
 #<a name="release"></a>
+
+
 # ToDo (future release)
 * Create iAqualink Touch Simulator
-* AuqlinkD to self configure. (Done for ID's, need to do for Panel type/size)
+* AqualinkD to self configure. (Done for ID's, need to do for Panel type/size)
 
 
 <!--
@@ -100,7 +108,7 @@ Designed to mimic AqualinkRS devices, used to fully configure the master control
 -->
 
 # Call for Help.
-* The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/sfeakes/AqualinkD/discussions)
+* The only Jandy devices I have not decoded yet are LX heater & Chemical Feeder. If you have either of these devices and are willing to post some logs, please let me know, or post in the [Discussions area](https://github.com/aqualinkd/AqualinkD/discussions)
 
 
 <!-- 
@@ -111,10 +119,18 @@ NEED TO FIX FOR THIS RELEASE.
 * update documentation on how vbutton / vpump / pump_max & min / enable_iauqalink2
 * check rs serial adapter is active if light color mode 11 is used.
 
-* Check SWG messages like "#1 TruClear", see log in this post https://github.com/sfeakes/AqualinkD/discussions/388
+* Check SWG messages like "#1 TruClear", see log in this post https://github.com/aqualinkd/AqualinkD/discussions/388
 
 * Heat Pump / Chiller for OneTouch
+
+* Try an auto-update
+* Update Mongoose
 -->
+# Updates in 2.6.2
+* AqualinkD can how self-update directly from github. use `Upgrade AqualinkD` button in Aqmanager
+* New install and remote_install scripts.
+* Changed MQTT posting frequency when Timers are enabled for better
+* Updates for new repo location. [AqualinkD organization](https://github.com/aqualinkd/AqualinkD)
 
 # Updates in 2.6.1
 * Added External Sensors to Web UI & HomeKit.
@@ -123,7 +139,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Link device/virtual/onetouch button with SWG BOOST. (Allows you to set VSP RPM when in Boost mode)
 
 # Updates in 2.6.0
-* Added configuration editor in aqmanager.  [Wiki - AQManager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
+* Added configuration editor in aqmanager.  [Wiki - AQManager](https://github.com/aqualinkd/AqualinkD/wiki#AQManager)
 * Can now self-configure on startup. set `device_id=0xFF`
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
 * Fixed HA bug for thermostats not converting to °C when HA is set to display °C.
@@ -195,10 +211,10 @@ NEED TO FIX FOR THIS RELEASE.
 
 # Update in Release 2.3.5
 * Added Home Assistant integration through MQTT discover
-  * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/sfeakes/AqualinkD/wiki#HASSIO)
+  * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/aqualinkd/AqualinkD/wiki#HASSIO)
   * There are still some enhacments to come on this.
 * Included Docker into main releases
-  * Please read Docker section of the  [Wiki - Docker](https://github.com/sfeakes/AqualinkD/wiki#Docker)
+  * Please read Docker section of the  [Wiki - Docker](https://github.com/aqualinkd/AqualinkD/wiki#Docker)
 * Added support for reading extended information for Jandy JXi heaters.
 * Added Color Light to iAqualinkTouch protocol.
 * Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
@@ -214,11 +230,11 @@ NEED TO FIX FOR THIS RELEASE.
 
 # Update in Release 2.3.3
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
-  * [AqualinkD Manager](https://github.com/sfeakes/AqualinkD/wiki#AQManager)
+  * [AqualinkD Manager](https://github.com/aqualinkd/AqualinkD/wiki#AQManager)
 * Moved logging into systemd/journal (journalctl) from syslog
-  * [AqualinkD Log](https://github.com/sfeakes/AqualinkD/wiki#Log)
+  * [AqualinkD Log](https://github.com/aqualinkd/AqualinkD/wiki#Log)
 * Updated to scheduler
-  * [AqualinkD Scheduler](https://github.com/sfeakes/AqualinkD/wiki#Scheduler)
+  * [AqualinkD Scheduler](https://github.com/aqualinkd/AqualinkD/wiki#Scheduler)
 * Introduced RS485 frame delay / timer. 
   * Improve PDA panels reliability (PDA pannels are slower than RS panels)
   * Potentially fixed Pentair VSP / SWG problems since Pentair VSP use a different protocol, this will allow a timed delay for the VSP to post a status messages. Seems to only effect RS485 bus when both a Pentair VSP and Jandy SWG are present.
@@ -275,7 +291,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Fixed RS-4 panel bug.
 * Fixed some AqualinkTouch programming issues.
 * Increased timeout for startup probe.
-* This release WILL require you to make aqualinkd.conf changes. <b>Make sure to read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
+* This release WILL require you to make aqualinkd.conf changes. <b>Make sure to read wiki section https://github.com/aqualinkd/AqualinkD/wiki#Version_2</b>
 * Extensive work to reduce CPU cycles and unnesessary logic.
 * iAqualink Touch protocol supported for VSP & extended programming.
   * This protocol is a lot faster for programming, ID's are between 0x38 & 0x3B `extended_device_id`, use Serial_logger to find valid ID.
@@ -292,7 +308,7 @@ NEED TO FIX FOR THIS RELEASE.
 * AqualinkD startup changed to fix some 'systemctl restart' issues.
 * More detailed API replys.
 # Update in Release 2.1.0
-* Big update, lots of core changes, <b>please read wiki section https://github.com/sfeakes/AqualinkD/wiki#Version_2</b>
+* Big update, lots of core changes, <b>please read wiki section https://github.com/aqualinkd/AqualinkD/wiki#Version_2</b>
 * Full Variable Speed Pump support. (Can read,set & change RPM,GPM)
 * Full support for all Colored Lights (even if Jandy Control Panel doesn't support them)
 * Chemlink pH & ORP now supported. (along with posting MQTT information)
@@ -438,7 +454,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Freeze protect, heater temperature and SWG set-points have been added to support for standard HTTP requests (MQTT & WS always had support).
 
 # Please see Wiki for install instructions
-https://github.com/sfeakes/AqualinkD/wiki
+https://github.com/aqualinkd/AqualinkD/wiki
 
 #
 

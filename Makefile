@@ -84,7 +84,7 @@ endif
 SRCS = aqualinkd.c utils.c config.c aq_serial.c aq_panel.c aq_programmer.c allbutton.c allbutton_aq_programmer.c net_services.c json_messages.c rs_msg_utils.c\
        onetouch.c onetouch_aq_programmer.c iaqtouch.c iaqtouch_aq_programmer.c iaqualink.c\
        devices_jandy.c packetLogger.c devices_pentair.c color_lights.c serialadapter.c aq_timer.c aq_scheduler.c web_config.c\
-       serial_logger.c mongoose.c hassio.c simulator.c sensors.c aq_filesystem.c timespec_subtract.c 
+       serial_logger.c mongoose.c hassio.c simulator.c sensors.c aq_systemutils.c timespec_subtract.c 
 
 
 AQ_FLAGS =
