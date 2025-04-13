@@ -1621,6 +1621,12 @@
             //cmd.uri = "rawcommand"
             switch (source.id) {
                 case "upgrade":
+                   if (confirm("Are you sure you want to proceed upgrading AqualinkD?")) {
+                      console.log("Upgrading");
+                      update_log_message("***** AqualinkD upgrade in progress *****");
+                    } else {
+                      return;
+                    }
                     cmd.uri = "upgrade"
                     // NEED TO REGET aqmanager after restart.
                     break;
