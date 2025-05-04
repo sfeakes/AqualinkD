@@ -29,48 +29,43 @@ TEMP_INSTALL="/tmp/aqualinkd"
 OUTPUT="/tmp/aqualinkd_upgrade.log"
 
 FROM_CURL=$FASE
+SYSTEMD_LOG=$FALSE
 
 # Remember not to use (check for terminal, as it may not exist when pipe to bash)
 # ie.  if [ -t 0 ]; then  
 
 # We can get called from no path, so find external commands
 if command -v "systemd-cat" &>/dev/null; then
-  SYSTEMD_CAT="systemd-cat"
-  SYSTEMD_LOG=$TRUE
-elif command -v "/usr/bin/systemd-cat" &>/dev/null; then
-  SYSTEMD_CAT="/usr/bin/systemd-cat"
   SYSTEMD_LOG=$TRUE
 fi
-
-if command -v "logger" &>/dev/null; then
-  LOGGER="logger"
-elif command -v "/usr/bin/logger" &>/dev/null; then
-  LOGGER="/usr/bin/logger"
-fi
-
 
 
 log()
 { 
   echo "$*"
-  if [[ $SYSTEMD_LOG -eq $TRUE ]]; then
-    echo "Upgrade:   $*" | $SYSTEMD_CAT -t aqualinkd -p info
+
+  if [ "$SYSTEMD_LOG" -eq $TRUE ]; then
+    echo "Upgrade:   $*" | systemd-cat -t aqualinkd -p info  &>> "$OUTPUT"
   else
-    $LOGGER -p local0.notice -t aqualinkd "Upgrade:   $*"
+    logger -p local0.notice -t aqualinkd "Upgrade:   $*"
   fi
+
   echo "$*" 2>/dev/null >> "$OUTPUT"
 }
 
 logerr()
 { 
   echo "Error: $*" >&2
- 
-  if [[ $SYSTEMD_LOG -eq $TRUE ]]; then
-    echo "Upgrade:   $*" | $SYSTEMD_CAT -t aqualinkd -p err
+
+  logger -p local0.err -t aqualinkd "Upgrade1:   $*" &>> "$OUTPUT"
+
+  if [ "$SYSTEMD_LOG" -eq $TRUE ]; then
+    # For some unknown reason, only way below works from aqualinkd process is adding "&>> "$OUTPUT""
+    echo "Upgrade:   $*" | systemd-cat -t aqualinkd -p err &>> "$OUTPUT"
   else
-    $LOGGER -p local0.error -t aqualinkd "Upgrade:   $*"
+    logger -p local0.err -t aqualinkd "Upgrade:   $*"
   fi
-  
+
   echo "ERROR: $*" 2>/dev/null >> "$OUTPUT"
 }
 

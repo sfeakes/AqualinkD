@@ -140,7 +140,6 @@ bool run_aqualinkd_upgrade(bool onlycheck)
     int pipe_curl_to_bash[2];
     pid_t pid_curl, pid_bash;
     //char *curl_args[] = {"curl", "-fsSl", "http://tiger/scratch/remote_install.sh", NULL};
-    //char *curl_args[] = {"curl", "-fsSl", "-H",  "Accept: application/vnd.github.raw", "https://api.github.com/repos/sfeakes/AqualinkD/contents/release/remote_install.sh", NULL};
     char *curl_args[] = {"curl", "-fsSl", "-H",  "Accept: application/vnd.github.raw", "https://api.github.com/repos/AqualinkD/AqualinkD/contents/release/remote_install.sh", NULL};
     char *bash_args[] = {"bash", "-s", "--", "check", NULL};
     int status_curl, status_bash;
