@@ -224,9 +224,11 @@ function run_install_script {
   log "Installing AqualinkD $1"
 
   # Can't run in background as it'll cleanup / delete files before install.
-  nohup "$TEMP_INSTALL/release/install.sh" >> "$OUTPUT" 2>&1
-  #source "/nas/data/Development/Raspberry/AqualinkD/release/install.sh" &>> "$OUTPUT"
-  
+  temp_file=$(mktemp)
+  nohup "$TEMP_INSTALL/release/install.sh" "--logfile" "$temp_file" >> "$OUTPUT" 2>&1
+  cat $temp_file
+  rm $temp_file
+
   #nohup "/nas/data/Development/Raspberry/AqualinkD/release/install.sh" >> "$OUTPUT" 2>&1 &
   #nohup "$TEMP_INSTALL/release/install.sh" >> "$OUTPUT" 2>&1 &
 }

@@ -292,8 +292,6 @@ DEV_UNKNOWN_MASK    =     0xF8; // Unknown mask, used to reset values
 #define BUTTON_LABEL_LENGTH 20
 
 
-//#define TOTAL_LEDS          20
-#define TOTAL_LEDS          24  // Only 20 exist in control panel, but need space for the extra buttons on RS16 panel
 
 
 // Index starting at 1

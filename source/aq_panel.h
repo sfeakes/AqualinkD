@@ -78,6 +78,7 @@ void addPanelIAQTouchInterface();
 void addPanelRSserialAdapterInterface();
 void changePanelToExtendedIDProgramming();
 
+int getPumpDefaultSpeed(pump_detail *pump, bool max);
 int getPumpSpeedAsPercent(pump_detail *pump);
 int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable only needed internally
 
@@ -127,14 +128,13 @@ int PANEL_SIZE();
 
 // If we need to increase virtual buttons, then increase below.
 
-// NEED TO FIX, IF WE CHANGE TO ANOTHING OTHER THAN 0 CORE DUMP (we also had "panel_type = RS-16 Combo" in config)
-// FIX IS PROBABLY MAKE SURE LEDS IS SAME OR MORE.
-#define VIRTUAL_BUTTONS 0
 
+#define VIRTUAL_BUTTONS 5 // This is the only parameter to change if we need more virtual buttons.
 
-//#define TOTAL_BUTTONS 12+VIRTUAL_BUTTONS
+#define TOTAL_BUTTONS 20+VIRTUAL_BUTTONS // Biggest jandy panel is 20 buttons (RS16)
 
-#define TOTAL_BUTTONS 20+VIRTUAL_BUTTONS // Biggest jandy panel
+#define TOTAL_LEDS  TOTAL_BUTTONS+4  // Only 20 exist in control panel, but need space for the 4 extra buttons on RS16 panel, + every virtual button
+
 // This needs to be called AFTER and as well as initButtons
 void initButtons_RS16(struct aqualinkdata *aqdata);
 

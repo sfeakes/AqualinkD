@@ -17,6 +17,7 @@
 #
 # Clean the build env and start again
 # docker buildx prune
+# docker builder prune
 #
 #
 #  docker build -f ./Dockerfile.buildrelease  .

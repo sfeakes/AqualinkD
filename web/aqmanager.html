@@ -311,6 +311,21 @@
             opacity: 0.0;
         }
 
+        .config_option_deletebutton {
+          font-size: 10px !important;
+          font-weight: bold !important;
+          /*color: var(--body_text);*/
+          /*background-color: #7f8385 !important;*/
+            border: none !important;
+            color: rgb(0, 0, 0) !important;
+            padding: 2px 2px !important;
+            text-decoration: none !important;
+            margin: 2px 2px 2px 2px !important;
+            min-width: 18px !important;
+            border-radius: 5px !important;
+            height: 18px !important;
+        }
+
         
         /*
         .helptxt {
@@ -621,7 +636,7 @@
           populateconfigtable(data);
         }
 
-        function addConfigRow(hideLineSeperator, data, obj, row=-1) {
+        function addConfigRow(hideLineSeperator, data, obj, row=-1, deletable=false) {
             const configtable = document.getElementById("config_table");
 
             const newRow = configtable.insertRow(row);
@@ -647,6 +662,14 @@
 
             cell1.style.paddingLeft = "20px";
             cell3.textContent = " ";
+
+            // Add DELETE button deletable
+            
+            if (deletable) {
+              cell3.innerHTML = '<input type="button" class="config_option_deletebutton" id="delete" key="'+obj.toString()+'" value="X" onclick="deleteCfgOption(this);">';
+            }
+            
+
             if (data[obj]["valid values"] !== undefined) {
                 //console.log(data[obj]["valid values"]);
                 const input = document.createElement("select");
@@ -731,8 +754,8 @@
             //  key = 1
             //}
 
-            const buttonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "lightMode"];
-            const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "onetouchID", "altLabel"];
+            const buttonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "pumpMaxSpeed", "pumpMinSpeed", "lightMode"];
+            const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "pumpMaxSpeed", "pumpMinSpeed", "onetouchID", "altLabel"];
 
             const configtable = document.getElementById("config_table");
             const newRow = configtable.insertRow();
@@ -831,7 +854,7 @@
             return;
           }
 
-          const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "onetouchID", "altLabel"];
+          const virtButtonTypelist = ["pumpIndex", "pumpID", "pumpType", "pumpName", "pumpMaxSpeed", "pumpMinSpeed", "onetouchID", "altLabel"];
 
           const configtable = document.getElementById("config_table");
 
@@ -917,6 +940,63 @@
           }
           
           console.log(event);
+        }
+
+        function deleteCfgOption(event) {
+          
+          // Rebuild whole config table, or just delete single row.
+          // Rebuild table is better.
+          let rebuild = true;
+
+          //var id = event.srcElement.getAttribute('id');
+          var key = event.getAttribute('key');
+          let deleted = false;
+          //var value = event.srcElement.value;
+
+          //console.log(event.parentNode.parentNode);
+          //console.log("deleteCfgOption - "+key);
+          //console.log(_config[key]);
+          console.log(_config);
+
+          if (!rebuild) {
+           const configtable = document.getElementById("config_table");
+           for (let i = 0; i < configtable.rows.length; i++) {
+            //console.log(configtable.rows[i].cells[2]);
+            try{
+              if(configtable.rows[i].cells[2].childNodes[0].getAttribute('key') == key) {
+                //configtable.deleteRow(i);
+                deleted = true;
+              }
+            } catch (e){}
+           }
+          } else {
+            deleted=true;
+          }
+
+          //event.parentNode.parentNode.style.display = 'none'; 
+
+          if (deleted && key.startsWith("virtual_button") && key.endsWith("_label")) {
+            //console.log(key.slice(0, 17));
+            delete _config[key.slice(0, 17)];
+            // Delete the whole entity
+          } else if (deleted && key.startsWith("virtual_button")) {
+            delete _config[key.slice(0, 17)][key];
+          } else if (deleted && key.startsWith("button")) {
+            delete _config[key.slice(0, 9)][key];
+            //console.log(key.slice(0, 9));
+          } else if (deleted && key.startsWith("sensor")) {
+            //console.log(key.slice(0, 9));
+            delete _config[key.slice(0, 9)][key];
+          } else if (deleted && key.startsWith("light_program_")) {
+            //console.log(key.slice(0, 9));
+            delete _config[key];
+          }
+          
+          if (rebuild) {
+            resetConfig(null);
+          }
+
+          console.log(_config);
         }
 
         function addSensorRow(num=0, row=-1){
@@ -1011,7 +1091,6 @@
             _addedBlankSensor = true;
         }
 
-
         function cfgAddButtonOption(event) {
 
            var type = event.srcElement.value;
@@ -1025,6 +1104,8 @@
                   case "pumpIndex":
                   case "lightMode":
                   case "onetouchID":
+                  case "pumpMaxSpeed":
+                  case "pumpMinSpeed":
                     js.type = "int";
                   break;
                   case "pumpID":
@@ -1050,7 +1131,7 @@
            for (let i = 0; i < configtable.rows.length; i++) {
              if(configtable.rows[i].cells[0].getAttribute('button_key') !== null) {
                 if(configtable.rows[i].cells[0].getAttribute('button_key') == key) {
-                  addConfigRow(true, _config[obj], key+"_"+type, i);
+                  addConfigRow(true, _config[obj], key+"_"+type, i, true);
                   break;
                 }
               }
@@ -1209,7 +1290,20 @@
             }
 
             if (_config[obj].value !== undefined) {
-              addConfigRow(hideLineSeperator, _config, obj);
+              if (obj.toString().startsWith("light_program_") ) {
+                console.log(obj.toString());
+                num = parseInt(lastKey.match(/[0-9]+/));
+                num++;
+                console.log("check for light_program_"+String(num+1).padStart(2, '0'));
+                //console.log("check for light_program_"+num);
+                if ( !('light_program_'+String(num+1).padStart(2, '0') in _config)) {
+                  addConfigRow(hideLineSeperator, _config, obj, -1, true);
+                } else {
+                  addConfigRow(hideLineSeperator, _config, obj);
+                } 
+              } else {
+                addConfigRow(hideLineSeperator, _config, obj);
+              }
             } else if (obj.toString().startsWith("button_") || obj.toString().startsWith("virtual_button_") ) {
                 var hide=false;
                 for (var obj1 in _config[obj]) {
@@ -1223,7 +1317,11 @@
                     cell1.style.borderTop = "1px solid black";
                     hide=true;
                   } else if (obj1.toString() != "advanced") {
-                    addConfigRow(hide, _config[obj], obj1);
+                    if ( obj1.toString().endsWith("_label") && !obj1.toString().startsWith("virtual_button")) {
+                      addConfigRow(hide, _config[obj], obj1);
+                    } else {
+                      addConfigRow(hide, _config[obj], obj1, -1, true);
+                    }
                     hide=true;
                   }
                 }
@@ -1232,7 +1330,7 @@
                 var hide=false;
                 for (var obj1 in _config[obj]) {
                   if (obj1.toString() != "advanced") {
-                    addConfigRow(hide, _config[obj], obj1);
+                    addConfigRow(hide, _config[obj], obj1, -1, true);
                     hide=true;
                   }
                 }

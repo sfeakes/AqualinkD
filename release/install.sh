@@ -27,17 +27,74 @@ SOURCEBIN=$BIN
 LOG_SYSTEMD=1   # 1=false in bash, 0=true
 REMOUNT_RO=1
 
+TRUE=0
+FALSE=1
+
+_logfile="";
+_frommake=$FALSE;
+_ignorearch=$FALSE;
+
 log()
 {
   echo "$*"
 
+  if [[ -n "$_logfile" ]]; then
+    echo "$*" >> "$_logfile"
+  fi
+
   if [[ $LOG_SYSTEMD -eq 0 ]]; then
-    logger -p local0.notice -t aqualinkd "Upgrade:   $*"
+    logger -p local0.notice -t aqualinkd.upgrade "Upgrade:   $*"
     # Below is same as above but will only wotrk on journald (leaving it here if we use that rater then file)
     #echo $* | systemd-cat -t aqualinkd_upgrade -p info 
     #echo "$*" >> "$OUTPUT"
   fi
 }
+
+printHelp()
+{
+  echo "$0"
+  echo "ignorearch            (don't check OS architecture, install what was made from Makefile)"
+  echo "--arch <arch>         (install specific OS architecture - armhf | arm64)"
+  echo "--logfile <filename>  (log to file)"
+}
+
+
+log "Called $0 with $*"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --logfile)
+      shift
+      _logfile="$1"
+      ;;
+    --arch | --forcearch)
+      shift
+      #_forcearch="$1"
+      if [[ -n "$1" ]]; then
+        _ignorearch=$TRUE
+        SOURCEBIN=$BIN-$1
+      else
+        log "--arch requires parameter eg. ( --arch armhf | --arch arm64 )"
+      fi
+      ;;
+    from-make)
+      _frommake=$TRUE
+      ;;
+    ignorearch)
+      _ignorearch=$TRUE
+      ;;
+    help | -help | --help | -h)
+      printHelp
+      exit $TRUE;
+      ;;
+    *)
+      echo "Unknown argument: $1"
+      printHelp;
+      exit $FALSE;
+      ;;
+  esac
+  shift
+done
 
 if ! tty > /dev/null 2>&1 || [ "$1" = "syslog" ]; then
   # No stdin, probably called from upgrade script
@@ -63,7 +120,8 @@ fi
 
 # Figure out what system we are on and set correct binary.
 # If we have been called from make, this is a custom build and install, so ignore check.
-if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "ignorearch" ]; then
+#if [ "$PARENT_COMMAND" != "make" ] && [ "$1" != "from-make" ] && [ "$1" != "ignorearch" ]; then
+if [ "$PARENT_COMMAND" != "make" ] && [ "$_frommake" -eq $FALSE ] && [ "$_ignorearch" -eq $FALSE ]; then
   # Use arch or uname -a to get above.
   # dpkg --print-architecture
 

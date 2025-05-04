@@ -180,7 +180,7 @@ void ws_send_logmsg(struct mg_connection *nc, char *msg) {
 }
 
 sd_journal *open_journal() {
-  sd_journal *journal;
+  sd_journal *journal; // should be static??????
   char filter[51];
 
 #ifndef AQ_CONTAINER
@@ -192,14 +192,14 @@ sd_journal *open_journal() {
 #endif
   {
     LOGSystemError(errno, NET_LOG, "Failed to open journal");
-    return journal;
+    return NULL;
   }
   snprintf(filter, 50, "SYSLOG_IDENTIFIER=%s",_aqualink_data->self );
   if (sd_journal_add_match(journal, filter, 0) < 0)
   {
     LOGSystemError(errno, NET_LOG, "Failed to set journal syslog filter");
     sd_journal_close(journal);
-    return journal;
+    return NULL;
   }
   /* Docker wll also have problem with this
   // Daemon will change PID after printing startup message, so don't filter on current PID
@@ -282,11 +282,13 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
   } 
   // aqManager is active
   if (!active) {
-      if ( (journal = open_journal()) < 0) {
+      if ( (journal = open_journal()) == NULL) {
+  //printf("Open faied\n");
         build_logmsg_JSON(msg, LOG_ERR, "Failed to open journal", WS_LOG_LENGTH,22);
         ws_send_logmsg(_mgr.active_connections, msg);
         return false;
       }
+  //printf("Open good %d\n",journal);
       if (sd_journal_seek_tail(journal) < 0) {
         build_logmsg_JSON(msg, LOG_ERR, "Failed to seek to journal end", WS_LOG_LENGTH,29);
         ws_send_logmsg(_mgr.active_connections, msg);
@@ -373,7 +375,7 @@ bool write_systemd_logmessages_2file(char *fname, int lines)
     LOG(NET_LOG, LOG_WARNING, "Failed to open tmp log file '%s'\n",fname);
     return false;
   }
-   if ( (journal = open_journal()) < 0) {
+   if ( (journal = open_journal()) == NULL) {
     fclose (fp);
     return false;
   }
@@ -2253,9 +2255,12 @@ bool _start_net_services(struct mg_mgr *mgr, struct aqualinkdata *aqdata) {
 
 //volatile bool _broadcast = false; // This is redundent when most the fully threadded rather than option.
 
+#define JOURNAL_FAIL_RETRY 5
+
 void *net_services_thread( void *ptr )
 {
   struct aqualinkdata *aqdata = (struct aqualinkdata *) ptr;
+  int journald_fail = 0;
   //struct mg_mgr mgr;
   if (!_start_net_services(&_mgr, aqdata)) {
     //LOG(NET_LOG,LOG_ERR, "Failed to start network services\n");
@@ -2279,9 +2284,28 @@ void *net_services_thread( void *ptr )
       aqdata->updated = false;
     }
 #ifdef AQ_MANAGER
+// NSF, need to stop and disable after 5 tries, this just keeps looping. 
+// USe something like below to notify user
+// build_logmsg_JSON(msg, LOG_ERR, "Failed to open journal, giving up!", WS_LOG_LENGTH,29);
+// set global variable so _broadcast_systemd_logmessages() also doesn't keep erroring.
+
+    //if ( ! broadcast_systemd_logmessages(aqdata->aqManagerActive) && journald_fail < JOURNAL_FAIL_RETRY) {
+    if ( journald_fail < JOURNAL_FAIL_RETRY && ! broadcast_systemd_logmessages(aqdata->aqManagerActive) ) {
+      journald_fail++;
+      LOG(AQUA_LOG,LOG_ERR, "Couldn't open systemd journal log\n");
+    } else if (journald_fail == JOURNAL_FAIL_RETRY) {
+      char msg[WS_LOG_LENGTH];
+      build_logmsg_JSON(msg, LOG_ERR, "Giving up on journal, don't expect to see logs", WS_LOG_LENGTH,46);
+      ws_send_logmsg(_mgr.active_connections, msg);
+      journald_fail = JOURNAL_FAIL_RETRY+1;
+    }
+    // Reset failures when manager is not active.
+    if (!aqdata->aqManagerActive) {journald_fail=0;}
+/*
     if ( ! broadcast_systemd_logmessages(aqdata->aqManagerActive)) {
       LOG(AQUA_LOG,LOG_ERR, "Couldn't open systemd journal log\n");
     }
+*/    
 #endif
     if (aqdata->simulator_active != SIM_NONE && aqdata->simulator_packet_updated == true ) {
       _broadcast_simulator_message(_mgr.active_connections);

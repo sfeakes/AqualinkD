@@ -927,7 +927,6 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
   char *tmpval;
  
-
 //#ifdef CONFIG_DEV_TEST
   //int val;
   //char *sval;
@@ -1120,7 +1119,7 @@ if (strlen(cleanwhitespace(value)) <= 0) {
 
   } else if (strncasecmp(param, "light_program_", 14) == 0) {
     int num = strtoul(param + 14, NULL, 10);
-    if ( num >= LIGHT_COLOR_OPTIONS ) {
+    if ( num >= LIGHT_COLOR_OPTIONS || num < 0 ) {
       LOG(AQUA_LOG,LOG_ERR, "Config error, light_program_%d is out of range\n",num);
     }
     char *name = cleanalloc(value);
@@ -1162,14 +1161,15 @@ if (strlen(cleanwhitespace(value)) <= 0) {
 #endif
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
       int type = strtoul(value, NULL, 10);
+
       // See if light is existing button / light
       if (isPLIGHT(aqdata->aqbuttons[num].special_mask)) {
         ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType = type;
       }
       else if (aqdata->num_lights < MAX_LIGHTS) 
       {
-        if (type < LC_PROGRAMABLE || type > NUMBER_LIGHT_COLOR_TYPES) {
-          LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%s'\n",type);
+        if (type < LC_PROGRAMABLE || type >= NUMBER_LIGHT_COLOR_TYPES) {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, unknown light mode '%d' for '%s'\n",type,param);
         } else {
           aqdata->lights[aqdata->num_lights].button = &aqdata->aqbuttons[num];
           aqdata->lights[aqdata->num_lights].lightType = type;          
@@ -1584,11 +1584,15 @@ void check_print_config (struct aqualinkdata *aqdata)
       if (aqdata->chiller_button == NULL) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` is enabled, but no Virtual Button set for Heat Pump / Chiller! Creating vbutton.",CFG_N_force_chiller);
         aqkey *button = getVirtualButton(aqdata, 0);
-        setVirtualButtonLabel(button, cleanalloc("Heat Pump"));// Need to malloc this so it can be freed
-        setVirtualButtonAltLabel(button, cleanalloc("Chiller"));// Need to malloc this so it can be freed
-        aqdata->chiller_button = button;
+        if (button != NULL) {
+          setVirtualButtonLabel(button, cleanalloc("Heat Pump"));// Need to malloc this so it can be freed
+          setVirtualButtonAltLabel(button, cleanalloc("Chiller"));// Need to malloc this so it can be freed
+          aqdata->chiller_button = button;
         //aqdata->chiller_button->special_mask |= VIRTUAL_BUTTON_CHILLER;
-        setMASK(aqdata->chiller_button->special_mask, VIRTUAL_BUTTON_CHILLER);
+          setMASK(aqdata->chiller_button->special_mask, VIRTUAL_BUTTON_CHILLER);
+        } else {
+          LOG(AQUA_LOG,LOG_WARNING, "Error can't create Heat Pump / Chiller, total buttons=%d, config has %d already, ignoring!\n", TOTAL_BUTTONS, aqdata->total_buttons);
+        }
       }
     } else {
       LOG(AQUA_LOG,LOG_ERR, "Config error, `%s` can only be enabled, if using an iAqualink Touch ID for `%s`, Turning off\n",CFG_N_force_chiller, CFG_N_extended_device_id );
@@ -1636,6 +1640,18 @@ void check_print_config (struct aqualinkdata *aqdata)
       LOG(AQUA_LOG,LOG_WARNING, "Config error, couldn't find button `%s` from config option `%s`\n",_aqconfig_.sched_chk_booston_device,CFG_N_event_check_booston_device);
   } else {
     aqdata->boost_linked_device = AQ_UNKNOWN;
+  }
+
+  // Check we have pump speed set
+  for (i=0; i < aqdata->num_pumps; i++) {
+    if (aqdata->pumps[i].maxSpeed <= 0) {
+      aqdata->pumps[i].maxSpeed = getPumpDefaultSpeed(&aqdata->pumps[i], true);
+      //aqdata.pumps[i].maxSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MAX:PUMP_RPM_MAX);
+    }
+    if (aqdata->pumps[i].minSpeed <= 0) {
+      //aqdata.pumps[i].minSpeed = (_aqualink_data.pumps[i].pumpType==VFPUMP?PUMP_GPM_MIN:PUMP_RPM_MIN);
+      aqdata->pumps[i].minSpeed = getPumpDefaultSpeed(&aqdata->pumps[i], false);
+    }
   }
   
 
@@ -2103,6 +2119,21 @@ bool writeCfg (struct aqualinkdata *aqdata)
       if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpType != PT_UNKNOWN) {
         fprintf(fp,"%s_pumpType=%s\n", prefix, pumpType2String(((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->pumpType));
       }
+
+      //if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->minSpeed != PT_UNKNOWN) {
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->minSpeed != PT_UNKNOWN &&
+          ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->minSpeed != getPumpDefaultSpeed((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr, false) ) 
+      {
+        fprintf(fp,"%s_pumpMinSpeed=%d\n", prefix, ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->minSpeed);
+      }
+
+      //if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->maxSpeed != PT_UNKNOWN) {
+      if (((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->maxSpeed != PT_UNKNOWN &&
+          ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->maxSpeed != getPumpDefaultSpeed((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr, true) ) 
+      {   
+        fprintf(fp,"%s_pumpMaxSpeed=%d\n", prefix, ((pump_detail *)aqdata->aqbuttons[i].special_mask_ptr)->maxSpeed);
+      }
+
     } else if (isPLIGHT(aqdata->aqbuttons[i].special_mask)) {
       //if (((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType > 0) {
       fprintf(fp,"%s_lightMode=%d\n", prefix, ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType);

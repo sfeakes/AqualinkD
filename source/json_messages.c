@@ -35,6 +35,7 @@
 #include "rs_msg_utils.h"
 #include "color_lights.h"
 #include "iaqualink.h"
+#include "aq_panel.h"
 
 //#define test_message "{\"type\": \"status\",\"version\": \"8157 REV MMM\",\"date\": \"09/01/16 THU\",\"time\": \"1:16 PM\",\"temp_units\": \"F\",\"air_temp\": \"96\",\"pool_temp\": \"86\",\"spa_temp\": \" \",\"battery\": \"ok\",\"pool_htr_set_pnt\": \"85\",\"spa_htr_set_pnt\": \"99\",\"freeze_protection\": \"off\",\"frz_protect_set_pnt\": \"0\",\"leds\": {\"pump\": \"on\",\"spa\": \"off\",\"aux1\": \"off\",\"aux2\": \"off\",\"aux3\": \"off\",\"aux4\": \"off\",\"aux5\": \"off\",\"aux6\": \"off\",\"aux7\": \"off\",\"pool_heater\": \"off\",\"spa_heater\": \"off\",\"solar_heater\": \"off\"}}"
 //#define test_labels "{\"type\": \"aux_labels\",\"aux1_label\": \"Cleaner\",\"aux2_label\": \"Waterfall\",\"aux3_label\": \"Spa Blower\",\"aux4_label\": \"Pool Light\",\"aux5_label\": \"Spa Light\",\"aux6_label\": \"Unassigned\",\"aux7_label\": \"Unassigned\"}"
@@ -1456,6 +1457,33 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
         } else
           length += result;
       }
+
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->minSpeed != PT_UNKNOWN &&
+          ((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->minSpeed != getPumpDefaultSpeed((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr, false) ) 
+      {
+        sprintf(buf,"%s_pumpMinSpeed", prefix);
+        stringptr = pumpType2String(((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->minSpeed, CFG_INT, 0, NULL, 0) ) <= 0) {
+          LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
+          return length;
+        } else
+          length += result;
+      }
+
+      if (((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->maxSpeed != PT_UNKNOWN &&
+          ((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->maxSpeed != getPumpDefaultSpeed((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr, true) ) 
+      {
+        sprintf(buf,"%s_pumpMaxSpeed", prefix);
+        stringptr = pumpType2String(((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->pumpType);
+        if ((result = json_cfg_element(buffer+length, size-length, buf, &((pump_detail *)aq_data->aqbuttons[i].special_mask_ptr)->maxSpeed, CFG_INT, 0, NULL, 0) ) <= 0) {
+          LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);
+          return length;
+        } else
+          length += result;
+      }
+
+
+
     } else if (isPLIGHT(aq_data->aqbuttons[i].special_mask)) {
       if (((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType > 0) {
         sprintf(buf,"%s_lightMode", prefix);

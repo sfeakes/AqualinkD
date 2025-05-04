@@ -237,6 +237,10 @@ debugbinaries:
 	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make debugbuild 
 	$(info Binaries for release have been built)
 
+runindocker:
+	sudo docker run -it --mount type=bind,source=./,target=/build aqualinkd-releasebin make dockerbuildnrun 
+	$(info Binaries for release have been built)
+
 # This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
 buildrelease: clean armhf arm64 
 	$(shell cd release && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
@@ -244,6 +248,11 @@ buildrelease: clean armhf arm64
 # This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
 quickbuild: armhf arm64 
 	$(shell cd release && [ ! -f "./aqualinkd-armhf" ] && ln -s ./aqualinkd-armhf ./aqualinkd && ln -s ./serial_logger-armhf ./serial_logger)
+
+# This is run inside container Dockerfile.releaseBinariies (aqualinkd-releasebin)
+dockerbuildnrun: ./release/aqualinkd
+	$(shell ./release/aqualinkd -d -c ./realease/aqualinkd.test.conf
+
 
 debugbuild: CFLAGS = $(DFLAGS)
 debugbuild: armhf arm64 

@@ -680,6 +680,18 @@ bool setVirtualButtonAltLabel(aqkey *button, const char *label) {
   return true;
 }
 
+
+int getPumpDefaultSpeed(pump_detail *pump, bool max)
+{
+  if (pump == NULL)
+    return AQ_UNKNOWN;
+
+  if (max)
+    return pump->pumpType==VFPUMP?PUMP_GPM_MAX:PUMP_RPM_MAX;
+  else
+    return pump->pumpType==VFPUMP?PUMP_GPM_MIN:PUMP_RPM_MIN;
+}
+
 // So the 0-100% should be 600-3450 RPM and 15-130 GPM (ie 1% would = 600 & 0%=off)
 // (value-600) / (3450-600) * 100   
 // (value) / 100 * (3450-600) + 600
@@ -1254,9 +1266,9 @@ bool programDeviceValue(struct aqualinkdata *aqdata, action_type type, int value
 }
 
 
-void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int button, bool expectMultiple) 
+void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int deviceIndex, bool expectMultiple, request_source source) 
 {
-  clight_detail *light = getProgramableLight(aqdata, button);
+  clight_detail *light = getProgramableLight(aqdata, deviceIndex);
 
   if (!isRSSA_ENABLED) {
     LOG(PANL_LOG,LOG_ERR, "Light mode brightness is only supported with `rssa_device_id` set\n");
@@ -1264,7 +1276,7 @@ void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int bu
   }
 
   if (light == NULL) {
-    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
+    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",deviceIndex);
     return;
   }
 
@@ -1274,14 +1286,19 @@ void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int bu
   }
 
   if (!expectMultiple) {
-    programDeviceLightMode(aqdata, value, button);
+    if (value <= 0) {
+      // Consider this a bad/malformed request to turn the light off.
+      panel_device_request(aqdata, ON_OFF, deviceIndex, 0, source);
+    } else {
+      programDeviceLightMode(aqdata, value, deviceIndex);
+    }
     return;
   }
 
   time(&aqdata->unactioned.requested);
   aqdata->unactioned.value = value;
   aqdata->unactioned.type = LIGHT_MODE;
-  aqdata->unactioned.id = button;
+  aqdata->unactioned.id = deviceIndex;
 
   return;
 }
@@ -1289,7 +1306,7 @@ void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int bu
 
 //void programDeviceLightMode(struct aqualinkdata *aqdata, char *value, int button) 
 //void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button) 
-void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button) 
+void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int deviceIndex) 
 {
 #ifdef AQ_PDA
   if (isPDA_PANEL && !isPDA_IAQT) {
@@ -1308,10 +1325,10 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
     }
   }*/
 
-  clight_detail *light = getProgramableLight(aqdata, button);
+  clight_detail *light = getProgramableLight(aqdata, deviceIndex);
 
   if (light == NULL) {
-    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",button);
+    LOG(PANL_LOG,LOG_ERR, "Light mode control not configured for button %d\n",deviceIndex);
     return;
   }
 
@@ -1320,7 +1337,7 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
   if (light->lightType == LC_PROGRAMABLE ) {
     //sprintf(buf, "%-5s%-5d%-5d%-5d%.2f",value, 
     sprintf(buf, "%-5d%-5d%-5d%-5d%.2f",value, 
-                                      button, 
+                                      deviceIndex, 
                                       _aqconfig_.light_programming_initial_on,
                                       _aqconfig_.light_programming_initial_off,
                                       _aqconfig_.light_programming_mode );
@@ -1368,12 +1385,12 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button)
     set_aqualink_rssadapter_aux_extended_state(light->button, value);*/
   } else {
     //sprintf(buf, "%-5s%-5d%-5d",value, button, light->lightType);
-    sprintf(buf, "%-5d%-5d%-5d",value, button, light->lightType);
+    sprintf(buf, "%-5d%-5d%-5d",value, deviceIndex, light->lightType);
     aq_programmer(AQ_SET_LIGHTCOLOR_MODE, buf, aqdata);
   }
 
   // Use function so can be called from programming thread if we decide to in future.
-  updateButtonLightProgram(aqdata, value, button);
+  updateButtonLightProgram(aqdata, value, deviceIndex);
 }
 
 /*
@@ -1416,7 +1433,7 @@ bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int dev
       start_timer(aqdata, deviceIndex, value);
     break;
     case LIGHT_BRIGHTNESS:
-      programDeviceLightBrightness(aqdata, value, deviceIndex, (source==NET_MQTT?true:false));
+      programDeviceLightBrightness(aqdata, value, deviceIndex, (source==NET_MQTT?true:false), source);
     break;
     case LIGHT_MODE:
       if (value <= 0) {

@@ -15,16 +15,16 @@ if [ $# -eq 0 ]
   then
     # Below is safer, but not supported on all platforms.
     #VERSION=$(curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep -Po '"tag_name": "[^0-9|v|V]*\K.*?(?=")')
-    VERSION=$(curl --silent "https://api.github.com/repos/sfeakes/AqualinkD/releases/latest" | grep  "tag_name" | awk -F'"' '$0=$4')
+    VERSION=$(curl --silent "https://api.github.com/repos/aqualinkd/AqualinkD/releases/latest" | grep  "tag_name" | awk -F'"' '$0=$4')
     LATEST_TAG="-t ${DOCKER_HUB_NAME}/${IMAGE}:latest"
   else
     VERSION=$1
 fi
 
-URL="https://github.com/sfeakes/AqualinkD/archive/refs/tags/"$VERSION".tar.gz"
-URL2="https://github.com/sfeakes/AqualinkD/archive/refs/tags/v"$VERSION".tar.gz"
-URL3="https://github.com/sfeakes/AqualinkD/archive/refs/tags/V"$VERSION".tar.gz"
-#BURL="https://github.com/sfeakes/AqualinkD/archive/refs/heads/"$VERSION".tar.gz"
+URL="https://github.com/aqualinkd/AqualinkD/archive/refs/tags/"$VERSION".tar.gz"
+URL2="https://github.com/aqualinkd/AqualinkD/archive/refs/tags/v"$VERSION".tar.gz"
+URL3="https://github.com/aqualinkd/AqualinkD/archive/refs/tags/V"$VERSION".tar.gz"
+#BURL="https://github.com/aqualinkd/AqualinkD/archive/refs/heads/"$VERSION".tar.gz"
 
 # Check version is accurate before running docker build
 
@@ -46,7 +46,7 @@ fi
 
 # Check we are building a version not already on docker hub
 
-DOCKER_TAGS=$(wget -q -O - "https://hub.docker.com/v2/namespaces/sfeakes/repositories/aqualinkd/tags" | grep -o '"name": *"[^"]*' | grep -o '[^"]*$')
+DOCKER_TAGS=$(wget -q -O - "https://hub.docker.com/v2/namespaces/aqualinkd/repositories/aqualinkd/tags" | grep -o '"name": *"[^"]*' | grep -o '[^"]*$')
 
 if echo $DOCKER_TAGS | grep -q $VERSION; then
   echo "AqualinkD version $VERSION already exists on docker.io, are you sure you want to overide"

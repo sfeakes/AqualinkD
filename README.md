@@ -126,6 +126,12 @@ NEED TO FIX FOR THIS RELEASE.
 * Try an auto-update
 * Update Mongoose
 -->
+# Updates in 2.6.4
+* Fix docker crash where journal not configured correctly.
+* Updates to config editor.
+* Increased number of virtual buttons. (previous limitation only effected RS 16 panels).
+* Changed to dimmable lights.
+
 # Updates in 2.6.3
 * AqualinkD can how self-update directly from github. use `Upgrade AqualinkD` button in Aqmanager
 * New install and remote_install scripts.

@@ -6,13 +6,11 @@
 # armhf is 32 bit armv6l (armhf) stretch and newer - work on all Pi's running 32bit (Pi1 to Pi4)
 # arm64 is 64 bit aarch64 buster and newer - work on Pi3/Pi4/2w running 64bit os
 #
-# To build
-# docker build -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# docker build -f Dockerfile.releaseBinaries2 -t aqualinkd-releasebin2 .
 # For better debug logs use --progress=plain
-# docker build --progress=plain -f Dockerfile.releaseBinaries -t aqualinkd-releasebin .
+# docker build --progress=plain -f Dockerfile.releaseBinaries2 -t aqualinkd-releasebin2 .
 #
-# To Run
-# docker run -it --mount type=bind,source=./build,target=/build aqualinkd-releasebin bash
+# docker run -it --mount type=bind,source=./build,target=/build aqualinkd-releasebin2 bash
 #
 #  clean method
 #  docker system prune
@@ -46,6 +44,7 @@ FROM debian:buster
 RUN apt-get update && \
     apt-get install -y \
     build-essential \
+    libsystemd-dev \
     gcc-aarch64-linux-gnu \
     binutils-arm-linux-gnueabi \
     file
