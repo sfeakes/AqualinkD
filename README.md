@@ -126,6 +126,9 @@ NEED TO FIX FOR THIS RELEASE.
 * Try an auto-update
 * Update Mongoose
 -->
+# Updates in 2.6.5
+* Changes to virtual buttons.
+
 # Updates in 2.6.4
 * Fix docker crash where journal not configured correctly.
 * Updates to config editor.

@@ -1210,7 +1210,7 @@ if (strlen(cleanwhitespace(value)) <= 0) {
       if (button != NULL) {
         setVirtualButtonLabel(button, label);
       } else {
-        LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
+        LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons);
       }
     } else if (strncasecmp(param + 17, "_altLabel", 9) == 0) {
       char *label = cleanalloc(value);
@@ -1218,7 +1218,7 @@ if (strlen(cleanwhitespace(value)) <= 0) {
       if (button != NULL) {
         setVirtualButtonAltLabel(button, label);
       } else {
-        LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons+1);
+        LOG(AQUA_LOG,LOG_WARNING, "Error with '%s', total buttons=%d, config has %d already, ignoring!\n",param, TOTAL_BUTTONS, aqdata->total_buttons);
       }
     } else if (strncasecmp(param + 17, "_pump", 5) == 0) {
       aqkey *vbutton = getVirtualButton(aqdata, num);

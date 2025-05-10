@@ -599,7 +599,7 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
 }
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
-  if (aqdata->total_buttons + 1 >= TOTAL_BUTTONS) {
+  if (aqdata->total_buttons /*+ 1*/ >= TOTAL_BUTTONS) {
     return NULL;
   }
 
@@ -616,7 +616,7 @@ aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex) {
     } else {
       index = aqdata->total_buttons - aqdata->virtual_button_start + 1;
     }
-    printf("TOTAL=%d VSTART=%d INDEXNAME=%d\n",aqdata->total_buttons,aqdata->virtual_button_start,index);
+    //printf("TOTAL=%d VSTART=%d INDEXNAME=%d\n",aqdata->total_buttons,aqdata->virtual_button_start,index);
   }
   
 
