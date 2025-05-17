@@ -5,7 +5,7 @@
 
 
 BUILD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PARENT_COMMAND=$(ps -o comm= $PPID) &>/dev/null
+PARENT_COMMAND=$(ps -o comm= $PPID 2>/dev/null) 
 
 SERVICE="aqualinkd"
 
@@ -110,7 +110,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-#if [ "$_nosystemd" -eq $FALSE ]; then
+if [ "$_nosystemd" -eq $FALSE ]; then
   if [[ $(mount | grep " / " | grep "(ro,") ]]; then
     if mount / -o remount,rw &>/dev/null; then
       # can mount RW.
@@ -122,7 +122,7 @@ fi
       exit 1
     fi
   fi
-#fi
+fi
 
 # Figure out what system we are on and set correct binary.
 # If we have been called from make, this is a custom build and install, so ignore check.
