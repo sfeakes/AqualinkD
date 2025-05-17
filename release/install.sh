@@ -110,15 +110,17 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-if [[ $(mount | grep " / " | grep "(ro,") ]]; then
-  if mount / -o remount,rw &>/dev/null; then
+if [ "$_nosystemd" -eq $FALSE ]; then
+  if [[ $(mount | grep " / " | grep "(ro,") ]]; then
+    if mount / -o remount,rw &>/dev/null; then
       # can mount RW.
       #mount / -o remount,rw &>/dev/null
-    log "Root filesystem is readonly, remounted RW"
-    REMOUNT_RO=0;
-  else
-    log "Root filesystem is readonly, can't install" 
-    exit 1
+      log "Root filesystem is readonly, remounted RW"
+      REMOUNT_RO=0;
+    else
+      log "Root filesystem is readonly, can't install" 
+      exit 1
+    fi
   fi
 fi
 
