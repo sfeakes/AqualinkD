@@ -45,6 +45,7 @@ log()
   echo "$*"
 
   if [ "$SYSTEMD_LOG" -eq $TRUE ]; then
+    # For some unknown reason, only way below works from aqualinkd process is adding "&>> "$OUTPUT""
     echo "Upgrade:   $*" | systemd-cat -t aqualinkd -p info  &>> "$OUTPUT"
   else
     logger -p local0.notice -t aqualinkd "Upgrade:   $*"

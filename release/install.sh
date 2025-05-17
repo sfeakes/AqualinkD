@@ -30,9 +30,10 @@ REMOUNT_RO=1
 TRUE=0
 FALSE=1
 
-_logfile="";
-_frommake=$FALSE;
-_ignorearch=$FALSE;
+_logfile=""
+_frommake=$FALSE
+_ignorearch=$FALSE
+_nosystemd=$FALSE
 
 log()
 {
@@ -59,7 +60,7 @@ printHelp()
 }
 
 
-log "Called $0 with $*"
+#log "Called $0 with $*"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -82,6 +83,9 @@ while [[ $# -gt 0 ]]; do
       ;;
     ignorearch)
       _ignorearch=$TRUE
+      ;;
+    nosystemd)
+      _nosystemd=$TRUE
       ;;
     help | -help | --help | -h)
       printHelp
@@ -170,9 +174,11 @@ fi
 # Exit if we can't find systemctl
 command -v systemctl >/dev/null 2>&1 || { log "This script needs systemd's systemctl manager, Please check path or install manually" >&2; exit 1; }
 
-# stop service, hide any error, as the service may not be installed yet
-systemctl stop $SERVICE > /dev/null 2>&1
-SERVICE_EXISTS=$(echo $?)
+if [ "$_nosystemd" -eq $FALSE ]; then
+  # stop service, hide any error, as the service may not be installed yet
+  systemctl stop $SERVICE > /dev/null 2>&1
+  SERVICE_EXISTS=$(echo $?)
+fi
 
 # Clean everything if requested.
 if [ "$1" == "clean" ]; then
@@ -287,6 +293,11 @@ fi
 # remount root ro
 if [[ $REMOUNT_RO -eq 0 ]]; then
   mount / -o remount,ro &>/dev/null
+  log "Root filesystem remounted RO"
+fi
+
+if [ "$_nosystemd" -eq $TRUE ]; then
+  exit 0
 fi
 
 systemctl enable $SERVICE
