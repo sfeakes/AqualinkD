@@ -121,6 +121,9 @@ const char *getJandyDeviceName(emulation_type etype) {
     case AQUAPDA:
       return "PDA";
     break;
+    case SIM_NONE:
+      return "AutoConfig";
+    break;
     default:
       return "Unknown";
     break;

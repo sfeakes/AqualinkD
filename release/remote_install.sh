@@ -259,7 +259,7 @@ function cleanup {
 #  
 
 
-# See if we are called from curl ot local dir.
+# See if we are called from curl or local dir.
 # with curl no tty input and script name wil be blank.
 if ! tty > /dev/null 2>&1; then
   script=$(basename "$0")

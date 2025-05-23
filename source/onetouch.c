@@ -300,13 +300,13 @@ bool log_panelversion(struct aqualinkdata *aq_data)
   if (strlen(aq_data->version) > 0) {
     // If another protocol set the version, we need to check the rev.
     if (!revTest){
-      LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
+      //LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
       if ( strcmp(aq_data->revision, "O.1") == 0 || strcmp(aq_data->revision, "O.2") == 0 ) {
         LOG(ONET_LOG,LOG_NOTICE, "Setting early version for OneTouch\n");
         _panel_version_P2 = true;
         revTest = true;
       }
-      LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
+      //LOG(ONET_LOG,LOG_NOTICE, "Control Panel revision %s\n", aq_data->revision);
     }
     return false;
   }

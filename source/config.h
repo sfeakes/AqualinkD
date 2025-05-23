@@ -227,7 +227,7 @@ int _numCfgParams;
 #define CFG_N_serial_port                       "serial_port"
 #define CFG_C_serial_port                       11
 #define CFG_N_log_level                         "log_level"
-#define CFG_V_log_level                         "[\"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]"
+#define CFG_V_log_level                         "[\"DEBUG_SERIAL\", \"DEBUG\", \"INFO\", \"NOTICE\", \"WARNING\", \"ERROR\"]"
 #define CFG_C_log_level                         9
 #define CFG_N_socket_port                       "socket_port" // Change to Web_socket
 #define CFG_C_socket_port                       11

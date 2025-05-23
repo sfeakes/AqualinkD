@@ -126,16 +126,23 @@ NEED TO FIX FOR THIS RELEASE.
 * Try an auto-update
 * Update Mongoose
 -->
-# Updates in 2.6.5
+# Updates in 2.6.6 (May 23 2025)
+* Fixed some HTTP response codes.
+* Added checks for protocols vs panel revision.
+* Fixed auto_configure for panel REV I & K.
+* Updates to install scripts.
+* Update to WebUI dimmers.
+
+# Updates in 2.6.5 (May 5 2025)
 * Changes to virtual buttons.
 
-# Updates in 2.6.4
+# Updates in 2.6.4 (Apr 28 2025)
 * Fix docker crash where journal not configured correctly.
 * Updates to config editor.
 * Increased number of virtual buttons. (previous limitation only effected RS 16 panels).
 * Changed to dimmable lights.
 
-# Updates in 2.6.3
+# Updates in 2.6.3 (April 13 2025)
 * AqualinkD can how self-update directly from github. use `Upgrade AqualinkD` button in Aqmanager
 * New install and remote_install scripts.
 * Changed MQTT posting frequency when Timers are enabled for better
@@ -145,13 +152,13 @@ NEED TO FIX FOR THIS RELEASE.
   * -or- 
   * `curl -fsSL https://raw.githubusercontent.com/aqualinkd/AqualinkD/master/release/remote_install.sh | sudo bash -s -- latest`
 
-# Updates in 2.6.1
+# Updates in 2.6.1 (Mar 26 2025)
 * Added External Sensors to Web UI & HomeKit.
 * Added Heat Pump / Chiller Thermostat to Web UI & HomeKit.
 * Fixed some bugs in Configuration Editor.
 * Link device/virtual/onetouch button with SWG BOOST. (Allows you to set VSP RPM when in Boost mode)
 
-# Updates in 2.6.0
+# Updates in 2.6.0 (Mar 22 2025)
 * Added configuration editor in aqmanager.  [Wiki - AQManager](https://github.com/aqualinkd/AqualinkD/wiki#AQManager)
 * Can now self-configure on startup. set `device_id=0xFF`
 * Added scheduling of pump after events (Power On, Freeze Protect, Boost)
@@ -162,8 +169,10 @@ NEED TO FIX FOR THIS RELEASE.
 * Reworked PDA sleep mode.
 * Added support for Heat Pump / Chiller support.
 
+# Updates in 2.5.1 (Dec 7 2024)
+* Patch
 
-# Updates in 2.5.0
+# Updates in 2.5.0 (Nov 16 2024)
 * PDA panel Rev 6.0 or newer that do not have a Jandy iAqualink device attached can use the AqualinkTouch protocol rather than PDA protocol.
   * This is faster, more reliable and does not intefear with the physical PDA device (like existing implimentation) 
   * Please consider this very much BETA at the moment.
@@ -183,7 +192,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Faster OneTouch device support.
 
 
-# Updates in Release 2.4.0
+# Updates in Release 2.4.0 (Sept 7 2024)
 * <b>WARNING</b> Breaking change if you use dimmer (please change button_??_lightMode from 6 to 10)
 * Fixed bugs with particular Jandy panel versions and color lights.
 * Added support for more color lights, and sped up programming
@@ -200,10 +209,10 @@ NEED TO FIX FOR THIS RELEASE.
   * look at `virtual_button??_label` in aqualinkd.conf
   * have to use AqualinkTouch protocol for `extended_device_id` 0x31->0x33 in aqualinkd.conf
 
-# Updates in Release 2.3.8
+# Updates in Release 2.3.8  (Sept 3 2024)
 * Release removed.  Bug with light program 0.
 
-# Updates in Release 2.3.7
+# Updates in Release 2.3.7 (Jun 11 2024)
 * Fix for Pentair VSP losing connection & bouncing SWG to 0 and back.
 * Added more VSP data (Mode, Status, Pressure Curve, both RPM & GPM) for all Pentair Pumps (VS/VF/VSF).
 * Few updates to HomeAssistant integration.
@@ -215,14 +224,14 @@ NEED TO FIX FOR THIS RELEASE.
   * Fix freeze protect button in UI not showing enabled.
 * Few updates to AQmanager UI.
 
-# Update in Release 2.3.6
+# Update in Release 2.3.6 (May 31 2024)
 * No functionality changes
 * Build & Docker changes
 * Going forward AqualinkD will release binaries for both armhf & arm64
   * armhf = any Pi (or equiv board) running 32 bit Debain based OS, stretch or newer
   * arm64 = Pi3/4/2w running 64 bit Debain based OS, buster or newer
 
-# Update in Release 2.3.5
+# Update in Release 2.3.5 (May 23 2024)
 * Added Home Assistant integration through MQTT discover
   * Please read the Home Assistant section of the [Wiki - HASSIO](https://github.com/aqualinkd/AqualinkD/wiki#HASSIO)
   * There are still some enhacments to come on this.
@@ -232,7 +241,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Added Color Light to iAqualinkTouch protocol.
 * Fixed issue mqtt_timed_update (1~2 min rather than between 2 & 20 min)
   
-# Update in Release 2.3.4
+# Update in Release 2.3.4 (May 13 2024)
 * Changes for Docker
 * Updated simulator code base and added new simulators for AllButton, OneTouch & PDA.
   * <aqualinkd.ip>/allbutton_sim.html
@@ -241,7 +250,7 @@ NEED TO FIX FOR THIS RELEASE.
     * On PDA only panel AqualinkD has to share the same ID with the PDA simulator. Therefore for AqualinkD will not respond to commands while simulator is active.
 * Now you can completely program the control panel with the simulators removing the need to have Jandy device.   
 
-# Update in Release 2.3.3
+# Update in Release 2.3.3 (May 30 2024)
 * Introduced Aqualink Manager UI http://aqualink.ip/aqmanager.html
   * [AqualinkD Manager](https://github.com/aqualinkd/AqualinkD/wiki#AQManager)
 * Moved logging into systemd/journal (journalctl) from syslog
@@ -254,12 +263,12 @@ NEED TO FIX FOR THIS RELEASE.
   * Add ```rs485_frame_delay = 4``` to /etc/aqualinkd.conf, 4 is number of milliseconds between frames, 0 will turn off ie no pause.
 * PDA Changes to support SWG and Boot.
 
-# Update in Release 2.3.2
+# Update in Release 2.3.2 (Jul 8 2023)
 * Added support for VSP on panel versions REV 0.1 & 0.2
 * Can change heater sliver min/max values in web UI. `./web/config.js`
 * Added reading ePump RPM/Watts directly from RS485 bus.
 
-# Update in Release 2.3.1
+# Update in Release 2.3.1 (Jun 23 2023)
 * Changed a lot of logic around different protocols.
 * Added low latency support for FTDI usb driver.
 * AqualinkD will find out the fastest way to change something depending on the protocols available.

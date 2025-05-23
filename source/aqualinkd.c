@@ -740,7 +740,7 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
 
 #define MAX_AUTO_PACKETS 1200
 
-bool auto_configure(unsigned char* packet) {
+bool auto_configure(unsigned char* packet, int rs_fd) {
   // Loop over PROBE packets and store any we can use,
   // once we see the 2nd probe of any ID we fave stored, then the loop is complete, 
   // set ID's and exit true, exit falce to get called again.
@@ -755,8 +755,13 @@ bool auto_configure(unsigned char* packet) {
   static unsigned char firstprobe = 0x00;
   static unsigned char lastID = 0x00;
   static bool seen_iAqualink2 = false;
+  static bool ignore_AqualinkTouch = false;
   static int foundIDs = 0;
   static int packetsReceived=0;
+
+  static bool gotRev = false;
+  static unsigned char gettingRevID = 0xFF;
+  //static char message[AQ_MSGLONGLEN + 1];
 
   if (++packetsReceived >= MAX_AUTO_PACKETS ) {
     LOG(AQUA_LOG,LOG_ERR, "Received %d packets, and didn't get a full probe cycle, stoping Auto Configure!\n",packetsReceived);
@@ -766,6 +771,35 @@ bool auto_configure(unsigned char* packet) {
   if ( packet[PKT_CMD] == CMD_PROBE ) {
     LOG(AQUA_LOG,LOG_INFO, "Got Probe on ID 0x%02hhx\n",packet[PKT_DEST]);
     //printf(" *** Got Probe on ID 0x%02hhx\n",packet[PKT_DEST]);
+    if ( packet[PKT_DEST] >= 0x08 && packet[PKT_DEST] <= 0x0B && gotRev == false && gettingRevID == 0xFF) {
+        // Try replying to get panel rev
+        gettingRevID = packet[PKT_DEST];
+        caculate_ack_packet(rs_fd, packet, ALLBUTTON);
+        return false; // We don't want to store this ID since we use it for getting REV and is won't go back to probe when AqualinkD starts
+    }
+  } else if (packet[PKT_DEST] == gettingRevID) {
+    if ( packet[PKT_CMD] == CMD_MSG ) {
+      if ( rsm_strnstr((char *)&packet[5], " REV", AQ_MSGLEN) != NULL ) {
+        // We need to get the rev to cater for panel rev I & k (maybe others) that send AqualinkTouch probe messages
+        // then they don't support that protocol.
+        LOG(AQUA_LOG,LOG_DEBUG, "Got %15s    from ID 0x%02hhx\n",(char *)&packet[5],packet[PKT_DEST]);
+        gotRev = true;
+        gettingRevID = 0xFF;
+        setPanelInformationFromPanelMsg(&_aqualink_data, (char *)&packet[5], PANEL_CPU | PANEL_REV, SIM_NONE);
+        if ( !isMASKSET(_aqualink_data.panel_support_options, RSP_SUP_AQLT)) {
+          LOG(AQUA_LOG,LOG_NOTICE, "Ignoring AqualinkTouch probes due to panel rev\n");
+          ignore_AqualinkTouch = true;
+          if ( _aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33 ) {
+             _aqconfig_.extended_device_id = 0x00;
+             _aqconfig_.enable_iaqualink = false;
+             _aqconfig_.read_RS485_devmask &= ~ READ_RS485_IAQUALNK;
+             //firstprobe = 0x00;
+             foundIDs--;
+          }
+        }
+      }
+    }
+    caculate_ack_packet(rs_fd, packet, ALLBUTTON);
   }
 
   if (lastID != 0x00 && packet[PKT_DEST] == DEV_MASTER ) { // Can't use got a reply to the late probe.
@@ -803,7 +837,7 @@ bool auto_configure(unsigned char* packet) {
       _aqconfig_.extended_device_id_programming = true;
       // Don't increase  foundIDs as we prefer not to use this one.
       LOG(AQUA_LOG,LOG_NOTICE, "Found valid unused extended ID 0x%02hhx\n",lastID);
-    } else if ( (lastID >= 0x30 && lastID <= 0x33) && 
+    } else if ( (lastID >= 0x30 && lastID <= 0x33) && ignore_AqualinkTouch == false && 
                   (_aqconfig_.extended_device_id < 0x30 || _aqconfig_.extended_device_id > 0x33)) { //Overide is it's been set to Touch or not set.
       _aqconfig_.extended_device_id = lastID;
       _aqconfig_.extended_device_id_programming = true;
@@ -816,6 +850,8 @@ bool auto_configure(unsigned char* packet) {
     }
     // Now reset ID
     lastID = 0x00;
+
+    return false;
   }
 
   if ( foundIDs >= 3 || (packet[PKT_DEST] == firstprobe && packet[PKT_CMD] == CMD_PROBE) ) {
@@ -1084,7 +1120,7 @@ void main_loop()
 
     if (packet_length > 0 && auto_config_complete == false) {
       blank_read = 0;
-      auto_config_complete = auto_configure(packet_buffer);
+      auto_config_complete = auto_configure(packet_buffer, rs_fd);
       AddAQDstatusMask(AUTOCONFIGURE_ID);
       _aqualink_data.updated = true;
       if (auto_config_complete) {

@@ -1539,7 +1539,7 @@ void check_print_config (struct aqualinkdata *aqdata)
 
 
   // Sanity checks
-
+  
   // If no panel has been set, use default one
   if (_aqconfig_.paneltype_mask == 0) {
     //printf("Set temp panel info Size=%d, RS=%d, combo=%d, dual=%d\n",_defaultPanel.size,_defaultPanel.rs,_defaultPanel.combo, _defaultPanel.dual);

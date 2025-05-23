@@ -33,6 +33,11 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button);
 void printPanelSupport(struct aqualinkdata *aqdata);
 uint16_t setPanelSupport(struct aqualinkdata *aqdata);
 
+
+void removePanelRSserialAdapterInterface();
+void removePanelOneTouchInterface();
+void removePanelIAQTouchInterface();
+
 char *name2label(char *str)
 {
   int len = strlen(str);
@@ -117,6 +122,40 @@ const char* find_rev_chars(const char *str, int length, int *out_len) {
     return NULL;  // Pattern not found
 }
 
+void checkPanelConfig(struct aqualinkdata *aqdata) {
+
+  // Check panel rev for common errors.
+
+  // Aqualink Touch.
+  if ( _aqconfig_.extended_device_id >= 0x30 && _aqconfig_.extended_device_id <= 0x33) {
+    if ( !isMASKSET(aqdata->panel_support_options, RSP_SUP_AQLT)) {
+      LOG(PANL_LOG, LOG_ERR, "Panel REV %s does not support AqualinkTouch protocol, please change configuration option '%s'\n",aqdata->panel_rev, CFG_N_extended_device_id);
+      LOG(PANL_LOG, LOG_WARNING, "Removing option '%s', please correct configuration\n",CFG_N_extended_device_id);
+      _aqconfig_.extended_device_id = 0x00;
+      removePanelIAQTouchInterface();
+    }
+  }
+
+  // One Touch
+  if ( _aqconfig_.extended_device_id >= 0x40 && _aqconfig_.extended_device_id <= 0x43) {
+    if ( !isMASKSET(aqdata->panel_support_options, RSP_SUP_ONET)) {
+      LOG(PANL_LOG, LOG_ERR, "Panel REV %s does not support OneTouch protocol, please change configuration option '%s'\n",aqdata->panel_rev, CFG_N_extended_device_id);
+      LOG(PANL_LOG, LOG_WARNING, "Removing option '%s', please correct configuration\n",CFG_N_extended_device_id);
+      _aqconfig_.extended_device_id = 0x00;
+      removePanelOneTouchInterface();
+    }
+  }
+
+  // Serial Adapter
+  if ( _aqconfig_.rssa_device_id >= 0x48 && _aqconfig_.rssa_device_id <= 0x49) {
+    if ( !isMASKSET(aqdata->panel_support_options, RSP_SUP_RSSA)) {
+      LOG(PANL_LOG, LOG_ERR, "Panel REV %s does not support RS SerialAdapter protocol, please change configuration option '%s'\n",aqdata->panel_rev, CFG_N_rssa_device_id);
+      LOG(PANL_LOG, LOG_WARNING, "Removing option '%s', please correct configuration\n",CFG_N_rssa_device_id);
+      _aqconfig_.rssa_device_id = 0x00;
+      removePanelRSserialAdapterInterface();
+    }
+  }
+}
 
 /*
 pull board CPU, revision & panel string from strings like
@@ -164,6 +203,12 @@ uint8_t setPanelInformationFromPanelMsg(struct aqualinkdata *aqdata, const char 
             LOG(PANL_LOG, LOG_NOTICE, "Panel REV %s from %s\n",aqdata->panel_rev,getJandyDeviceName(source));
             setPanelSupport(aqdata);
             //printPanelSupport(aqdata);
+            if (source == SIM_NONE) { 
+              // We pass SIM_NONE when we are in auto_config mode, so reset the panel name so we get it again when we fully start
+              aqdata->panel_rev[0] = '\0';
+            } else {
+               checkPanelConfig(aqdata);
+            }
          } else {
             //printf("Failed to find REV, length\n");
          }
@@ -395,6 +440,16 @@ void addPanelOneTouchInterface() {
 void addPanelIAQTouchInterface() {
   _aqconfig_.paneltype_mask |= RSP_IAQT;
   _aqconfig_.paneltype_mask &= ~RSP_ONET;
+}
+
+void removePanelRSserialAdapterInterface() {
+  _aqconfig_.paneltype_mask &= ~RSP_RSSA;
+}
+void removePanelOneTouchInterface() {
+  _aqconfig_.paneltype_mask &= ~RSP_ONET;
+}
+void removePanelIAQTouchInterface() {
+  _aqconfig_.paneltype_mask &= ~RSP_IAQT;
 }
 
 int PANEL_SIZE() {

@@ -1344,6 +1344,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       *rtnmsg = NO_PLIGHT_DEVICE;
       LOG(NET_LOG,LOG_WARNING, "%s: Didn't find device that matched URI '%.*s'\n",actionName[from], uri_length, URI);
       rtn = uBad;
+    } else {
+      rtn = uActioned;
     }
   } else if ((ri3 != NULL && (strncasecmp(ri2, "brightness", 10) == 0) && (strncasecmp(ri3, "set", 3) == 0))) {
     found = false;
@@ -1360,6 +1362,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
       *rtnmsg = NO_PLIGHT_DEVICE;
       LOG(NET_LOG,LOG_WARNING, "%s: Didn't find device that matched URI '%.*s'\n",actionName[from], uri_length, URI);
       rtn = uBad;
+    } else {
+      rtn = uActioned;
     }
   // Action a pump RPM/GPM message
   } else if ((ri3 != NULL && ((strncasecmp(ri2, "RPM", 3) == 0) || (strncasecmp(ri2, "GPM", 3) == 0) || (strncasecmp(ri2, "Speed", 5) == 0) || (strncasecmp(ri2, "VSP", 3) == 0)) && (strncasecmp(ri3, "set", 3) == 0))) {

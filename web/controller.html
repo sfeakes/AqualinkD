@@ -1784,12 +1784,26 @@
                 setTileState(id, state);
             }
           } else if (type == 'light_dimmer') {
+            //console.log("DIMMER "+state+" - "+tile.getAttribute('status'));
             var value = slider.value;
-            if (state == (tile.getAttribute('status') == 'off')) {
+            if (state == false) { //Turn off
+              //console.log("State off");
               setTileState(id, state);
             } else if (sp_value != slider.value && dimmer_slider_changed == true) {
+              //console.log("SLIDER CHANGED");
               setThermostatSetpoint(id, slider.value);
+            } else {
+              //console.log("State on/off");
+              setTileState(id, state);
             }
+            /*
+            if (state == (tile.getAttribute('status') == 'off')) {
+              console.log("ON/OFF "+state+" = "+(tile.getAttribute('status') == 'off'));
+              setTileState(id, state);
+            } else if (sp_value != slider.value && dimmer_slider_changed == true) {
+              console.log("SLIDER CHANGED");
+              setThermostatSetpoint(id, slider.value);
+            }*/
           } else if (type == 'setpoint_swg') {
             //console.log ("Boost attribute = "+tile.getAttribute('boost'));
             //console.log ("state = "+state);
