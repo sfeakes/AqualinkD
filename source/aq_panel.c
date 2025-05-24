@@ -1039,7 +1039,16 @@ void initPanelButtons(struct aqualinkdata *aqdata, bool rs, int size, bool combo
     aqdata->pool_heater_index = index-3;
     aqdata->spa_heater_index = index-2;
     aqdata->solar_heater_index = index-1;
-
+    if (_aqconfig_.pda_force_pool_heater_btn != 0 && _aqconfig_.pda_force_pool_heater_btn < aqdata->total_buttons) {
+      aqdata->pool_heater_index = _aqconfig_.pda_force_pool_heater_btn;
+    }
+    if (_aqconfig_.pda_force_spa_heater_btn != 0 && _aqconfig_.pda_force_spa_heater_btn < aqdata->total_buttons) {
+      aqdata->spa_heater_index = _aqconfig_.pda_force_spa_heater_btn;
+    }
+    if (_aqconfig_.pda_force_solar_heater_btn != 0 && _aqconfig_.pda_force_solar_heater_btn < aqdata->total_buttons) {
+      aqdata->solar_heater_index = _aqconfig_.pda_force_solar_heater_btn;
+    }
+    
     // Reset all LED's to off since their is no off state in PDA.
     for(int i=0; i < aqdata->total_buttons; i++) {
         aqdata->aqbuttons[i].led->state = OFF;

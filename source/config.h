@@ -78,6 +78,10 @@ struct aqconfig
   bool override_freeze_protect;
   #ifdef AQ_PDA
   bool pda_sleep_mode;
+  bool pda_bypass_info;
+  int pda_force_pool_heater_btn;
+  int pda_force_spa_heater_btn;
+  int pda_force_solar_heater_btn;
   #endif
   bool convert_mqtt_temp;
   bool convert_dz_temp;
