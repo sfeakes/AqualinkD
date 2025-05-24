@@ -347,7 +347,8 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
       // Line 9 =      BOOST
 
       // "SET AquaPure" and "BOOST" are only present when filter pump is running
-      if (strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) {
+      if ((strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) ||
+          (strncasecmp(pda_m_line(9),"   BOOST POOL   ", 16) == 0)) {
         min_index = 1;
         max_index = 8; // to account for 8 missing
         if (index == 9) { // looking for boost
