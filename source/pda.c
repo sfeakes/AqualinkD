@@ -43,6 +43,7 @@ static struct aqualinkdata *_aqualink_data;
 static unsigned char _last_packet_type;
 static unsigned long _pda_loop_cnt = -0;
 static bool _initWithRS = false;
+static bool first_status_after_clear = false;
 
 // Each RS message is around 0.25 seconds apart
 //#define PDA_SLEEP_FOR 120 //
@@ -875,6 +876,7 @@ bool process_pda_packet(unsigned char *packet, int length)
 
     case CMD_PDA_CLEAR:
       read_equiptment_menu = false; // Reset the have read menu flag, since this is new menu.
+      first_status_after_clear = true;
     break;
 
     case CMD_STATUS:
@@ -911,6 +913,11 @@ bool process_pda_packet(unsigned char *packet, int length)
         //printf("**** PDA INIT PUT BACK IN ****\n");
         queueGetProgramData(AQUAPDA, _aqualink_data);
       }
+      else if (first_status_after_clear && (pda_m_type() == PM_FREEZE_PROTECT_DEVICES))
+      {
+        process_pda_freeze_protect_devices();
+      }
+      first_status_after_clear = false;
     break;
 
     case CMD_MSG_LONG:
