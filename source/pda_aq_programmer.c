@@ -678,6 +678,26 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
                              aq_data->aqbuttons[device].label);
               }
           }
+      } if (strcasestr(device_name, "LIGHT") != NULL) {
+	  if (state == ON) {
+            // Set Light ON prompt for color selection
+	    if (!waitForPDAnextMenu(aq_data)) {
+	      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - waitForPDAnextMenu\n",
+	  	       aq_data->aqbuttons[device].label);
+	    } else {
+	      send_pda_cmd(KEY_PDA_SELECT);
+	      while (get_pda_queue_length() > 0) { delay(500); }
+	      if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
+	          LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
+			     aq_data->aqbuttons[device].label);
+	      }
+	    }
+	  } else {
+	      if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
+	          LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
+			     aq_data->aqbuttons[device].label);
+	      }
+	  }
       } else { // not turning on heater wait for line update
           // worst case spa when pool is running
           if (!waitForPDAMessageType(aq_data,CMD_MSG_LONG,2)) {
