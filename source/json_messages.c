@@ -346,7 +346,7 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
     length += sprintf(buffer+length, ",\"temp_units\":\"%s\"",JSON_UNKNOWN );
 
   length += sprintf(buffer+length,  ", \"devices\": [");
-  
+
   for (i=0; i < aqdata->total_buttons; i++) 
   {
     if ( strcmp(BTN_POOL_HTR,aqdata->aqbuttons[i].name) == 0 && (ENABLE_HEATERS || aqdata->pool_htr_set_point != TEMP_UNKNOWN)) {
