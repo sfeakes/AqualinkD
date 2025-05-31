@@ -347,7 +347,8 @@ bool find_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, int charli
       // Line 9 =      BOOST
 
       // "SET AquaPure" and "BOOST" are only present when filter pump is running
-      if (strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) {
+      if ((strncasecmp(pda_m_line(9),"     BOOST      ", 16) == 0) ||
+          (strncasecmp(pda_m_line(9),"   BOOST POOL   ", 16) == 0)) {
         min_index = 1;
         max_index = 8; // to account for 8 missing
         if (index == 9) { // looking for boost
@@ -677,6 +678,26 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
                              aq_data->aqbuttons[device].label);
               }
           }
+      } if (strcasestr(device_name, "LIGHT") != NULL) {
+	  if (state == ON) {
+            // Set Light ON prompt for color selection
+	    if (!waitForPDAnextMenu(aq_data)) {
+	      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - waitForPDAnextMenu\n",
+	  	       aq_data->aqbuttons[device].label);
+	    } else {
+	      send_pda_cmd(KEY_PDA_SELECT);
+	      while (get_pda_queue_length() > 0) { delay(500); }
+	      if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
+	          LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
+			     aq_data->aqbuttons[device].label);
+	      }
+	    }
+	  } else {
+	      if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
+	          LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
+			     aq_data->aqbuttons[device].label);
+	      }
+	  }
       } else { // not turning on heater wait for line update
           // worst case spa when pool is running
           if (!waitForPDAMessageType(aq_data,CMD_MSG_LONG,2)) {
@@ -754,7 +775,11 @@ void *set_aqualink_PDA_init( void *ptr )
     //printf("****** Version '%s' ********\n",aq_data->version);
     LOG(PDA_LOG,LOG_DEBUG, "PDA type=%d, version=%s\n", _PDA_Type, aq_data->version);
     // don't wait for version menu to time out press back to get to home menu faster
-    //send_pda_cmd(KEY_PDA_BACK);
+    #if AQ_PDA
+      if (_aqconfig_.pda_bypass_info) {
+        send_pda_cmd(KEY_PDA_BACK);
+      }
+    #endif
     //if (! waitForPDAnextMenu(aq_data)) { // waitForPDAnextMenu waits for highlight chars, which we don't get on normal menu
     
     if (! waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10)) {
