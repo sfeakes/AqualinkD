@@ -45,6 +45,7 @@
 #include "utils.h"
 #include "rs_msg_utils.h"
 #include "aq_serial.h"
+#include "aqualink.h"
 
 #define DEFAULT_LOG_FILE "/tmp/aqualinkd-inline.log"
 //#define MAXCFGLINE 265
@@ -109,15 +110,15 @@ int getSystemLogLevel()
 int getLogLevel(logmask_t from)
 {
 
-  // RSSD_LOG should default to INFO unless the mask is explicitly set.
-  // IE Even if DEBUG is set, (Note ignored for the moment)
-
-  //if ( from == RSSD_LOG && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
-  if ( (from == RSSD_LOG || from == SLOG_LOG) && ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+  if ( (from == RSSD_LOG || from == SLOG_LOG) && isMASK_SET(_logforcemask, from) && _log_level < LOG_DEBUG_SERIAL) {
     return LOG_DEBUG_SERIAL;
-  else if ( ((_logforcemask & from) == from ) && _log_level < LOG_DEBUG_SERIAL)
+  } else if ( isMASK_SET(_logforcemask, from) && _log_level < LOG_DEBUG_SERIAL) {
     return LOG_DEBUG;
-  
+  } else if (from == RSTM_LOG && _log_level < LOG_DEBUG_SERIAL && !isMASK_SET(_logforcemask, from)) {
+    // RSTM_LOG (RS serial timings) should only print if debug_serial or explicitly set in the forcelogmask.
+    return LOG_NOTICE;
+ }
+
   return _log_level;
 }
 
@@ -593,8 +594,9 @@ void LOG(const logmask_t from, const int msg_level, const char * format, ...)
     return;
   }
   */
-  if ( msg_level > getLogLevel(from))
+  if ( msg_level > getLogLevel(from)) {
     return;
+  }
 
   char buffer[LOGBUFFER];
   va_list args;

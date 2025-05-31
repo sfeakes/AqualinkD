@@ -489,7 +489,11 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
       int byteType = packet[5 + i];
       LOG(IAQL_LOG, LOG_INFO, "%-15.*s = %s | index %d type=(%0.2d 0x%02hhx) status=0x%02hhx start=%d length=%d\n", length, &packet[start + 2], (status == 0x00 ? "Off" : "On "), i, byteType, byteType, status, start, length);
       // Check against virtual onetouch buttons.
+
+      // NSF This needs to check strlingth, ie "Spa Mode" vs "Spa"
+     if ( aq_data->virtual_button_start > 0 ) {
       for (int bi=aq_data->virtual_button_start ; bi < aq_data->total_buttons ; bi++) {
+        //LOG(IAQL_LOG, LOG_INFO, "Check %s against %s\n",(char *)&packet[start + 2], aq_data->aqbuttons[bi].label);
         if (rsm_strcmp((char *)&packet[start + 2], aq_data->aqbuttons[bi].label) == 0) {
           //LOG(IAQL_LOG, LOG_INFO, "Status for %s is %s\n",aq_data->aqbuttons[bi].label,(status == 0x00 ? "Off" : "On "));
           // == means doesn;t match, RS 1=on 0=off / LED enum 1=off 0=on
@@ -501,6 +505,7 @@ bool process_iAqualinkStatusPacket(unsigned char *packet, int length, struct aqu
         }
       }
       start = start + packet[start + 1] + 2;
+     }
     }
   }
   else if (packet[PKT_CMD] == CMD_IAQ_AUX_STATUS)

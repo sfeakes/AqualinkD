@@ -829,14 +829,16 @@ printf("Pump Type %d\n",aqdata->pumps[i].pumpType);
 
 
   length += sprintf(buffer+length, ",\"alternate_modes\":{" );
-  for (i=aqdata->virtual_button_start; i < aqdata->total_buttons; i++) 
-  {
-    if (isVBUTTON_ALTLABEL(aqdata->aqbuttons[i].special_mask)) {
-       length += sprintf(buffer+length, "\"%s\": \"%s\",",aqdata->aqbuttons[i].name, ((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->in_alt_mode?JSON_ON:JSON_OFF );
+  if (aqdata->virtual_button_start > 0) {
+    for (i=aqdata->virtual_button_start; i < aqdata->total_buttons; i++) 
+    {
+      if (isVBUTTON_ALTLABEL(aqdata->aqbuttons[i].special_mask)) {
+        length += sprintf(buffer+length, "\"%s\": \"%s\",",aqdata->aqbuttons[i].name, ((vbutton_detail *)aqdata->aqbuttons[i].special_mask_ptr)->in_alt_mode?JSON_ON:JSON_OFF );
+      }
     }
+    if (buffer[length-1] == ',')
+      length--;
   }
-  if (buffer[length-1] == ',')
-    length--;
   length += sprintf(buffer+length, "}");
 
 
