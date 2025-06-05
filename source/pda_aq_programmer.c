@@ -71,6 +71,7 @@ void waitfor_pda_queue2empty() {
   waitfor_queue2empty();
 }
 void send_pda_cmd(unsigned char cmd) {
+  // LOG(PDA_LOG, LOG_DEBUG, "PDA command %d\n", cmd);
   send_cmd(cmd);
 }
 unsigned char pop_pda_cmd(struct aqualinkdata *aq_data){
@@ -111,6 +112,7 @@ bool push_pda_cmd(unsigned char cmd) {
 }
 void send_pda_cmd(unsigned char cmd) {
   if (waitfor_pda_queue2empty()) {
+    // LOG(LDA_LOG, LOG_DEBUG, "PDA command %d\n", cmd);
     push_pda_cmd(cmd);
   }
 }
@@ -838,6 +840,42 @@ void program_PDA_lightmode(struct aqualinkdata *aq_data, unsigned int device, bo
   goto_pda_menu(aq_data, PM_HOME, false);
 }
 
+void _program_PDA_heater(struct aqualinkdata *aq_data, unsigned int device, unsigned int state)
+{
+  switch (aq_data->aqbuttons[device].led->state) {
+  case ON:
+  case ENABLE: // If on or enabled, will get disable. Wait for change to OFF.
+    if (!waitForPDAMessageType(aq_data,CMD_PDA_0x04,20)) {
+       LOG(PDA_LOG,LOG_ERR, "PDA Heater: %s off - wait for CMD_PDA_HIGHLIGHT\n", aq_data->aqbuttons[device].label);
+       return;
+    }
+    break;
+  case OFF:  // Will prompt for temperate set
+    aq_data->last_packet_type = CMD_STATUS; // Reset last packet type
+    if (!_waitForPDAMessageTypesOrMenu(aq_data, CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS, 20, "HEAT", 0, 0)) {
+      LOG(PDA_LOG,LOG_ERR, "PDA light: %s - no HEAT menu.\n", aq_data->aqbuttons[device].label);
+      return;
+    }
+    send_pda_cmd(KEY_PDA_SELECT);
+    while (get_pda_queue_length() > 0) { delay(500); }
+    if (!waitForPDAMessageTypes(aq_data,CMD_PDA_HIGHLIGHT,CMD_PDA_HIGHLIGHTCHARS,21)) {
+      LOG(PDA_LOG,LOG_ERR, "PDA Heater: %s on - wait for CMD_PDA_HIGHLIGHT\n", aq_data->aqbuttons[device].label);
+      return;
+    }
+    break;
+  case FLASH:
+  default:
+    return;
+  }
+}
+
+void program_PDA_heater(struct aqualinkdata *aq_data, unsigned int device, unsigned int state)
+{
+  _program_PDA_heater(aq_data, device, state);
+  waitfor_pda_queue2empty();
+  goto_pda_menu(aq_data, PM_HOME, false);
+}
+
 void *set_aqualink_PDA_device_on_off( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -861,12 +899,41 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
 
   LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].label,state);
 
-  //
-  // Now, navigate to equipment menu
-  if (! goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, true)) {
-    LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
-    cleanAndTerminateThread(threadCtrl);
-    return ptr;
+  for (int i = 0; i < 2; i++) {
+    //
+    // Before start, put back to home menu. Otherwise may get timing issue.
+    // We can be sending SELECT at EQUIPMNET menu while PDA immediate fall back to HOME
+    // menu. And if we fail to find the EQUIPMENT menu, retry one more time.
+    send_pda_cmd(KEY_PDA_BACK);
+    if (!waitForPDAnextMenu(aq_data)) {
+      if (i <= 0)
+        continue;
+      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find HOME menu\n");
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+
+    //
+    // Now, navigate to equipment menu
+    if (!goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, true)) {
+      if (i <= 0)
+        continue;
+      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+
+    //
+    // Make sure we actually got to the EQUIPMENT menu
+    if (strcasestr(pda_m_line(0), "   EQUIPMENT    ") == NULL) {
+      if (i <= 0)
+        continue;
+      // Did not see EQUIPMENT menu
+      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
+      cleanAndTerminateThread(threadCtrl);
+      return ptr;
+    }
+    break;
   }
 
   // If single config (Spa OR pool) rather than (Spa AND pool) heater is TEMP1 and TEMP2
@@ -886,25 +953,16 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
   if (find_pda_menu_item(aq_data, device_name, 13)) {
     if (aq_data->aqbuttons[device].led->state != state) {
       //printf("*** Select State ***\n");
-      LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, found device '%s', changing state\n",aq_data->aqbuttons[device].label,state);
+      LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, found device '%s', changing state %d to %d\n", aq_data->aqbuttons[device].label,
+		     aq_data->aqbuttons[device].led->state, state);
       force_queue_delete(); // NSF This is a bad thing to do.  Need to fix this
       send_pda_cmd(KEY_PDA_SELECT);
       while (get_pda_queue_length() > 0) { delay(500); }
       // If you are turning on a heater there will be a sub menu to set temp
-      if ((state == ON) && ((device == aq_data->pool_heater_index) || (device == aq_data->spa_heater_index))) {
-          if (! waitForPDAnextMenu(aq_data)) {
-            LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - waitForPDAnextMenu\n",
-                       aq_data->aqbuttons[device].label);
-          } else {
-              send_pda_cmd(KEY_PDA_SELECT);
-              while (get_pda_queue_length() > 0) { delay(500); }
-              if (!waitForPDAMessageType(aq_data,CMD_PDA_HIGHLIGHT,20)) {
-                  LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off: %s on - wait for CMD_PDA_HIGHLIGHT\n",
-                             aq_data->aqbuttons[device].label);
-              }
-          }
-      }
-      if (strcasestr(device_name, "LIGHT") != NULL) {
+      if (strcasecmp(aq_data->aqbuttons[device].name, BTN_POOL_HTR) == 0 ||
+          strcasecmp(aq_data->aqbuttons[device].name, BTN_SPA_HTR) == 0) {
+          program_PDA_heater(aq_data, device, state);
+      } else  if (strcasestr(device_name, "LIGHT") != NULL) {
           program_PDA_lightmode(aq_data, device, isVBUTTON(aq_data->aqbuttons[device].special_mask));
       } else { // not turning on heater wait for line update
           // worst case spa when pool is running
