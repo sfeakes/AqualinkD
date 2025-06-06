@@ -229,6 +229,16 @@ const char *get_currentlight_mode_name(clight_detail light, emulation_type proto
   return _color_light_options[light.lightType][light.currentValue];
 }
 
+int get_currentlight_mode_name_count(clight_detail light, emulation_type protocol)
+{
+  int i = 0;
+  for (; i < LIGHT_COLOR_OPTIONS; i++) {
+    if (_color_light_options[light.lightType][i] == NULL)
+      break;
+  }
+  return i;
+}
+
 // This should not be uses for getting current lightmode name since it doesn;t have full logic
 
 const char *light_mode_name(clight_type type, int index, emulation_type protocol)
