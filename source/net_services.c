@@ -915,7 +915,8 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
   for (i=0; i < _aqualink_data->total_buttons; i++) {
     if (_last_mqtt_aqualinkdata.aqualinkleds[i].state != _aqualink_data->aqbuttons[i].led->state) {
       _last_mqtt_aqualinkdata.aqualinkleds[i].state = _aqualink_data->aqbuttons[i].led->state;
-      if (_aqualink_data->aqbuttons[i].code == KEY_POOL_HTR || _aqualink_data->aqbuttons[i].code == KEY_SPA_HTR) {
+      if (strcmp(BTN_POOL_HTR,_aqualink_data->aqbuttons[i].name) == 0 ||
+          strcmp(BTN_SPA_HTR,_aqualink_data->aqbuttons[i].name) == 0) {
         send_mqtt_heater_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
       } else {
         send_mqtt_state_msg(nc, _aqualink_data->aqbuttons[i].name, _aqualink_data->aqbuttons[i].led->state);
