@@ -45,7 +45,8 @@ bool waitForPDAMessageType(struct aqualinkdata *aq_data, unsigned char mtype, in
 bool waitForPDAMessageTypes(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived);
 bool _waitForPDAMessageTypesOrMenu(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived, char *text, int line, int send_key);
 bool waitForPDAMessageTypesOrMenu(struct aqualinkdata *aq_data, unsigned char mtype1, unsigned char mtype2, int numMessageReceived, char *text, int line);
-bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first);
+bool _goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first);
+bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first, int attempt);
 bool wait_pda_selected_item(struct aqualinkdata *aq_data);
 bool waitForPDAnextMenu(struct aqualinkdata *aq_data);
 bool loopover_devices(struct aqualinkdata *aq_data);
@@ -251,7 +252,7 @@ bool loopover_devices(struct aqualinkdata *aq_data) {
   int i;
   int index = -1;
 
-  if (! goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, false)) {
+  if (! goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, false, 1)) {
     LOG(PDA_LOG,LOG_ERR, "loopover_devices :- can't goto PM_EQUIPTMENT_CONTROL menu\n");
     //cleanAndTerminateThread(threadCtrl);
     return false;
@@ -464,7 +465,7 @@ bool _select_pda_menu_item(struct aqualinkdata *aq_data, char *menuText, bool wa
 // and 6594 - AquaLink RS Control Panel Installation Manual
 // https://www.jandy.com/-/media/zodiac/global/downloads/0748-91071/6594.pdf
 
-bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first) {
+bool _goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first) {
   bool ret = true;
   int cnt = 0;
 
@@ -637,6 +638,18 @@ bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_f
   }
 
   return true;
+}
+
+bool goto_pda_menu(struct aqualinkdata *aq_data, pda_menu_type menu, bool home_first, int attempt) {
+  bool ret;
+  int tried = 0;
+
+  do {
+    ret = _goto_pda_menu(aq_data, menu, home_first);
+    tried++;
+  } while (!ret && (tried < attempt));
+
+  return ret;
 }
 
 bool program_PDA_lightmode_next_color(struct aqualinkdata *aq_data, unsigned int device)
@@ -837,7 +850,7 @@ void program_PDA_lightmode(struct aqualinkdata *aq_data, unsigned int device, bo
 {
   _program_PDA_lightmode(aq_data, device, next_color, NULL);
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 }
 
 void _program_PDA_heater(struct aqualinkdata *aq_data, unsigned int device, unsigned int state)
@@ -873,7 +886,7 @@ void program_PDA_heater(struct aqualinkdata *aq_data, unsigned int device, unsig
 {
   _program_PDA_heater(aq_data, device, state);
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 }
 
 void *set_aqualink_PDA_device_on_off( void *ptr )
@@ -899,41 +912,10 @@ void *set_aqualink_PDA_device_on_off( void *ptr )
 
   LOG(PDA_LOG,LOG_INFO, "PDA Device On/Off, device '%s', state %d\n",aq_data->aqbuttons[device].label,state);
 
-  for (int i = 0; i < 2; i++) {
-    //
-    // Before start, put back to home menu. Otherwise may get timing issue.
-    // We can be sending SELECT at EQUIPMNET menu while PDA immediate fall back to HOME
-    // menu. And if we fail to find the EQUIPMENT menu, retry one more time.
-    send_pda_cmd(KEY_PDA_BACK);
-    if (!waitForPDAnextMenu(aq_data)) {
-      if (i <= 0)
-        continue;
-      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find HOME menu\n");
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
-    }
-
-    //
-    // Now, navigate to equipment menu
-    if (!goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, true)) {
-      if (i <= 0)
-        continue;
-      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
-    }
-
-    //
-    // Make sure we actually got to the EQUIPMENT menu
-    if (strcasestr(pda_m_line(0), "   EQUIPMENT    ") == NULL) {
-      if (i <= 0)
-        continue;
-      // Did not see EQUIPMENT menu
-      LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
-    }
-    break;
+  if (!goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, true, 2)) {
+    LOG(PDA_LOG,LOG_ERR, "PDA Device On/Off :- can't find EQUIPTMENT CONTROL menu\n");
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
   }
 
   // If single config (Spa OR pool) rather than (Spa AND pool) heater is TEMP1 and TEMP2
@@ -997,7 +979,7 @@ void *get_aqualink_PDA_device_status( void *ptr )
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_DEVICE_STATUS);
   
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   if (! loopover_devices(aq_data)) {
     LOG(PDA_LOG,LOG_ERR, "PDA Device Status :- failed\n");
@@ -1069,7 +1051,7 @@ void *set_aqualink_PDA_init( void *ptr )
 
   pda_reset_sleep();
 
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   cleanAndTerminateThread(threadCtrl);
 
@@ -1106,7 +1088,7 @@ void *set_aqualink_PDA_wakeinit( void *ptr )
 bool _get_PDA_freeze_protect_temp(struct aqualinkdata *aq_data) {
   
   if ( _PDA_Type == PDA) {
-    if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT, true)) {
+    if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT, true, 2)) {
       return false;
     }
     /* select the freeze protect temp to see which devices are enabled by freeze
@@ -1122,10 +1104,10 @@ bool _get_PDA_freeze_protect_temp(struct aqualinkdata *aq_data) {
 bool _get_PDA_aqualink_pool_spa_heater_temps(struct aqualinkdata *aq_data) {
 
    // Get heater setpoints
-  if (! goto_pda_menu(aq_data, PM_SET_TEMP, true)) {
+  if (! goto_pda_menu(aq_data, PM_SET_TEMP, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Could not get heater setpoints, trying again!\n");
     // Going to try this twice.
-    if (! goto_pda_menu(aq_data, PM_SET_TEMP, false)) {
+    if (! goto_pda_menu(aq_data, PM_SET_TEMP, false, 1)) {
       return false;
     }
   }
@@ -1347,7 +1329,7 @@ void *set_PDA_aqualink_SWG_setpoint(void *ptr) {
   int val = atoi((char*)threadCtrl->thread_args);
   val = setpoint_check(SWG_SETPOINT, val, aq_data);
 
-  if (! goto_pda_menu(aq_data, PM_AQUAPURE, true)) {
+  if (! goto_pda_menu(aq_data, PM_AQUAPURE, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding SWG setpoints menu\n");
     cleanAndTerminateThread(threadCtrl);
     return ptr;
@@ -1369,7 +1351,7 @@ void *set_PDA_aqualink_SWG_setpoint(void *ptr) {
   }
   
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   cleanAndTerminateThread(threadCtrl);
   return ptr;
@@ -1386,7 +1368,7 @@ void *set_PDA_aqualink_boost(void *ptr)
 
   int val = atoi((char*)threadCtrl->thread_args);
 
-  if (! goto_pda_menu(aq_data, PM_BOOST, true)) {
+  if (! goto_pda_menu(aq_data, PM_BOOST, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding BOOST menu\n");
     return false;
   }
@@ -1409,7 +1391,7 @@ void *set_PDA_aqualink_boost(void *ptr)
   }
 
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
   cleanAndTerminateThread(threadCtrl);
   return ptr;
 }
@@ -1444,7 +1426,7 @@ bool set_PDA_aqualink_heater_setpoint(struct aqualinkdata *aq_data, int val, boo
     return true;
   } 
 
-  if (! goto_pda_menu(aq_data, PM_SET_TEMP, true)) {
+  if (! goto_pda_menu(aq_data, PM_SET_TEMP, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding heater setpoints menu\n");
     return false;
   }
@@ -1469,7 +1451,7 @@ void *set_aqualink_PDA_pool_heater_temps( void *ptr )
   set_PDA_aqualink_heater_setpoint(aq_data, val, true);
 
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   cleanAndTerminateThread(threadCtrl);
   return ptr;
@@ -1489,7 +1471,7 @@ void *set_aqualink_PDA_spa_heater_temps( void *ptr )
   set_PDA_aqualink_heater_setpoint(aq_data, val, false);
   
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   cleanAndTerminateThread(threadCtrl);
   return ptr;
@@ -1511,7 +1493,7 @@ void *set_aqualink_PDA_freeze_protectsetpoint( void *ptr )
   if (_PDA_Type != PDA) {
     LOG(PDA_LOG,LOG_INFO, "In PDA AquaPalm mode, freezepoints not supported\n");
     //return false;
-  } else if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT, true)) {
+  } else if (! goto_pda_menu(aq_data, PM_FREEZE_PROTECT, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding freeze protect setpoints menu\n");
     //return false;
   } else if (! set_PDA_numeric_field_value(aq_data, val, aq_data->frz_protect_set_point, NULL, 1)) {
@@ -1522,7 +1504,7 @@ void *set_aqualink_PDA_freeze_protectsetpoint( void *ptr )
   }
 
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   cleanAndTerminateThread(threadCtrl);
   return ptr;
@@ -1537,7 +1519,7 @@ void *set_PDA_aqualink_time( void *ptr )
   
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_SET_TIME);
 
-  if (! goto_pda_menu(aq_data, PM_SET_TIME, true)) {
+  if (! goto_pda_menu(aq_data, PM_SET_TIME, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding set time menu\n");
     goto f_end;
   }
@@ -1597,7 +1579,7 @@ Debug:   PDA:       PDA Menu Line 9 = to continue.
 
   waitForPDAnextMenu(aq_data);
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
 
   f_end:
   
@@ -1621,7 +1603,7 @@ void *get_PDA_aqualink_aux_labels( void *ptr ) {
 
   LOG(PDA_LOG,LOG_INFO, "Finding PDA labels, (BETA ONLY)\n");
 
-  if (! goto_pda_menu(aq_data, PM_AUX_LABEL, true)) {
+  if (! goto_pda_menu(aq_data, PM_AUX_LABEL, true, 2)) {
     LOG(PDA_LOG,LOG_ERR, "Error finding aux label menu\n");
     goto f_end;
   }
@@ -1636,7 +1618,7 @@ void *get_PDA_aqualink_aux_labels( void *ptr ) {
   // Read first page of devices and make some assumptions.
 
   waitfor_pda_queue2empty();
-  goto_pda_menu(aq_data, PM_HOME, false);
+  goto_pda_menu(aq_data, PM_HOME, false, 1);
   
   f_end:
   
@@ -1702,7 +1684,7 @@ void *set_PDA_light_programmode( void *ptr )
   for (int i = 0; i < 2; i++) {
     //
     // Now, navigate to equipment menu
-    if (!goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL,  true)) {
+    if (!goto_pda_menu(aq_data, PM_EQUIPTMENT_CONTROL, true, 2)) {
       if (i <= 0)
         continue;
       LOG(PDA_LOG,LOG_ERR, "PDA Light: can't find EQUIPTMENT CONTROL menu\n");
@@ -1737,7 +1719,7 @@ void *set_PDA_light_programmode( void *ptr )
         _program_PDA_lightmode(aq_data, btn, false, light_mode_name(clight->lightType, val, AQUAPDA));
 
       waitfor_pda_queue2empty();
-      goto_pda_menu(aq_data, PM_HOME, false);
+      goto_pda_menu(aq_data, PM_HOME, false, 1);
   }
 
   cleanAndTerminateThread(threadCtrl);
