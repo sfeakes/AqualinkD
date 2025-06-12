@@ -37,6 +37,7 @@ void set_currentlight_value(clight_detail *light, int index);
 
 bool set_aqualinkd_light_mode_name(char *name, int index, bool isShow);
 const char *get_aqualinkd_light_mode_name(int index, bool *isShow);
+int get_currentlight_mode_name_count(clight_detail light, emulation_type protocol);
 
 //char *_color_light_options_[LIGHT_COLOR_TYPES][LIGHT_COLOR_OPTIONS][LIGHT_COLOR_NAME];
 

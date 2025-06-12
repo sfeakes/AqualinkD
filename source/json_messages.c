@@ -299,10 +299,11 @@ char *get_aux_information(aqkey *button, struct aqualinkdata *aqdata, char *buff
                                   aqdata->lights[i].currentValue,
                                   aqdata->lights[i].currentValue);
         } else {
-          length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%s\" ",
+          length += sprintf(buffer, ",\"type_ext\": \"switch_program\", \"Light_Type\":\"%d\", \"Light_Program\":\"%d\", \"Program_Name\":\"%s\", \"Light_Program_Total\":\"%d\" ",
                                   aqdata->lights[i].lightType,
                                   aqdata->lights[i].currentValue,
-                                  get_currentlight_mode_name(aqdata->lights[i], ALLBUTTON));
+                                  get_currentlight_mode_name(aqdata->lights[i], ALLBUTTON),
+				  get_currentlight_mode_name_count(aqdata->lights[i], ALLBUTTON));
                                   //light_mode_name(aqdata->lights[i].lightType, aqdata->lights[i].currentValue, ALLBUTTON));
         }
         return buffer;
