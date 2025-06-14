@@ -4,6 +4,8 @@
     // For a complete list returned from your particular aqualinkd instance
     // use the below URL and look at the ID value for each device.
     // http://aqualink.ip.address/api/devices
+
+    
     var devices = [
         "Filter_Pump",
         "Spa",

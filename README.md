@@ -126,6 +126,10 @@ NEED TO FIX FOR THIS RELEASE.
 * Try an auto-update
 * Update Mongoose
 -->
+# Updates in 2.6.8 (Dev)
+* Fixed some UI bugs
+* Heatpump / chiller updates
+
 # Updates in 2.6.7 (May 23 2025)
 * Fixed bug with iaqualink protocol when no virtual buttons configured.
 * Updated RS timing debug messages.

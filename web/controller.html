@@ -1284,13 +1284,21 @@
       return num.toString().padStart(2, "0");
     }
 
+    function caseInsensitiveIndexOf(array, searchString) {
+      const lowerCaseArray = array.map(element => String(element).toLowerCase());
+      return lowerCaseArray.indexOf(searchString.toLowerCase());
+    }
+
     function createTile(object) {
       //console.log("Create tile "+object.id);
       if (object.name == 'NONE') {
+        //console.log("Create tile <exclude name> "+object);
         return;
       }
-      if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
-        //console.log("Create tile <exclude list> "+object.label);
+      //if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
+      if (typeof devices !== 'undefined' && caseInsensitiveIndexOf(devices, object.id) < 0) {
+        console.log("Create tile <exclude list> "+object);
+        console.log(object);
         return;
       }
       //if (object.type == 'switch' || object.type == 'switch_program') {
@@ -2494,8 +2502,10 @@
       var pa;
       var pb;
       try {
-        pa = devices.indexOf(a.id);
-        pb = devices.indexOf(b.id);
+        //pa = devices.indexOf(a.id);
+        //pb = devices.indexOf(b.id);
+        pa = caseInsensitiveIndexOf(devices,a.id);
+        pb = caseInsensitiveIndexOf(devices,b.id);
         if (pa > pb) 
           return 1;
         else if (pa < pb)

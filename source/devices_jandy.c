@@ -42,7 +42,13 @@ typedef enum heatpumpstate{
   HP_UNKNOWN
 } heatpumpstate;
 
-void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualinkdata *aqdata, bool fromMessage);
+typedef enum heatpumpmsgfrom{
+  HP_TO_PANEL,
+  HP_FROM_PANEL,
+  HP_DISPLAY
+} heatpumpmsgfrom;
+
+void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualinkdata *aqdata, heatpumpmsgfrom from);
 
 bool processJandyPacket(unsigned char *packet_buffer, int packet_length, struct aqualinkdata *aqdata)
 {
@@ -990,24 +996,38 @@ bool processPacketToHeatPump(unsigned char *packet_buffer, int packet_length, st
   0x0c|0x09 = Request Heat
   0x0c|0x29 = Request Cool
 */
+/*
+0x0c|0x00|0x00|0x00|0x00|	CMD HP Disabled
+0x0c|0x0a|0x00|0x00|0x00|	CMD HP Heat SPA
+0x0c|0x01|0x00|0x00|0x00|	CMD HP Enabled Pool
+0x0c|0x02|0x00|0x00|0x00|	CMD HP Enabled SPA
+0x0c|0x09|0x00|0x00|0x00|	CMD HP Heat Pool
+*/
   if (packet_buffer[3] == 0x0c ) {
-    if (packet_buffer[4] == 0x00) {
-      // Heat Pump is off
-      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Off - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
-      updateHeatPumpLed(false, OFF, aqdata, false);
-    } else if (packet_buffer[4] == 0x09) {
-      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Heat - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
-      // Heat
-      updateHeatPumpLed(false, ENABLE, aqdata, false);
-    } else if (packet_buffer[4] == 0x29) {
-      // Cool
-      LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Cool - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
-      updateHeatPumpLed(true, ENABLE, aqdata, false);
-    } else {
-      // Heat Pump is on or enabled (not sure what state), but set to something other than off
-      LOG(DJAN_LOG, LOG_INFO, "Heat Pump 0x%02hhx request to (unknown status) 0x%02hhx\n",packet_buffer[PKT_DEST], packet_buffer[4]);
-      if (aqdata->chiller_button != NULL && aqdata->chiller_button->led->state == OFF)
-        updateHeatPumpLed(false, ENABLE, aqdata, false); // Guess at enabled. ()
+    switch(packet_buffer[4]) {
+      case 0x00: // Heat Pump is off
+        LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Off - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
+        updateHeatPumpLed(HP_UNKNOWN, OFF, aqdata, HP_FROM_PANEL);
+      break;
+      case 0x09: // Heat Pool
+      case 0x0a: // Heat Spa
+        LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Heat - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
+        updateHeatPumpLed(HP_HEAT, ON, aqdata, HP_FROM_PANEL);
+      break;
+      case 0x01: // Enabled Pool
+      case 0x02: // Enabled SPA
+        LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx Enabled - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
+        updateHeatPumpLed(HP_UNKNOWN, ENABLE, aqdata, HP_FROM_PANEL);
+      break;
+      case 0x29: // Cool
+        LOG(DJAN_LOG, LOG_DEBUG, "Heat Pump 0x%02hhx request to Cool - status 0x%02hhx\n",packet_buffer[PKT_DEST],packet_buffer[4] );
+        updateHeatPumpLed(HP_COOL, ENABLE, aqdata, HP_FROM_PANEL);
+      break;
+      default:
+        LOG(DJAN_LOG, LOG_INFO, "Heat Pump 0x%02hhx request to (unknown status) 0x%02hhx\n",packet_buffer[PKT_DEST], packet_buffer[4]);
+        //if (aqdata->chiller_button != NULL && aqdata->chiller_button->led->state == OFF)
+        //  updateHeatPumpLed(HP_UNKNOWN, ENABLE, aqdata, HP_FROM_PANEL); // Guess at enabled. ()
+      break;
     }
   } else {
     LOG(DJAN_LOG, LOG_INFO, "Heat Pump 0x%02hhx request unknown 0x%02hhx 0x%02hhx\n",packet_buffer[PKT_DEST], packet_buffer[3] , packet_buffer[4]);
@@ -1032,11 +1052,12 @@ bool processPacketFromHeatPump(unsigned char *packet_buffer, int packet_length, 
   
   if (packet_buffer[3] == 0x0d ) {
     if (packet_buffer[4] == 0x40) {
-      updateHeatPumpLed(HP_HEAT, OFF, aqdata, false);
+      //updateHeatPumpLed(HP_HEAT, OFF, aqdata, HP_TO_PANEL);
+      updateHeatPumpLed(HP_HEAT, ENABLE, aqdata, HP_TO_PANEL);
     } else if (packet_buffer[4] == 0x48) {
-      updateHeatPumpLed(HP_HEAT, ON, aqdata, false);
+      updateHeatPumpLed(HP_HEAT, ON, aqdata, HP_TO_PANEL);
     } else if (packet_buffer[4] == 0x68) {
-      updateHeatPumpLed(HP_COOL, ON, aqdata, false);
+      updateHeatPumpLed(HP_COOL, ON, aqdata, HP_TO_PANEL);
     } else {
       //LOG(DJAN_LOG, LOG_INFO, "Heat Pump 0x%02hhx ");
       LOG(DJAN_LOG, LOG_INFO, "Heat Pump 0x%02hhx returned unknown state 0x%02hhx\n",packet_buffer[PKT_DEST], packet_buffer[4]);
@@ -1067,11 +1088,11 @@ void processHeatPumpDisplayMessage(char *msg, struct aqualinkdata *aqdata) {
     hpstate = HP_COOL;
   }
   if (stristr(msg," ENA") != NULL) {
-    updateHeatPumpLed(hpstate, ENABLE, aqdata, true);
+    updateHeatPumpLed(hpstate, ENABLE, aqdata, HP_DISPLAY);
   } else if (stristr(msg," OFF") != NULL) {
-    updateHeatPumpLed(hpstate, OFF, aqdata, true);
+    updateHeatPumpLed(hpstate, OFF, aqdata, HP_DISPLAY);
   } else if (stristr(msg," ON") != NULL) {
-    updateHeatPumpLed(hpstate, ON, aqdata, true);
+    updateHeatPumpLed(hpstate, ON, aqdata, HP_DISPLAY);
   }
 
   LOG(AQUA_LOG,LOG_DEBUG, "Set %s to %s from message '%s'",
@@ -1080,11 +1101,28 @@ void processHeatPumpDisplayMessage(char *msg, struct aqualinkdata *aqdata) {
 }
 
 //void updateHeatPumpLed(bool chiller, aqledstate state, struct aqualinkdata *aqdata) {
-void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualinkdata *aqdata, bool fromMessage)
+void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualinkdata *aqdata, heatpumpmsgfrom from)
 {
   if (aqdata->chiller_button == NULL)
     return;
   
+  // ledstate Enabled is valied from Display and FromPanel HP_FROM_PANEL, HP_DISPLAY (NOT valid from HP ie HP_TO_PANEL)
+  // ledstate on off is only valid from HP or DISPLAY HP_TO_PANEL or HP_TO_PANEL (NOT FROM HP_FROM_PANEL)
+
+  if ( (ledstate == ENABLE && (from == HP_DISPLAY || from == HP_FROM_PANEL)) ||
+       ( (ledstate == ON || ledstate == OFF) && (from == HP_DISPLAY || from == HP_TO_PANEL) )) {
+    if ( ledstate != aqdata->chiller_button->led->state) {
+      aqdata->chiller_button->led->state == ledstate;
+      aqdata->updated = true;
+    }
+  }
+
+  if (state == HP_COOL) {
+    ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode = true;
+  } else if (state == HP_HEAT) {
+    ((vbutton_detail *)aqdata->chiller_button->special_mask_ptr)->in_alt_mode = false;
+  }
+/*
   // If LED state is enable (that's a reqest), so only change if off.
   // if froma displayed message, that's from ON to ENA, so set that one.
   if ( !fromMessage && ledstate == ENABLE && aqdata->chiller_button->led->state == ON) {
@@ -1104,6 +1142,7 @@ void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualink
   } else {
     //printf("**** Heat Pump %s, already %s, ignore!\n",LED2text(ledstate),LED2text(aqdata->chiller_button->led->state));
   }
+    */
 }
 /*
 
@@ -1173,6 +1212,9 @@ LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|       
 LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x29|0x00|0x00|0x00|0xb7|0x10|0x03|.   byte 4 0x29 This is some on / enable
 LXi status      | HEX: 0x10|0x02|0x00|0x0d|0x68|0x00|0x00|0x87|0x10|0x03|         0x68 probably is chiller ON
 
+Below is when heatpump chiller is enabled but NOT on (heat or cool)
+JandyDvce: To   HPump: Read  Jandy   packet To 0x70 of type  LXi heater ping | HEX: 0x10|0x02|0x70|0x0c|0x01|0x00|0x00|0x00|0x8f|0x10|0x03|
+JandyDvce: From HPump: Read  Jandy   packet To 0x00 of type       LXi status | HEX: 0x10|0x02|0x00|0x0d|0x40|0x00|0x00|0x5f|0x10|0x03|
 
 0x0c|0x01 = Enabled
 0x0c|0x29 = Chiller on

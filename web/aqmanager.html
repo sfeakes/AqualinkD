@@ -1438,6 +1438,26 @@
             } catch (Error) { }
         }
 
+        function delayedVersionCheck(currentVersion, call=0) {
+          //console.log("DELAY VERSION call="+call+" - "+currentVersion+". latest "+_latestVersionAvailable);
+          if (_latestVersionAvailable == 0) {
+            if (call > 5) {
+              console.log("ERROR getting latest Aqualinkd version information");
+              return;
+            }
+            setTimeout(function() {
+              delayedVersionCheck(currentVersion, ++call);
+            }, 100);
+          } else {
+            //console.log("VERSION call="+call+" - "+currentVersion+". latest "+_latestVersionAvailable);
+            if ( isNewerVersion(_latestVersionAvailable, currentVersion ) || _urlParams.get('upgrade') != null) {
+              enablebutton("upgrade");
+            } else {
+              disablebutton("upgrade");
+            }
+          }
+        }
+
         function setAqManagerOptions(data) {
             /*
               read deamonized logging2file logfilename debugmasks[] loglevels[]
@@ -1462,10 +1482,11 @@
                 } else {
                     document.getElementById("latesversionavailable").classList.add("newversion");
                 }
-                if ( isNewerVersion(_latestVersionAvailable, data['aqualinkd_version'] ) || _urlParams.get('upgrade') != null) {
-                    enablebutton("upgrade");
-                } else {
-                    disablebutton("upgrade");
+
+                delayedVersionCheck(data['aqualinkd_version']);
+
+                if (_urlParams.get('upgrade') != null) {
+                   enablebutton("upgrade");
                 }
               }
             }
