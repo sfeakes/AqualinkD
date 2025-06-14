@@ -127,7 +127,7 @@ NEED TO FIX FOR THIS RELEASE.
 * Update Mongoose
 -->
 # Updates in 2.6.8 (Dev)
-* Fixed some UI bugs
+* Fixed some UI bugs, added download config option
 * Heatpump / chiller updates
 
 # Updates in 2.6.7 (May 23 2025)

@@ -1028,7 +1028,7 @@ void mqtt_broadcast_aqualinkstate(struct mg_connection *nc)
 }
 
 
-typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uLogDownload, uNotAvailable, uConfig, uSaveConfig} uriAtype;
+typedef enum {uActioned, uBad, uDevices, uStatus, uHomebridge, uDynamicconf, uDebugStatus, uDebugDownload, uSimulator, uSchedules, uSetSchedules, uAQmanager, uLogDownload, uNotAvailable, uConfig, uSaveConfig, uConfigDownload} uriAtype;
 //typedef enum {NET_MQTT=0, NET_API, NET_WS, DZ_MQTT} netRequest;
 const char actionName[][5] = {"MQTT", "API", "WS", "DZ"};
 
@@ -1117,6 +1117,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     return uSetSchedules;
   } else if (strncmp(ri1, "schedules", 9) == 0) {
     return uSchedules;
+  } else if (strncmp(ri1, "config/download", 10) == 0) {
+    return uConfigDownload;
   } else if (strncmp(ri1, "config/set", 10) == 0) {
     return uSaveConfig;
   } else if (strncmp(ri1, "config", 6) == 0) {
@@ -1173,14 +1175,8 @@ uriAtype action_URI(request_source from, const char *URI, int uri_length, float 
     }
     return uAQmanager; // Want to resent updated status
   } else if (strncmp(ri1, "logfile", 7) == 0) {
-    /*
-    if (ri2 != NULL && strncmp(ri2, "start", 5) == 0) {
-      startInlineLog2File();
-    } else if (ri2 != NULL && strncmp(ri2, "stop", 4) == 0) {
-      stopInlineLog2File();
-    } else if (ri2 != NULL && strncmp(ri2, "clean", 5) == 0) {
-      cleanInlineLog2File();
-    } else*/ if (ri2 != NULL && strncmp(ri2, "download", 8) == 0) {
+    if (ri2 != NULL && strncmp(ri2, "download", 8) == 0) {
+      LOG(NET_LOG,LOG_INFO, "Received download log request!\n");
       return uLogDownload;
     } 
     return uAQmanager; // Want to resent updated status
@@ -1790,6 +1786,11 @@ void action_web_request(struct mg_connection *nc, struct http_message *http_msg)
             mg_http_serve_file(nc, http_msg, "/dev/shm/aqualinkd.log", mg_mk_str("text/plain"), mg_mk_str("Content-Disposition: attachment; filename=\"aqualinkd.log\""));
             remove("/dev/shm/aqualinkd.log");
           }
+        break;
+
+        case uConfigDownload:
+          LOG(NET_LOG, LOG_DEBUG, "Downloading config\n");
+          mg_http_serve_file(nc, http_msg, _aqconfig_.config_file, mg_mk_str("text/plain"), mg_mk_str("Content-Disposition: attachment; filename=\"aqualinkd.conf\""));
         break;
 #endif
         case uBad:
