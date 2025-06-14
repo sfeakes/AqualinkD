@@ -1112,7 +1112,7 @@ void updateHeatPumpLed(heatpumpstate state, aqledstate ledstate, struct aqualink
   if ( (ledstate == ENABLE && (from == HP_DISPLAY || from == HP_FROM_PANEL)) ||
        ( (ledstate == ON || ledstate == OFF) && (from == HP_DISPLAY || from == HP_TO_PANEL) )) {
     if ( ledstate != aqdata->chiller_button->led->state) {
-      aqdata->chiller_button->led->state == ledstate;
+      aqdata->chiller_button->led->state = ledstate;
       aqdata->updated = true;
     }
   }
