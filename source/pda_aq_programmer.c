@@ -774,7 +774,11 @@ void *set_aqualink_PDA_init( void *ptr )
     //printf("****** Version '%s' ********\n",aq_data->version);
     LOG(PDA_LOG,LOG_DEBUG, "PDA type=%d, version=%s\n", _PDA_Type, aq_data->version);
     // don't wait for version menu to time out press back to get to home menu faster
-    //send_pda_cmd(KEY_PDA_BACK);
+    #if AQ_PDA
+      if (_aqconfig_.pda_bypass_info) {
+        send_pda_cmd(KEY_PDA_BACK);
+      }
+    #endif
     //if (! waitForPDAnextMenu(aq_data)) { // waitForPDAnextMenu waits for highlight chars, which we don't get on normal menu
     
     if (! waitForPDAMessageType(aq_data,CMD_PDA_CLEAR,10)) {

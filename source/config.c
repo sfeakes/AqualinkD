@@ -608,6 +608,12 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].value_type = CFG_BOOL;
   _cfgParams[_numCfgParams].name = CFG_N_pda_sleep_mode;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_true;
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.pda_bypass_info;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = "pda_bypass_info";
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
 #endif
 
   //#endif
