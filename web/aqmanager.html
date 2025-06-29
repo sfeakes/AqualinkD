@@ -501,24 +501,7 @@
         }
         function requestFileDownload(caller) {
             var msg = {};
-            /*
-            if (caller.id == "logfile") {
-                var startstop = "";
-                if (caller.checked) {
-                    startstop = "start";
-                } else {
-                    startstop = "stop";
-                }
-                msg = {
-                    uri: "logfile/" + startstop,
-                    value: 0
-                };
-            } else if (caller.id == "cleanlog") {
-                msg = {
-                    uri: "logfile/clean",
-                    value: 0
-                };
-            } else*/
+
             if (caller.id == "downloadlog") {
                 //window.location = '/api/debug/download';
               downloadFile('/api/logfile/download', "aqualinkd.log", document.getElementById("logsize").value);
@@ -592,11 +575,15 @@
             values: {}
           };
 
-          for (var obj in _config) {
+          //console.log(_config);
 
+          for (var obj in _config) {
             if (_config[obj].value !== undefined) {
               if (_config[obj].value) {
                 json_ordered.values[obj] = _config[obj].value;
+              } else if (_config[obj].allow_blank !== undefined && _config[obj].allow_blank == "yes") {
+                //console.log("----- Add Blank value for "+ obj+"\n");
+                json_ordered.values[obj] = "";
               }
             } else if (obj.toString().startsWith("button_") || obj.toString().startsWith("virtual_button_") || obj.toString().startsWith("sensor_") ) {
               for (var obj1 in _config[obj]) {
@@ -1373,7 +1360,7 @@ console.log( _AlertsShown[key]);
           var key = event.srcElement.getAttribute('key');
           var value = event.srcElement.value;
 
-          console.log("Config set "+key+" to "+value)
+          console.log("Config set '"+key+"'' to '"+value+"'");
 
           try {
             _config[key].value = value;

@@ -625,6 +625,8 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str)
     rs = false;
     if (str[2] == '-' || str[2] == ' ') // Account for PD-8
       size = atoi(&str[3]);
+    if (str[3] == '-' || str[4] == 'P') // PDA-PS6 Combo
+      size = atoi(&str[6]);
     else // Account for PDA-8
       size = atoi(&str[4]);
   } else {
@@ -1363,12 +1365,15 @@ void programDeviceLightBrightness(struct aqualinkdata *aqdata, int value, int de
 //void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int button) 
 void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int deviceIndex) 
 {
+  
 #ifdef AQ_PDA
   if (isPDA_PANEL && !isPDA_IAQT) {
     LOG(PANL_LOG,LOG_ERR, "Light mode control not supported in PDA mode\n");
     return;
   }
 #endif
+
+
   /*
   int i;
   clight_detail *light = NULL;
@@ -1400,7 +1405,12 @@ void programDeviceLightMode(struct aqualinkdata *aqdata, int value, int deviceIn
   } else if (isRSSA_ENABLED) {
     // If we are using rs-serial then turn light on first.
     if (light->button->led->state != ON) {
-      set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+      set_aqualink_rssadapter_aux_state(light->button, TRUE);
+      //set_aqualink_rssadapter_aux_extended_state(light->button, RS_SA_ON);
+      //set_aqualink_rssadapter_aux_extended_state(light->button, 100);
+      // Add a few delays to slow it down.  0 is get status
+      //set_aqualink_rssadapter_aux_extended_state(light->button, 0);
+      //set_aqualink_rssadapter_aux_extended_state(light->button, 0);
     }
     if (light->lightType == LC_DIMMER) {
         // Value 1 = 25, 2 = 50, 3 = 75, 4 = 100 (need to convert value into binary)
@@ -1545,8 +1555,13 @@ void updateButtonLightProgram(struct aqualinkdata *aqdata, int value, int button
   }
 
   light->currentValue = value;
-  if (value > 0)
+  if (value > 0 && light->lastValue != value) {
     light->lastValue = value;
+    if (_aqconfig_.save_light_programming_value && light->lightType == LC_PROGRAMABLE ) {
+      LOG(PANL_LOG,LOG_NOTICE, "Writing light programming value to config\n",button);
+      writeCfg(aqdata);
+    }
+  }
 }
 
 clight_detail *getProgramableLight(struct aqualinkdata *aqdata, int button) 

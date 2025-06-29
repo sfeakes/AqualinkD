@@ -567,6 +567,8 @@ int build_device_JSON(struct aqualinkdata *aqdata, char* buffer, int size, bool 
 
   buffer[length] = '\0';
 
+//printf("%s\n",buffer);
+
   return strlen(buffer);
   
   //return length;
@@ -1204,6 +1206,9 @@ int json_cfg_element(char* buffer, int size, const char *name, const void *value
 
   if (isMASKSET(config_mask, CFG_FORCE_RESTART))
     adv_size += sprintf(adv+adv_size,",\"force_restart\": \"yes\"");
+
+  if (isMASKSET(config_mask, CFG_ALLOW_BLANK))
+    adv_size += sprintf(adv+adv_size,",\"allow_blank\": \"yes\"");
   
 
   switch(type){
@@ -1487,7 +1492,7 @@ int build_aqualink_config_JSON(char* buffer, int size, struct aqualinkdata *aq_d
 
 
     } else if (isPLIGHT(aq_data->aqbuttons[i].special_mask)) {
-      if (((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType > 0) {
+      if (((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType >= 0) {
         sprintf(buf,"%s_lightMode", prefix);
         if ((result = json_cfg_element(buffer+length, size-length, buf, &((clight_detail *)aq_data->aqbuttons[i].special_mask_ptr)->lightType, CFG_INT, 0, NULL, 0)) <= 0) {
           LOG(NET_LOG,LOG_ERR, "Config json buffer full in, result truncated! size=%d curently used=%d\n",size,length);

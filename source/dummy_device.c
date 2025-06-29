@@ -28,7 +28,14 @@
 #include "config.h"
 
 
+#define SWG
+//#define HEATPUMP
+
+#ifdef SWG
+unsigned char DEVICE_ID = 0x50;
+#else
 unsigned char DEVICE_ID = 0x70;
+#endif
 
 bool _keepRunning = true;
 int _rs_fd;
@@ -43,6 +50,7 @@ bool isAqualinkDStopping() {
   return !_keepRunning;
 }
 
+void process_swg_packet(unsigned char *packet_buffer, const int packet_length);
 void process_heatpump_packet(unsigned char *packet_buffer, const int packet_length);
 
 int main(int argc, char *argv[])
@@ -143,7 +151,11 @@ int main(int argc, char *argv[])
 
       if (packet_buffer[PKT_DEST] == DEVICE_ID)
       {
+#ifdef SWG
+        process_swg_packet(packet_buffer, packet_length);
+#else
         process_heatpump_packet(packet_buffer, packet_length);
+#endif
       }
     }
   }
@@ -205,4 +217,37 @@ void process_heatpump_packet(unsigned char *packet_buffer, const int packet_leng
   }
 }
 
+
+void process_swg_packet(unsigned char *packet_buffer, const int packet_length)
+{
+  //(packet[3] = 0x16
+  //(packet[4] * 100) = PPM
+  static unsigned char swg_ack[] = {0x00,0x01,0x00,0x00};
+  static unsigned char swg_ppm[] = {0x00, 0x16, 0x1f, 0x00, 0x00, 0x00};
+  //static unsigned char swg_id[] = {0x00,0x03,0x00,0x49,0x6e,0x74,0x65,0x6c,0x6c,0x69,0x63,0x68,0x6c,0x6f,0x72,0x2d,0x2d,0x34,0x30};
+  //static unsigned char swg_id[] = {0x00,0x03,0x00,0x41,0x71,0x75,0x61,0x50,0x75,0x72,0x65,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  static unsigned char swg_id[] = {0x00,0x03,0x01,0x41,0x71,0x75,0x61,0x50,0x75,0x72,0x65,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+   // 0x11  set SWG %
+  if (packet_buffer[PKT_CMD] == CMD_PROBE)
+  {
+    //send_ack(_rs_fd, 0x00);
+    send_jandy_command(_rs_fd, swg_ack, 4);
+    LOG(SLOG_LOG, LOG_NOTICE, "Replied to Probe packet to 0x%02hhx with ACK\n",packet_buffer[PKT_DEST]);
+  }
+  else if (packet_buffer[3] == 0x11)
+  {
+    //int percent = (int)packet_buffer[4]; 
+    send_jandy_command(_rs_fd, swg_ppm, 6);
+    LOG(SLOG_LOG, LOG_NOTICE, "Received %%=%d, Replied PPM=%d\n",(int)packet_buffer[4],swg_ppm[2] * 100);
+  } 
+  else if (packet_buffer[3] == 0x14) 
+  {
+    send_jandy_command(_rs_fd, swg_id, 19);
+    LOG(SLOG_LOG, LOG_NOTICE, "Receive ID request, replied\n");
+  } 
+  else 
+  {
+     LOG(SLOG_LOG, LOG_ERR, "************* Unknown Request 0x%02hhx *************",packet_buffer[3]);
+  }
+}
 

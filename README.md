@@ -125,10 +125,20 @@ NEED TO FIX FOR THIS RELEASE.
 
 * Try an auto-update
 * Update Mongoose
+
+* PDA Crap.
+* pda_aq_programmer line 702/703 color light.
+* pda_aq_programmer line 782 back menu testing in pda_init
+
+* FIX Panel name in config to accept output from panel actual name
+
+
 -->
-# Updates in 2.6.8 (Dev)
+# Updates in 2.6.8 (June 29 2025)
 * Fixed some UI bugs, added download config option
+* Changes to config options & config editor
 * Heatpump / chiller updates
+* PDA updates (detect temperature units, other small changes)
 
 # Updates in 2.6.7 (May 23 2025)
 * Fixed bug with iaqualink protocol when no virtual buttons configured.

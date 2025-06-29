@@ -1039,7 +1039,7 @@ void main_loop()
   }
 */
   if (is_valid_port(rs_fd)) {
-    LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink RS8 on serial port: %s\n", _aqconfig_.serial_port);
+    LOG(AQUA_LOG,LOG_NOTICE, "Listening to Aqualink %s on serial port: %s\n", getPanelString(), _aqconfig_.serial_port);
   } else {
     LOG(AQUA_LOG,LOG_ERR, "Error Aqualink bad serial port: %s\n", _aqconfig_.serial_port);
     AddAQDstatusMask(ERROR_SERIAL);

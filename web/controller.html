@@ -961,7 +961,7 @@
 
     function switchTileState(id, details) {
       if (details) {
-        console.log("TILE DETAILS WHAY ARE WE HERE??? '" + id + "'");
+        console.log("TILE DETAILS WHY ARE WE HERE??? '" + id + "'");
       } else {
         setTileState(id, (document.getElementById(id).getAttribute('status') == 'off'))
       }
@@ -1297,8 +1297,8 @@
       }
       //if (typeof devices !== 'undefined' && devices.indexOf(object.id) < 0) {
       if (typeof devices !== 'undefined' && caseInsensitiveIndexOf(devices, object.id) < 0) {
-        console.log("Create tile <exclude list> "+object);
-        console.log(object);
+        //console.log("Create tile <exclude list> "+object);
+        //console.log(object);
         return;
       }
       //if (object.type == 'switch' || object.type == 'switch_program') {

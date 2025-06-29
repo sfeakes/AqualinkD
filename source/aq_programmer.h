@@ -78,6 +78,7 @@ typedef enum {
   AQ_PDA_SET_TIME,
   AQ_PDA_GET_POOL_SPA_HEATER_TEMPS,
   AQ_PDA_GET_FREEZE_PROTECT_TEMP,
+  AQ_PDA_SET_LIGHT_MODE,
   // ******** OneTouch Delimiter make sure to change MAX/MIN below
   AQ_SET_ONETOUCH_PUMP_RPM,
   AQ_SET_ONETOUCH_MACRO,

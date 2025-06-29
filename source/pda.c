@@ -170,6 +170,10 @@ void set_pda_led(struct aqualinkled *led, char state)
   {
     led->state = FLASH;
   }
+  else if (state == '%')
+  {
+    led->state = ON;
+  }
   else
   {
     led->state = OFF;
@@ -253,7 +257,10 @@ void process_pda_packet_msg_long_temp(const char *msg)
   //           'AIR             '
   //           ' 86`            '
   //           'AIR        WATER'  // In case of single device.
-  _aqualink_data->temp_units = FAHRENHEIT; // Force FAHRENHEIT
+  if (_aqualink_data->temp_units == UNKNOWN && !in_programming_mode(_aqualink_data)) {
+    LOG(PDA_LOG,LOG_NOTICE, "Forcing temperature units to FAHRENHEIT\n");
+    _aqualink_data->temp_units = FAHRENHEIT; // Force FAHRENHEIT
+  }
   if (stristr(pda_m_line(1), "AIR") != NULL)
     _aqualink_data->air_temp = atoi(msg);
 
@@ -408,6 +415,27 @@ void process_pda_packet_msg_long_set_time(const char *msg)
  */ 
 }
 
+//
+//PDA Line 2 = POOL HEAT   70`F
+//PDA Line 3 = SPA HEAT    98`F
+// temp units are last char as above.
+void get_pda_temp_units(const char *msg)
+{
+  if (_aqualink_data->temp_units != UNKNOWN) {
+    return;
+  }
+
+  if (msg[15] == 'F') {
+    _aqualink_data->temp_units = FAHRENHEIT;
+    LOG(PDA_LOG,LOG_DEBUG, "Set temperature units to FAHRENHEIT\n");
+  } else if (msg[15] == 'C') {
+    _aqualink_data->temp_units = CELSIUS;
+    LOG(PDA_LOG,LOG_DEBUG, "Set temperature units to CELSIUS\n");
+  } else {
+    LOG(PDA_LOG,LOG_DEBUG, "Unknown temperature units '%c'\n",msg[15]);
+  }
+}
+
 void process_pda_packet_msg_long_set_temp(const char *msg)
 {
   LOG(PDA_LOG,LOG_DEBUG, "process_pda_packet_msg_long_set_temp\n");
@@ -416,23 +444,27 @@ void process_pda_packet_msg_long_set_temp(const char *msg)
   {
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    get_pda_temp_units(msg);
   }
   else if (stristr(msg, "SPA HEAT") != NULL)
   {
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    get_pda_temp_units(msg);
   }
   else if (stristr(msg, "TEMP1") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->pool_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "pool_htr_set_point = %d\n", _aqualink_data->pool_htr_set_point);
+    get_pda_temp_units(msg);
   }
   else if (stristr(msg, "TEMP2") != NULL)
   {
     setSingleDeviceMode();
     _aqualink_data->spa_htr_set_point = atoi(msg + 10);
     LOG(PDA_LOG,LOG_DEBUG, "spa_htr_set_point = %d\n", _aqualink_data->spa_htr_set_point);
+    get_pda_temp_units(msg);
   }
 
  
@@ -519,7 +551,7 @@ void process_pda_packet_msg_long_unknown(const char *msg)
   // Lets make a guess here and just see if there is an ON/OFF/ENA/*** at the end of the line
   // When you turn on/off a piece of equiptment, a clear screen followed by single message is sent.
   // So we are not in any PDA menu, try to catch that message here so we catch new device state ASAP.
-  if (msg[AQ_MSGLEN - 1] == 'N' || msg[AQ_MSGLEN - 1] == 'F' || msg[AQ_MSGLEN - 1] == 'A' || msg[AQ_MSGLEN - 1] == '*')
+  if (msg[AQ_MSGLEN - 1] == 'N' || msg[AQ_MSGLEN - 1] == 'F' || msg[AQ_MSGLEN - 1] == 'A' || msg[AQ_MSGLEN - 1] == '*' || msg[AQ_MSGLEN - 1] == '%')
   {
     for (i = 0; i < _aqualink_data->total_buttons; i++)
     {

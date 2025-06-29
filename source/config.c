@@ -34,6 +34,8 @@
 #include <unistd.h>
 #include <net/if.h>
 #include <regex.h>
+#include <limits.h>
+
 
 #define CONFIG_C
 #include "config.h"
@@ -262,12 +264,15 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].value_type = CFG_STRING;
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_server;
   _cfgParams[_numCfgParams].default_value = (void *)_dcfg_null;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
+  _cfgParams[_numCfgParams].config_mask |= CFG_FORCE_RESTART;
 
    _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_user;
   _cfgParams[_numCfgParams].value_type = CFG_STRING;
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_user;
   _cfgParams[_numCfgParams].default_value = (void *)NULL;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
 
    _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_passwd;
@@ -275,18 +280,21 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_passwd;
   _cfgParams[_numCfgParams].config_mask |= CFG_PASSWD_MASK;
   _cfgParams[_numCfgParams].default_value = (void *)NULL;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
 
    _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_aq_topic;
   _cfgParams[_numCfgParams].value_type = CFG_STRING;
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_aq_topic;
   _cfgParams[_numCfgParams].default_value = (void *)_dcfg_mqtt_aq_tp;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
 
    _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.mqtt_hass_discover_topic;
   _cfgParams[_numCfgParams].value_type = CFG_STRING;
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_hass_discover_topic;
   _cfgParams[_numCfgParams].default_value = (void *)_dcfg_mqtt_ha_discover;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
 
 
    _numCfgParams++;
@@ -313,6 +321,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_dz_sub_topic;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = NULL;
 
   _numCfgParams++;
@@ -321,6 +330,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_mqtt_dz_pub_topic;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = NULL;
 /*
   _numCfgParams++;
@@ -336,6 +346,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_air_temp;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -344,6 +355,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_pool_water_temp;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -352,6 +364,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_spa_water_temp;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -360,6 +373,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_percent;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -368,6 +382,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_ppm;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -376,6 +391,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_dzidx_swg_status;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -384,6 +400,7 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_convert_dz_temp;
   //_cfgParams[_numCfgParams].advanced = true;
   _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_ALLOW_BLANK;
   _cfgParams[_numCfgParams].default_value = (void *)&unknownInt;
 
   _numCfgParams++;
@@ -609,6 +626,21 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].name = CFG_N_pda_sleep_mode;
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_true;
 #endif
+
+  // Optional values to store in config
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.save_debug_log_masks;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_save_debug_log_masks;
+  _cfgParams[_numCfgParams].config_mask |= CFG_READONLY;
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
+
+   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.save_light_programming_value;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_save_light_programming_value;
+  _cfgParams[_numCfgParams].config_mask |= CFG_READONLY;
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
 
   //#endif
 
@@ -947,7 +979,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
       }
 
       if (strlen(cleanwhitespace(value)) <= 0) {
-        LOG(AQUA_LOG,LOG_NOTICE,"Set configuration option `%s` to default since value is blank\n",_cfgParams[i].name );
+        LOG(AQUA_LOG,LOG_INFO,"Set configuration option `%s` to default since value is blank\n",_cfgParams[i].name );
         set_cfg_parm_to_default(&_cfgParams[i]);
         return true;
       }
@@ -1125,9 +1157,8 @@ if (strlen(cleanwhitespace(value)) <= 0) {
     char *name = cleanalloc(value);
     int len = strlen(name);
     if (len > 0) {
-      if ( strncmp(name+len-7, " - Show", 7) == 0 ) {
+      if ( strncasecmp(name+len-7, " - show", 7) == 0 ) {
         name[len-7] = '\0';
-      //printf("Value '%s' index %d is show\n",name,num);
         set_aqualinkd_light_mode_name(name,num,true);
       } else {
         set_aqualinkd_light_mode_name(name,num,false);
@@ -1159,6 +1190,19 @@ if (strlen(cleanwhitespace(value)) <= 0) {
       aqdata->aqbuttons[num].label = cleanalloc(value);
       rtn=true;
 #endif
+    } else if (strncasecmp(param + 9, "_lightModeCacheValue", 20) == 0) {
+      if (isPLIGHT(aqdata->aqbuttons[num].special_mask)) {
+        if (  ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType == LC_PROGRAMABLE ) {
+          int val = strtoul(value, NULL, 10);
+          ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lastValue = val;
+          printf("**** Set lastValue=%d for %s\n",val,aqdata->aqbuttons[num].label);
+        } else {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, '%s' is invalied for light type '%s'\n",value,((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType);
+        }
+      } else {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, Couldn't find light for '%s'\n",value);
+      }
+      rtn=true;
     } else if (strncasecmp(param + 9, "_lightMode", 10) == 0) {
       int type = strtoul(value, NULL, 10);
 
@@ -1186,6 +1230,18 @@ if (strlen(cleanwhitespace(value)) <= 0) {
         LOG(AQUA_LOG,LOG_ERR, "Config error, (colored|programmable) Lights limited to %d, ignoring %s'\n",MAX_LIGHTS,param);
       }
       rtn=true;
+      /*
+    } else if (strncasecmp(param + 9, "_lightModeCacheValue", 20) == 0) {
+      int val = strtoul(value, NULL, 20);
+      if (isPLIGHT(aqdata->aqbuttons[num].special_mask)) {
+        if (  ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType == LC_PROGRAMABLE ) {
+          ((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lastValue = val;
+        } else {
+          LOG(AQUA_LOG,LOG_ERR, "Config error, '%s' is invalied for light type '%s'\n",value,((clight_detail *)aqdata->aqbuttons[num].special_mask_ptr)->lightType);
+        }
+      } else {
+        LOG(AQUA_LOG,LOG_ERR, "Config error, Couldn't find light for '%s'\n",value);
+      }*/
     } else if (strncasecmp(param + 9, "_pump", 5) == 0) {
 
       if ( ! populatePumpData(aqdata, param + 10, &aqdata->aqbuttons[num], value) ) 
@@ -1447,6 +1503,8 @@ void init_config()
   init_parameters(&_aqconfig_);
 }
 
+
+
 //void readCfg (struct aqconfig *config_parameters, struct aqualinkdata *aqdata, char *cfgFile)
 void read_config (struct aqualinkdata *aqdata, char *cfgFile)
 {
@@ -1655,6 +1713,26 @@ void check_print_config (struct aqualinkdata *aqdata)
   }
   
 
+  /* 
+     PDA Mode
+
+     No light mode 11
+     (chiller????? )
+     <probably ton of other stuff>
+  */
+
+    if (_aqconfig_.device_id == 0x60) {
+      // Check lights.
+      for (i = 0; i < aqdata->total_buttons; i++)
+      {
+        if (isPLIGHT(aqdata->aqbuttons[i].special_mask)) {
+          if ( ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType == LC_DIMMER2 ) {
+            LOG(AQUA_LOG,LOG_WARNING, "Config error, PDA does not support lightmode %d setting to %d\n",LC_DIMMER2,LC_DIMMER);
+            ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType = LC_DIMMER;
+          }
+        }
+      }
+    }
   /*
     PDA sleep and PDA ID.
   */
@@ -1918,6 +1996,8 @@ int save_config_js(const char* inBuf, int inSize, char* outBuf, int outSize, str
     snprintf(value, 64, "%.*s",   (groupArray[2].rm_eo - groupArray[2].rm_so), (cursor + groupArray[2].rm_so));
     //printf("**** Pair = %s : %s \n",key,value);
 
+    LOG(AQUA_LOG,LOG_DEBUG, "Read json cfg Pair = %s : %s \n",key,value);
+
     // If panel size changed, see if we should ignore the label
     if (strncasecmp(key, "button_", 7 ) == 0) {
       if ( strtoul(key + 7, NULL, 10) >= ignodeBtnLabelsGrater) {
@@ -2014,6 +2094,18 @@ bool writeCfg (struct aqualinkdata *aqdata)
   }
   
   //char fp[100];
+
+  // Testing shit
+  if (_aqconfig_.save_debug_log_masks) {
+    for (int i = 0; i < (sizeof(logmask_t) * CHAR_BIT); i++) {
+      if(isDebugLogMaskSet((1 << i))) {
+        fprintf(fp, "debug_log_mask=%d\n", (1 << i));
+      }
+    }
+    fprintf(fp,"\n");
+  }
+
+  // Loop over config parameters.
 
   for ( i=0; i <= _numCfgParams; i++) {
     if (isMASK_SET(_cfgParams[i].config_mask, CFG_HIDE) ) {
@@ -2137,6 +2229,9 @@ bool writeCfg (struct aqualinkdata *aqdata)
     } else if (isPLIGHT(aqdata->aqbuttons[i].special_mask)) {
       //if (((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType > 0) {
       fprintf(fp,"%s_lightMode=%d\n", prefix, ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType);
+      if (_aqconfig_.save_light_programming_value && ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lightType == LC_PROGRAMABLE ) {
+        fprintf(fp,"%s_lightModeCacheValue=%d\n", prefix, ((clight_detail *)aqdata->aqbuttons[i].special_mask_ptr)->lastValue);
+      }
       //}
     } else if ( (isVBUTTON(aqdata->aqbuttons[i].special_mask) && aqdata->aqbuttons[i].rssd_code >= IAQ_ONETOUCH_1 && aqdata->aqbuttons[i].rssd_code <= IAQ_ONETOUCH_6 ) ) {
       fprintf(fp,"%s_onetouchID=%d\n", prefix, (aqdata->aqbuttons[i].rssd_code - 15));

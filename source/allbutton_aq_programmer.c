@@ -612,10 +612,12 @@ void *set_allbutton_light_programmode( void *ptr )
   } else {
     for (i = 1; i < val; i++) {
       const int dt = 0.5;  // Time to wait after receiving conformation of light on/off
+      waitfor_queue2empty();
       LOG(ALLB_LOG, LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "ON", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, ON, 2);
       delay(dt * seconds);
+      waitfor_queue2empty();
       LOG(ALLB_LOG, LOG_INFO, "Light Programming button press number %d - %s of %d\n", i, "OFF", val);
       send_cmd(code);
       waitForButtonState(aq_data, button, OFF, 2);
@@ -623,7 +625,8 @@ void *set_allbutton_light_programmode( void *ptr )
     }
     LOG(ALLB_LOG, LOG_INFO, "Finished - Light Programming button press number %d - %s of %d\n", i, "ON", val);
     send_cmd(code);
-    waitfor_queue2empty();
+    //waitfor_queue2empty();
+    longwaitfor_queue2empty();
   }
   //waitForButtonState(aq_data, &aq_data->aqbuttons[btn], ON, 2);
 

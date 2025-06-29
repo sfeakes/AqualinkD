@@ -107,6 +107,7 @@ const func_ptr _prog_functions[AQP_RSSADAPTER_MAX] = {
      [AQ_PDA_SET_SPA_HEATER_TEMPS]     = set_aqualink_PDA_spa_heater_temps,
      [AQ_PDA_SET_FREEZE_PROTECT_TEMP]  = set_aqualink_PDA_freeze_protectsetpoint,
      [AQ_PDA_SET_TIME]                 = set_PDA_aqualink_time,
+     [AQ_PDA_SET_LIGHT_MODE]           = set_aqualink_PDA_light_mode,
      //[AQ_PDA_GET_POOL_SPA_HEATER_TEMPS]= get_aqualink_PDA_pool_spa_heater_temps,
      [AQ_PDA_GET_FREEZE_PROTECT_TEMP]  = get_PDA_aqualink_pool_spa_heater_temps
      /*
@@ -599,6 +600,9 @@ void _aq_programmer(program_type r_type, char *args, struct aqualinkdata *aq_dat
       case AQ_SET_TIME:
         type = AQ_PDA_SET_TIME;
       break;
+      case AQ_SET_LIGHTCOLOR_MODE:
+        type = AQ_PDA_SET_LIGHT_MODE;
+      break;
 #ifdef BETA_PDA_AUTOLABEL
       case AQ_GET_AUX_LABELS:
         type = AQ_PDA_AUX_LABELS:
@@ -963,6 +967,9 @@ const char *ptypeName(program_type type)
     case AQ_PDA_GET_FREEZE_PROTECT_TEMP:
       return "Get PDA freeze protect";
     break;
+    case AQ_PDA_SET_LIGHT_MODE:
+      return "Set PDA light  mode";
+    break;
 #endif
     case AQP_NULL:
     default:
@@ -1058,6 +1065,9 @@ const char *programtypeDisplayName(program_type type)
     break;
     case AQ_PDA_WAKE_INIT:
       return "Programming: PDA wakeup";
+    break;
+    case AQ_PDA_SET_LIGHT_MODE:
+      return "Programming: setting light color";
     break;
 #endif
     default:

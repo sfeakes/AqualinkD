@@ -363,7 +363,7 @@ bool process_rssadapter_packet(unsigned char *packet, int length, struct aqualin
          
           // CHANGE TO DEBUG BEFORE RELEASE
           if (aq_data->lights[i].lightType == LC_DIMMER || aq_data->lights[i].lightType == LC_DIMMER2) {
-            LOG(RSSA_LOG,LOG_DEBUG,"DimmerLight '%s' is %s 0x%02hhx  value '%d'%%\n",
+            LOG(RSSA_LOG,LOG_DEBUG,"DimmerLight '%s' is %s, rawvalue 0x%02hhx  value '%d'%%\n",
                                   aq_data->lights[i].button->label,
                                   packet[6]==0x00?"OFF":"ON",
                                   packet[6],
