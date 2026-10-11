@@ -479,7 +479,7 @@ struct aqualinkdata
   char panel_rev[AQ_MSGLEN];    // From panel
   char panel_cpu[AQ_MSGLEN];    // From panel
   char panel_string[AQ_MSGLEN]; // This is from actual PANEL not aqualinkd's config
-  uint16_t panel_support_options;
+  uint32_t panel_support_options;
 
   char date[AQ_MSGLEN];
   char time[AQ_MSGLEN];

@@ -65,6 +65,7 @@ struct aqconfig
   char *config_file;
   char *listen_address;
   char *serial_port;
+  bool force_panel_rev;
   unsigned int log_level;
   unsigned int mg_log_level;
   bool log_msec_ts;
@@ -354,6 +355,7 @@ int _numCfgParams;
 #define CFG_N_save_debug_log_masks              "save_debug_log_masks"
 #define CFG_N_save_light_programming_value      "save_light_programming_value"
 
+#define CFG_N_force_panel_rev                   "force_panel_rev" 
 
 //#define CFG_V_UOM "[\"°C\", \"°F\", \"K\", \"Hz\", \"GHz\", \"Pa\", \"0x41\", \"hPa\", \"bar\", \"mbar\", \"inHg\", \"psi\", \"L\", \"mL\", \"m³\", \"ft³\", \"fl. oz.\", \"m³/h\", \"ft³/m\"]"
 

@@ -123,9 +123,11 @@ void set_cfg_parm_to_default(cfgParam *parm) {
         break;
         case CFG_SPECIAL:
           if (strncasecmp(parm->name, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
-            *(int *)parm->value_ptr = *(int *)parm->default_value;
+            //*(int *)parm->value_ptr = *(int *)parm->default_value;
           } else if (strncasecmp(parm->name, CFG_N_panel_type, strlen(CFG_N_panel_type)) == 0) {
-            //setPanelByName(aqdata, cleanwhitespace(value)); 
+            //setPanelByName(aqdata, cleanwhitespace(value));
+          } else if (strncasecmp(parm->name, CFG_N_force_panel_rev, strlen(CFG_N_force_panel_rev)) == 0) {
+            _aqconfig_.force_panel_rev = false;
           } else {
             LOG(AQUA_LOG,LOG_ERR, "ADD CONFIG DEFAULT FOR %s\n",parm->name);
           }
@@ -240,6 +242,14 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].config_mask |= CFG_READONLY;
   _cfgParams[_numCfgParams].default_value = (void *) &_dcfg_zero;
 
+
+  _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.force_panel_rev;
+  _cfgParams[_numCfgParams].value_type = CFG_SPECIAL;
+  _cfgParams[_numCfgParams].name = CFG_N_force_panel_rev;
+  _cfgParams[_numCfgParams].config_mask |= CFG_GRP_ADVANCED;
+  _cfgParams[_numCfgParams].config_mask |= CFG_READONLY; 
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
 
 
   _numCfgParams++;
@@ -879,6 +889,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
   bool rtn = false;
   char *tmpval;
  
+  LOG(AQUA_LOG,LOG_DEBUG,"Reading config value: %s",param);
 //#ifdef CONFIG_DEV_TEST
   //int val;
   //char *sval;
@@ -942,9 +953,19 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         break;
         case CFG_SPECIAL:
           if (strncasecmp(param, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
-            *(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
+            // Only reset if currently below DEBUG, as the cmd line coule set debug.
+            if (_aqconfig_.log_level < LOG_DEBUG) {
+              *(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
+            }
+            //*(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
           } else if (strncasecmp(param, CFG_N_panel_type, strlen(CFG_N_panel_type)) == 0) {
-            setPanelByName(aqdata, cleanwhitespace(value)); 
+            setPanelByName(aqdata, cleanwhitespace(value));
+          } else if (strncasecmp(param, CFG_N_force_panel_rev, strlen(CFG_N_force_panel_rev)) == 0) {
+             //_aqconfig_.log_level = LOG_DEBUG;
+             //printf("***** Setting panel rev to %s\n", value);
+             // String needs to start with "REV" and then the number.  We will add REV if not there.
+             setPanelInformationFromPanelMsg(aqdata, value, PANEL_REV, SIMULATOR);
+            _aqconfig_.force_panel_rev = true;
           } else {
             LOG(AQUA_LOG,LOG_ERR, "ADD SPECIAL CONFIG FOR '%s'\n",param);
           }
@@ -1396,7 +1417,6 @@ bool populatePumpData(struct aqualinkdata *aqdata, char *pumpcfg ,aqkey *button,
     pump->maxSpeed = strtoul(value, NULL, 10);
   } else if (strncasecmp(pumpcfg, "pumpMinSpeed", 12) == 0) {
     pump->minSpeed = strtoul(value, NULL, 10);
-
   } else if (strncasecmp(pumpcfg, "pumpBaselineRpmLow", 18) == 0) {
     pump->efficiency.baselineRpmLow = strtoul(value, NULL, 10);
   } else if (strncasecmp(pumpcfg, "pumpBaselineKLow", 16) == 0) {
@@ -2030,6 +2050,8 @@ void check_print_config (struct aqualinkdata *aqdata)
           LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n", name, loglevel2cgn_name(_aqconfig_.log_level));
         } else if (strncasecmp(_cfgParams[i].name, CFG_N_panel_type, strlen(CFG_N_panel_type)) == 0) {
           LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n", name, getPanelString());
+        } else if (strncasecmp(_cfgParams[i].name, CFG_N_force_panel_rev, strlen(CFG_N_force_panel_rev)) == 0 && _aqconfig_.force_panel_rev == true) {
+          LOG(AQUA_LOG,LOG_NOTICE, "%-35s = %s\n", name, aqdata->panel_rev);
         } else {
           LOG(AQUA_LOG,LOG_NOTICE, "%-35s = NEED TO ADD CODE TO HANDLE THIS\n",name);
         }

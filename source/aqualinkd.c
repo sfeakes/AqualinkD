@@ -613,14 +613,16 @@ int startup(char *self, char *cfgFile)
     LOG(AQUA_LOG,LOG_NOTICE, "Starting %s v%s !\n", AQUALINKD_NAME, AQUALINKD_VERSION);
   }
 
-  snprintf(_aqualink_data.self, sizeof(_aqualink_data.self), "%s",
-           basename(self));
+  snprintf(_aqualink_data.self, sizeof(_aqualink_data.self), "%s", basename(self));
+  
+  if (_cmdln_loglevel != -1)
+    setSystemLogLevel(_cmdln_loglevel);
+  
   clearDebugLogMask();
   read_config(&_aqualink_data, cfgFile);
 
   if (_cmdln_loglevel != -1)
     _aqconfig_.log_level = _cmdln_loglevel;
-
   if (_cmdln_debugRS485)
     _aqconfig_.log_protocol_packets = true;
 
@@ -631,6 +633,8 @@ int startup(char *self, char *cfgFile)
     _aqconfig_.log_msec_ts = true;
 
   setMsecTimestampLog(_aqconfig_.log_msec_ts);
+
+  
       
 
 #ifdef AQ_MANAGER

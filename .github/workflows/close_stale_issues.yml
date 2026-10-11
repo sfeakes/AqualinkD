@@ -24,3 +24,7 @@ jobs:
           stale-issue-label: "stale"
           # Optional: specify exempt labels, such as "bug" or "feature"
           # exempt-issue-labels: "bug,feature"
+
+          # Pull requests: never mark or close
+          days-before-pr-stale: -1
+          days-before-pr-close: -1

@@ -12,6 +12,12 @@
 #define SPA_HEAT_INDEX  10
 */
 
+typedef enum  {
+  RSP_UNKNOWN = -1,
+  RSP_SUPPORTED,
+  RSP_NOT_SUPPORTED
+} panel_support_t;
+
 //#define VBUTTON_ONETOUCH_RSSD 0xFF
 //#define VBUTTON_RSSD 0xFE
 
@@ -41,23 +47,27 @@ const uint32_t PANEL_COMPARISON_MASK = (1U << 12) - 1;  // We only care about bi
 
 // Bitmask for pannel support against board rev
 // used in getPanelSupport()
-#define RSP_SUP_ONET   (1 << 0)  // OneTouch
-#define RSP_SUP_AQLT   (1 << 1)  // Aqualink Touch
-#define RSP_SUP_ONET_EARLY (1 << 14) // OneTouch REV O uses different tpage for VSP
-#define RSP_SUP_IAQL   (1 << 2) // iAqualink Wifi (1.0/2.0)
-#define RSP_SUP_IAQL3   (1 << 15) // iAqualink WiFi (3.0)
-#define RSP_SUP_RSSA   (1 << 3) // RS Serial Adapter
-#define RSP_SUP_VSP    (1 << 4)  // Variable Speed Pumps
-#define RSP_SUP_CHEM   (1 << 5)  // chem feeder
-#define RSP_SUP_TSCHEM (1 << 6) // true sense chem reader
-#define RSP_SUP_SWG    (1 << 7) // Salt water generator
-#define RSP_SUP_CLIT   (1 << 8) // color lights 
-#define RSP_SUP_DLIT   (1 << 9) // dimmer lights 
-#define RSP_SUP_VBTN   (1 << 10) // Virtual button
-#define RSP_SUP_PLAB   (1 << 11) // Pump VSP by Label and not number
-#define RSP_SUP_HPCHIL (1 << 12) // Heat Pump chiller
-#define RSP_SUP_PCDOC  (1 << 13) // PC Dock
-#define RSP_SUP_CLIT_RSSA  (1 << 14) // Color Lights can be set over serial adapter.
+// uint32_tso 31 is MAX.
+#define RSP_SUP_ONET       (1U << 0)  // OneTouch
+#define RSP_SUP_AQLT       (1U << 1)  // Aqualink Touch
+#define RSP_SUP_IAQL       (1U << 2)  // iAqualink Wifi (1.0/2.0)
+#define RSP_SUP_IAQL3      (1U << 3)  // iAqualink WiFi (3.0)
+#define RSP_SUP_RSSA       (1U << 4)  // RS Serial Adapter
+#define RSP_SUP_VSP        (1U << 5)  // Variable Speed Pumps
+#define RSP_SUP_CHEM       (1U << 6)  // chem feeder
+#define RSP_SUP_TSCHEM     (1U << 7)  // true sense chem reader
+#define RSP_SUP_SWG        (1U << 8)  // Salt water generator
+#define RSP_SUP_CLIT       (1U << 9)  // color lights
+#define RSP_SUP_DLIT       (1U << 10) // dimmer lights
+#define RSP_SUP_VBTN       (1U << 11) // Virtual button
+#define RSP_SUP_PLAB       (1U << 12) // Pump VSP by Label and not number
+#define RSP_SUP_HPCHIL     (1U << 13) // Heat Pump chiller
+#define RSP_SUP_PCDOC      (1U << 14) // PC Dock
+#define RSP_SUP_CLIT_RSSA  (1U << 15) // Color Lights can be set over serial adapter.
+#define RSP_SUP_ONET_EARLY (1U << 16) // OneTouch REV O uses different tpage for VSP
+#define RSP_SUP_SWG_PS     (1U << 17) // Can set SWG setpoints for both pool and spa.
+// Don't forget to add to aq_panel.c -- `static const struct { uint32_t mask; const char *name; } s_rsp_sup_names[] = {` -- ~line 500
+// uint32_tso 31 is MAX.
 
 #define PANEL_CPU    (1 << 0)
 #define PANEL_REV    (1 << 1)
@@ -70,6 +80,8 @@ void setPanelByName(struct aqualinkdata *aqdata, const char *str);
 void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool dual);
 const char* getPanelString();
 const char* getShortPanelString();
+
+panel_support_t doesPanelSupport(const struct aqualinkdata *aqdata, uint32_t mask);
 
 bool panel_device_request(struct aqualinkdata *aqdata, action_type type, int deviceIndex, int value, request_source source);
 
@@ -88,7 +100,7 @@ int getPumpDefaultSpeed(pump_detail *pump, bool max);
 int getPumpSpeedAsPercent(pump_detail *pump);
 int convertPumpPercentToSpeed(pump_detail *pump, int value); // This is probable only needed internally
 
-uint16_t getPanelSupport( char *rev_string, int rev_len);
+//uint16_t getPanelSupport( char *rev_string, int rev_len);
 
 aqkey *addVirtualButton(struct aqualinkdata *aqdata, char *label, int vindex);
 bool setVirtualButtonLabel(aqkey *button, const char *label);

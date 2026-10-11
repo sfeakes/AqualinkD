@@ -257,11 +257,11 @@ static bool select_chlorinator_boost_menu(struct aqualinkdata *aqdata)
       return select_menu_item(aqdata, "SUPERCHLORINATE");
 
     default:  // SWG_BOOST_UNKNOWN: probe once
-      if (select_menu_item(aqdata, "BOOST POOL")) {
+      if (select_menu_item_noerror(aqdata, "BOOST POOL")) {
         s_swg_boost_menu = SWG_M_BOOST;
         return true;
       }
-      if (can_be_superchlor && select_menu_item(aqdata, "SUPERCHLORINATE")) {
+      if (can_be_superchlor && select_menu_item_noerror(aqdata, "SUPERCHLORINATE")) {
         s_swg_boost_menu = SWG_M_SUPERCHLORINATE;
         return true;
       }
@@ -440,24 +440,32 @@ void *set_allbutton_SWG( void *ptr )
 
 
   // If spa is on, set SWG for spa, if not set SWG for pool
-  if (aqdata->aqbuttons[SPA_INDEX].led->state != OFF) {
-    if (select_sub_menu_item(aqdata, "SET SPA SP") != true) {
-      LOG(ALLB_LOG, LOG_WARNING, "Could not select SWG setpoint menu for SPA\n");
-      LOG(ALLB_LOG, LOG_ERR, "%s failed\n", ptypeName( aqdata->active_thread.ptype ) );
-      cancel_menu();
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
+  if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED)
+  {
+    setAqualinkNumericField_new(aqdata, "AQUA", val, 1); // Could be Aquarite or Aquapure. Also increment or 1 not 5
+  }
+  else
+  {
+    if (aqdata->aqbuttons[SPA_INDEX].led->state != OFF) {
+      if (select_sub_menu_item(aqdata, "SET SPA SP") != true) {
+        LOG(ALLB_LOG, LOG_WARNING, "Could not select SWG setpoint menu for SPA\n");
+        LOG(ALLB_LOG, LOG_ERR, "%s failed\n", ptypeName(aqdata->active_thread.ptype));
+        cancel_menu();
+        cleanAndTerminateThread(threadCtrl);
+        return ptr;
+      }
+      setAqualinkNumericField_new(aqdata, "SPA SP", val, 5);
+    } else {
+      if (select_sub_menu_item(aqdata, "SET POOL SP") != true)
+      {
+        LOG(ALLB_LOG, LOG_WARNING, "Could not select SWG setpoint menu\n");
+        LOG(ALLB_LOG, LOG_ERR, "%s failed\n", ptypeName(aqdata->active_thread.ptype));
+        cancel_menu();
+        cleanAndTerminateThread(threadCtrl);
+        return ptr;
+      }
+      setAqualinkNumericField_new(aqdata, "POOL SP", val, 5);
     }
-    setAqualinkNumericField_new(aqdata, "SPA SP", val, 5);
-  } else {
-    if (select_sub_menu_item(aqdata, "SET POOL SP") != true) {
-      LOG(ALLB_LOG, LOG_WARNING, "Could not select SWG setpoint menu\n");
-      LOG(ALLB_LOG, LOG_ERR, "%s failed\n", ptypeName( aqdata->active_thread.ptype ) );
-      cancel_menu();
-      cleanAndTerminateThread(threadCtrl);
-      return ptr;
-    }
-    setAqualinkNumericField_new(aqdata, "POOL SP", val, 5);
   }
 
   // Let everyone know we set SWG, if it failed we will update on next message, unless it's 0.

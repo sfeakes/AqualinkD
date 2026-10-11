@@ -935,6 +935,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   int diff;
   int i;
   int len;
+  int pcnt_increment = 5;
   unsigned char direction = KEY_ONET_UP;
 
   waitForSingleThreadOrTerminate(threadCtrl, AQ_SET_ONETOUCH_SWG_PERCENT);
@@ -959,7 +960,19 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   //OneTouch Menu Line 4 =  Set Spa to:  0%
 
   // Only have option for both on ComboPanel, and us
-  if (isCOMBO_PANEL) {
+  
+  if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED) {
+    // No further menu(s), supports increment of 1
+    pcnt_increment=1;
+  } else if ( isSINGLE_DEV_PANEL ) {
+    // No further menu(s), supports increment of 5
+    pcnt_increment=5;
+    waitForOT_MessageTypes(aqdata,CMD_PDA_HIGHLIGHTCHARS,0x00,5);
+    //printf("**** JUST WAITING *****\n");
+    //waitForNextOT_Menu(aqdata);
+  } else if (isCOMBO_PANEL) {
+    // More menu's and increment of 5
+    pcnt_increment=5;
     if (aqdata->aqbuttons[SPA_INDEX].led->state == OFF) {
       if (!highlight_onetouch_menu_item(aqdata, "Set Pool")) {
         LOG(ONET_LOG,LOG_ERR, "OneTouch device programmer failed to get Pool swg percent\n");
@@ -971,14 +984,15 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
         goto f_end;
       }
     }
+  
+    send_ot_cmd(KEY_ONET_SELECT);
+    waitfor_ot_queue2empty();
+    waitForOT_MessageTypes(aqdata,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
   } else {
-    // NSF Need to check text for congle panel.
+    // No idea what we are.
+    LOG(ONET_LOG,LOG_WARNING, "OneTouch device programmer failed, Not sure panel so programming might fail!\n");
   }
 
-  send_ot_cmd(KEY_ONET_SELECT);
-  waitfor_ot_queue2empty();
-  waitForOT_MessageTypes(aqdata,CMD_PDA_HIGHLIGHTCHARS,0x00,15); // CMD_PDA_0x04 is just a packer.
- 
   {
     i=0;
     char *st = onetouch_menu_hlightchars(&len);
@@ -994,7 +1008,7 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   }
   
   cval = atoi(onetouch_menu_hlightchars(&len));
-  diff = (val - cval) / 5;
+  diff = (val - cval) / pcnt_increment;
   LOG(ONET_LOG,LOG_DEBUG, "** OneTouch set SWG Percent val=%d cval=%d diff=%d \n", val,cval,diff);
   if (diff > 0) {
     direction = KEY_ONET_UP;

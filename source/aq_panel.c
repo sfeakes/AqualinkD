@@ -41,7 +41,7 @@ void programDeviceLightRGB(struct aqualinkdata *aqdata, int packed_rgb, int devi
 
 
 void printPanelSupport(struct aqualinkdata *aqdata);
-uint16_t setPanelSupport(struct aqualinkdata *aqdata);
+uint32_t setPanelSupport(struct aqualinkdata *aqdata);
 uint16_t getPanelBitmaskFromName(const char *str);
 
 
@@ -228,7 +228,9 @@ pull board CPU, revision & panel string from strings like
  PDA-P4 Only
 */
 
-
+static inline bool isPanelRevKnown(const struct aqualinkdata *aqdata) {
+  return aqdata->panel_rev[0] != '\0';
+}
 
 uint8_t setPanelInformationFromPanelMsg(struct aqualinkdata *aqdata, const char *input, uint8_t type, emulation_type source) {
     //const char *rev_pos = NULL;
@@ -239,6 +241,13 @@ uint8_t setPanelInformationFromPanelMsg(struct aqualinkdata *aqdata, const char 
     const char *sp;
     int length = 0;
     
+    if ( isPanelRevKnown(aqdata) ) {
+      // Check config, if it was set their, display warning if it doesn't match what the panel is reporting.
+      if ( _aqconfig_.force_panel_rev == true ) {
+        LOG(PANL_LOG, LOG_WARNING, "Config option '%s' was set to '%s', please delete line from config. The real value `%s` is being ignored\n", CFG_N_force_panel_rev, aqdata->panel_rev,input);
+      }
+    }
+
     LOG(PANL_LOG, LOG_DEBUG, "Decoding string '%s'\n",input);
 
     if (isMASK_SET(type, PANEL_REV)) {
@@ -389,106 +398,153 @@ uint16_t setPDAPanelSupport(struct aqualinkdata *aqdata)
   return aqdata->panel_support_options;
 }
 
-uint16_t setPanelSupport(struct aqualinkdata *aqdata)
+uint32_t setPanelSupport(struct aqualinkdata *aqdata)
 {
+  aqdata->panel_support_options = 0;
 
-  if (! isalpha(aqdata->panel_rev[0])) {
-    if (isPDA_PANEL) {
+  if (!isalpha(aqdata->panel_rev[0]))
+  {
+    if (isPDA_PANEL)
+    {
       return setPDAPanelSupport(aqdata);
-    } else {
-      LOG(PANL_LOG,LOG_WARNING, "Panel revision is not understood '%s', please report this issue\n", aqdata->panel_rev);
+    }
+    else
+    {
+      LOG(PANL_LOG, LOG_WARNING, "Panel revision is not understood '%s', please report this issue\n", aqdata->panel_rev);
     }
   }
 
-    // Rev >= F Dimmer.  But need serial protocol so set to I
-    // Rev >= H (Think this was first RS485)
-    // Rev >= HH - (some panels support serial adapter, some don't)
-    // Rev >= I Serial Adapter.
-    // Rev >= I One Touch protocol
-    // Rev >= L JandyColors Smart Light Control
-    // Rev >= L PC Dock / (Support stopped around REV Y)
-    // Rev >= M AquaPalm (PDA) - even in MMM this was not usefull
-    // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
-    // Rev >= N Hayward ColorLogic LED Light
-    // Rev >= N VersaTemp heatpump & chiller
-    // Rev >= O Variable Speed Pump
-    // Rev >- O One Touch (VSP) has different wat to display info vs REV T (Between REV O & T not sure when exact changed )
-    // Rev >= O.1 == Jandy WaterColors LED ( 9 colors )
-    // Rev >= O.2 ==
-    // Rev >= P ChemLink (Chem feeder / replaced with TrueDose )
-    // Rev >= Q Aqualink Touch protocol
-    // Rev >= R iAqualink (wifi adapter) protocol
-    // Rev >= S
-    // Rev >= T.0.1 == limited color light
-    // Rev >= T.2 == more color lights
-    // Rev >= U
-    // Rev >= V
-    // Rev >= W pump label (not number)
-    // Rev >= W iAqualink 3.0 (I think.  ie can set VSP rpm / SWG / Chill setpoint over the protocol )
-    // Rev >= X
-    // Rev >= Xg
-    // Rev >= Y TruSense Water Chemistry Analyzer
-    // Rev >= Yg Virtual Device called Label Auxiliraries
+  // Rev >= F Dimmer.  But need serial protocol so set to I
+  // Rev >= H (Think this was first RS485)
+  // Rev >= HH - (some panels support serial adapter, some don't)
+  // Rev >= I Serial Adapter.
+  // Rev >= I One Touch protocol
+  // Rev >= L JandyColors Smart Light Control
+  // Rev >= L PC Dock / (Support stopped around REV Y)
+  // Rev >= L SWG control for both Pool & Spa (not just one)
+  // Rev >= M AquaPalm (PDA) - even in MMM this was not usefull
+  // Rev >= MMM = 12V JandyColor Lights (also light dimmer)
+  // Rev >= N Hayward ColorLogic LED Light
+  // Rev >= N VersaTemp heatpump & chiller
+  // Rev >= O Variable Speed Pump
+  // Rev >- O One Touch (VSP) has different wat to display info vs REV T (Between REV O & T not sure when exact changed )
+  // Rev >= O.1 == Jandy WaterColors LED ( 9 colors )
+  // Rev >= O.2 ==
+  // Rev >= P ChemLink (Chem feeder / replaced with TrueDose )
+  // Rev >= Q Aqualink Touch protocol
+  // Rev >= R iAqualink (wifi adapter) protocol
+  // Rev >= S
+  // Rev >= T.0.1 == limited color light
+  // Rev >= T.2 == more color lights
+  // Rev >= U
+  // Rev >= V
+  // Rev >= W pump label (not number)
+  // Rev >= W iAqualink 3.0 (I think.  ie can set VSP rpm / SWG / Chill setpoint over the protocol )
+  // Rev >= X
+  // Rev >= Xg
+  // Rev >= Y TruSense Water Chemistry Analyzer
+  // Rev >= Yg Virtual Device called Label Auxiliraries
 
-/*
-    if (aqdata->panel_rev[0] >= 79) // O in ascii
-      aqdata->panel_support_options |= RSP_SUP_VSP;
-*/
-    if (aqdata->panel_rev[0] >= 73){ // I in ascii
-      aqdata->panel_support_options |= RSP_SUP_ONET;
-      aqdata->panel_support_options |= RSP_SUP_RSSA;
-      aqdata->panel_support_options |= RSP_SUP_SWG;
-    }
+  const char rev = aqdata->panel_rev[0];
+  const char rev2 = aqdata->panel_rev[1];
 
-    if (aqdata->panel_rev[0] >= 73) // I in ascii, dimmer came out in F, but we use the serial adapter to set, so use that as support
-      aqdata->panel_support_options |= RSP_SUP_DLIT;
+  if (rev >= 'I')
+  {
+    aqdata->panel_support_options |= RSP_SUP_ONET;
+    aqdata->panel_support_options |= RSP_SUP_RSSA;
+    aqdata->panel_support_options |= RSP_SUP_SWG;
+  }
 
-    if (aqdata->panel_rev[0] >= 76) {// L in ascii
-      aqdata->panel_support_options |= RSP_SUP_CLIT;
-      aqdata->panel_support_options |= RSP_SUP_PCDOC;
-    }
+  if (rev >= 'I') // dimmer came out in F, but we use the serial adapter to set, so use that as support
+    aqdata->panel_support_options |= RSP_SUP_DLIT;
 
-    if (aqdata->panel_rev[0] >= 78) // N in ascii
-      aqdata->panel_support_options |= RSP_SUP_HPCHIL;
+  if (rev >= 'L')
+  {
+    aqdata->panel_support_options |= RSP_SUP_CLIT;
+    aqdata->panel_support_options |= RSP_SUP_PCDOC;
+    aqdata->panel_support_options |= RSP_SUP_SWG_PS;
+  }
 
-    if (aqdata->panel_rev[0] >= 79) // O in ascii
-      aqdata->panel_support_options |= RSP_SUP_VSP;
+  if (rev >= 'N')
+    aqdata->panel_support_options |= RSP_SUP_HPCHIL;
 
-    if (aqdata->panel_rev[0] == 79) // O.  VERY SEPCIFIC onetouch uses diferent menu for VSP.
-      aqdata->panel_support_options |= RSP_SUP_ONET_EARLY;
+  if (rev >= 'O')
+    aqdata->panel_support_options |= RSP_SUP_VSP;
 
-    if (aqdata->panel_rev[0] >= 80) // P in ascii
-      aqdata->panel_support_options |= RSP_SUP_CHEM;
+  if (rev == 'O') // VERY SPECIFIC: OneTouch uses a different menu for VSP.
+    aqdata->panel_support_options |= RSP_SUP_ONET_EARLY;
 
-    if (aqdata->panel_rev[0] >= 81) // Q in ascii
-      aqdata->panel_support_options |= RSP_SUP_AQLT;
+  if (rev >= 'P')
+    aqdata->panel_support_options |= RSP_SUP_CHEM;
 
-    if (aqdata->panel_rev[0] >= 82) // R in ascii
-      aqdata->panel_support_options |= RSP_SUP_IAQL;
+  if (rev >= 'Q')
+    aqdata->panel_support_options |= RSP_SUP_AQLT;
 
-    if (aqdata->panel_rev[0] >= 84) // T in ascii
-      aqdata->panel_support_options |= RSP_SUP_CLIT_RSSA;
+  if (rev >= 'R')
+    aqdata->panel_support_options |= RSP_SUP_IAQL;
 
-    if (aqdata->panel_rev[0] >= 87) {// W in ascii
-      aqdata->panel_support_options |= RSP_SUP_PLAB;
-      aqdata->panel_support_options |= RSP_SUP_IAQL3;
-    }
-    
-    if (aqdata->panel_rev[0] > 89 || ( aqdata->panel_rev[0] == 89 && aqdata->panel_rev[1] >= 103)) { // Y=89, g=103
-      aqdata->panel_support_options |= RSP_SUP_VBTN;
-      aqdata->panel_support_options |= RSP_SUP_TSCHEM;
-      aqdata->panel_support_options &= ~RSP_SUP_PCDOC;
-    }
+  if (rev >= 'T')
+    aqdata->panel_support_options |= RSP_SUP_CLIT_RSSA;
 
-    //if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
-    //  supported |= RSP_SUP_CLIT4;
+  if (rev >= 'W')
+  {
+    aqdata->panel_support_options |= RSP_SUP_PLAB;
+    aqdata->panel_support_options |= RSP_SUP_IAQL3;
+  }
+
+  if (rev > 'Y' || (rev == 'Y' && rev2 >= 'g'))
+  { // Y.g or later
+    aqdata->panel_support_options |= RSP_SUP_VBTN;
+    aqdata->panel_support_options |= RSP_SUP_TSCHEM;
+    aqdata->panel_support_options &= ~RSP_SUP_PCDOC;
+  }
+
+  // if (REV[0] > 84 || (REV[0] == 84 && REV[1] == 64 && REV[2] >= 50) ) // T in ascii (or T and . and 2 )
+  //   supported |= RSP_SUP_CLIT4;
     
   //}
 
   return aqdata->panel_support_options;
 }
 
+static const struct { uint32_t mask; const char *name; } s_rsp_sup_names[] = {
+  { RSP_SUP_ONET,       "One Touch" },
+  { RSP_SUP_AQLT,       "Aqualink Touch" },
+  { RSP_SUP_ONET_EARLY, "One Touch (Early)" },
+  { RSP_SUP_IAQL,       "iAqualink 1.0/2.0" },
+  { RSP_SUP_IAQL3,      "iAqualink 3.0" },
+  { RSP_SUP_RSSA,       "RS Serial Adapter" },
+  { RSP_SUP_VSP,        "Variable Speed Pumps" },
+  { RSP_SUP_CHEM,       "Chemical feeder" },
+  { RSP_SUP_TSCHEM,     "True Sense Chemical Reader" },
+  { RSP_SUP_SWG,        "Salt Water Generator" },
+  { RSP_SUP_CLIT,       "Color Lights" },
+  { RSP_SUP_DLIT,       "Dimmable Lights" },
+  { RSP_SUP_VBTN,       "Virtual Button" },
+  { RSP_SUP_PLAB,       "Variable Speed Pump (By Label & extended ID)" },
+  { RSP_SUP_HPCHIL,     "Heat Pump / Chiller" },
+  { RSP_SUP_PCDOC,      "PC Dock" },
+  { RSP_SUP_CLIT_RSSA,  "Color Lights over Serial Adapter" },
+  { RSP_SUP_SWG_PS,     "SWG setpoints for both pool and spa" },
+};
 
+void printPanelSupport(struct aqualinkdata *aqdata) {
+  for (size_t i = 0; i < sizeof(s_rsp_sup_names) / sizeof(s_rsp_sup_names[0]); i++) {
+    if (isMASK_SET(aqdata->panel_support_options, s_rsp_sup_names[i].mask))
+      LOG(PANL_LOG, LOG_DEBUG, "Panel supports: %s\n", s_rsp_sup_names[i].name);
+  }
+}
+
+
+panel_support_t doesPanelSupport(const struct aqualinkdata *aqdata, uint32_t mask)
+{
+  if (aqdata->panel_support_options == 0) {
+    return RSP_UNKNOWN;
+  }
+  return (aqdata->panel_support_options & mask) == mask ? RSP_SUPPORTED : RSP_NOT_SUPPORTED;
+}
+
+/*
 void printPanelSupport(struct aqualinkdata *aqdata) {
   if (isMASK_SET(aqdata->panel_support_options, RSP_SUP_ONET )) {
     LOG(PANL_LOG,LOG_DEBUG, "Panel supports: One Touch\n");
@@ -539,7 +595,7 @@ void printPanelSupport(struct aqualinkdata *aqdata) {
     LOG(PANL_LOG,LOG_DEBUG, "Panel supports: PC Dock\n");
   }
 }
-
+*/
 
 
 
