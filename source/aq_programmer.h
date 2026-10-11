@@ -198,6 +198,10 @@ typedef enum pump_type {
 
 //void aq_programmer(program_type type, void *args, struct aqualinkdata *aq_data);
 
+/* True when AQ_SET_TIME lands on a setter that commits on a minute boundary.
+   See the definition in aq_programmer.c - it mirrors the AQ_SET_TIME routing. */
+bool isPanelTimeSetterBoundaryAware();
+
 #ifndef NEW_AQ_PROGRAMMER
 void aq_programmer(program_type type, char *args, struct aqualinkdata *aq_data);
 #else

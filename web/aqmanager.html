@@ -1418,6 +1418,10 @@
       // More advanced groupings
       if(obj.toString().includes("device_id") && lastKey.includes("device_id")) {
         hideLineSeperator = true;
+      } else if(obj.toString().includes("panel_time") && lastKey.includes("panel_time")) {
+        // sync_panel_time and force_panel_time_sync_at_startup belong together, but the
+        // first letter grouping above cannot see that ('s' then 'f').
+        hideLineSeperator = true;
       } else if(obj.toString().includes("light_program_")) {
         hideLineSeperator = true;
         if(obj.toString().includes("light_program_01")) {

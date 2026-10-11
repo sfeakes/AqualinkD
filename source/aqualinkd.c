@@ -110,6 +110,14 @@ void main_loop();
 int startup(char *self, char *cfgFile);
 
 
+/* One shot, armed in startup() when force_panel_time_sync_at_startup is set.  Holds the
+   time the forced sync becomes due (0 = not armed).  Makes that one comparison report the
+   panel as wrong even when it is inside ACCEPTABLE_TIME_DIFF, so the panel clock gets
+   rewritten once per daemon start.  Deliberately NOT due immediately: setting the clock
+   takes over the panel menus for a while, which is the last thing we want while startup
+   is still collecting state. */
+static time_t _force_panel_time_sync_after = 0;
+
 bool isAqualinkDStopping() {
   return !_keepRunning;
 }
@@ -157,6 +165,162 @@ bool isVirtualButtonEnabled() {
 }
 
 
+/* --------------------------------------------------------------------------
+ * Panel minute rollover timing.
+ *
+ * The panel reports HH:MM with no seconds, so one reading only locates its clock
+ * to within a minute; we assume the midpoint, which is +/-30s of noise however
+ * accurate the panel actually is.  But the panel repeats its display every few
+ * seconds, so the moment the displayed minute CHANGES pins the panel's HH:MM:00
+ * to within one message gap - about 8s on an RS panel, so +/-4s once we take the
+ * middle of the gap.  That is tight enough to judge against
+ * ACCEPTABLE_TIME_DIFF_PRECISE instead of ACCEPTABLE_TIME_DIFF.
+ *
+ * Only used where the panel reports a real date.  PDA reports a weekday and its
+ * check has its own day-of-week handling, so that path keeps the coarse estimate.
+ * -------------------------------------------------------------------------- */
+static char   _ro_last_time[AQ_MSGLEN] = "";
+static time_t _ro_prev_sample = 0;   /* when the previous time message arrived */
+static time_t _ro_at          = 0;   /* when we first saw the new minute */
+static int    _ro_window      = 0;   /* gap between those two messages */
+static time_t _ro_panel_min   = 0;   /* when that minute SHOULD have started */
+
+/* Parse the panel's 'MM/DD/YY' + 'H:MM XM' into the time_t its minute started. */
+static bool panel_minute_start(time_t now, time_t *out)
+{
+  char datestr[DATE_STRING_LEN];
+  struct tm tm;
+  size_t dlen = strlen(_aqualink_data.date);
+  size_t tlen = strlen(_aqualink_data.time);
+
+  /* 'MM/DD/YY' is 8, 'H:MM XM' is 7 and 'HH:MM XM' is 8. Anything else is not
+     something the surgery below can lay out, and would risk overrunning datestr. */
+  if (dlen < 8 || dlen > 12 || tlen < 7 || tlen > 8)
+    return false;
+
+  memset(&tm, 0, sizeof(tm));
+  memcpy(&datestr[0], _aqualink_data.date, 8);
+  datestr[8] = ' ';
+  memcpy(&datestr[9], _aqualink_data.time, tlen);
+  datestr[9 + tlen] = '\0';
+
+  if (strptime(datestr, "%m/%d/%y %I:%M %p", &tm) == NULL)
+    return false;
+
+  tm.tm_sec = 0;                                   /* the START of the minute */
+  tm.tm_isdst = localtime(&now)->tm_isdst;
+  *out = mktime(&tm);
+  return true;
+}
+
+/*
+* Is now a reasonable moment to take over the panel's menus and rewrite its clock?
+*
+* Setting the clock holds SET TIME for up to a minute, so routine corrections are confined
+* to a configured quiet window.  A gross offset is not routine - the panel has lost its
+* clock rather than drifted - and does not wait for the window.
+*/
+static bool panel_time_sync_allowed_now(time_t now, int time_difference)
+{
+  struct tm tm_now;
+  int start = _aqconfig_.panel_time_sync_start_hour;
+  int end   = _aqconfig_.panel_time_sync_end_hour;
+
+  if (abs(time_difference) >= AQ_TIME_DIFF_URGENT) {
+    LOG(AQUA_LOG,LOG_NOTICE, "Panel clock is %d seconds out, too far to wait for the quiet window\n",
+        time_difference);
+    return true;
+  }
+
+  if (start == end)                       /* window disabled, any time will do */
+    return true;
+
+  localtime_r(&now, &tm_now);
+  if (start < end) {
+    if (tm_now.tm_hour >= start && tm_now.tm_hour < end)
+      return true;
+  } else {                                /* window wraps midnight, e.g. 22 to 4 */
+    if (tm_now.tm_hour >= start || tm_now.tm_hour < end)
+      return true;
+  }
+
+  LOG(AQUA_LOG,LOG_INFO, "Panel clock is %d seconds out, waiting for the %02d:00-%02d:00 window to correct it\n",
+      time_difference, start, end);
+  return false;
+}
+
+/* Called for every panel time message, before any of the rate limiting below. */
+static void observe_panel_rollover(time_t now)
+{
+  time_t minstart;
+
+#ifdef AQ_PDA
+  if (isPDA_PANEL && !isPDA_IAQT)
+    return;
+#endif
+
+  if (strncmp(_aqualink_data.time, _ro_last_time, sizeof(_ro_last_time)) != 0) {
+    /* Displayed minute just changed, so its :00 fell between the previous message
+       and this one.  _ro_prev_sample of 0 means this is our first message and we
+       have no window to measure, so only remember the string. */
+    if (_ro_prev_sample != 0 && panel_minute_start(now, &minstart)) {
+      _ro_at        = now;
+      _ro_window    = (int)(now - _ro_prev_sample);
+      _ro_panel_min = minstart;
+      LOG(AQUA_LOG,LOG_DEBUG, "Panel minute rolled to '%s' %ds after the previous message\n",
+          _aqualink_data.time, _ro_window);
+    }
+    strncpy(_ro_last_time, _aqualink_data.time, sizeof(_ro_last_time) - 1);
+    _ro_last_time[sizeof(_ro_last_time) - 1] = '\0';
+  }
+  _ro_prev_sample = now;
+}
+
+/*
+* Throw away what we know about the panel's minute rollover.
+*
+* Called when we are about to rewrite the panel clock.  After that the panel's reported
+* time JUMPS, and a jump is not a rollover - treating it as one measures the size of the
+* correction we just made rather than any error, which is how a 903,657,588 second offset
+* got reported.  Clearing _ro_prev_sample also makes the first message after the change
+* establish a baseline instead of being paired with one from before it.
+*/
+static void panel_rollover_forget(void)
+{
+  _ro_last_time[0] = '\0';
+  _ro_prev_sample  = 0;
+  _ro_at           = 0;
+  _ro_window       = 0;
+  _ro_panel_min    = 0;
+}
+
+/* Offset in seconds, positive meaning the panel clock is BEHIND system time -
+   the same sense as the coarse difftime() comparison. */
+static bool panel_rollover_offset(time_t now, int *offset, int *accuracy)
+{
+  /* These report at INFO rather than DEBUG on purpose: when the rollover estimate is
+     not used, the reason for falling back to the coarse +/-30s figure needs to be
+     visible in a normal log. */
+  if (_ro_at == 0 || _ro_window <= 0) {
+    LOG(AQUA_LOG,LOG_INFO, "No panel minute rollover timed yet, using the +/-30s HH:MM estimate\n");
+    return false;
+  }
+  if (_ro_window > AQ_ROLLOVER_MAX_WINDOW) {
+    LOG(AQUA_LOG,LOG_INFO, "Panel minute rollover only pinned to %ds, no better than the HH:MM estimate, using that\n",
+        _ro_window);
+    return false;
+  }
+  if (now - _ro_at > AQ_ROLLOVER_MAX_AGE) {
+    LOG(AQUA_LOG,LOG_INFO, "Last panel minute rollover is %ds old, using the +/-30s HH:MM estimate\n",
+        (int)(now - _ro_at));
+    return false;
+  }
+
+  *offset   = (int)((_ro_at - (_ro_window / 2)) - _ro_panel_min);
+  *accuracy = (_ro_window / 2) + 1;
+  return true;
+}
+
 // Should move to panel.
 bool checkAqualinkTime()
 {
@@ -169,8 +333,15 @@ bool checkAqualinkTime()
   if (_aqconfig_.sync_panel_time != true)
     return true; 
 
+  // Must run on EVERY time message, so it goes before all the rate limiting below.
+  observe_panel_rollover(now);
+
+  // A due forced sync has to skip the hourly rate limit, otherwise arming it at startup
+  // would not take effect until the next scheduled check up to an hour later.
+  bool force_due = (_force_panel_time_sync_after != 0 && now >= _force_panel_time_sync_after);
+
   time_difference = (int)difftime(now, last_checked);
-  if (time_difference < TIME_CHECK_INTERVAL)
+  if (!force_due && time_difference < TIME_CHECK_INTERVAL)
   {
     LOG(AQUA_LOG,LOG_DEBUG, "time not checked, will check in %d seconds\n", TIME_CHECK_INTERVAL - time_difference);
     return true;
@@ -233,7 +404,14 @@ bool checkAqualinkTime()
   }
 
   aq_tm.tm_isdst = localtime(&now)->tm_isdst; // ( Might need to use -1) set daylight savings to same as system time
-  aq_tm.tm_sec = 0; // Set seconds to time.  Really messes up when we don't do this.
+  // The panel only reports HH:MM, it has no seconds field.  A panel showing '10:05'
+  // is actually somewhere in 10:05:00 - 10:05:59, so the best estimate of the panel
+  // clock is the MIDPOINT of the minute it is displaying.  Using 0 here made every
+  // comparison read 0-59 seconds slow (+30 on average) even for a perfectly synced
+  // panel, which both hid real drift and made the panel look ~1 minute behind.
+  // NOTE: seconds must be set to something deterministic, strptime() leaves whatever
+  // was on the stack in tm_sec.
+  aq_tm.tm_sec = 30;
 
   char buff[30];
   
@@ -254,13 +432,79 @@ bool checkAqualinkTime()
   strftime(buff, 30, "%m/%d/%y %I:%M %p", localtime(&now));
   LOG(AQUA_LOG,LOG_INFO, "Aqualink time '%s' is off system time '%s' by %d seconds...\n", datestr, buff, time_difference);
 
-  if (abs(time_difference) < ACCEPTABLE_TIME_DIFF)
+  /* Prefer the rollover timed offset when we have a usable one.  It is roughly an
+     order of magnitude tighter than reading HH:MM and assuming the midpoint, so it
+     is judged against a correspondingly tighter tolerance. */
+  /* How close the panel can actually be held depends on which setter AQ_SET_TIME lands
+     on.  Only the allbutton one commits on a minute boundary; the iAQ Touch and PDA
+     setters cannot land closer than a few tens of seconds, so tightening the tolerance
+     for them would just re-program the panel every hour to the same wrong time. */
+  bool boundary_aware = isPanelTimeSetterBoundaryAware();
+  int tolerance = boundary_aware ? ACCEPTABLE_TIME_DIFF : ACCEPTABLE_TIME_DIFF_LEGACY;
+  int precise, accuracy;
+  if (panel_rollover_offset(now, &precise, &accuracy))
   {
-    // Time difference is less than or equal to ACCEPTABLE_TIME_DIFF seconds (1 1/2 minutes).
-    // Set the return value to true.
+    /* The rollover measurement is good regardless of which setter we use, so always
+       prefer it for the figure we report and act on.  Only the TOLERANCE depends on what
+       the setter can achieve. */
+    /* Both figures measure the same thing by different routes, so a wild disagreement
+       means the rollover reading is not sound - stale state, or the panel's date and time
+       messages momentarily describing different moments (they arrive separately). Keep
+       the coarse figure, which cannot be skewed that way. */
+    if (abs(precise - time_difference) > AQ_ROLLOVER_SANITY) {
+      LOG(AQUA_LOG,LOG_WARNING, "Ignoring minute rollover estimate of %+ds, it disagrees with the %+ds from the panel display by more than %ds\n",
+          precise, time_difference, AQ_ROLLOVER_SANITY);
+      panel_rollover_forget();
+      goto rollover_unusable;
+    }
+
+    time_difference = precise;
+    if (boundary_aware) {
+      /* Only act on an offset bigger than what we can actually resolve.  Scaling by the
+         measured window rather than applying a fixed cutoff means a rollover we only
+         pinned loosely still gets used, just held to a looser figure - and it is never
+         worse than the coarse path it replaces. */
+      tolerance = accuracy + AQ_ROLLOVER_SLACK;
+      if (tolerance < ACCEPTABLE_TIME_DIFF_PRECISE)
+        tolerance = ACCEPTABLE_TIME_DIFF_PRECISE;
+      if (tolerance > ACCEPTABLE_TIME_DIFF)
+        tolerance = ACCEPTABLE_TIME_DIFF;
+    }
+    LOG(AQUA_LOG,LOG_INFO, "Panel clock is %+d seconds off system time (+/-%ds, timed from the panel's minute rollover over %ds), tolerance %ds\n",
+        precise, accuracy, _ro_window, tolerance);
+  }
+rollover_unusable:
+
+  if (force_due)
+  {
+    // Startup sync was requested and is now due.  Consumed here rather than in startup()
+    // so we inherit every check above, the panel has to be initialised and have actually
+    // told us its time before we start walking its menus.
+    _force_panel_time_sync_after = 0;
+    LOG(AQUA_LOG,LOG_NOTICE, "Forcing panel time sync (%s=yes), panel is off by %d seconds\n",
+        CFG_N_force_panel_time_sync_at_startup, time_difference);
+    panel_rollover_forget();
+    return false;
+  }
+
+  if (abs(time_difference) < tolerance)
+  {
+    // Within tolerance, leave the panel alone.
     return true;
   }
 
+  /* Out of tolerance, but rewriting the clock takes over the panel for up to a minute,
+     so unless it is badly out this waits for the quiet window. */
+  if (! panel_time_sync_allowed_now(now, time_difference))
+    return true;
+
+  /* The clock is about to be set, so a forced startup sync still waiting to fire would
+     only take the panel over a second time for nothing. */
+  if (_force_panel_time_sync_after != 0) {
+    LOG(AQUA_LOG,LOG_INFO, "Setting the clock now, so the pending startup sync is no longer needed\n");
+    _force_panel_time_sync_after = 0;
+  }
+  panel_rollover_forget();
   return false;
 }
 
@@ -631,7 +875,19 @@ int startup(char *self, char *cfgFile)
     _aqconfig_.log_msec_ts = true;
 
   setMsecTimestampLog(_aqconfig_.log_msec_ts);
-      
+
+  // Arm the one shot startup time sync, due AQ_STARTUP_TIME_SYNC_DELAY from now so it
+  // runs in the background once startup has settled rather than stalling it.  Done here
+  // (rather than at the declaration) so a self restart, which calls startup() again,
+  // re-arms it.
+  if (_aqconfig_.sync_panel_time && _aqconfig_.force_panel_time_sync_at_startup) {
+    _force_panel_time_sync_after = time(0) + AQ_STARTUP_TIME_SYNC_DELAY;
+    LOG(AQUA_LOG,LOG_NOTICE, "Panel time will be synced in %d seconds (%s=yes)\n",
+        AQ_STARTUP_TIME_SYNC_DELAY, CFG_N_force_panel_time_sync_at_startup);
+  } else {
+    _force_panel_time_sync_after = 0;
+  }
+
 
 #ifdef AQ_MANAGER
   setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, (_aqconfig_.display_warnings_web?_aqualink_data.last_display_message:NULL));

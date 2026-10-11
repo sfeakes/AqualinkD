@@ -470,6 +470,30 @@ void _aq_programmer_(program_type r_type, aqkey *button, int value, int alt_valu
 void aq_program(program_type r_type, aqkey *button, int value, int alt_value, struct aqualinkdata *aqdata){
   _aq_programmer_(r_type, button, value, alt_value, aqdata, true);
 }
+/*
+* Does AQ_SET_TIME land on a setter that commits the panel clock on a minute boundary?
+*
+* Only set_allbutton_time() does.  The iAQ Touch and PDA setters sample the clock before
+* walking their fields and commit some seconds later, so they leave the panel tens of
+* seconds behind however tight a tolerance we hold them to - tightening the tolerance for
+* those panels just makes them re-program every hour to the same wrong time.
+*
+* MUST mirror the AQ_SET_TIME routing in aq_programmer() below.  OneTouch is deliberately
+* 'true': its AQ_SET_TIME case is commented out, so it falls through to allbutton.
+*/
+bool isPanelTimeSetterBoundaryAware()
+{
+#ifdef AQ_PDA
+  if (isPDA_PANEL && !isPDA_IAQT)
+    return false;                                    // set_PDA_aqualink_time()
+#endif
+  if (isONET_ENABLED && isEXTP_ENABLED)
+    return true;                                     // falls through to allbutton
+  if ((isIAQT_ENABLED && isEXTP_ENABLED) || isPDA_IAQT)
+    return false;                                    // set_aqualink_iaqtouch_time()
+  return true;                                       // set_allbutton_time()
+}
+
 void aq_programmer(program_type r_type, aqkey *button, int value, int alt_value, struct aqualinkdata *aqdata){
   _aq_programmer_(r_type, button, value, alt_value, aqdata, true);
 }

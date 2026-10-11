@@ -130,6 +130,9 @@ struct aqconfig
 
   bool mqtt_timed_update;
   bool sync_panel_time;
+  bool force_panel_time_sync_at_startup;
+  int  panel_time_sync_start_hour;
+  int  panel_time_sync_end_hour;
   bool enable_scheduler;
   int8_t schedule_event_mask; // Was int16_t, but no need
   int  sched_chk_pumpon_hour;
@@ -288,6 +291,14 @@ int _numCfgParams;
 #define CFG_V_extended_device_id                "[\"0x00\", \"0x30\", \"0x31\", \"0x32\", \"0x33\", \"0x40\", \"0x41\", \"0x42\", \"0x43\"]"
 
 #define CFG_N_sync_panel_time                   "sync_panel_time"
+/* NOTE: setConfigValue() matches config names by PREFIX, first registered wins, so this
+   deliberately does NOT start with "sync_panel_time" - a name like
+   "sync_panel_time_on_startup" would be swallowed by "sync_panel_time" above. */
+#define CFG_N_force_panel_time_sync_at_startup  "force_panel_time_sync_at_startup"
+/* Same prefix-matching caveat as above: these deliberately do not start with
+   "sync_panel_time", which would swallow them. */
+#define CFG_N_panel_time_sync_start_hour        "panel_time_sync_start_hour"
+#define CFG_N_panel_time_sync_end_hour          "panel_time_sync_end_hour"
 
 #define CFG_N_extended_device_id_programming    "extended_device_id_programming"
 #define CFG_N_enable_iaqualink                  "enable_iaqualink"
