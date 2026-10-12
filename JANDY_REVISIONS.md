@@ -1,4 +1,4 @@
-# AquaLink RS Software and PCB Revisions (Nov. 2011)
+# AquaLink RS Software and PCB Revisions
 
 ## Power Center software revisions
 
