@@ -964,12 +964,11 @@ void *set_aqualink_onetouch_swg_percent( void *ptr )
   if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED) {
     // No further menu(s), supports increment of 1
     pcnt_increment=1;
+    waitForOT_MessageTypes(aqdata,CMD_PDA_HIGHLIGHTCHARS,0x00,5);
   } else if ( isSINGLE_DEV_PANEL ) {
     // No further menu(s), supports increment of 5
     pcnt_increment=5;
     waitForOT_MessageTypes(aqdata,CMD_PDA_HIGHLIGHTCHARS,0x00,5);
-    //printf("**** JUST WAITING *****\n");
-    //waitForNextOT_Menu(aqdata);
   } else if (isCOMBO_PANEL) {
     // More menu's and increment of 5
     pcnt_increment=5;
