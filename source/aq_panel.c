@@ -798,6 +798,7 @@ void setPanel(struct aqualinkdata *aqdata, bool rs, int size, bool combo, bool d
     _aqconfig_.paneltype_mask |= RSP_SINGLE;
 
   if (dual) { // Dual are combo
+    combo = true; // Keep button initialization consistent with the panel mask.
     _aqconfig_.paneltype_mask |= RSP_DUAL_EQPT;
     _aqconfig_.paneltype_mask |= RSP_COMBO;
     _aqconfig_.paneltype_mask &= ~RSP_SINGLE;
