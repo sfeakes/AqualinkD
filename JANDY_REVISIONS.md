@@ -643,7 +643,7 @@
   <td valign="top">
   </td>
 </tr>
-<tr><td colspan="4"><b>ARM 32 processor</b> - This can be loaded with firmware back to T.2.<br> Currently has issues reading water temperature that seem to he hardware related</td></tr>
+<tr><td colspan="4"><b>ARM 32 processor</b> - This can be loaded with firmware back to T.2.<br> Currently has issues reading water temperature that <b>seem</b> to be hardware related. </td></tr>
 <tr>
   <td valign="top">Rev. Yg</td>
   <td valign="top">-</td>
@@ -658,6 +658,8 @@
 </tr>
 </tbody>
 </table>
+
+<!--
 
 ## PDA software, J-Box and Handheld revisions
 
@@ -877,3 +879,5 @@
 </tr>
 </tbody>
 </table>
+
+-->
