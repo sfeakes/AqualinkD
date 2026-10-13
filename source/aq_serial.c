@@ -1314,14 +1314,19 @@ int get_packet(int fd, unsigned char* packet)
   return index;
 }
 
+/*  Function is not complete.  It needs the allbutton or pda passed to it,
+    then print either since there are conflicting keycodes. 
+    simply hacked it for the moment and removed UNKNOWN from default, as to not clutter
+    the allbutton output with garbage.
+  */
 const char* cmd_to_string(const unsigned char cmd)
 {
   switch (cmd) {
-    case KEY_PDA_UP:      return "UP";
-    case KEY_PDA_DOWN:    return "DOWN";
-    case KEY_PDA_BACK:    return "BACK";
-    case KEY_PDA_SELECT:  return "SELECT";
-    default:              return "UNKNOWN";
+    case KEY_PDA_UP:      return "UP ";
+    case KEY_PDA_DOWN:    return "DOWN ";
+    case KEY_PDA_BACK:    return "BACK ";
+    case KEY_PDA_SELECT:  return "SELECT ";
+    default:              return "";
   }
 }
 

@@ -384,29 +384,29 @@ STOP BOOST POOL
 typedef enum { SWG_UNKNOWN = 0, SWG_AQUAPURE, SWG_AQUARITE } swg_menu_t;
 
 // Returns true if a menu was selected; remembers which one worked.
-static bool select_chlorinator_menu(struct aqualinkdata *aqdata)
+static int select_chlorinator_menu(struct aqualinkdata *aqdata)
 {
   static swg_menu_t s_swg_menu = SWG_UNKNOWN;   // detected on first successful run
   //const bool can_be_aquarite = (aqdata->panel_rev[0] < 'L');
 
   switch (s_swg_menu) {
     case SWG_AQUAPURE:
-      return select_menu_item(aqdata, "SET AQUAPURE");
+      return select_menu_item(aqdata, "SET AQUAPURE")==true?SWG_AQUAPURE:SWG_UNKNOWN;
 
     case SWG_AQUARITE:
-      return select_menu_item(aqdata, "SET AQUARITE");
+      return select_menu_item(aqdata, "SET AQUARITE")==true?SWG_AQUARITE:SWG_UNKNOWN;
 
     default:  // SWG_UNKNOWN: probe once
       if (select_menu_item_noerror(aqdata, "SET AQUAPURE")) {
         s_swg_menu = SWG_AQUAPURE;
-        return true;
+        return SWG_AQUAPURE;
       }
       if (select_menu_item_noerror(aqdata, "SET AQUARITE")) {
         s_swg_menu = SWG_AQUARITE;
-        return true;
+        return SWG_AQUARITE;
       }
       s_swg_menu = SWG_UNKNOWN;   // optional: re-detect next run
-      return false;
+      return SWG_UNKNOWN;
   }
 }
 
@@ -429,7 +429,9 @@ void *set_allbutton_SWG( void *ptr )
   //LOG(ALLB_LOG, LOG_NOTICE, "programming SWG percent to %d\n", val);
 
   // On revisions I to K (prior to L) can also see "SET AquaRite" in menu
-  if (!select_chlorinator_menu(aqdata)) {
+  int swg_type = select_chlorinator_menu(aqdata);
+
+  if (swg_type == SWG_UNKNOWN) {
     LOG(ALLB_LOG, LOG_WARNING, "Could not select SET AQUAPURE/AQUARITE menu\n");
     LOG(ALLB_LOG, LOG_ERR, "%s failed\n", ptypeName(aqdata->active_thread.ptype));
     //_s_swg_menu = SWG_UNKNOWN;   // optional: re-detect next run
@@ -442,10 +444,10 @@ void *set_allbutton_SWG( void *ptr )
   // If spa is on, set SWG for spa, if not set SWG for pool
   if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED)
   {
-    setAqualinkNumericField_new(aqdata, "AQUA", val, 1); // Could be Aquarite or Aquapure. Also increment or 1 not 5
-  }
-  else
-  {
+    setAqualinkNumericField_new(aqdata, (swg_type==SWG_AQUAPURE?"AQUAPURE":"AQUARITE"), val, 1); // Could be Aquarite or Aquapure. Also increment or 1 not 5
+  } else if ( isSINGLE_DEV_PANEL ) {
+    setAqualinkNumericField_new(aqdata, (swg_type==SWG_AQUAPURE?"AQUAPURE":"AQUARITE"), val, 5); // Could be Aquarite or Aquapure. Also increment 5
+  } else {
     if (aqdata->aqbuttons[SPA_INDEX].led->state != OFF) {
       if (select_sub_menu_item(aqdata, "SET SPA SP") != true) {
         LOG(ALLB_LOG, LOG_WARNING, "Could not select SWG setpoint menu for SPA\n");
@@ -1430,7 +1432,7 @@ void send_cmd(unsigned char cmd)
   _allb_pgm_command = cmd;
   //delay(200);
 
-  LOG(ALLB_LOG, LOG_INFO, "Queue send %s '0x%02hhx' to controller (programming)\n", cmd_to_string(_allb_pgm_command), _allb_pgm_command);
+  LOG(ALLB_LOG, LOG_INFO, "Queue send %s'0x%02hhx' to controller (programming)\n", cmd_to_string(_allb_pgm_command), _allb_pgm_command);
 }
 
 void force_queue_delete()

@@ -1522,6 +1522,7 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
 
   #ifdef AQ_PDA
   if (isPDA_PANEL) {
+     set_pre_state = false;
       if (button->special_mask & PROGRAM_LIGHT/* && isPDA_IAQT*/) {
         //if ( isPDA_IAQT && isIAQL_ACTIVE) {
         // AqualinkTouch in PDA mode, we can program light. (if turing off, use standard AQ_PDA_DEVICE_ON_OFF below)
