@@ -617,12 +617,7 @@ int startup(char *self, char *cfgFile)
   
   if (_cmdln_loglevel != -1)
     setSystemLogLevel(_cmdln_loglevel);
-  
-  clearDebugLogMask();
-  read_config(&_aqualink_data, cfgFile);
 
-  if (_cmdln_loglevel != -1)
-    _aqconfig_.log_level = _cmdln_loglevel;
   if (_cmdln_debugRS485)
     _aqconfig_.log_protocol_packets = true;
 
@@ -632,18 +627,19 @@ int startup(char *self, char *cfgFile)
   if (_cmdln_log_msec_ts)
     _aqconfig_.log_msec_ts = true;
 
+  
+  clearDebugLogMask();
+  read_config(&_aqualink_data, cfgFile);
+
   setMsecTimestampLog(_aqconfig_.log_msec_ts);
 
-  
-      
-
 #ifdef AQ_MANAGER
-  setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, (_aqconfig_.display_warnings_web?_aqualink_data.last_display_message:NULL));
+  setLoggingPrms( (_cmdln_loglevel != -1? _cmdln_loglevel : _aqconfig_.log_level), _aqconfig_.deamonize, (_aqconfig_.display_warnings_web?_aqualink_data.last_display_message:NULL));
 #else
   if (_aqconfig_.display_warnings_web == true)
-    setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, _aqualink_data.last_display_message);
+    setLoggingPrms(__cmdln_loglevel != -1? _cmdln_loglevel : _aqconfig_.log_level), _aqconfig_.deamonize, _aqconfig_.log_file, _aqualink_data.last_display_message);
   else
-    setLoggingPrms(_aqconfig_.log_level, _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
+    setLoggingPrms(_cmdln_loglevel != -1? _cmdln_loglevel : _aqconfig_.log_level), _aqconfig_.deamonize, _aqconfig_.log_file, NULL);
 #endif
 
   //LOG(AQUA_LOG,LOG_NOTICE, "Starting %s v%s !\n", AQUALINKD_NAME, AQUALINKD_VERSION);

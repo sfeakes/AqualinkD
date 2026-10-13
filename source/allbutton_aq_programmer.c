@@ -442,9 +442,9 @@ void *set_allbutton_SWG( void *ptr )
 
 
   // If spa is on, set SWG for spa, if not set SWG for pool
-  if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED)
-  {
-    setAqualinkNumericField_new(aqdata, (swg_type==SWG_AQUAPURE?"AQUAPURE":"AQUARITE"), val, 1); // Could be Aquarite or Aquapure. Also increment or 1 not 5
+  if (doesPanelSupport(aqdata, RSP_SUP_SWG_PS) == RSP_NOT_SUPPORTED){
+    // confirmed panel L is incrment of 5, not 1 as documentation mentions 
+    setAqualinkNumericField_new(aqdata, (swg_type==SWG_AQUAPURE?"AQUAPURE":"AQUARITE"), val, 5); // Could be Aquarite or Aquapure. Also increment or 1 not 5
   } else if ( isSINGLE_DEV_PANEL ) {
     setAqualinkNumericField_new(aqdata, (swg_type==SWG_AQUAPURE?"AQUAPURE":"AQUARITE"), val, 5); // Could be Aquarite or Aquapure. Also increment 5
   } else {

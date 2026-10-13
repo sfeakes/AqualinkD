@@ -462,6 +462,10 @@ uint32_t setPanelSupport(struct aqualinkdata *aqdata)
   {
     aqdata->panel_support_options |= RSP_SUP_CLIT;
     aqdata->panel_support_options |= RSP_SUP_PCDOC;
+  }
+
+  if (rev >= 'M')
+  {
     aqdata->panel_support_options |= RSP_SUP_SWG_PS;
   }
 

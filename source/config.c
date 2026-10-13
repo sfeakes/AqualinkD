@@ -953,11 +953,7 @@ bool setConfigValue(struct aqualinkdata *aqdata, char *param, char *value) {
         break;
         case CFG_SPECIAL:
           if (strncasecmp(param, CFG_N_log_level, strlen(CFG_N_log_level)) == 0) {
-            // Only reset if currently below DEBUG, as the cmd line coule set debug.
-            if (_aqconfig_.log_level < LOG_DEBUG) {
-              *(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
-            }
-            //*(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
+            *(int *)_cfgParams[i].value_ptr = text2elevel(cleanwhitespace(value));
           } else if (strncasecmp(param, CFG_N_panel_type, strlen(CFG_N_panel_type)) == 0) {
             setPanelByName(aqdata, cleanwhitespace(value));
           } else if (strncasecmp(param, CFG_N_force_panel_rev, strlen(CFG_N_force_panel_rev)) == 0) {
