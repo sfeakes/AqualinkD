@@ -17,6 +17,7 @@
 
 
 #define _GNU_SOURCE 1 // for strcasestr & strptime
+#include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -37,9 +38,7 @@
 #include "rs_msg_utils.h"
 #include "color_lights.h"
 
-#ifdef AQ_DEBUG
-  #include "timespec_subtract.h"
-#endif
+#include "timespec_subtract.h"
 
 bool waitForPDAMessageHighlight(struct aqualinkdata *aqdata, int highlighIndex, int numMessageReceived);
 bool waitForPDAMessageType(struct aqualinkdata *aqdata, unsigned char mtype, int numMessageReceived);
@@ -1329,7 +1328,9 @@ bool waitForPDAMessages(struct aqualinkdata *aqdata, int numberMessages)
   Use number for cur_val to  increase / decrease from known start point
 */
 
-bool set_PDA_numeric_field_value(struct aqualinkdata *aqdata, int val, int cur_val, char *select_label, int step) {
+static bool set_PDA_numeric_field_value_ex(struct aqualinkdata *aqdata, int val,
+                                           int cur_val, char *select_label,
+                                           int step, bool send_select) {
   int i=0;
 
   LOG(PDA_LOG,LOG_DEBUG, "set_PDA_numeric_field_value %s from %d to %d step %d\n", select_label, cur_val, val, step);
@@ -1375,10 +1376,18 @@ bool set_PDA_numeric_field_value(struct aqualinkdata *aqdata, int val, int cur_v
     LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : already at %d\n", select_label, val);
   }
 
-  send_pda_cmd(KEY_PDA_SELECT);
+  if (send_select)
+    send_pda_cmd(KEY_PDA_SELECT);
   LOG(PDA_LOG,LOG_DEBUG, "Numeric selector %s value : set to %d\n", select_label, val);
   
   return true;
+}
+
+bool set_PDA_numeric_field_value(struct aqualinkdata *aqdata, int val, int cur_val,
+                                 char *select_label, int step)
+{
+  return set_PDA_numeric_field_value_ex(aqdata, val, cur_val, select_label,
+                                        step, true);
 }
 
 //bool set_PDA_aqualink_SWG_setpoint(struct aqualinkdata *aqdata, int val) {
@@ -1694,6 +1703,184 @@ void *set_aqualink_PDA_freeze_protectsetpoint( void *ptr )
   return ptr;
 }
 
+#define PDA_SETTIME_LEAD         15
+#define PDA_SETTIME_KEEPALIVE    20
+#define PDA_SETTIME_NUDGE_GUARD  10
+#define PDA_SETTIME_COMMIT_SLOP   5
+#define PDA_SETTIME_MAX_STEPS     5
+#define PDA_SETTIME_FIELD_TIMEOUT 5
+
+static bool pda_settime_sleep_for(struct timespec duration)
+{
+  while (nanosleep(&duration, &duration) != 0) {
+    if (errno != EINTR) {
+      LOG(PDA_LOG,LOG_ERR, "PDA time boundary timer failed: %s\n",
+          strerror(errno));
+      return false;
+    }
+    if (isAqualinkDStopping())
+      return false;
+  }
+  return !isAqualinkDStopping();
+}
+
+static bool pda_settime_minute_is(int expected)
+{
+  const char *separator;
+  char *end;
+  long parsed;
+
+  separator = strchr(pda_m_line(3), ':');
+  if (separator == NULL)
+    return false;
+
+  errno = 0;
+  parsed = strtol(separator + 1, &end, 10);
+  return errno == 0 && end != separator + 1 && parsed == expected;
+}
+
+static bool pda_settime_wait_for_minute(struct aqualinkdata *aqdata,
+                                         int expected)
+{
+  struct timespec deadline;
+  bool matched;
+  int wait_result = 0;
+
+  if (clock_gettime(CLOCK_REALTIME, &deadline) != 0) {
+    LOG(PDA_LOG,LOG_ERR, "Could not start PDA minute selector timer: %s\n",
+        strerror(errno));
+    return false;
+  }
+  deadline.tv_sec += PDA_SETTIME_FIELD_TIMEOUT;
+
+  pthread_mutex_lock(&aqdata->active_thread.thread_mutex);
+  while (!(matched = pda_settime_minute_is(expected))) {
+    wait_result = pthread_cond_timedwait(&aqdata->active_thread.thread_cond,
+                                        &aqdata->active_thread.thread_mutex,
+                                        &deadline);
+    if (wait_result != 0)
+      break;
+  }
+  matched = pda_settime_minute_is(expected);
+  pthread_mutex_unlock(&aqdata->active_thread.thread_mutex);
+
+  if (matched)
+    return true;
+
+  if (wait_result != 0 && wait_result != ETIMEDOUT)
+    LOG(PDA_LOG,LOG_ERR, "PDA minute selector wait failed: %s\n",
+        strerror(wait_result));
+  LOG(PDA_LOG,LOG_ERR,
+      "PDA minute selector did not reach expected value %d\n", expected);
+  return false;
+}
+
+static bool pda_settime_stage_minute(struct aqualinkdata *aqdata, int minute,
+                                      int current_minute)
+{
+  if (!set_PDA_numeric_field_value_ex(aqdata, minute, current_minute,
+                                      NULL, 1, false))
+    return false;
+  waitfor_pda_queue2empty();
+  return pda_settime_wait_for_minute(aqdata, minute);
+}
+
+/* Keep SET TIME active without basing keepalives on an adjustable wall clock. */
+static bool pda_settime_hold_until(struct aqualinkdata *aqdata,
+                                   time_t target, int minute)
+{
+  const struct timespec target_time = { .tv_sec = target, .tv_nsec = 0 };
+  struct timespec next_nudge;
+
+  if (clock_gettime(CLOCK_MONOTONIC, &next_nudge) != 0)
+    return false;
+  next_nudge.tv_sec += PDA_SETTIME_KEEPALIVE;
+
+  for (;;) {
+    struct timespec realtime;
+    struct timespec monotonic;
+    struct timespec sleep_for;
+    struct timespec to_target;
+    bool can_nudge;
+
+    if (isAqualinkDStopping())
+      return false;
+    if (clock_gettime(CLOCK_REALTIME, &realtime) != 0 ||
+        clock_gettime(CLOCK_MONOTONIC, &monotonic) != 0) {
+      LOG(PDA_LOG,LOG_ERR, "Could not read clock while setting PDA time: %s\n",
+          strerror(errno));
+      return false;
+    }
+    if (timespec_subtract(&to_target, &target_time, &realtime) ||
+        (to_target.tv_sec == 0 && to_target.tv_nsec == 0))
+      return true;
+
+    can_nudge = to_target.tv_sec > PDA_SETTIME_NUDGE_GUARD ||
+                (to_target.tv_sec == PDA_SETTIME_NUDGE_GUARD &&
+                 to_target.tv_nsec > 0);
+
+    struct timespec to_nudge;
+    bool nudge_due =
+        timespec_subtract(&to_nudge, &next_nudge, &monotonic);
+    if (can_nudge && nudge_due) {
+      int nudge_minute = minute > 0 ? minute - 1 : minute + 1;
+
+      if (!pda_settime_stage_minute(aqdata, nudge_minute, minute) ||
+          !pda_settime_stage_minute(aqdata, minute, nudge_minute))
+        return false;
+      if (clock_gettime(CLOCK_MONOTONIC, &next_nudge) != 0)
+        return false;
+      next_nudge.tv_sec += PDA_SETTIME_KEEPALIVE;
+      continue;
+    }
+
+    sleep_for = to_target;
+    if (can_nudge && !nudge_due &&
+        (to_nudge.tv_sec < sleep_for.tv_sec ||
+         (to_nudge.tv_sec == sleep_for.tv_sec &&
+          to_nudge.tv_nsec < sleep_for.tv_nsec)))
+      sleep_for = to_nudge;
+    if (!pda_settime_sleep_for(sleep_for))
+      return false;
+  }
+}
+
+/* Stage MINUTE, then send its SELECT as close to the boundary as possible. */
+static bool pda_settime_commit_on_boundary(struct aqualinkdata *aqdata,
+                                           time_t target, int minute,
+                                           int current_minute)
+{
+  int steps = 0;
+
+  if (!pda_settime_stage_minute(aqdata, minute, current_minute))
+    return false;
+
+  for (;;) {
+    if (time(NULL) < target) {
+      if (!pda_settime_hold_until(aqdata, target, minute))
+        return false;
+      if (time(NULL) - target <= PDA_SETTIME_COMMIT_SLOP)
+        break;
+    }
+
+    if (minute == 59 || ++steps > PDA_SETTIME_MAX_STEPS) {
+      LOG(PDA_LOG,LOG_WARNING,
+          "Missed the minute to set the PDA time on, will try again later\n");
+      return false;
+    }
+    minute++;
+    target += 60;
+    LOG(PDA_LOG,LOG_NOTICE,
+        "Setting PDA time took longer than a minute, stepping on to minute %d\n",
+        minute);
+    if (!pda_settime_stage_minute(aqdata, minute, minute - 1))
+      return false;
+  }
+
+  send_pda_cmd(KEY_PDA_SELECT);
+  return waitForPDAnextMenu(aqdata);
+}
+
 //bool set_PDA_aqualink_time(struct aqualinkdata *aqdata) 
 void *set_PDA_aqualink_time( void *ptr )
 {
@@ -1701,6 +1888,8 @@ void *set_PDA_aqualink_time( void *ptr )
   threadCtrl = (struct programmingThreadCtrl *) ptr;
   struct aqualinkdata *aqdata = threadCtrl->aqdata;
   
+  bool time_set = false;
+  time_t target = 0;
   waitForSingleThreadOrTerminate(threadCtrl, AQ_PDA_SET_TIME);
 
   goto_pda_home_first(aqdata); // if enabled
@@ -1714,8 +1903,17 @@ void *set_PDA_aqualink_time( void *ptr )
   char result[30];
 
   time(&now);   // get time now
-  localtime_r(&now, &tm);
-  LOG(PDA_LOG,LOG_DEBUG, "set_PDA_aqualink_time to %s", asctime_r(&tm,result));
+  if (_aqconfig_.sync_time_accurately) {
+    target = ((now + PDA_SETTIME_LEAD + 59) / 60) * 60;
+    localtime_r(&target, &tm);
+    LOG(PDA_LOG,LOG_NOTICE,
+        "Setting PDA panel time accurately, committing at %02d:%02d\n",
+        tm.tm_hour, tm.tm_min);
+  } else {
+    localtime_r(&now, &tm);
+  }
+  LOG(PDA_LOG,LOG_DEBUG, "set_PDA_aqualink_time to %s",
+      asctime_r(&tm,result));
 /*  
 Debug:   PDA:       PDA Menu Line 0 =     Set Time    
 Debug:   PDA:       PDA Menu Line 1 = 
@@ -1758,11 +1956,23 @@ Debug:   PDA:       PDA Menu Line 9 = to continue.
   } else if (! set_PDA_numeric_field_value(aqdata, tm.tm_hour, panel_tm.tm_hour, NULL, 1)) {
     LOG(PDA_LOG,LOG_ERR, "Error failed to set hour\n");
   // PDA HlightChars | HEX: 0x10|0x02|0x62|0x10|0x03|0x07|0x08|0x01|0x97|0x10|0x03|
-  } else if (! set_PDA_numeric_field_value(aqdata, tm.tm_min, panel_tm.tm_min, NULL, 1)) {
+  } else if (!_aqconfig_.sync_time_accurately &&
+             !set_PDA_numeric_field_value(aqdata, tm.tm_min,
+                                          panel_tm.tm_min, NULL, 1)) {
     LOG(PDA_LOG,LOG_ERR, "Error failed to set min\n");
+  } else if (_aqconfig_.sync_time_accurately &&
+             !pda_settime_commit_on_boundary(aqdata, target, tm.tm_min,
+                                              panel_tm.tm_min)) {
+    LOG(PDA_LOG,LOG_ERR, "Error committing PDA time on minute boundary\n");
+  } else {
+    time_set = true;
   }
 
-  waitForPDAnextMenu(aqdata);
+  if (!_aqconfig_.sync_time_accurately)
+    waitForPDAnextMenu(aqdata);
+  else if (!time_set)
+    send_pda_cmd(KEY_PDA_BACK);
+
   waitfor_pda_queue2empty();
   goto_pda_menu(aqdata, PM_HOME);
 

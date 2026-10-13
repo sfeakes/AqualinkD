@@ -621,6 +621,12 @@ void init_parameters (struct aqconfig * parms)
   _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_true;
 
   _numCfgParams++;
+  _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.sync_time_accurately;
+  _cfgParams[_numCfgParams].value_type = CFG_BOOL;
+  _cfgParams[_numCfgParams].name = CFG_N_sync_time_accurately;
+  _cfgParams[_numCfgParams].default_value = (void *)&_dcfg_false;
+
+  _numCfgParams++;
   _cfgParams[_numCfgParams].value_ptr = &_aqconfig_.display_warnings_web;
   _cfgParams[_numCfgParams].value_type = CFG_BOOL;
   _cfgParams[_numCfgParams].name = "display_warnings_in_web";
