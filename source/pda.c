@@ -73,7 +73,8 @@ bool pda_shouldSleep() {
   
   // NSF NEED TO CHECK ACTIVE THREADS.
   if (_aqualink_data->active_thread.thread_id != 0) {
-    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as thread %d,%p is active\n",
+    LOG(PDA_LOG,LOG_DEBUG, "PDA can't sleep as thread %s(%d),%p is active\n",
+               ptypeName(_aqualink_data->active_thread.ptype),
                _aqualink_data->active_thread.ptype,
                _aqualink_data->active_thread.thread_id);
 
@@ -1013,7 +1014,7 @@ bool process_pda_packet(unsigned char *packet, int length)
             process_pda_packet_msg_long_equiptment_status(msg, index, false);
           break;
           case PM_SET_TEMP:
-            process_pda_packet_msg_long_set_temp(msg);
+            process_pda_packet_msg_long_set_temp(pda_m_line(index));
           break;
           case PM_SPA_HEAT:
             process_pda_packet_msg_long_spa_heat(msg);
@@ -1022,7 +1023,7 @@ bool process_pda_packet(unsigned char *packet, int length)
             process_pda_packet_msg_long_pool_heat(msg);
           break;
           case PM_FREEZE_PROTECT:
-            process_pda_packet_msg_long_freeze_protect(msg);
+            process_pda_packet_msg_long_freeze_protect(pda_m_line(index));
           break;
           case PM_AQUAPURE:
             process_pda_packet_msg_long_SWG(index, msg);

@@ -1541,6 +1541,10 @@ bool setDeviceState(struct aqualinkdata *aqdata, int deviceIndex, bool isON, req
           set_iaqualink_aux_state(button, isON);
         } else {
           aq_programmer(AQ_PDA_DEVICE_ON_OFF, button, (isON == false ? OFF : ON), deviceIndex, aqdata);
+          // The PDA programmer compares the requested state with the state read
+          // from the Equipment menu. Do not replace it with the requested state
+          // before the asynchronous programmer performs that comparison.
+          set_pre_state = false;
         }
       }
   } else

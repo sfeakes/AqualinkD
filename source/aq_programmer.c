@@ -683,7 +683,7 @@ void _aq_programmer_(program_type r_type, char *args, aqkey *button, int value, 
   }
 
 
-  LOG(PROG_LOG, LOG_NOTICE, "Starting programming thread '%s'\n",ptypeName(type));
+  LOG(PROG_LOG, LOG_INFO, "Starting programming thread '%s'\n",ptypeName(type));
 
   programmingthread->aqdata = aqdata;
   programmingthread->thread_id = 0;
