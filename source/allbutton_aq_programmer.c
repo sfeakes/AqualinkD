@@ -1163,6 +1163,63 @@ void *set_allbutton_freeze_heater_temps( void *ptr )
   return ptr;
 }
 
+/*
+* Set the SET TIME menu's HOUR field.  select_sub_menu_item() is not safe here: it decides
+* whether to press anything from the last message received, which coming out of the DAY field
+* is still the DAY line.  So it presses RIGHT before it has seen the hour, then matches the
+* "HOUR n xM" the panel had already queued and accepts an hour too far.  Instead wait for the
+* value each keypress should produce, as setAqualinkNumericField() does.
+*/
+static void hour_menu_string(char *out, size_t size, int hour24)
+{
+  if (hour24 == 0)       snprintf(out, size, "HOUR 12 AM");
+  else if (hour24 < 12)  snprintf(out, size, "HOUR %d AM", hour24);
+  else if (hour24 == 12) snprintf(out, size, "HOUR 12 PM");
+  else                   snprintf(out, size, "HOUR %d PM", hour24 - 12);
+}
+
+static bool parse_hour_menu(const char *msg, int *hour24)
+{
+  char *p = stristr(msg, "HOUR");
+  char mer[4];
+  int h12;
+
+  if (p == NULL || sscanf(p, "%*s %d %3s", &h12, mer) != 2 || h12 < 1 || h12 > 12)
+    return false;
+  if (mer[0] == 'A' || mer[0] == 'a')
+    *hour24 = (h12 == 12) ? 0 : h12;
+  else if (mer[0] == 'P' || mer[0] == 'p')
+    *hour24 = (h12 == 12) ? 12 : h12 + 12;
+  else
+    return false;
+  return true;
+}
+
+static bool setAqualinkHourField(struct aqualinkdata *aqdata, int hour24)
+{
+  char expect[20];
+  int cur, i;
+
+  if (waitForMessage(aqdata, "HOUR", 4) != true)    // get off the stale DAY line first
+    return false;
+
+  for (i = 0; i <= 24; i++) {
+    if (! parse_hour_menu(aqdata->last_message, &cur))
+      return false;
+    if (cur == hour24) {
+      send_cmd(KEY_ENTER);
+      waitForMessage(aqdata, NULL, 1);
+      return true;
+    }
+    hour_menu_string(expect, sizeof(expect), (cur + 1) % 24);   // RIGHT steps forward and wraps
+    send_cmd(KEY_RIGHT);
+    waitfor_queue2empty();
+    if (waitForMessage(aqdata, expect, 4) != true)
+      return false;
+  }
+  return false;
+}
+
 void *set_allbutton_time( void *ptr )
 {
   struct programmingThreadCtrl *threadCtrl;
@@ -1206,7 +1263,12 @@ void *set_allbutton_time( void *ptr )
   setAqualinkNumericField(aqdata, "MONTH", result->tm_mon + 1);
   setAqualinkNumericField(aqdata, "DAY", result->tm_mday);
   //setAqualinkNumericFieldExtra(aqdata, "HOUR", 11, "PM");
-  select_sub_menu_item(aqdata, hour); // This will keep looping until it finds the right message
+  if (setAqualinkHourField(aqdata, result->tm_hour) != true) {
+    LOG(ALLB_LOG, LOG_ERR, "Could not set panel hour to '%s', abandoning panel time set\n", hour);
+    cancel_menu();
+    cleanAndTerminateThread(threadCtrl);
+    return ptr;
+  }
   setAqualinkNumericField(aqdata, "MINUTE", result->tm_min);
   
   send_cmd(KEY_ENTER);
