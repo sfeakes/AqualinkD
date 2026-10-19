@@ -747,9 +747,12 @@ void caculate_ack_packet(int rs_fd, unsigned char *packet_buffer, emulation_type
       if (packet_buffer[PKT_CMD] != CMD_IAQ_CTRL_READY)
         send_extended_ack(rs_fd, ACK_IAQ_TOUCH, pop_iaqt_cmd(packet_buffer[PKT_CMD]));
       else {
-        size = ref_iaqt_control_cmd(&cmd);
-        send_jandy_command(rs_fd, cmd, size);
-        rem_iaqt_control_cmd(cmd);
+        unsigned char control_cmd[AQ_MAXPKTLEN_SEND];
+        size = pop_iaqt_control_cmd(control_cmd);
+        if (size > 0)
+          send_jandy_command(rs_fd, control_cmd, size);
+        else
+          send_extended_ack(rs_fd, ACK_IAQ_TOUCH, NUL);
       }
       //DEBUG_TIMER_STOP(_rs_packet_timer,AQUA_LOG,"AquaTouch Emulation type Processed packet in");
     break;

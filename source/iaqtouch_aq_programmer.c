@@ -49,6 +49,8 @@
 bool _cansend = false;
 
 unsigned char _iaqt_pgm_command = NUL;
+static pthread_mutex_t _iaqt_queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool _iaqt_control_announced = false;
 
 /**************
  * 
@@ -58,30 +60,39 @@ unsigned char _iaqt_pgm_command = NUL;
 
 // External command
 bool iaqt_queue_cmd(unsigned char cmd) {
-
+  pthread_mutex_lock(&_iaqt_queue_mutex);
   if (_iaqt_pgm_command == NUL) {
     _iaqt_pgm_command = cmd;
+    pthread_mutex_unlock(&_iaqt_queue_mutex);
     return true;
   }
-
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
   return false;
 }
 
 void set_iaq_cansend(bool cansend){
+  pthread_mutex_lock(&_iaqt_queue_mutex);
   _cansend = cansend;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
 }
 
 unsigned char pop_iaqt_cmd(unsigned char receive_type)
 {
   unsigned char cmd = NUL;
 
-  if (!_cansend)
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  if (!_cansend) {
+    pthread_mutex_unlock(&_iaqt_queue_mutex);
     return cmd;
+  }
 
   if (receive_type == CMD_IAQ_POLL) {
     cmd = _iaqt_pgm_command;
     _iaqt_pgm_command = NUL;
+    if (cmd == ACK_CMD_READY_CTRL)
+      _iaqt_control_announced = true;
   } 
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
 
   if (cmd != NUL)
     LOG(IAQT_LOG,LOG_DEBUG, "Sending '0x%02hhx' to controller\n", cmd);
@@ -89,28 +100,44 @@ unsigned char pop_iaqt_cmd(unsigned char receive_type)
 }
 
 
+static bool iaqt_command_pending(void)
+{
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  bool pending = _iaqt_pgm_command != NUL;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
+  return pending;
+}
+
+static bool iaqt_can_send(void)
+{
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  bool cansend = _cansend;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
+  return cansend;
+}
+
 void waitfor_iaqt_queue2empty()
 {
   int i=0;
 
-  while ( (_iaqt_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER) ) {
+  while (iaqt_command_pending() && ( i++ < PROGRAMMING_POLL_COUNTER) ) {
     delay(PROGRAMMING_POLL_DELAY_TIME);
   }
 
   // Initial startup can take some time, _cansend should be false during this time.
   // If we start programming before we receive the first status page, nothing works, this forces that wait
-  while(_cansend == false) {
+  while(!iaqt_can_send()) {
     delay(PROGRAMMING_POLL_DELAY_TIME * 2);
   }
 
-  if (_iaqt_pgm_command != NUL) {
+  if (iaqt_command_pending()) {
       // Wait for longer interval
-      while ( (_iaqt_pgm_command != NUL) && ( i++ < PROGRAMMING_POLL_COUNTER * 2 ) ) {
+      while (iaqt_command_pending() && ( i++ < PROGRAMMING_POLL_COUNTER * 2 ) ) {
         delay(PROGRAMMING_POLL_DELAY_TIME * 2);
       }
   }
 
-  if (_iaqt_pgm_command != NUL) {
+  if (iaqt_command_pending()) {
     LOG(IAQT_LOG,LOG_WARNING, "Send command Queue did not empty, timeout\n");
   }
 }
@@ -121,7 +148,7 @@ void send_aqt_cmd(unsigned char cmd)
   
   iaqt_queue_cmd(cmd);
 
-  LOG(IAQT_LOG,LOG_DEBUG, "Queue send '0x%02hhx' to controller (programming)\n", _iaqt_pgm_command);
+  LOG(IAQT_LOG,LOG_DEBUG, "Queue send '0x%02hhx' to controller (programming)\n", cmd);
 }
 
 /**************
@@ -134,42 +161,59 @@ unsigned char _iaqt_control_cmd[AQ_MAXPKTLEN_SEND];
 int _iaqt_control_cmd_len;
 
 
-int ref_iaqt_control_cmd(unsigned char **cmd)
+// Copy and remove under one lock: timeout cleanup must never modify a buffer
+// while the serial thread is transmitting it. The caller owns the copy.
+int pop_iaqt_control_cmd(unsigned char *cmd)
 {
-  //printf("*********** GET READY SENDING CONTROL ****************\n");
-  *cmd = _iaqt_control_cmd;
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  int len = _iaqt_control_announced ? _iaqt_control_cmd_len : 0;
+  if (len > 0) {
+    memcpy(cmd, _iaqt_control_cmd, len);
+    _iaqt_control_cmd_len = 0;
+    _iaqt_control_announced = false;
+  }
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
 
-  if ( getLogLevel(IAQT_LOG) >= LOG_DEBUG ) {
+  if (len > 0 && getLogLevel(IAQT_LOG) >= LOG_DEBUG) {
     char buff[1024];
-    //sprintf("Sending control command:")
-    beautifyPacket(buff, 1024, _iaqt_control_cmd, _iaqt_control_cmd_len, false);
+    beautifyPacket(buff, 1024, cmd, len, false);
     LOG(IAQT_LOG,LOG_DEBUG, "Sending commandsed : %s\n", buff);
   }
 
-  return _iaqt_control_cmd_len;
+  return len;
 }
 
-void rem_iaqt_control_cmd(unsigned char *cmd)
+static bool iaqt_control_pending(void)
 {
-  memset(_iaqt_control_cmd, 0, AQ_MAXPKTLEN_SEND * sizeof(unsigned char));
-  _iaqt_control_cmd_len = 0;
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  bool pending = _iaqt_control_cmd_len > 0;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
+  return pending;
 }
 
 bool waitfor_iaqt_ctrl_queue2empty()
 {
   int i=0;
 
-  while ( (_iaqt_control_cmd_len >0 ) && ( i++ < 100) ) {
+  while (iaqt_control_pending() && ( i++ < 100) ) {
     LOG(IAQT_LOG,LOG_DEBUG, "Waiting for commandset to send\n");
     delay(50);
   }
 
   LOG(IAQT_LOG,LOG_DEBUG, "Wait for commandset over!\n");
 
-  if (_iaqt_control_cmd_len > 0 ) {
-    LOG(IAQT_LOG,LOG_WARNING, "Send control command Queue did not empty, timeout\n");
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  if (_iaqt_control_cmd_len > 0) {
+    _iaqt_control_cmd_len = 0;
+    _iaqt_control_announced = false;
+    // Cancel an announcement not yet consumed by the serial thread as well.
+    if (_iaqt_pgm_command == ACK_CMD_READY_CTRL)
+      _iaqt_pgm_command = NUL;
+    pthread_mutex_unlock(&_iaqt_queue_mutex);
+    LOG(IAQT_LOG,LOG_WARNING, "Send control command timed out; discarded pending command, aborting operation\n");
     return false;
   }
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
   return true;
 }
 /*
@@ -287,13 +331,15 @@ unsigned const char waitfor_iaqt_nextMessage(struct aqualinkdata *aqdata, const 
 typedef enum {icct_setrpm, icct_settime, icct_setdate} iaqtControlCmdYype;
 
 // Type is always 0 at the moment, haven't found any 
-void queue_iaqt_control_command(iaqtControlCmdYype type, int num) {
+bool queue_iaqt_control_command(iaqtControlCmdYype type, int num) {
   //unsigned char packets[AQ_MAXPKTLEN_SEND];
   //int cnt;
 
   if (waitfor_iaqt_ctrl_queue2empty() == false)
-    return;
+    return false;
 
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  _iaqt_control_announced = false;
   _iaqt_control_cmd[0] = DEV_MASTER;
   _iaqt_control_cmd[1] = 0x24;
   _iaqt_control_cmd[2] = 0x31;
@@ -303,21 +349,26 @@ void queue_iaqt_control_command(iaqtControlCmdYype type, int num) {
   // Pad with 0xcd for some reason.
   for(_iaqt_control_cmd_len = _iaqt_control_cmd_len+3; _iaqt_control_cmd_len <= 18; _iaqt_control_cmd_len++)
     _iaqt_control_cmd[_iaqt_control_cmd_len] = 0xcd;
+  int len = _iaqt_control_cmd_len;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
 
   // Tell the control panel we are ready to send this shit.
   send_aqt_cmd(ACK_CMD_READY_CTRL);
   
-  LOG(IAQT_LOG,LOG_DEBUG, "Queued extended commandsed of length %d\n",_iaqt_control_cmd_len);
+  LOG(IAQT_LOG,LOG_DEBUG, "Queued extended commandsed of length %d\n",len);
   //printHex(packets, 19);
   //printf("\n");
 
   //send_jandy_command(NULL, packets, cnt);
+  return true;
 }
 
 bool queue_iaqt_control_command_str(iaqtControlCmdYype type, char *str) {
   if (waitfor_iaqt_ctrl_queue2empty() == false)
     return false;
 
+  pthread_mutex_lock(&_iaqt_queue_mutex);
+  _iaqt_control_announced = false;
   _iaqt_control_cmd[0] = DEV_MASTER;
   _iaqt_control_cmd[1] = 0x24;
   _iaqt_control_cmd[2] = 0x31;
@@ -336,6 +387,7 @@ bool queue_iaqt_control_command_str(iaqtControlCmdYype type, char *str) {
   // Pad with 0xcd for some reason.
   for(_iaqt_control_cmd_len = _iaqt_control_cmd_len+3; _iaqt_control_cmd_len <= 18; _iaqt_control_cmd_len++)
     _iaqt_control_cmd[_iaqt_control_cmd_len] = 0xcd;
+  pthread_mutex_unlock(&_iaqt_queue_mutex);
 
   // Tell the control panel we are ready to send this shit.
   send_aqt_cmd(ACK_CMD_READY_CTRL);
@@ -976,9 +1028,9 @@ void *set_aqualink_iaqtouch_pump_rpm( void *ptr )
   LOG(IAQT_LOG, LOG_INFO, "IAQ Touch got to %s page\n", VSPstr);
 
   //send_aqt_cmd(ACK_CMD_READY_CTRL);
-  queue_iaqt_control_command(0, pumpRPM);
-
-  waitfor_iaqt_ctrl_queue2empty();
+  if (!queue_iaqt_control_command(0, pumpRPM) ||
+      !waitfor_iaqt_ctrl_queue2empty())
+    goto f_end;
 
   LOG(IAQT_LOG, LOG_INFO, "IAQ Touch got to %s page\n", VSPstr);
 
@@ -1343,8 +1395,9 @@ bool set_aqualink_iaqtouch_aquapure( struct aqualinkdata *aqdata, bool boost, in
     }
 
     waitfor_iaqt_queue2empty();
-    queue_iaqt_control_command(0, val);
-    waitfor_iaqt_ctrl_queue2empty();
+    if (!queue_iaqt_control_command(0, val) ||
+        !waitfor_iaqt_ctrl_queue2empty())
+      return false;
     waitfor_iaqt_nextMessage(aqdata, CMD_IAQ_PAGE_BUTTON);
   }
   //LOG(IAQT_LOG, LOG_NOTICE, "IAQ Touch got to %s page\n", VSPstr);
@@ -1445,9 +1498,9 @@ bool set_aqualink_iaqtouch_heater_setpoint( struct aqualinkdata *aqdata, SP_TYPE
   send_aqt_cmd(button->keycode);
   waitfor_iaqt_queue2empty();
 
-  queue_iaqt_control_command(0, val);
-
-  waitfor_iaqt_ctrl_queue2empty();
+  if (!queue_iaqt_control_command(0, val) ||
+      !waitfor_iaqt_ctrl_queue2empty())
+    return false;
   waitfor_iaqt_nextMessage(aqdata, CMD_IAQ_PAGE_BUTTON);
 
   button = iaqtFindButtonByLabel(name);
@@ -1663,9 +1716,11 @@ void *set_aqualink_iaqtouch_time( void *ptr )
     // Queue the date string
     if ( queue_iaqt_control_command_str(icct_setdate, buf)) {
       LOG(IAQT_LOG,LOG_NOTICE, "Set date to %s\n",buf);
-      waitfor_iaqt_ctrl_queue2empty();
+      if (!waitfor_iaqt_ctrl_queue2empty())
+        goto f_end;
     } else {
       LOG(IAQT_LOG,LOG_ERR, "Failed to queue commandset for setting date\n");
+      goto f_end;
     }
     
   } else {
@@ -1699,7 +1754,8 @@ void *set_aqualink_iaqtouch_time( void *ptr )
   strftime(buf, 20, "%I:%M", result);
   if (queue_iaqt_control_command_str(icct_settime, buf)) {
     LOG(IAQT_LOG,LOG_NOTICE, "Set time to %s\n",buf);
-    waitfor_iaqt_ctrl_queue2empty();
+    if (!waitfor_iaqt_ctrl_queue2empty())
+      goto f_end;
   } else {
     LOG(IAQT_LOG,LOG_ERR, "Failed to queue commandset for setting time\n");
   }

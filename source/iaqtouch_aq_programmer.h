@@ -25,7 +25,8 @@ void *set_aqualink_iaqtouch_light_colormode( void *ptr );
 void *set_aqualink_iaqtouch_device_on_off( void *ptr ); // For PDA only
 void *set_aqualink_iaqtouch_onetouch_on_off( void *ptr ); 
 
-int ref_iaqt_control_cmd(unsigned char **cmd);
-void rem_iaqt_control_cmd(unsigned char *cmd);
+// cmd must have room for AQ_MAXPKTLEN_SEND bytes. Returns zero when no
+// announced command remains (including a late response after a timeout).
+int pop_iaqt_control_cmd(unsigned char *cmd);
 
 #endif // IAQ_TOUCH_PROGRAMMER_H_
