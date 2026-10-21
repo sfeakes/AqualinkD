@@ -304,6 +304,7 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
     } else {
       sd_journal_close(journal);
       active = false;
+      free(cursor);  // sd_journal_get_cursor() allocates, caller must free
       cursor = NULL;
       return true;
     }
@@ -352,7 +353,14 @@ bool _broadcast_systemd_logmessages(bool aqMgrActive, bool reOpenStaleConnection
         build_logmsg_JSON(msg, atoi((const char *)pri+9), (const char *)log+8, WS_LOG_LENGTH,(int)len-8);
         ws_send_logmsg(_mgr.conns, msg);
         cnt=0;
-        sd_journal_get_cursor(journal, &cursor);
+        // sd_journal_get_cursor() returns a newly malloc'd string on every call. Free the
+        // previous one, otherwise every log line sent to aqmanager leaks ~150 bytes.
+        char *new_cursor = NULL;
+        if (sd_journal_get_cursor(journal, &new_cursor) >= 0) {
+          free(cursor);
+          cursor = new_cursor;
+        }
+      }
     }
   }
   if (rtn < 0) {
